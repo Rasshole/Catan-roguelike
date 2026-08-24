@@ -8,6 +8,7 @@ namespace CatanRoguelike.Game
     {
         [SerializeField] private BoardView boardView;
         [SerializeField] private PlaceholderUI ui;
+        [SerializeField] private BoardInputController boardInput;
         [SerializeField] private int randomSeed = 42;
         [SerializeField] private bool useThirteenHexMap;
 
@@ -19,7 +20,10 @@ namespace CatanRoguelike.Game
             Controller.OnStateChanged += HandleStateChanged;
 
             boardView.Initialize(Controller);
-            ui.Initialize(Controller);
+            ui.Initialize(Controller, boardInput);
+
+            if (boardInput != null)
+                boardInput.Initialize(Controller, boardView);
 
             if (Controller.State.Phase == GamePhase.SetupAiSettlement1)
                 Controller.RunAiSetupStep();

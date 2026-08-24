@@ -29,6 +29,34 @@ namespace CatanRoguelike.Core.Hex
             return (x, z);
         }
 
+        /// <summary>World position of a hex corner (pointy-top, corner 0 at top).</summary>
+        public static (float x, float z) VertexToWorldPosition(HexCoord hex, int cornerIndex, float scale = 1f)
+        {
+            var (cx, cz) = ToWorldPosition(hex, scale);
+            float angleRad = (60f * cornerIndex) * (float)(Math.PI / 180f);
+            float r = scale * OuterRadius;
+            float x = cx + r * (float)Math.Sin(angleRad);
+            float z = cz + r * (float)Math.Cos(angleRad);
+            return (x, z);
+        }
+
+        public static (float x, float z) VertexToWorldPosition(Vertex vertex, float scale = 1f) =>
+            VertexToWorldPosition(vertex.Hex, vertex.CornerIndex, scale);
+
+        public static (float x, float z) EdgeMidpoint(Edge edge, float scale = 1f)
+        {
+            var (ax, az) = VertexToWorldPosition(edge.A, scale);
+            var (bx, bz) = VertexToWorldPosition(edge.B, scale);
+            return ((ax + bx) * 0.5f, (az + bz) * 0.5f);
+        }
+
+        public static float EdgeAngle(Edge edge)
+        {
+            var (ax, az) = VertexToWorldPosition(edge.A, 1f);
+            var (bx, bz) = VertexToWorldPosition(edge.B, 1f);
+            return (float)(Math.Atan2(bx - ax, bz - az) * 180f / Math.PI);
+        }
+
         public static IEnumerable<HexCoord> Ring(HexCoord center, int radius)
         {
             if (radius == 0)
@@ -58,7 +86,6 @@ namespace CatanRoguelike.Core.Hex
             }
         }
 
-        /// <summary>Corner vertex between two adjacent hexes — used for roads.</summary>
         public readonly struct Vertex : IEquatable<Vertex>
         {
             public HexCoord Hex { get; }
@@ -73,12 +100,12 @@ namespace CatanRoguelike.Core.Hex
             public bool Equals(Vertex other) => Hex.Equals(other.Hex) && CornerIndex == other.CornerIndex;
             public override bool Equals(object obj) => obj is Vertex other && Equals(other);
             public override int GetHashCode() => HashCode.Combine(Hex, CornerIndex);
+            public override string ToString() => $"V({Hex},{CornerIndex})";
 
             public static bool operator ==(Vertex a, Vertex b) => a.Equals(b);
             public static bool operator !=(Vertex a, Vertex b) => !a.Equals(b);
         }
 
-        /// <summary>Edge between two hex corners on shared border.</summary>
         public readonly struct Edge : IEquatable<Edge>
         {
             public Vertex A { get; }
@@ -104,6 +131,7 @@ namespace CatanRoguelike.Core.Hex
             public bool Equals(Edge other) => A.Equals(other.A) && B.Equals(other.B);
             public override bool Equals(object obj) => obj is Edge other && Equals(other);
             public override int GetHashCode() => HashCode.Combine(A, B);
+            public override string ToString() => $"E({A}-{B})";
 
             public static bool operator ==(Edge a, Edge b) => a.Equals(b);
             public static bool operator !=(Edge a, Edge b) => !a.Equals(b);

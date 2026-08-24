@@ -4,8 +4,7 @@ using System.Text;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Cards;
 using CatanRoguelike.Core.Hex;
-using CatanRoguelike.Core.Map;
-using CatanRoguelike.Core.Turn;
+using CatanRoguelike.Core.Shop;
 using UnityEngine;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 
@@ -15,17 +14,17 @@ namespace CatanRoguelike.Game
     public sealed class PlaceholderUI : MonoBehaviour
     {
         private GameController _controller;
+        private BoardInputController _boardInput;
         private Vector2 _scroll;
         private int _selectedCardIndex;
         private int _selectedResourceIndex;
         private int _selectedHexIndex;
         private int _selectedRoadIndex;
-        private int _settlementSpotIndex;
-        private int _roadSpotIndex;
 
-        public void Initialize(GameController controller)
+        public void Initialize(GameController controller, BoardInputController boardInput = null)
         {
             _controller = controller;
+            _boardInput = boardInput;
         }
 
         public void Refresh(GameState state) { }
@@ -120,27 +119,35 @@ namespace CatanRoguelike.Game
         private void DrawSetupActions()
         {
             GUILayout.Space(8);
-            GUILayout.Label("<b>Setup</b>");
-            DrawPlacementButtons();
+            GUILayout.Label("<b>Setup</b> — klik på grøn markør (hjørne) eller gul markør (vej)");
         }
 
         private void DrawDayActions(GameState state)
         {
             GUILayout.Space(8);
-            GUILayout.Label("<b>Shop</b>");
+            GUILayout.Label("<b>Shop</b> (3 daglige trades, 4:1 — bedre med port)");
             foreach (var deal in state.ShopDeals)
             {
-                if (GUILayout.Button($"Buy: {deal}"))
+                int effective = _controller.GetShopDealCost(deal);
+                if (GUILayout.Button($"Buy: {deal.Format(effective)}"))
                     _controller.BuyShopDeal(deal);
             }
 
             GUILayout.Space(8);
-            GUILayout.Label("<b>Build</b>");
-            DrawPlacementButtons();
+            GUILayout.Label("<b>Build</b> — klik hjørne (settlement) eller kant (vej)");
+            if (_boardInput != null)
+            {
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Auto")) _boardInput.SetBuildModeAuto();
+                if (GUILayout.Button("Settlement")) _boardInput.SetBuildModeSettlement();
+                if (GUILayout.Button("Road")) _boardInput.SetBuildModeRoad();
+                if (GUILayout.Button("City")) _boardInput.SetBuildModeCity();
+                GUILayout.EndHorizontal();
+            }
 
             var cities = _controller.GetUpgradeableCities(PlayerId.Human).ToList();
-            if (cities.Count > 0 && GUILayout.Button("Upgrade City (first valid)"))
-                _controller.UpgradeCity(cities[0], PlayerId.Human);
+            if (cities.Count > 0)
+                GUILayout.Label("Eller klik settlement i by-mode for at opgradere.");
 
             GUILayout.Space(8);
             GUILayout.Label("<b>Robber</b>");
@@ -148,40 +155,6 @@ namespace CatanRoguelike.Game
 
             if (GUILayout.Button("End Day"))
                 _controller.EndPlayerDay();
-        }
-
-        private void DrawPlacementButtons()
-        {
-            var settlements = _controller.GetValidSettlements(PlayerId.Human).ToList();
-            var roads = _controller.GetValidRoads(PlayerId.Human).ToList();
-
-            if (settlements.Count > 0)
-            {
-                _settlementSpotIndex = Mathf.Clamp(_settlementSpotIndex, 0, settlements.Count - 1);
-                GUILayout.Label($"Settlement spot {_settlementSpotIndex + 1}/{settlements.Count}");
-                if (GUILayout.Button("◀")) _settlementSpotIndex = Mathf.Max(0, _settlementSpotIndex - 1);
-                if (GUILayout.Button("Place Settlement ▶"))
-                    _controller.PlaceSettlement(settlements[_settlementSpotIndex], PlayerId.Human);
-                if (GUILayout.Button("▶")) _settlementSpotIndex = Mathf.Min(settlements.Count - 1, _settlementSpotIndex + 1);
-            }
-            else
-            {
-                GUILayout.Label("No valid settlement spots.");
-            }
-
-            if (roads.Count > 0)
-            {
-                _roadSpotIndex = Mathf.Clamp(_roadSpotIndex, 0, roads.Count - 1);
-                GUILayout.Label($"Road spot {_roadSpotIndex + 1}/{roads.Count}");
-                if (GUILayout.Button("◀ Road")) _roadSpotIndex = Mathf.Max(0, _roadSpotIndex - 1);
-                if (GUILayout.Button("Place Road ▶"))
-                    _controller.PlaceRoad(roads[_roadSpotIndex], PlayerId.Human);
-                if (GUILayout.Button("Road ▶")) _roadSpotIndex = Mathf.Min(roads.Count - 1, _roadSpotIndex + 1);
-            }
-            else
-            {
-                GUILayout.Label("No valid road spots.");
-            }
         }
 
         private void DrawResourcePicker()

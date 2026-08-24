@@ -28,11 +28,21 @@ namespace CatanRoguelike.Editor
 
             var gameGo = new GameObject("Game");
             var boardView = gameGo.AddComponent<BoardView>();
+            var boardInput = gameGo.AddComponent<BoardInputController>();
             var ui = gameGo.AddComponent<PlaceholderUI>();
             var manager = gameGo.AddComponent<GameManager>();
 
+            // IMGUI needs an EventSystem for click-through detection
+            if (Object.FindObjectOfType<UnityEngine.EventSystems.EventSystem>() == null)
+            {
+                var es = new GameObject("EventSystem");
+                es.AddComponent<UnityEngine.EventSystems.EventSystem>();
+                es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+            }
+
             var so = new SerializedObject(manager);
             so.FindProperty("boardView").objectReferenceValue = boardView;
+            so.FindProperty("boardInput").objectReferenceValue = boardInput;
             so.FindProperty("ui").objectReferenceValue = ui;
             so.FindProperty("randomSeed").intValue = 42;
             so.ApplyModifiedPropertiesWithoutUndo();

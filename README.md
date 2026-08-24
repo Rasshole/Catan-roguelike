@@ -7,17 +7,21 @@ Catan-inspireret roguelike prototype med dag/nat-cyklus, yield-rolls, shop, udvi
 - **Unity 2022.3 LTS** (eller nyere LTS — ret `ProjectSettings/ProjectVersion.txt` hvis din version afviger)
 - Windows PC target
 
-## Kom i gang
+## Sådan starter du (på din PC)
 
-1. Åbn **Unity Hub** → **Add** → vælg denne mappe (`Catan-roguelike`)
-2. Unity importerer projektet (første gang kan tage et par minutter)
-3. Kør menuen **Catan Roguelike → Setup Game Scene** (opretter `Assets/_Project/Scenes/Game.unity` med kamera, bord og GameManager)
-4. Åbn `Game`-scenen og tryk **Play**
+1. Pull repoet
+2. Åbn mappen i **Unity Hub** (2022.3 LTS eller din LTS-version)
+3. Kør menuen **Catan Roguelike → Setup Game Scene** — dette opretter `Game.unity` (se forklaring nedenfor)
+4. Åbn `Assets/_Project/Scenes/Game.unity` og tryk **Play**
 
-## Kontroller (placeholder)
+### Hvad betyder "Setup Game Scene"?
 
-- **Q / E** — roter kamera omkring brættet
-- **IMGUI-panel** (venstre) — ressourcer, rolls, kort, shop, byg-knapper
+Unity-spil består af en **scene-fil** (`.unity`) med kamera, lys, GameManager osv. Den scene er **ikke gemt i git** endnu — den genereres af et editor-script første gang du åbner projektet. Du skal bare køre menu-punktet én gang; derefter ligger scenen på din computer og du kan åbne den direkte.
+
+**Kontroller:**
+- **Klik på brættet** — grøn markør = settlement (hjørne), gul markør = vej (kant)
+- **Q / E** — roter kamera
+- **IMGUI-panel** (venstre) — ressourcer, rolls, kort, shop, build-mode
 
 ## Spilflow (v1 prototype)
 

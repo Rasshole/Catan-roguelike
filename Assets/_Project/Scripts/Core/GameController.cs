@@ -31,6 +31,7 @@ namespace CatanRoguelike.Core
         {
             var board = MapPresets.CreateBoard(useThirteenHex);
             State = new GameState(board);
+            State.Ports = PortAccess.DiscoverPorts(board);
             Placement = new PlacementValidator();
             RollEngine = new RollEngine(seed);
             CardEngine = new CardEngine(seed);
@@ -132,6 +133,9 @@ namespace CatanRoguelike.Core
         }
 
         public bool BuyShopDeal(ShopDeal deal) => Shop.TryPurchase(State, PlayerId.Human, deal);
+
+        public int GetShopDealCost(ShopDeal deal) =>
+            Shop.GetEffectiveGiveAmount(State, PlayerId.Human, deal);
 
         public bool PlayPlayerCard(CardId card, ResourceType? resource = null,
             HexCoord? robberTile = null, Edge? road = null)

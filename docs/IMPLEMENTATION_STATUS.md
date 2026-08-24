@@ -37,8 +37,9 @@ Last updated after gap-fill pass.
 
 ## Still polish / future (not blocking logic)
 
-- [ ] Click-to-place on hex vertices (now: cycle valid spots with ◀ ▶ buttons)
-- [ ] Vertex-accurate 3D building positions (now: hex centers)
+- [x] Click-to-place on hex vertices and edges
+- [x] Vertex-accurate 3D building/road positions
+- [x] Shop: 3 daily trades + port bonus (2:1)
 - [ ] Proper hex mesh + miniature art (bordspils-look)
 - [ ] Real UI (uGUI / UI Toolkit) instead of IMGUI
 - [ ] Committed Game.unity scene (use editor menu to generate)

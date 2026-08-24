@@ -21,6 +21,7 @@ namespace CatanRoguelike.Core
         public List<CardId> PlayerHand { get; } = new();
         public List<CardId> AiHand { get; } = new();
         public List<ShopDeal> ShopDeals { get; set; } = new();
+        public List<PortDefinition> Ports { get; set; } = new();
 
         public int PlayerVictoryPoints { get; set; }
         public int AiVictoryPoints { get; set; }
