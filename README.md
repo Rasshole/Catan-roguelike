@@ -4,7 +4,7 @@ Catan-inspireret roguelike prototype med dag/nat-cyklus, yield-rolls, shop, udvi
 
 ## Krav
 
-- **Unity 6** (6000.x) eller nyere LTS — *bekræft din version når du er klar*
+- **Unity 2022.3 LTS** (eller nyere LTS — ret `ProjectSettings/ProjectVersion.txt` hvis din version afviger)
 - Windows PC target
 
 ## Kom i gang

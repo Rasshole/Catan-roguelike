@@ -10,19 +10,31 @@ namespace CatanRoguelike.Core.Cards
     public sealed class CardEngine
     {
         private readonly Random _random;
+        private readonly RollEngine _rollEngine;
 
         public CardEngine(int? seed = null)
         {
             _random = seed.HasValue ? new Random(seed.Value) : new Random();
+            _rollEngine = new RollEngine(seed);
         }
 
         public CardId DrawCard(bool forAi = false)
         {
-            var pool = forAi
-                ? CardLibrary.AiPool.ToList()
-                : CardLibrary.AllCards.ToList();
+            var pool = (forAi ? CardLibrary.AiPool : CardLibrary.AllCards)
+                .Where(id => CardLibrary.Get(id).AiCanUse || !forAi)
+                .ToList();
 
-            return pool[_random.Next(pool.Count)];
+            if (pool.Count == 0) return CardId.Knight;
+
+            float totalWeight = pool.Sum(id => CardLibrary.Get(id).AiWeight);
+            float roll = (float)(_random.NextDouble() * totalWeight);
+            float acc = 0f;
+            foreach (var id in pool)
+            {
+                acc += CardLibrary.Get(id).AiWeight;
+                if (roll <= acc) return id;
+            }
+            return pool[^1];
         }
 
         public void DrawToHand(GameState state, PlayerId player, int count = 1)
@@ -52,9 +64,11 @@ namespace CatanRoguelike.Core.Cards
                 CardId.Monopoly => ApplyMonopoly(state, player, targetResource),
                 CardId.Knight => ApplyKnight(state, player, robberTarget),
                 CardId.BanditRaid => ApplyBanditRaid(state, player, roadTarget),
-                CardId.RoadBuilder => ApplyRoadBuilder(state, player),
-                CardId.MasterBuilder => ApplyMasterBuilder(state, player),
+                CardId.RoadBuilder => ApplyRoadBuilder(state),
+                CardId.MasterBuilder => ApplyMasterBuilder(state),
                 CardId.Forecast => ApplyForecast(state, targetResource),
+                CardId.Embargo => ApplyEmbargo(state, targetResource),
+                CardId.HarborCharter => ApplyHarborCharter(state),
                 _ => false
             };
 
@@ -144,13 +158,13 @@ namespace CatanRoguelike.Core.Cards
             return true;
         }
 
-        private bool ApplyRoadBuilder(GameState state, PlayerId player)
+        private static bool ApplyRoadBuilder(GameState state)
         {
             state.PendingCard = CardId.RoadBuilder;
             return true;
         }
 
-        private bool ApplyMasterBuilder(GameState state, PlayerId player)
+        private static bool ApplyMasterBuilder(GameState state)
         {
             state.PendingCard = CardId.MasterBuilder;
             return true;
@@ -159,8 +173,20 @@ namespace CatanRoguelike.Core.Cards
         private bool ApplyForecast(GameState state, ResourceType? resource)
         {
             if (!resource.HasValue) return false;
-            var engine = new RollEngine();
-            state.TomorrowRolls[resource.Value] = engine.RollResource(resource.Value, 2);
+            _rollEngine.RerollResource(state.TomorrowRolls, resource.Value, 2);
+            return true;
+        }
+
+        private static bool ApplyEmbargo(GameState state, ResourceType? resource)
+        {
+            if (!resource.HasValue) return false;
+            state.AiShopEmbargo = resource.Value;
+            return true;
+        }
+
+        private static bool ApplyHarborCharter(GameState state)
+        {
+            state.HarborCharterPending = true;
             return true;
         }
     }

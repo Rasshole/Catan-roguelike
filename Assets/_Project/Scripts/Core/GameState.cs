@@ -28,8 +28,20 @@ namespace CatanRoguelike.Core
         public PlayerId? Winner { get; set; }
         public string StatusMessage { get; set; } = "";
 
+        /// <summary>Active card effect waiting to be consumed on next build.</summary>
         public CardId? PendingCard { get; set; }
+
+        /// <summary>Next coastal settlement grants +1 VP (Harbor Charter).</summary>
+        public bool HarborCharterPending { get; set; }
+
+        /// <summary>AI cannot use shop deals that cost this resource today.</summary>
+        public ResourceType? AiShopEmbargo { get; set; }
+
         public bool IsSetupPhase => Phase <= GamePhase.SetupPlayerRoad2;
+
+        public bool IsNightPhase => Phase == GamePhase.NightPlayCard
+            || Phase == GamePhase.NightRoll
+            || Phase == GamePhase.NightAiPlan;
 
         public GameState(BoardState board)
         {

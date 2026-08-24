@@ -140,12 +140,15 @@ namespace CatanRoguelike.Game
                 go.transform.localPosition = new Vector3(x, 0.12f, z);
                 go.transform.localScale = new Vector3(0.08f, 0.04f, 0.4f);
 
+                bool disabled = state.Board.DisabledRoads.Contains(road.Key);
                 var renderer = go.GetComponent<Renderer>();
                 renderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit")
                     ?? Shader.Find("Standard"));
-                renderer.material.color = road.Value == PlayerId.Human
-                    ? new Color(0.3f, 0.5f, 1f)
-                    : new Color(1f, 0.3f, 0.3f);
+                renderer.material.color = disabled
+                    ? Color.gray
+                    : road.Value == PlayerId.Human
+                        ? new Color(0.3f, 0.5f, 1f)
+                        : new Color(1f, 0.3f, 0.3f);
             }
         }
 

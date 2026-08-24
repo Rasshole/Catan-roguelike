@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Map;
 
@@ -66,6 +65,11 @@ namespace CatanRoguelike.Core.Shop
 
         public bool TryPurchase(GameState state, PlayerId player, ShopDeal deal)
         {
+            if (player == PlayerId.Ai
+                && state.AiShopEmbargo.HasValue
+                && state.AiShopEmbargo.Value == deal.Give)
+                return false;
+
             var inv = state.GetInventory(player);
             var cost = new ResourceBundle();
             cost.Set(deal.Give, deal.GiveAmount);

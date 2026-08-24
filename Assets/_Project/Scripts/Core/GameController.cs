@@ -51,12 +51,20 @@ namespace CatanRoguelike.Core
 
             if (!setup)
             {
-                var cost = BalanceConfig.GetSettlementCost(State.Board, player);
+                var cost = GetEffectiveCost(player, BalanceConfig.GetSettlementCost(State.Board, player));
                 if (!TryPay(player, cost)) return false;
             }
 
             State.Board.VertexBuildings[vertex] = (BuildingType.Settlement, player);
             _lastPlacedSettlement = vertex;
+
+            if (State.HarborCharterPending && player == PlayerId.Human && IsCoastalVertexOnBoard(vertex))
+            {
+                State.AddVictoryPoints(player, 1);
+                State.HarborCharterPending = false;
+                State.StatusMessage = "Harbor Charter: +1 VP for coastal settlement!";
+            }
+
             AdvanceSetupAfterSettlement(player);
             VictoryCalculator.RefreshVictoryPoints(State);
             NotifyChanged();
@@ -71,11 +79,21 @@ namespace CatanRoguelike.Core
             if (!Placement.CanPlaceRoad(State.Board, edge, player, setup))
                 return false;
 
-            var cost = BalanceConfig.GetRoadCost(State.Board, player);
-            if (!setup && !TryPay(player, cost)) return false;
+            bool freeRoad = !setup && State.PendingCard == CardId.RoadBuilder && player == PlayerId.Human;
+
+            if (!setup && !freeRoad)
+            {
+                var cost = GetEffectiveCost(player, BalanceConfig.GetRoadCost(State.Board, player));
+                if (!TryPay(player, cost)) return false;
+            }
 
             State.Board.Roads[edge] = player;
+
+            if (freeRoad)
+                State.PendingCard = null;
+
             AdvanceSetupAfterRoad(player);
+            VictoryCalculator.RefreshVictoryPoints(State);
             NotifyChanged();
             return true;
         }
@@ -85,11 +103,30 @@ namespace CatanRoguelike.Core
             vertex = VertexGraph.Canonicalize(vertex);
             if (!Placement.CanUpgradeToCity(State.Board, vertex, player)) return false;
 
-            var cost = BalanceConfig.GetCityCost(State.Board, player);
+            var cost = GetEffectiveCost(player, BalanceConfig.GetCityCost(State.Board, player));
             if (!TryPay(player, cost)) return false;
 
             State.Board.VertexBuildings[vertex] = (BuildingType.City, player);
+
+            if (State.PendingCard == CardId.MasterBuilder && player == PlayerId.Human)
+                State.PendingCard = null;
+
             VictoryCalculator.RefreshVictoryPoints(State);
+            NotifyChanged();
+            return true;
+        }
+
+        public bool MoveRobber(HexCoord tile, PlayerId player, bool steal = false)
+        {
+            if (!State.Board.TryGetTile(tile, out _)) return false;
+            State.Board.PlaceRobber(tile);
+
+            if (steal)
+            {
+                var opponent = player == PlayerId.Human ? PlayerId.Ai : PlayerId.Human;
+                StealRandomResource(opponent, player);
+            }
+
             NotifyChanged();
             return true;
         }
@@ -129,6 +166,7 @@ namespace CatanRoguelike.Core
         private void EndDay()
         {
             State.Board.DisabledRoads.Clear();
+            State.AiShopEmbargo = null;
             State.Board.DayNumber++;
             var winner = VictoryCalculator.CheckWinner(State);
             if (winner.HasValue)
@@ -226,17 +264,8 @@ namespace CatanRoguelike.Core
                 {
                     GamePhase.SetupPlayerRoad1 => "Place your first road.",
                     GamePhase.SetupPlayerRoad2 => "Place your second road.",
-                    GamePhase.SetupPlayerSettlement2 => "Place your second settlement.",
                     _ => "Your turn."
                 };
-
-                if (State.Phase == GamePhase.SetupPlayerSettlement2)
-                    State.StatusMessage = "Place your second settlement.";
-
-                if (State.Phase == GamePhase.NightRoll || State.Phase == GamePhase.SetupPlayerRoad2)
-                {
-                    // After player road 2, start game
-                }
             }
         }
 
@@ -275,13 +304,65 @@ namespace CatanRoguelike.Core
         public IEnumerable<Edge> GetValidRoads(PlayerId player) =>
             Placement.GetValidRoadSpots(State.Board, player, State.IsSetupPhase);
 
+        public IEnumerable<Vertex> GetUpgradeableCities(PlayerId player) =>
+            State.Board.VertexBuildings
+                .Where(kv => kv.Value.owner == player && kv.Value.type == BuildingType.Settlement)
+                .Select(kv => kv.Key);
+
+        public ResourceBundle GetEffectiveCost(PlayerId player, ResourceBundle baseCost)
+        {
+            if (player != PlayerId.Human || State.PendingCard != CardId.MasterBuilder)
+                return baseCost;
+
+            return new ResourceBundle
+            {
+                Wood = Discount(baseCost.Wood),
+                Brick = Discount(baseCost.Brick),
+                Wheat = Discount(baseCost.Wheat),
+                Sheep = Discount(baseCost.Sheep),
+                Stone = Discount(baseCost.Stone)
+            };
+        }
+
+        private static int Discount(int value) =>
+            value == 0 ? 0 : Math.Max(1, (int)Math.Ceiling(value * 0.75f));
+
         private bool TryPay(PlayerId player, ResourceBundle cost)
         {
+            cost = GetEffectiveCost(player, cost);
             var inv = State.GetInventory(player);
             if (!inv.CanAfford(cost)) return false;
             inv.Pay(cost);
             State.SetInventory(player, inv);
+
+            if (player == PlayerId.Human && State.PendingCard == CardId.MasterBuilder)
+                State.PendingCard = null;
+
             return true;
+        }
+
+        private void StealRandomResource(PlayerId from, PlayerId to)
+        {
+            var oppInv = State.GetInventory(from);
+            var available = oppInv.EnumerateNonZero().ToList();
+            if (available.Count == 0) return;
+
+            var pick = available[new Random().Next(available.Count)];
+            oppInv.Add(pick.type, -1);
+            var inv = State.GetInventory(to);
+            inv.Add(pick.type, 1);
+            State.SetInventory(from, oppInv);
+            State.SetInventory(to, inv);
+        }
+
+        private bool IsCoastalVertexOnBoard(Vertex vertex)
+        {
+            foreach (var hex in VertexGraph.GetHexesForVertex(vertex))
+            {
+                if (State.Board.TryGetTile(hex, out var tile) && tile.IsCoastal)
+                    return true;
+            }
+            return false;
         }
 
         private static Edge NormalizeEdge(Edge edge) =>

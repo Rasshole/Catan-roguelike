@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using CatanRoguelike.Core;
+using CatanRoguelike.Core.Data;
 
 namespace CatanRoguelike.Core.Yield
 {
@@ -18,20 +18,20 @@ namespace CatanRoguelike.Core.Yield
         {
             var rolls = new Dictionary<ResourceType, int>();
             foreach (ResourceType resource in Enum.GetValues(typeof(ResourceType)))
-            {
                 rolls[resource] = RollSingle(maxRoll);
-            }
 
-            ApplyCap(rolls, 0, maxRoll);
-            ApplyCap(rolls, maxRoll, maxRoll);
-
+            ApplyGlobalCaps(rolls, maxRoll);
             return rolls;
         }
 
-        public int RollResource(ResourceType resource, int maxRoll = 2)
+        /// <summary>Reroll one resource and re-apply global caps to the full set.</summary>
+        public void RerollResource(Dictionary<ResourceType, int> rolls, ResourceType resource, int maxRoll = 2)
         {
-            return RollSingle(maxRoll);
+            rolls[resource] = RollSingle(maxRoll);
+            ApplyGlobalCaps(rolls, maxRoll);
         }
+
+        public int RollSingleResource(int maxRoll = 2) => RollSingle(maxRoll);
 
         private int RollSingle(int maxRoll)
         {
@@ -44,7 +44,6 @@ namespace CatanRoguelike.Core.Yield
                 return 2;
             }
 
-            // Late game 0-3 distribution
             int[] weights = { 15, 45, 25, 15 };
             int sum = weights.Sum();
             int r = _random.Next(sum);
@@ -57,11 +56,15 @@ namespace CatanRoguelike.Core.Yield
             return 1;
         }
 
-        /// <summary>50/50 elimination until exactly one resource keeps targetValue.</summary>
-        private void ApplyCap(Dictionary<ResourceType, int> rolls, int targetValue, int maxRoll)
+        private void ApplyGlobalCaps(Dictionary<ResourceType, int> rolls, int maxRoll)
         {
-            if (maxRoll < targetValue) return;
+            ApplyCap(rolls, 0);
+            ApplyCap(rolls, maxRoll);
+        }
 
+        /// <summary>50/50 elimination until exactly one resource keeps targetValue.</summary>
+        private void ApplyCap(Dictionary<ResourceType, int> rolls, int targetValue)
+        {
             var contenders = rolls.Where(kv => kv.Value == targetValue).Select(kv => kv.Key).ToList();
             while (contenders.Count > 1)
             {
