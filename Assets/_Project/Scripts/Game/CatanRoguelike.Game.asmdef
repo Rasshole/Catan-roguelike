@@ -1,0 +1,16 @@
+{
+    "name": "CatanRoguelike.Game",
+    "rootNamespace": "CatanRoguelike.Game",
+    "references": [
+        "CatanRoguelike.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
