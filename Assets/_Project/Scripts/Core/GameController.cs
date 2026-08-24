@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using CatanRoguelike.Core.Cards;
-using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Buildings;
+using CatanRoguelike.Core.Events;
+using CatanRoguelike.Core.Leaders;
+using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Shop;
@@ -22,13 +24,16 @@ namespace CatanRoguelike.Core
         public CardEngine CardEngine { get; }
         public ShopGenerator Shop { get; }
         public AiController Ai { get; }
+        public EventEngine Events { get; }
 
         public event Action<GameState> OnStateChanged;
 
+        private readonly Random _random;
         private Vertex? _lastPlacedSettlement;
 
         public GameController(int? seed = null, bool useThirteenHex = false)
         {
+            _random = seed.HasValue ? new Random(seed.Value) : new Random();
             var board = MapPresets.CreateBoard(useThirteenHex);
             State = new GameState(board);
             State.Ports = PortAccess.DiscoverPorts(board);
@@ -37,7 +42,8 @@ namespace CatanRoguelike.Core
             CardEngine = new CardEngine(seed);
             Shop = new ShopGenerator(seed);
             Ai = new AiController(seed);
-            State.StatusMessage = "AI places first settlement...";
+            Events = new EventEngine(seed);
+            State.StatusMessage = "Choose your leader.";
         }
 
         public void NotifyChanged() => OnStateChanged?.Invoke(State);
@@ -52,7 +58,11 @@ namespace CatanRoguelike.Core
 
             if (!setup)
             {
-                var cost = GetEffectiveCost(player, BalanceConfig.GetSettlementCost(State.Board, player));
+                var baseCost = BalanceConfig.GetSettlementCost(State.Board, player,
+                    ModifierService.GetSettlementThreshold(State));
+                baseCost = ModifierService.ApplyLeaderCostModifiers(State, player, baseCost,
+                    isSettlement: true, isCity: false, isRoad: false);
+                var cost = GetEffectiveCost(player, baseCost);
                 if (!TryPay(player, cost)) return false;
             }
 
@@ -80,18 +90,30 @@ namespace CatanRoguelike.Core
             if (!Placement.CanPlaceRoad(State.Board, edge, player, setup))
                 return false;
 
-            bool freeRoad = !setup && State.PendingCard == CardId.RoadBuilder && player == PlayerId.Human;
+            bool freeRoad = !setup && player == PlayerId.Human && (
+                State.PendingCard == CardId.RoadBuilder && State.FreeRoadCharges > 0
+                || State.Leader == LeaderId.Pioneer && State.PioneerFreeRoadAvailable);
 
             if (!setup && !freeRoad)
             {
-                var cost = GetEffectiveCost(player, BalanceConfig.GetRoadCost(State.Board, player));
+                var baseCost = ModifierService.ApplyLeaderCostModifiers(State, player,
+                    BalanceConfig.GetRoadCost(State.Board, player), false, false, true);
+                var cost = GetEffectiveCost(player, baseCost);
                 if (!TryPay(player, cost)) return false;
             }
 
             State.Board.Roads[edge] = player;
 
             if (freeRoad)
-                State.PendingCard = null;
+            {
+                if (State.PendingCard == CardId.RoadBuilder && State.FreeRoadCharges > 0)
+                {
+                    State.FreeRoadCharges--;
+                    if (State.FreeRoadCharges <= 0) State.PendingCard = null;
+                }
+                else
+                    State.PioneerFreeRoadAvailable = false;
+            }
 
             AdvanceSetupAfterRoad(player);
             VictoryCalculator.RefreshVictoryPoints(State);
@@ -104,10 +126,19 @@ namespace CatanRoguelike.Core
             vertex = VertexGraph.Canonicalize(vertex);
             if (!Placement.CanUpgradeToCity(State.Board, vertex, player)) return false;
 
-            var cost = GetEffectiveCost(player, BalanceConfig.GetCityCost(State.Board, player));
+            var baseCity = ModifierService.ApplyLeaderCostModifiers(State, player,
+                BalanceConfig.GetCityCost(State.Board, player), false, true, false);
+            var cost = GetEffectiveCost(player, baseCity);
             if (!TryPay(player, cost)) return false;
 
             State.Board.VertexBuildings[vertex] = (BuildingType.City, player);
+
+            if (player == PlayerId.Human && !State.FirstCityBuiltThisRun)
+            {
+                State.FirstCityBuiltThisRun = true;
+                if (State.HasPerk(LevelUpPerkId.FirstCityVp))
+                    State.AddVictoryPoints(player, 1);
+            }
 
             if (State.PendingCard == CardId.MasterBuilder && player == PlayerId.Human)
                 State.PendingCard = null;
@@ -169,9 +200,37 @@ namespace CatanRoguelike.Core
 
         private void EndDay()
         {
+            Events.ClearDailyEventEffects(State);
             State.Board.DisabledRoads.Clear();
-            State.AiShopEmbargo = null;
+
+            if (State.AiEmbargoDaysLeft > 0)
+            {
+                State.AiEmbargoDaysLeft--;
+                if (State.AiEmbargoDaysLeft <= 0) State.AiShopEmbargo = null;
+            }
+            else
+                State.AiShopEmbargo = null;
+
             State.Board.DayNumber++;
+
+            if (RunProgression.ShouldOfferLevelUp(State))
+            {
+                State.PendingLevelUpChoices.Clear();
+                State.PendingLevelUpChoices.AddRange(RunProgression.GenerateLevelUpChoices(State, _random));
+                if (State.PendingLevelUpChoices.Count > 0)
+                {
+                    State.Phase = GamePhase.LevelUpChoice;
+                    State.StatusMessage = "Level up! Choose a perk.";
+                    NotifyChanged();
+                    return;
+                }
+            }
+
+            ContinueAfterDayIncrement();
+        }
+
+        private void ContinueAfterDayIncrement()
+        {
             var winner = VictoryCalculator.CheckWinner(State);
             if (winner.HasValue)
             {
@@ -185,16 +244,73 @@ namespace CatanRoguelike.Core
             BeginNight();
         }
 
+        public void SelectLeader(LeaderId leader)
+        {
+            if (State.Phase != GamePhase.RunSelectLeader) return;
+            State.Leader = leader;
+            State.Phase = GamePhase.RunSelectDraft;
+            State.StatusMessage = $"Leader: {LeaderLibrary.Get(leader).Name}. Draft {RunProgression.DraftPickCount} uniques.";
+            NotifyChanged();
+        }
+
+        public void ToggleDraftUnique(UniqueBuildingId id)
+        {
+            if (State.Phase != GamePhase.RunSelectDraft) return;
+            if (State.DraftedUniques.Contains(id))
+                State.DraftedUniques.Remove(id);
+            else if (State.DraftedUniques.Count < RunProgression.DraftPickCount)
+                State.DraftedUniques.Add(id);
+            NotifyChanged();
+        }
+
+        public void ConfirmRunSetup()
+        {
+            if (State.Phase != GamePhase.RunSelectDraft) return;
+            if (State.DraftedUniques.Count != RunProgression.DraftPickCount) return;
+
+            State.RunSetupComplete = true;
+            State.Phase = GamePhase.SetupAiSettlement1;
+            State.StatusMessage = "AI places first settlement...";
+            RunAiSetupStep();
+            NotifyChanged();
+        }
+
+        public void ChooseLevelUpPerk(LevelUpPerkId perk)
+        {
+            if (State.Phase != GamePhase.LevelUpChoice) return;
+            if (!State.PendingLevelUpChoices.Contains(perk)) return;
+
+            State.AcquiredPerks.Add(perk);
+            State.LevelUpsTaken++;
+            State.LastLevelUpDay = State.Board.DayNumber;
+            State.PendingLevelUpChoices.Clear();
+            State.StatusMessage = $"Gained: {LevelUpLibrary.GetDescription(perk)}";
+            ContinueAfterDayIncrement();
+            NotifyChanged();
+        }
+
         public void BeginNight()
         {
+            State.PioneerFreeRoadAvailable = State.Leader == LeaderId.Pioneer;
             State.Phase = GamePhase.NightRoll;
             State.TomorrowRolls = RollEngine.RollNightly(2);
 
-            CardEngine.DrawToHand(State, PlayerId.Human, BalanceConfig.CardsDrawnPerNight);
+            var eventId = Events.MaybeRollEvent();
+            if (eventId != EventId.None)
+                Events.ApplyEvent(State, eventId);
+
+            ModifierService.ApplyNightUniques(State);
+
+            int draws = BalanceConfig.CardsDrawnPerNight;
+            if (State.HasUnique(UniqueBuildingId.CaravanPost)) draws++;
+            if (State.HasPerk(LevelUpPerkId.ExtraCardDraw)) draws++;
+
+            CardEngine.DrawToHand(State, PlayerId.Human, draws);
             CardEngine.DrawToHand(State, PlayerId.Ai, 1);
 
             State.Phase = GamePhase.NightPlayCard;
-            State.StatusMessage = "Night: review tomorrow's rolls. Play a card or continue.";
+            string eventNote = State.ActiveEvent != EventId.None ? $" Event: {State.EventMessage}" : "";
+            State.StatusMessage = "Night: review tomorrow's rolls. Play a card or continue." + eventNote;
             NotifyChanged();
         }
 
@@ -207,7 +323,7 @@ namespace CatanRoguelike.Core
             State.Phase = GamePhase.DayProduction;
             ApplyProduction();
 
-            State.ShopDeals = Shop.GenerateDailyDeals();
+            State.ShopDeals = Shop.GenerateDailyDeals(State);
             State.Phase = GamePhase.DayPlayerActions;
             State.StatusMessage = "Day: build, shop, or end turn.";
             NotifyChanged();
@@ -215,8 +331,8 @@ namespace CatanRoguelike.Core
 
         private void ApplyProduction()
         {
-            var playerProd = ProductionCalculator.CalculateForPlayer(State.Board, PlayerId.Human, State.TodayRolls);
-            var aiProd = ProductionCalculator.CalculateForPlayer(State.Board, PlayerId.Ai, State.TodayRolls);
+            var playerProd = ProductionCalculator.CalculateForPlayer(State, PlayerId.Human, State.TodayRolls);
+            var aiProd = ProductionCalculator.CalculateForPlayer(State, PlayerId.Ai, State.TodayRolls);
 
             var pInv = State.PlayerInventory;
             pInv.Add(playerProd);
@@ -315,21 +431,26 @@ namespace CatanRoguelike.Core
 
         public ResourceBundle GetEffectiveCost(PlayerId player, ResourceBundle baseCost)
         {
-            if (player != PlayerId.Human || State.PendingCard != CardId.MasterBuilder)
-                return baseCost;
+            if (player != PlayerId.Human) return baseCost;
+
+            float discount = State.PendingCard == CardId.MasterBuilder ? 0.75f : 1f;
+            if (State.Leader == LeaderId.Architect && State.PendingCard == CardId.MasterBuilder)
+                discount = 0.65f;
+
+            if (discount >= 1f) return baseCost;
 
             return new ResourceBundle
             {
-                Wood = Discount(baseCost.Wood),
-                Brick = Discount(baseCost.Brick),
-                Wheat = Discount(baseCost.Wheat),
-                Sheep = Discount(baseCost.Sheep),
-                Stone = Discount(baseCost.Stone)
+                Wood = Discount(baseCost.Wood, discount),
+                Brick = Discount(baseCost.Brick, discount),
+                Wheat = Discount(baseCost.Wheat, discount),
+                Sheep = Discount(baseCost.Sheep, discount),
+                Stone = Discount(baseCost.Stone, discount)
             };
         }
 
-        private static int Discount(int value) =>
-            value == 0 ? 0 : Math.Max(1, (int)Math.Ceiling(value * 0.75f));
+        private static int Discount(int value, float factor) =>
+            value == 0 ? 0 : Math.Max(1, (int)Math.Ceiling(value * factor));
 
         private bool TryPay(PlayerId player, ResourceBundle cost)
         {

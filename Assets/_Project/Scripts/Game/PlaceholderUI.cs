@@ -2,15 +2,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using CatanRoguelike.Core;
+using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Cards;
 using CatanRoguelike.Core.Hex;
-using CatanRoguelike.Core.Shop;
+using CatanRoguelike.Core.Leaders;
+using CatanRoguelike.Core.Events;
+using CatanRoguelike.Core.Turn;
 using UnityEngine;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 
 namespace CatanRoguelike.Game
 {
-    /// <summary>Simple IMGUI placeholder until proper UI is chosen.</summary>
     public sealed class PlaceholderUI : MonoBehaviour
     {
         private GameController _controller;
@@ -34,11 +36,41 @@ namespace CatanRoguelike.Game
             if (_controller == null) return;
             var state = _controller.State;
 
-            GUILayout.BeginArea(new Rect(10, 10, 380, Screen.height - 20), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(10, 10, 400, Screen.height - 20), GUI.skin.box);
             _scroll = GUILayout.BeginScrollView(_scroll);
 
+            if (state.Phase == GamePhase.RunSelectLeader)
+            {
+                DrawLeaderSelect();
+                GUILayout.EndScrollView();
+                GUILayout.EndArea();
+                return;
+            }
+
+            if (state.Phase == GamePhase.RunSelectDraft)
+            {
+                DrawDraftSelect();
+                GUILayout.EndScrollView();
+                GUILayout.EndArea();
+                return;
+            }
+
+            if (state.Phase == GamePhase.LevelUpChoice)
+            {
+                DrawLevelUp();
+                GUILayout.EndScrollView();
+                GUILayout.EndArea();
+                return;
+            }
+
             GUILayout.Label($"<b>Day {state.Board.DayNumber}</b> — {state.Phase}");
+            GUILayout.Label($"<b>Leader:</b> {LeaderLibrary.Get(state.Leader).Name}");
+            if (state.DraftedUniques.Count > 0)
+                GUILayout.Label($"<b>Uniques:</b> {string.Join(", ", state.DraftedUniques)}");
             GUILayout.Label(state.StatusMessage);
+
+            if (state.ActiveEvent != Events.EventId.None)
+                GUILayout.Label($"<color=orange><b>Event:</b> {state.EventMessage}</color>");
 
             if (state.PendingCard.HasValue)
                 GUILayout.Label($"<color=yellow>Pending: {CardLibrary.Get(state.PendingCard.Value).Name}</color>");
@@ -56,6 +88,7 @@ namespace CatanRoguelike.Game
 
             GUILayout.Space(8);
             GUILayout.Label($"<b>VP:</b> You {state.PlayerVictoryPoints} | AI {state.AiVictoryPoints}");
+            GUILayout.Label($"<b>Level ups:</b> {state.LevelUpsTaken}/{RunProgression.MaxLevelUpsPerRun}");
             GUILayout.Label(FormatResources("You", state.PlayerInventory));
             GUILayout.Label(FormatResources("AI", state.AiInventory));
 
@@ -72,6 +105,41 @@ namespace CatanRoguelike.Game
 
             GUILayout.EndScrollView();
             GUILayout.EndArea();
+        }
+
+        private void DrawLeaderSelect()
+        {
+            GUILayout.Label("<b>Choose your Leader</b>");
+            foreach (var kv in LeaderLibrary.All)
+            {
+                var def = kv.Value;
+                if (GUILayout.Button($"{def.Name}\n<i>{def.PassiveDescription}</i>"))
+                    _controller.SelectLeader(def.Id);
+            }
+        }
+
+        private void DrawDraftSelect()
+        {
+            GUILayout.Label($"<b>Draft {RunProgression.DraftPickCount} unique buildings</b> ({_controller.State.DraftedUniques.Count} selected)");
+            foreach (var kv in UniqueBuildingLibrary.All)
+            {
+                bool picked = _controller.State.DraftedUniques.Contains(kv.Key);
+                bool newPicked = GUILayout.Toggle(picked, $"{kv.Value.Name}: {kv.Value.Description}");
+                if (newPicked != picked)
+                    _controller.ToggleDraftUnique(kv.Key);
+            }
+            if (GUILayout.Button("Start Run"))
+                _controller.ConfirmRunSetup();
+        }
+
+        private void DrawLevelUp()
+        {
+            GUILayout.Label("<b>Level Up!</b> Choose one perk:");
+            foreach (var perk in _controller.State.PendingLevelUpChoices)
+            {
+                if (GUILayout.Button(LevelUpLibrary.GetDescription(perk)))
+                    _controller.ChooseLevelUpPerk(perk);
+            }
         }
 
         private void DrawRolls(GameState state)
@@ -101,15 +169,19 @@ namespace CatanRoguelike.Game
                     _selectedCardIndex = i;
             }
 
-            DrawResourcePicker();
-
-            if (state.PlayerHand.Count > 0 && GUILayout.Button("Play Selected Card"))
+            if (state.PlayerHand.Count > 0)
             {
                 var card = state.PlayerHand[_selectedCardIndex];
-                var resource = (ResourceType)_selectedResourceIndex;
-                HexCoord? robber = GetSelectedRobberTile(state);
-                Edge? road = GetSelectedOpponentRoad(state);
-                _controller.PlayPlayerCard(card, resource, robber, road);
+                if (card != CardId.Forecast)
+                    DrawResourcePicker();
+
+                if (GUILayout.Button("Play Selected Card"))
+                {
+                    var resource = (ResourceType)_selectedResourceIndex;
+                    HexCoord? robber = GetSelectedRobberTile(state);
+                    Edge? road = GetSelectedOpponentRoad(state);
+                    _controller.PlayPlayerCard(card, resource, robber, road);
+                }
             }
 
             if (GUILayout.Button("Skip Card → Start Day"))
@@ -119,22 +191,23 @@ namespace CatanRoguelike.Game
         private void DrawSetupActions()
         {
             GUILayout.Space(8);
-            GUILayout.Label("<b>Setup</b> — klik på grøn markør (hjørne) eller gul markør (vej)");
+            GUILayout.Label("<b>Setup</b> — klik grønt hjørne (settlement) eller gul kant (vej)");
         }
 
         private void DrawDayActions(GameState state)
         {
             GUILayout.Space(8);
-            GUILayout.Label("<b>Shop</b> (3 daglige trades, 4:1 — bedre med port)");
+            GUILayout.Label("<b>Shop</b> (3 trades; 3rd is often RISKY 2:1)");
             foreach (var deal in state.ShopDeals)
             {
                 int effective = _controller.GetShopDealCost(deal);
-                if (GUILayout.Button($"Buy: {deal.Format(effective)}"))
+                string risk = deal.IsRisky ? $"\n{deal.RiskDescription}" : "";
+                if (GUILayout.Button($"Buy: {deal.Format(effective)}{risk}"))
                     _controller.BuyShopDeal(deal);
             }
 
             GUILayout.Space(8);
-            GUILayout.Label("<b>Build</b> — klik hjørne (settlement) eller kant (vej)");
+            GUILayout.Label("<b>Build</b> — klik hjørne eller kant");
             if (_boardInput != null)
             {
                 GUILayout.BeginHorizontal();
@@ -144,10 +217,6 @@ namespace CatanRoguelike.Game
                 if (GUILayout.Button("City")) _boardInput.SetBuildModeCity();
                 GUILayout.EndHorizontal();
             }
-
-            var cities = _controller.GetUpgradeableCities(PlayerId.Human).ToList();
-            if (cities.Count > 0)
-                GUILayout.Label("Eller klik settlement i by-mode for at opgradere.");
 
             GUILayout.Space(8);
             GUILayout.Label("<b>Robber</b>");

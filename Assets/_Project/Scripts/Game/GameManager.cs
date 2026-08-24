@@ -25,7 +25,8 @@ namespace CatanRoguelike.Game
             if (boardInput != null)
                 boardInput.Initialize(Controller, boardView);
 
-            if (Controller.State.Phase == GamePhase.SetupAiSettlement1)
+            if (Controller.State.RunSetupComplete
+                && Controller.State.Phase == GamePhase.SetupAiSettlement1)
                 Controller.RunAiSetupStep();
         }
 

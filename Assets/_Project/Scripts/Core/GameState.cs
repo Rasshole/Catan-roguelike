@@ -1,16 +1,19 @@
-using System;
 using System.Collections.Generic;
+using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Cards;
+using CatanRoguelike.Core.Events;
+using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Turn;
+using CatanRoguelike.Core.Hex;
 
 namespace CatanRoguelike.Core
 {
     public sealed class GameState
     {
         public BoardState Board { get; }
-        public GamePhase Phase { get; set; } = GamePhase.SetupAiSettlement1;
+        public GamePhase Phase { get; set; } = GamePhase.RunSelectLeader;
 
         public ResourceBundle PlayerInventory { get; set; }
         public ResourceBundle AiInventory { get; set; }
@@ -27,22 +30,47 @@ namespace CatanRoguelike.Core
         public int AiVictoryPoints { get; set; }
 
         public PlayerId? Winner { get; set; }
-        public string StatusMessage { get; set; } = "";
+        public string StatusMessage { get; set; } = "Choose your leader.";
 
-        /// <summary>Active card effect waiting to be consumed on next build.</summary>
         public CardId? PendingCard { get; set; }
-
-        /// <summary>Next coastal settlement grants +1 VP (Harbor Charter).</summary>
         public bool HarborCharterPending { get; set; }
-
-        /// <summary>AI cannot use shop deals that cost this resource today.</summary>
         public ResourceType? AiShopEmbargo { get; set; }
+        public int AiEmbargoDaysLeft { get; set; }
+
+        // Run setup
+        public LeaderId Leader { get; set; } = LeaderId.Merchant;
+        public List<UniqueBuildingId> DraftedUniques { get; } = new();
+        public bool RunSetupComplete { get; set; }
+
+        // Level-ups (every 5 days, max 3)
+        public List<LevelUpPerkId> AcquiredPerks { get; } = new();
+        public List<LevelUpPerkId> PendingLevelUpChoices { get; } = new();
+        public int LevelUpsTaken { get; set; }
+        public int LastLevelUpDay { get; set; } = -1;
+
+        // Daily leader flags
+        public bool PioneerFreeRoadAvailable { get; set; }
+        public int FreeRoadCharges { get; set; }
+        public bool FirstCityBuiltThisRun { get; set; }
+
+        // Unique building flags
+        public bool MonasteryUsed { get; set; }
+
+        // Events
+        public EventId ActiveEvent { get; set; } = EventId.None;
+        public string EventMessage { get; set; } = "";
+        public HexCoord? EventStormTile { get; set; }
+        public bool EventStoneDouble { get; set; }
+        public int EventShopBonus { get; set; }
 
         public bool IsSetupPhase => Phase <= GamePhase.SetupPlayerRoad2;
 
         public bool IsNightPhase => Phase == GamePhase.NightPlayCard
             || Phase == GamePhase.NightRoll
             || Phase == GamePhase.NightAiPlan;
+
+        public bool HasPerk(LevelUpPerkId perk) => AcquiredPerks.Contains(perk);
+        public bool HasUnique(UniqueBuildingId id) => DraftedUniques.Contains(id);
 
         public GameState(BoardState board)
         {

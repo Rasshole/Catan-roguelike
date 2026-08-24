@@ -51,7 +51,7 @@ namespace CatanRoguelike.Core.Cards
             [CardId.MasterBuilder] = new(CardId.MasterBuilder, "Master Builder",
                 "Next building costs 25% less.", CardCategory.Synergy),
             [CardId.Forecast] = new(CardId.Forecast, "Forecast",
-                "Reroll one resource's tomorrow roll before cap is applied.", CardCategory.RollManipulation)
+                "Reroll all resource rolls for tomorrow (caps reapplied).", CardCategory.RollManipulation),
         };
 
         public static CardDefinition Get(CardId id) => Definitions[id];

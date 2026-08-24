@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using CatanRoguelike.Core;
+using CatanRoguelike.Core.Hex;
+using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
 
 namespace CatanRoguelike.Core.Shop
@@ -13,21 +14,25 @@ namespace CatanRoguelike.Core.Shop
         public ResourceType Receive { get; }
         public int ReceiveAmount { get; }
         public bool IsRisky { get; }
+        public string RiskDescription { get; }
 
-        public ShopDeal(ResourceType give, int giveAmount, ResourceType receive, int receiveAmount, bool risky = false)
+        public ShopDeal(ResourceType give, int giveAmount, ResourceType receive, int receiveAmount,
+            bool risky = false, string riskDescription = "")
         {
             Give = give;
             GiveAmount = giveAmount;
             Receive = receive;
             ReceiveAmount = receiveAmount;
             IsRisky = risky;
+            RiskDescription = riskDescription;
         }
 
         public string Format(int effectiveGive = -1)
         {
             int give = effectiveGive >= 0 ? effectiveGive : GiveAmount;
-            string portNote = effectiveGive >= 0 && effectiveGive < GiveAmount ? " (port)" : "";
-            return $"Give {give} {Give} → Get {ReceiveAmount} {Receive}{portNote}";
+            string risky = IsRisky ? " ⚠ RISKY" : "";
+            string bonus = effectiveGive >= 0 && effectiveGive < GiveAmount ? " (bonus)" : "";
+            return $"Give {give} {Give} → Get {ReceiveAmount} {Receive}{bonus}{risky}";
         }
 
         public override string ToString() => Format();
@@ -51,14 +56,18 @@ namespace CatanRoguelike.Core.Shop
 
         public const int DailyDealCount = 3;
         public const int BaseTradeRate = 4;
+        public const int RiskyTradeRate = 2;
 
         public ShopGenerator(int? seed = null)
         {
             _random = seed.HasValue ? new Random(seed.Value) : new Random();
         }
 
-        /// <summary>Exactly 3 distinct trades per day (default 4:1 bank rate).</summary>
-        public List<ShopDeal> GenerateDailyDeals()
+        /// <summary>
+        /// 3 trades per day; the 3rd is often a risky 2:1 deal.
+        /// Risky = better rate, but robber jumps to your best tile when purchased.
+        /// </summary>
+        public List<ShopDeal> GenerateDailyDeals(GameState state)
         {
             var shuffled = DealTemplates.OrderBy(_ => _random.Next()).ToList();
             var deals = new List<ShopDeal>(DailyDealCount);
@@ -66,7 +75,20 @@ namespace CatanRoguelike.Core.Shop
             for (int i = 0; i < DailyDealCount; i++)
             {
                 var (give, receive) = shuffled[i];
-                deals.Add(new ShopDeal(give, BaseTradeRate, receive, 1, risky: _random.Next(6) == 0));
+                bool risky = i == DailyDealCount - 1;
+                int rate = risky ? RiskyTradeRate : BaseTradeRate;
+                deals.Add(new ShopDeal(
+                    give, rate, receive, 1,
+                    risky: risky,
+                    riskDescription: risky
+                        ? "Robber moves to your best tile when you buy."
+                        : ""));
+            }
+
+            if (state.HasPerk(LevelUpPerkId.ExtraShopDeal) && shuffled.Count > DailyDealCount)
+            {
+                var extra = shuffled[DailyDealCount];
+                deals.Add(new ShopDeal(extra.give, BaseTradeRate, extra.receive, 1));
             }
 
             return deals;
@@ -74,7 +96,14 @@ namespace CatanRoguelike.Core.Shop
 
         public int GetEffectiveGiveAmount(GameState state, PlayerId player, ShopDeal deal)
         {
-            return PortAccess.GetEffectiveGiveAmount(state.Board, player, deal, state.Ports);
+            if (player == PlayerId.Ai
+                && state.AiShopEmbargo.HasValue
+                && state.AiShopEmbargo.Value == deal.Give)
+                return int.MaxValue;
+
+            int give = ModifierService.GetShopGiveAmount(state, player, deal.GiveAmount, deal.Give);
+            int portGive = PortAccess.GetEffectiveGiveAmount(state.Board, player, deal, state.Ports);
+            return Math.Min(give, portGive);
         }
 
         public bool TryPurchase(GameState state, PlayerId player, ShopDeal deal)
@@ -94,7 +123,38 @@ namespace CatanRoguelike.Core.Shop
             inv.Pay(cost);
             inv.Add(deal.Receive, deal.ReceiveAmount);
             state.SetInventory(player, inv);
+
+            if (deal.IsRisky && player == PlayerId.Human && !state.HasPerk(LevelUpPerkId.RiskyDealsSafe))
+                ApplyRiskyDealPenalty(state, player);
+
             return true;
+        }
+
+        private void ApplyRiskyDealPenalty(GameState state, PlayerId player)
+        {
+            var best = PickPlayerBestProductionTile(state, player);
+            if (best.HasValue)
+            {
+                state.Board.PlaceRobber(best.Value);
+                state.StatusMessage += " Risky deal: robber moved!";
+            }
+        }
+
+        private static HexCoord? PickPlayerBestProductionTile(GameState state, PlayerId player)
+        {
+            var counts = new Dictionary<HexCoord, int>();
+            foreach (var kvp in state.Board.VertexBuildings)
+            {
+                if (kvp.Value.owner != player) continue;
+                foreach (var hex in VertexGraph.GetHexesForVertex(kvp.Key))
+                {
+                    if (!state.Board.Tiles.ContainsKey(hex)) continue;
+                    counts.TryGetValue(hex, out int c);
+                    counts[hex] = c + 1;
+                }
+            }
+            if (counts.Count == 0) return null;
+            return counts.OrderByDescending(kv => kv.Value).First().Key;
         }
     }
 }

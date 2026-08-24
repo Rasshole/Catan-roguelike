@@ -2,6 +2,8 @@ namespace CatanRoguelike.Core.Turn
 {
     public enum GamePhase
     {
+        RunSelectLeader,
+        RunSelectDraft,
         SetupAiSettlement1,
         SetupAiRoad1,
         SetupAiSettlement2,
@@ -17,6 +19,7 @@ namespace CatanRoguelike.Core.Turn
         DayPlayerActions,
         DayAiTurn,
         DayEndCheck,
+        LevelUpChoice,
         GameOver
     }
 

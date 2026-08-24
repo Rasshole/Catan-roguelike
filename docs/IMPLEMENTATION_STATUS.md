@@ -26,14 +26,19 @@ Last updated after gap-fill pass.
 - [x] Placeholder IMGUI (setup, build, cards, shop, robber)
 - [x] EditMode tests (rolls, placement, production)
 
-## Explicitly out of scope (per your choice)
+## Explicitly out of scope (for now)
 
-- [ ] Meta progression
-- [ ] Leaders
-- [ ] Roguelike upgrades / draft uniques
+- [ ] Meta progression between runs (permanent unlocks)
 - [ ] Save/load
-- [ ] Act 2 / late-game 0–3 rolls
-- [ ] Events (storm, famine)
+
+## New in latest pass
+
+- [x] 4 Leaders with passives + mid-run level-ups (every 5 days, max 3)
+- [x] Draft 2 of 5 unique buildings at run start
+- [x] Random events (~22% per night)
+- [x] AI uses shop
+- [x] Risky shop deal (3rd trade: 2:1 but robber jumps to your best tile)
+- [x] Forecast rerolls ALL resources
 
 ## Still polish / future (not blocking logic)
 

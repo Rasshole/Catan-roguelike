@@ -5,6 +5,7 @@ using CatanRoguelike.Core.Cards;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Victory;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
@@ -68,6 +69,8 @@ namespace CatanRoguelike.Core
         {
             _hiddenIntent = "Expand economy";
 
+            TryShopPurchases(game);
+
             // Try city upgrade
             foreach (var kvp in game.State.Board.VertexBuildings)
             {
@@ -122,6 +125,32 @@ namespace CatanRoguelike.Core
             {
                 game.State.Board.PlaceRobber(robberTarget.Value);
                 _hiddenIntent = "Move robber";
+            }
+        }
+
+        private void TryShopPurchases(GameController game)
+        {
+            foreach (var deal in game.State.ShopDeals.ToList())
+            {
+                if (!game.State.AiInventory.CanAfford(new ResourceBundle())) continue;
+
+                int cost = game.Shop.GetEffectiveGiveAmount(game.State, PlayerId.Ai, deal);
+                var bundle = game.State.AiInventory;
+                var need = new ResourceBundle();
+                need.Set(deal.Give, cost);
+                if (!bundle.CanAfford(need)) continue;
+
+                // Buy if we need the receive resource for a build
+                if (deal.Receive == ResourceType.Wheat || deal.Receive == ResourceType.Stone
+                    || deal.Receive == ResourceType.Sheep || deal.Receive == ResourceType.Wood
+                    || deal.Receive == ResourceType.Brick)
+                {
+                    if (game.Shop.TryPurchase(game.State, PlayerId.Ai, deal))
+                    {
+                        _hiddenIntent = $"Bought shop deal ({deal.Receive})";
+                        break;
+                    }
+                }
             }
         }
 

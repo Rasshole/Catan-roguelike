@@ -52,8 +52,9 @@ namespace CatanRoguelike.Game
         }
 
         private bool IsPlayerBuildPhase() =>
-            _controller.State.IsSetupPhase
-            || _controller.State.Phase == GamePhase.DayPlayerActions;
+            _controller.State.RunSetupComplete
+            && (_controller.State.IsSetupPhase
+                || _controller.State.Phase == GamePhase.DayPlayerActions);
 
         private void UpdateHighlights()
         {

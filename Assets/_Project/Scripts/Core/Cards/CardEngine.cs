@@ -117,8 +117,11 @@ namespace CatanRoguelike.Core.Cards
             var opponent = player == PlayerId.Human ? PlayerId.Ai : PlayerId.Human;
             var oppInv = state.GetInventory(opponent);
             int amount = oppInv[resource.Value];
-            int steal = (amount + 1) / 2;
-            if (steal <= 0) return true;
+            if (amount <= 0) return true;
+
+            int steal = player == PlayerId.Human && state.HasPerk(Leaders.LevelUpPerkId.MonopolyFull)
+                ? amount
+                : (amount + 1) / 2;
 
             oppInv.Add(resource.Value, -steal);
             var inv = state.GetInventory(player);
@@ -134,17 +137,31 @@ namespace CatanRoguelike.Core.Cards
             state.Board.PlaceRobber(target.Value);
 
             var opponent = player == PlayerId.Human ? PlayerId.Ai : PlayerId.Human;
-            var oppInv = state.GetInventory(opponent);
-            var available = oppInv.EnumerateNonZero().ToList();
-            if (available.Count == 0) return true;
+            int steals = ModifierService.GetKnightStealAmount(state, player);
+            for (int i = 0; i < steals; i++)
+                StealOneRandom(opponent, player, state);
 
+            if (player == PlayerId.Human && state.HasPerk(Leaders.LevelUpPerkId.KnightMovesRobberTwice))
+            {
+                var humanRoads = state.Board.Roads.Where(kv => kv.Value == PlayerId.Ai).Select(kv => kv.Key).ToList();
+                if (humanRoads.Count > 0)
+                    state.Board.DisabledRoads.Add(humanRoads[_random.Next(humanRoads.Count)]);
+            }
+
+            return true;
+        }
+
+        private void StealOneRandom(PlayerId from, PlayerId to, GameState state)
+        {
+            var oppInv = state.GetInventory(from);
+            var available = oppInv.EnumerateNonZero().ToList();
+            if (available.Count == 0) return;
             var pick = available[_random.Next(available.Count)];
             oppInv.Add(pick.type, -1);
-            var inv = state.GetInventory(player);
+            var inv = state.GetInventory(to);
             inv.Add(pick.type, 1);
-            state.SetInventory(opponent, oppInv);
-            state.SetInventory(player, inv);
-            return true;
+            state.SetInventory(from, oppInv);
+            state.SetInventory(to, inv);
         }
 
         private bool ApplyBanditRaid(GameState state, PlayerId player, Hex.HexMath.Edge? edge)
@@ -161,6 +178,7 @@ namespace CatanRoguelike.Core.Cards
         private static bool ApplyRoadBuilder(GameState state)
         {
             state.PendingCard = CardId.RoadBuilder;
+            state.FreeRoadCharges = state.HasPerk(Leaders.LevelUpPerkId.DoubleRoadBuilder) ? 2 : 1;
             return true;
         }
 
@@ -172,8 +190,7 @@ namespace CatanRoguelike.Core.Cards
 
         private bool ApplyForecast(GameState state, ResourceType? resource)
         {
-            if (!resource.HasValue) return false;
-            _rollEngine.RerollResource(state.TomorrowRolls, resource.Value, 2);
+            state.TomorrowRolls = _rollEngine.RollNightly(2);
             return true;
         }
 
@@ -181,6 +198,7 @@ namespace CatanRoguelike.Core.Cards
         {
             if (!resource.HasValue) return false;
             state.AiShopEmbargo = resource.Value;
+            state.AiEmbargoDaysLeft = state.HasPerk(Leaders.LevelUpPerkId.EmbargoExtended) ? 2 : 1;
             return true;
         }
 

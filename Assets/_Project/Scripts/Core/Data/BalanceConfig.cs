@@ -26,11 +26,11 @@ namespace CatanRoguelike.Core.Data
 
         public static ResourceBundle CityCost => new() { Wheat = 2, Stone = 3 };
 
-        public static ResourceBundle GetSettlementCost(BoardState board, PlayerId player)
+        public static ResourceBundle GetSettlementCost(BoardState board, PlayerId player, int threshold = SettlementThresholdCount)
         {
             int count = board.CountBuildings(player, BuildingType.Settlement)
                       + board.CountBuildings(player, BuildingType.City);
-            return ApplyThreshold(SettlementCost, count, SettlementThresholdCount, SettlementThresholdMultiplier);
+            return ApplyThreshold(SettlementCost, count, threshold, SettlementThresholdMultiplier);
         }
 
         public static ResourceBundle GetRoadCost(BoardState board, PlayerId player)
