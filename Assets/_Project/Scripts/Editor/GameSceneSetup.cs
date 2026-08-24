@@ -1,4 +1,4 @@
-using CatanRoguelike.Game;
+using CatanRoguelike.Core.Data;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -45,6 +45,7 @@ namespace CatanRoguelike.Editor
             so.FindProperty("boardInput").objectReferenceValue = boardInput;
             so.FindProperty("ui").objectReferenceValue = ui;
             so.FindProperty("randomSeed").intValue = 42;
+            so.FindProperty("mapSize").enumValueIndex = (int)MapSize.Small;
             so.ApplyModifiedPropertiesWithoutUndo();
 
             var lightGo = new GameObject("Directional Light");

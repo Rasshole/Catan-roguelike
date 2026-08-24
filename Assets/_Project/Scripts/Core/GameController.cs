@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using CatanRoguelike.Core.Buildings;
-using CatanRoguelike.Core.Events;
-using CatanRoguelike.Core.Leaders;
-using CatanRoguelike.Core.Progression;
+using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Shop;
@@ -31,11 +28,11 @@ namespace CatanRoguelike.Core
         private readonly Random _random;
         private Vertex? _lastPlacedSettlement;
 
-        public GameController(int? seed = null, bool useThirteenHex = false)
+        public GameController(int? seed = null, MapSize mapSize = MapSize.Small)
         {
             _random = seed.HasValue ? new Random(seed.Value) : new Random();
-            var board = MapPresets.CreateBoard(useThirteenHex);
-            State = new GameState(board);
+            var board = MapPresets.CreateBoard(mapSize);
+            State = new GameState(board) { MapSize = mapSize };
             State.Ports = PortAccess.DiscoverPorts(board);
             Placement = new PlacementValidator();
             RollEngine = new RollEngine(seed);

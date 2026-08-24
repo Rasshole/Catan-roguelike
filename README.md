@@ -25,11 +25,23 @@ Unity-spil består af en **scene-fil** (`.unity`) med kamera, lys, GameManager o
 
 ## Spilflow (v1 prototype)
 
-1. **Setup:** AI placerer 2 settlements + roads, derefter spilleren 2 settlements + roads
-2. **Nat:** Rolls for næste dag vises (max 1×0 og 1×2 globalt, 50/50 tie-break)
-3. **Nat:** Træk 1 kort, spil max 1 (hånd max 5)
-4. **Dag:** Produktion → shop → byg/sabotage → afslut dag → AI tur
-5. **Win:** 10 VP (settlements, cities, longest route)
+1. **Run start:** Vælg leader → draft 2 unique buildings
+2. **Setup:** AI placerer 2 settlements + roads, derefter spilleren 2 settlements + roads
+3. **Nat:** Rolls for næste dag vises (max 1×0 og 1×2 globalt, 50/50 tie-break)
+4. **Nat:** Træk 1 kort, spil max 1 (hånd max 5); tilfældigt event (~22 %)
+5. **Dag:** Produktion → shop → byg/sabotage → afslut dag → AI tur
+6. **Level-up:** Hver 5. dag (max 3 gange) — vælg perk
+7. **Win:** 10 VP (settlements, cities, longest route)
+
+## Kortstørrelser
+
+Vælg på **GameManager** i inspector:
+
+| Map Size | Hexes |
+|----------|-------|
+| Small | 7 |
+| Medium | 13 |
+| Large | 19 (klassisk Catan-form) |
 
 ## Mappestruktur
 
@@ -42,7 +54,8 @@ Assets/Tests/    # EditMode unit tests
 
 ## Design-dokumentation
 
-Se plan-filen for fuld design-spec og faser.
+- `docs/IMPLEMENTATION_STATUS.md` — kort checkliste
+- `docs/MISSING_AND_GAPS.md` — detaljeret liste over mangler / ikke-wired
 
 ## Tests
 
@@ -51,13 +64,13 @@ Unity → **Window → General → Test Runner** → EditMode → Run All
 ## Kendte begrænsninger (prototype)
 
 - Placeholder 3D (cylindre/primitiver) — ikke endelig bordspils-look endnu
-- Bygning via "auto valid spot" knapper — hex-klik kommer senere
-- Ingen save/load
-- Ingen meta progression / leaders
+- IMGUI placeholder UI — ikke uGUI
+- Ingen save/load eller meta progression mellem runs
+- Se `docs/MISSING_AND_GAPS.md` for fuld liste over huller og halvt-implementeret logik
 
-## Næste skridt
+## Næste skridt (forslag)
 
-- [ ] Bekræft Unity-version
-- [ ] Klik-placering på hex-hjørner
-- [ ] Bedre 3D bordspils-look (bord, hex-kanter, miniature-bygninger)
-- [ ] Robber + kort-targeting i UI
+- [ ] Fix bonus-VP refresh-bug
+- [ ] Bedre 3D bordspils-look
+- [ ] Generiske 3:1-porte + Bandit Raid vej-vælger i UI
+- [ ] Integrationstests

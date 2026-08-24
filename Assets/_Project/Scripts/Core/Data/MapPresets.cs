@@ -1,27 +1,31 @@
 using System.Collections.Generic;
+using System.Linq;
 using CatanRoguelike.Core.Hex;
 
 namespace CatanRoguelike.Core.Data
 {
     public static class MapPresets
     {
-        /// <summary>7-hex flower layout with all 5 resources + one duplicate for 7 tiles.</summary>
-        public static IReadOnlyList<(HexCoord coord, ResourceType resource, bool coastal)> SmallSevenHex()
+        /// <summary>7-hex flower — tutorial / fast runs.</summary>
+        public static IReadOnlyList<(HexCoord coord, ResourceType resource)> SmallSevenHex()
         {
-            return new List<(HexCoord, ResourceType, bool)>
+            return new List<(HexCoord, ResourceType)>
             {
-                (new HexCoord(0, 0), ResourceType.Wood, false),
-                (new HexCoord(1, 0), ResourceType.Brick, true),
-                (new HexCoord(1, -1), ResourceType.Wheat, false),
-                (new HexCoord(0, -1), ResourceType.Sheep, true),
-                (new HexCoord(-1, 0), ResourceType.Stone, false),
-                (new HexCoord(-1, 1), ResourceType.Wood, true),
-                (new HexCoord(0, 1), ResourceType.Wheat, false),
+                (new HexCoord(0, 0), ResourceType.Wood),
+                (new HexCoord(1, 0), ResourceType.Brick),
+                (new HexCoord(1, -1), ResourceType.Wheat),
+                (new HexCoord(0, -1), ResourceType.Sheep),
+                (new HexCoord(-1, 0), ResourceType.Stone),
+                (new HexCoord(-1, 1), ResourceType.Wood),
+                (new HexCoord(0, 1), ResourceType.Wheat),
             };
         }
 
-        /// <summary>13-hex layout (radius 2) with all 5 resources distributed.</summary>
-        public static IReadOnlyList<(HexCoord coord, ResourceType resource, bool coastal)> MediumThirteenHex()
+        /// <summary>
+        /// 13-hex board — center + ring 1 (6) + 6 alternating tiles from ring 2.
+        /// Classic mid-size shape (not the full 19-hex Catan ring).
+        /// </summary>
+        public static IReadOnlyList<(HexCoord coord, ResourceType resource)> MediumThirteenHex()
         {
             var resources = new[]
             {
@@ -32,30 +36,115 @@ namespace CatanRoguelike.Core.Data
                 ResourceType.Wheat, ResourceType.Sheep, ResourceType.Stone
             };
 
-            var result = new List<(HexCoord, ResourceType, bool)>();
-            int i = 0;
-            foreach (var coord in HexMath.Spiral(new HexCoord(0, 0), 2))
+            return BuildFromCoords(ThirteenHexCoords(), resources);
+        }
+
+        /// <summary>
+        /// 19-hex classic Catan shape (radius 2 ring + center).
+        /// Resource counts: 4 wood, 4 wheat, 4 sheep, 4 brick, 3 stone (19 tiles).
+        /// Center stone = desert/robber tile equivalent.
+        /// </summary>
+        public static IReadOnlyList<(HexCoord coord, ResourceType resource)> LargeNineteenHex()
+        {
+            var resources = new[]
             {
-                bool coastal = coord.Q == 0 || coord.R == 0 || coord.S == 0
-                    || System.Math.Abs(coord.Q) == 2 || System.Math.Abs(coord.R) == 2;
-                result.Add((coord, resources[i++], coastal));
+                ResourceType.Stone,  // center — robber starts here
+                // ring 1 (clockwise from east)
+                ResourceType.Wood, ResourceType.Wheat, ResourceType.Sheep,
+                ResourceType.Brick, ResourceType.Wood, ResourceType.Wheat,
+                // ring 2
+                ResourceType.Sheep, ResourceType.Brick, ResourceType.Wood,
+                ResourceType.Wheat, ResourceType.Stone, ResourceType.Sheep,
+                ResourceType.Brick, ResourceType.Wood, ResourceType.Wheat,
+                ResourceType.Sheep, ResourceType.Stone, ResourceType.Brick
+            };
+
+            return BuildFromSpiral(2, resources);
+        }
+
+        /// <summary>13 tiles: full center + ring 1, then every other tile on ring 2.</summary>
+        public static IEnumerable<HexCoord> ThirteenHexCoords()
+        {
+            var center = new HexCoord(0, 0);
+            yield return center;
+
+            foreach (var coord in HexMath.Ring(center, 1))
+                yield return coord;
+
+            int ringIndex = 0;
+            foreach (var coord in HexMath.Ring(center, 2))
+            {
+                if (ringIndex % 2 == 0)
+                    yield return coord;
+                ringIndex++;
             }
+        }
+
+        private static List<(HexCoord coord, ResourceType resource)> BuildFromSpiral(
+            int radius, ResourceType[] resources)
+        {
+            var coords = HexMath.Spiral(new HexCoord(0, 0), radius).ToList();
+            return BuildFromCoords(coords, resources);
+        }
+
+        private static List<(HexCoord coord, ResourceType resource)> BuildFromCoords(
+            IEnumerable<HexCoord> coords, ResourceType[] resources)
+        {
+            var result = new List<(HexCoord, ResourceType)>();
+            int i = 0;
+            foreach (var coord in coords)
+            {
+                if (i >= resources.Length)
+                    throw new System.InvalidOperationException(
+                        $"Map preset mismatch: {i + 1} coords but only {resources.Length} resources.");
+                result.Add((coord, resources[i++]));
+            }
+
+            if (i != resources.Length)
+                throw new System.InvalidOperationException(
+                    $"Map preset mismatch: {resources.Length} resources but only {i} coords.");
 
             return result;
         }
 
-        public static BoardState CreateBoard(bool useThirteenHex = false)
+        public static BoardState CreateBoard(MapSize size = MapSize.Small)
         {
-            var board = new BoardState();
-            var preset = useThirteenHex ? MediumThirteenHex() : SmallSevenHex();
-
-            foreach (var (coord, resource, coastal) in preset)
+            var preset = size switch
             {
-                board.Tiles[coord] = new HexTileData(coord, resource, coastal);
+                MapSize.Medium => MediumThirteenHex(),
+                MapSize.Large => LargeNineteenHex(),
+                _ => SmallSevenHex()
+            };
+
+            var board = new BoardState();
+            var coords = new HashSet<HexCoord>();
+
+            foreach (var (coord, resource) in preset)
+            {
+                coords.Add(coord);
+                board.Tiles[coord] = new HexTileData(coord, resource, coastal: false);
+            }
+
+            foreach (var coord in coords)
+            {
+                board.Tiles[coord].IsCoastal = IsCoastalTile(coord, coords);
             }
 
             board.PlaceRobber(new HexCoord(0, 0));
             return board;
         }
+
+        /// <summary>Coastal = has at least one missing neighbor (board edge → port vertex).</summary>
+        public static bool IsCoastalTile(HexCoord coord, HashSet<HexCoord> allTiles)
+        {
+            foreach (var dir in HexCoord.Directions)
+            {
+                if (!allTiles.Contains(coord + dir))
+                    return true;
+            }
+            return false;
+        }
+
+        public static int GetHexCount(MapSize size) => (int)size;
     }
 }

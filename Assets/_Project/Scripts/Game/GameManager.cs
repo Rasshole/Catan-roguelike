@@ -1,4 +1,5 @@
 using CatanRoguelike.Core;
+using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Turn;
 using UnityEngine;
 
@@ -10,13 +11,13 @@ namespace CatanRoguelike.Game
         [SerializeField] private PlaceholderUI ui;
         [SerializeField] private BoardInputController boardInput;
         [SerializeField] private int randomSeed = 42;
-        [SerializeField] private bool useThirteenHexMap;
+        [SerializeField] private MapSize mapSize = MapSize.Small;
 
         public GameController Controller { get; private set; }
 
         private void Start()
         {
-            Controller = new GameController(randomSeed, useThirteenHexMap);
+            Controller = new GameController(randomSeed, mapSize);
             Controller.OnStateChanged += HandleStateChanged;
 
             boardView.Initialize(Controller);

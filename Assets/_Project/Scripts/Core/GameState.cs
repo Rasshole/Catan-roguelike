@@ -13,6 +13,7 @@ namespace CatanRoguelike.Core
     public sealed class GameState
     {
         public BoardState Board { get; }
+        public MapSize MapSize { get; set; } = MapSize.Small;
         public GamePhase Phase { get; set; } = GamePhase.RunSelectLeader;
 
         public ResourceBundle PlayerInventory { get; set; }

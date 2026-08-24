@@ -20,6 +20,7 @@ namespace CatanRoguelike.Game
 
         private readonly Dictionary<HexCoord, HexTileView> _tiles = new();
         private GameController _controller;
+        private int _tileCount;
 
         private static readonly Color WoodColor = new(0.2f, 0.55f, 0.2f);
         private static readonly Color BrickColor = new(0.7f, 0.35f, 0.2f);
@@ -38,6 +39,7 @@ namespace CatanRoguelike.Game
         {
             if (boardRoot == null) boardRoot = transform;
 
+            _tileCount = board.Tiles.Count;
             CreateTableSurface();
 
             foreach (var kvp in board.Tiles)
@@ -55,7 +57,8 @@ namespace CatanRoguelike.Game
             table.name = "BoardSurface";
             table.transform.SetParent(boardRoot, false);
             table.transform.localPosition = new Vector3(0f, -0.08f, 0f);
-            table.transform.localScale = new Vector3(10f, 0.06f, 9f);
+            float scale = Mathf.Sqrt(_tileCount / 7f) * hexScale;
+            table.transform.localScale = new Vector3(10f * scale / hexScale, 0.06f, 9f * scale / hexScale);
 
             var renderer = table.GetComponent<Renderer>();
             var mat = new Material(Shader.Find("Universal Render Pipeline/Lit")
