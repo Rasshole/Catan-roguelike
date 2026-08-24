@@ -19,6 +19,7 @@ namespace CatanRoguelike.Game
         {
             Controller = new GameController(randomSeed, mapSize);
             Controller.OnStateChanged += HandleStateChanged;
+            Controller.OnBoardRebuilt += HandleBoardRebuilt;
 
             boardView.Initialize(Controller);
             ui.Initialize(Controller, boardInput);
@@ -33,14 +34,20 @@ namespace CatanRoguelike.Game
 
         private void OnDestroy()
         {
-            if (Controller != null)
-                Controller.OnStateChanged -= HandleStateChanged;
+            if (Controller == null) return;
+            Controller.OnStateChanged -= HandleStateChanged;
+            Controller.OnBoardRebuilt -= HandleBoardRebuilt;
         }
 
         private void HandleStateChanged(GameState state)
         {
             boardView.Refresh(state);
             ui.Refresh(state);
+        }
+
+        private void HandleBoardRebuilt()
+        {
+            boardView.Rebuild(Controller);
         }
     }
 }

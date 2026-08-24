@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Cards;
 using CatanRoguelike.Core.Events;
@@ -12,9 +13,9 @@ namespace CatanRoguelike.Core
 {
     public sealed class GameState
     {
-        public BoardState Board { get; }
+        public BoardState Board { get; private set; }
         public MapSize MapSize { get; set; } = MapSize.Small;
-        public GamePhase Phase { get; set; } = GamePhase.RunSelectLeader;
+        public GamePhase Phase { get; set; } = GamePhase.RunSelectMap;
 
         public ResourceBundle PlayerInventory { get; set; }
         public ResourceBundle AiInventory { get; set; }
@@ -78,6 +79,51 @@ namespace CatanRoguelike.Core
             Board = board;
             PlayerInventory = ResourceBundle.Zero;
             AiInventory = ResourceBundle.Zero;
+        }
+
+        public void ResetForNewMap(BoardState board, MapSize mapSize)
+        {
+            Board = board;
+            MapSize = mapSize;
+            Phase = GamePhase.RunSelectLeader;
+
+            PlayerInventory = ResourceBundle.Zero;
+            AiInventory = ResourceBundle.Zero;
+            TomorrowRolls.Clear();
+            TodayRolls.Clear();
+            PlayerHand.Clear();
+            AiHand.Clear();
+            ShopDeals.Clear();
+            Ports.Clear();
+
+            PlayerVictoryPoints = 0;
+            AiVictoryPoints = 0;
+            Winner = null;
+            StatusMessage = "Choose your leader.";
+            PendingCard = null;
+            HarborCharterPending = false;
+            AiShopEmbargo = null;
+            AiEmbargoDaysLeft = 0;
+
+            Leader = LeaderId.Merchant;
+            DraftedUniques.Clear();
+            RunSetupComplete = false;
+
+            AcquiredPerks.Clear();
+            PendingLevelUpChoices.Clear();
+            LevelUpsTaken = 0;
+            LastLevelUpDay = -1;
+
+            PioneerFreeRoadAvailable = false;
+            FreeRoadCharges = 0;
+            FirstCityBuiltThisRun = false;
+            MonasteryUsed = false;
+
+            ActiveEvent = EventId.None;
+            EventMessage = "";
+            EventStormTile = null;
+            EventStoneDouble = false;
+            EventShopBonus = 0;
         }
 
         public ResourceBundle GetInventory(PlayerId player) =>

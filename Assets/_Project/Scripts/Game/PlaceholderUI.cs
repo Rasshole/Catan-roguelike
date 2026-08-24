@@ -6,6 +6,7 @@ using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Cards;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Leaders;
+using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Events;
 using CatanRoguelike.Core.Turn;
 using UnityEngine;
@@ -39,6 +40,14 @@ namespace CatanRoguelike.Game
             GUILayout.BeginArea(new Rect(10, 10, 400, Screen.height - 20), GUI.skin.box);
             _scroll = GUILayout.BeginScrollView(_scroll);
 
+            if (state.Phase == GamePhase.RunSelectMap)
+            {
+                DrawMapSelect(state);
+                GUILayout.EndScrollView();
+                GUILayout.EndArea();
+                return;
+            }
+
             if (state.Phase == GamePhase.RunSelectLeader)
             {
                 DrawLeaderSelect();
@@ -63,7 +72,8 @@ namespace CatanRoguelike.Game
                 return;
             }
 
-            GUILayout.Label($"<b>Day {state.Board.DayNumber}</b> — {state.Phase}");
+            GUILayout.Label($"<b>Day {state.Board.DayNumber}</b> — {MapPresets.GetDisplayName(state.MapSize)}");
+            GUILayout.Label($"{state.Phase}");
             GUILayout.Label($"<b>Leader:</b> {LeaderLibrary.Get(state.Leader).Name}");
             if (state.DraftedUniques.Count > 0)
                 GUILayout.Label($"<b>Uniques:</b> {string.Join(", ", state.DraftedUniques)}");
@@ -107,8 +117,27 @@ namespace CatanRoguelike.Game
             GUILayout.EndArea();
         }
 
+        private void DrawMapSelect(GameState state)
+        {
+            GUILayout.Label("<b>Vælg kort</b>");
+            GUILayout.Label($"Nuværende forhåndsvisning: {MapPresets.GetDisplayName(state.MapSize)}");
+            GUILayout.Space(8);
+
+            DrawMapButton(MapSize.Small);
+            DrawMapButton(MapSize.Medium);
+            DrawMapButton(MapSize.Large);
+        }
+
+        private void DrawMapButton(MapSize size)
+        {
+            if (GUILayout.Button($"{MapPresets.GetDisplayName(size)}\n<i>{MapPresets.GetDescription(size)}</i>"))
+                _controller.SelectMap(size);
+        }
+
         private void DrawLeaderSelect()
         {
+            GUILayout.Label($"<b>Leader</b> — {MapPresets.GetDisplayName(_controller.State.MapSize)}");
+            GUILayout.Space(4);
             GUILayout.Label("<b>Choose your Leader</b>");
             foreach (var kv in LeaderLibrary.All)
             {

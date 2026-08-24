@@ -62,23 +62,51 @@ namespace CatanRoguelike.Core.Data
             return BuildFromSpiral(2, resources);
         }
 
-        /// <summary>13 tiles: full center + ring 1, then every other tile on ring 2.</summary>
+        /// <summary>
+        /// 13 tiles: classic compact Catan — full 19-hex radius-2 board minus the 6 outer corner tiles.
+        /// Outer edge keeps flat sides (3 internal neighbors); corners (2 neighbors) are removed.
+        /// </summary>
         public static IEnumerable<HexCoord> ThirteenHexCoords()
         {
             var center = new HexCoord(0, 0);
-            yield return center;
+            var full = HexMath.Spiral(center, 2).ToList();
+            var set = full.ToHashSet();
 
-            foreach (var coord in HexMath.Ring(center, 1))
-                yield return coord;
-
-            int ringIndex = 0;
-            foreach (var coord in HexMath.Ring(center, 2))
+            foreach (var coord in full)
             {
-                if (ringIndex % 2 == 0)
+                if (HexMath.Distance(center, coord) < 2)
+                {
                     yield return coord;
-                ringIndex++;
+                    continue;
+                }
+
+                int neighbors = 0;
+                foreach (var dir in HexCoord.Directions)
+                {
+                    if (set.Contains(coord + dir))
+                        neighbors++;
+                }
+
+                if (neighbors >= 3)
+                    yield return coord;
             }
         }
+
+        public static string GetDisplayName(MapSize size) => size switch
+        {
+            MapSize.Small => "Small — 7 hex",
+            MapSize.Medium => "Medium — 13 hex (kompakt Catan)",
+            MapSize.Large => "Large — 19 hex (klassisk Catan)",
+            _ => size.ToString()
+        };
+
+        public static string GetDescription(MapSize size) => size switch
+        {
+            MapSize.Small => "Hurtig tutorial — lille blomst.",
+            MapSize.Medium => "19-hex form uden de 6 yderhjørner — flade kanter som mini-Catan.",
+            MapSize.Large => "Fuld radius-2 hexagon — standard Catan-størrelse.",
+            _ => ""
+        };
 
         private static List<(HexCoord coord, ResourceType resource)> BuildFromSpiral(
             int radius, ResourceType[] resources)

@@ -5,7 +5,8 @@ Last updated: map sizes 7 / 13 / 19 hex.
 ## Done (playable prototype scope)
 
 - [x] Unity 2022.3 LTS project structure
-- [x] **7 / 13 / 19-hex maps** (`MapSize` on `GameManager`)
+- [x] **In-game map menu** (7 / 13 / 19 hex) at run start
+- [x] **7 / 13 / 19-hex maps** (`MapSize`; 13 = classic shape minus 6 corners)
 - [x] 3D placeholder board (table + hex cylinders)
 - [x] Run start: leader select → draft 2 unique buildings
 - [x] Setup: AI 2 settlements + roads, then player 2 + roads

@@ -8,13 +8,13 @@ Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt impleme
 
 ## Kortstørrelser (nyt)
 
-| Størrelse | Hexes | Vælg i Unity |
-|-----------|-------|--------------|
-| **Small** | 7 | `GameManager` → Map Size = Small |
-| **Medium** | 13 | Map Size = Medium |
-| **Large** | 19 (klassisk Catan-form) | Map Size = Large |
+| Størrelse | Hexes | Vælg |
+|-----------|-------|------|
+| **Small** | 7 | Startmenu eller `GameManager` default |
+| **Medium** | 13 | Kompakt Catan (19 minus 6 hjørner) |
+| **Large** | 19 | Klassisk Catan-form |
 
-Der er **ingen in-game map-vælger** — kun inspector på `GameManager` (eller editor-menu ved scene-setup).
+Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameManager` sætter kun **standard-forhåndsvisning**.
 
 ---
 
@@ -99,7 +99,7 @@ Der er **ingen in-game map-vælger** — kun inspector på `GameManager` (eller 
 | **IMGUI** (`PlaceholderUI`) | Fungerer, men er placeholder — ikke uGUI/UI Toolkit |
 | **3D-art** | Cylindre/kuber — ikke bordspils-look |
 | **Game.unity** | Ikke i git — kør **Catan Roguelike → Setup Game Scene** |
-| **Map size** | Kun `GameManager` inspector |
+| **Map size** | Startmenu + inspector default |
 | **VP-breakdown** | Kun total VP — ingen opdeling (bygninger / longest / bonus) |
 | **Pending effects** | Road Builder / Master Builder — minimal feedback |
 | **Game over** | Kun scene reload — ingen run-summary |

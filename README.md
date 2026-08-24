@@ -25,7 +25,8 @@ Unity-spil består af en **scene-fil** (`.unity`) med kamera, lys, GameManager o
 
 ## Spilflow (v1 prototype)
 
-1. **Run start:** Vælg leader → draft 2 unique buildings
+1. **Kort:** Vælg 7 / 13 / 19 hex i startmenuen
+2. **Run start:** Vælg leader → draft 2 unique buildings
 2. **Setup:** AI placerer 2 settlements + roads, derefter spilleren 2 settlements + roads
 3. **Nat:** Rolls for næste dag vises (max 1×0 og 1×2 globalt, 50/50 tie-break)
 4. **Nat:** Træk 1 kort, spil max 1 (hånd max 5); tilfældigt event (~22 %)
@@ -35,13 +36,13 @@ Unity-spil består af en **scene-fil** (`.unity`) med kamera, lys, GameManager o
 
 ## Kortstørrelser
 
-Vælg på **GameManager** i inspector:
+Vælg i **startmenuen** når spillet starter (eller sæt standard på **GameManager → Map Size**):
 
 | Map Size | Hexes |
 |----------|-------|
 | Small | 7 |
-| Medium | 13 |
-| Large | 19 (klassisk Catan-form) |
+| Medium | 13 (klassisk Catan-form uden yderhjørner) |
+| Large | 19 (klassisk Catan) |
 
 ## Mappestruktur
 

@@ -35,6 +35,25 @@ namespace CatanRoguelike.Game
             Refresh(controller.State);
         }
 
+        public void Rebuild(GameController controller)
+        {
+            _controller = controller;
+            ClearBoard();
+            BuildBoard(controller.State.Board);
+            Refresh(controller.State);
+        }
+
+        private void ClearBoard()
+        {
+            if (boardRoot != null)
+            {
+                for (int i = boardRoot.childCount - 1; i >= 0; i--)
+                    Destroy(boardRoot.GetChild(i).gameObject);
+            }
+
+            _tiles.Clear();
+        }
+
         private void BuildBoard(BoardState board)
         {
             if (boardRoot == null) boardRoot = transform;

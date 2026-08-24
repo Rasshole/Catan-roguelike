@@ -2,6 +2,7 @@ namespace CatanRoguelike.Core.Turn
 {
     public enum GamePhase
     {
+        RunSelectMap,
         RunSelectLeader,
         RunSelectDraft,
         SetupAiSettlement1,

@@ -18,6 +18,43 @@ namespace CatanRoguelike.Tests.EditMode
         }
 
         [Test]
+        public void MediumThirteenHex_RemovesOuterCornersFromClassicBoard()
+        {
+            var coords = MapPresets.ThirteenHexCoords().ToList();
+            var full = HexMath.Spiral(new HexCoord(0, 0), 2).ToHashSet();
+            var set = coords.ToHashSet();
+
+            Assert.AreEqual(13, coords.Count);
+            Assert.AreEqual(19, full.Count);
+
+            foreach (var coord in full)
+            {
+                if (HexMath.Distance(new HexCoord(0, 0), coord) < 2)
+                    Assert.IsTrue(set.Contains(coord), $"Inner tile {coord} should remain.");
+            }
+
+            int cornerCount = 0;
+            foreach (var coord in full)
+            {
+                if (HexMath.Distance(new HexCoord(0, 0), coord) != 2)
+                    continue;
+
+                int neighbors = HexCoord.Directions.Count(dir => full.Contains(coord + dir));
+                if (neighbors == 2)
+                {
+                    cornerCount++;
+                    Assert.IsFalse(set.Contains(coord), $"Corner tile {coord} should be removed.");
+                }
+                else if (neighbors == 3)
+                {
+                    Assert.IsTrue(set.Contains(coord), $"Edge tile {coord} should remain.");
+                }
+            }
+
+            Assert.AreEqual(6, cornerCount);
+        }
+
+        [Test]
         public void MediumThirteenHex_IsConnectedShape()
         {
             var coords = MapPresets.ThirteenHexCoords().ToList();

@@ -24,6 +24,7 @@ namespace CatanRoguelike.Core
         public EventEngine Events { get; }
 
         public event Action<GameState> OnStateChanged;
+        public event Action OnBoardRebuilt;
 
         private readonly Random _random;
         private Vertex? _lastPlacedSettlement;
@@ -32,7 +33,7 @@ namespace CatanRoguelike.Core
         {
             _random = seed.HasValue ? new Random(seed.Value) : new Random();
             var board = MapPresets.CreateBoard(mapSize);
-            State = new GameState(board) { MapSize = mapSize };
+            State = new GameState(board) { MapSize = mapSize, Phase = GamePhase.RunSelectMap };
             State.Ports = PortAccess.DiscoverPorts(board);
             Placement = new PlacementValidator();
             RollEngine = new RollEngine(seed);
@@ -40,7 +41,21 @@ namespace CatanRoguelike.Core
             Shop = new ShopGenerator(seed);
             Ai = new AiController(seed);
             Events = new EventEngine(seed);
-            State.StatusMessage = "Choose your leader.";
+            State.StatusMessage = "Vælg kortstørrelse.";
+        }
+
+        public void SelectMap(MapSize mapSize)
+        {
+            if (State.Phase != GamePhase.RunSelectMap) return;
+
+            var board = MapPresets.CreateBoard(mapSize);
+            State.ResetForNewMap(board, mapSize);
+            State.Ports = PortAccess.DiscoverPorts(board);
+            State.StatusMessage = "Vælg din leader.";
+            _lastPlacedSettlement = null;
+
+            OnBoardRebuilt?.Invoke();
+            NotifyChanged();
         }
 
         public void NotifyChanged() => OnStateChanged?.Invoke(State);
