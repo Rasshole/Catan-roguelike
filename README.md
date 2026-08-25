@@ -4,13 +4,13 @@ Catan-inspireret roguelike prototype med dag/nat-cyklus, yield-rolls, shop, udvi
 
 ## Krav
 
-- **Unity 2022.3 LTS** (eller nyere LTS — ret `ProjectSettings/ProjectVersion.txt` hvis din version afviger)
+- **Unity 6.3 LTS** (`6000.3.15f1`)
 - Windows PC target
 
 ## Sådan starter du (på din PC)
 
 1. Pull repoet
-2. Åbn mappen i **Unity Hub** (2022.3 LTS eller din LTS-version)
+2. Åbn mappen i **Unity Hub** med **Unity 6.3 LTS (6000.3.15f1)**
 3. Kør menuen **Catan Roguelike → Setup Game Scene** — dette opretter `Game.unity` (se forklaring nedenfor)
 4. Åbn `Assets/_Project/Scenes/Game.unity` og tryk **Play**
 

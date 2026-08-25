@@ -4,7 +4,7 @@ Last updated: map sizes 7 / 13 / 19 hex.
 
 ## Done (playable prototype scope)
 
-- [x] Unity 2022.3 LTS project structure
+- [x] Unity 6.3 LTS (`6000.3.15f1`) project structure
 - [x] **In-game map menu** (7 / 13 / 19 hex) at run start
 - [x] **7 / 13 / 19-hex maps** (`MapSize`; 13 = classic shape minus 6 corners)
 - [x] 3D placeholder board (table + hex cylinders)
@@ -61,7 +61,7 @@ Set on **GameManager → Map Size** in the inspector (or re-run Setup Game Scene
 
 ## How to test when back at PC
 
-1. Open in Unity 2022.3 LTS
+1. Open in **Unity 6.3 LTS (6000.3.15f1)**
 2. **Catan Roguelike → Setup Game Scene** (if `Game.unity` missing)
 3. On `GameManager`, set **Map Size** to Small / Medium / Large
 4. Play — leader → draft → setup → day/night loop
