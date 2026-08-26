@@ -168,40 +168,89 @@ screenshots, ingen tokens spildt på GUI-navigation.
 
 **Overvejer du at klikke i Inspector — bed i stedet Cursor om et editor-script.**
 
-## Niveau 2 — Unity CLI batchmode
+## Niveau 2 — Unity CLI (FORETRUKKET over Editor-binærens `-batchmode`)
 
-Kør headless fra shell:
+Unity CLI er **ikke** det samme som `Unity -batchmode`. Det er et nyt standalone-værktøj
+(`unity` på PATH) som Hub nu installerer automatisk. Det er lavet til agenter:
+struktureret JSON, forudsigelige exit codes, og med Pipeline-pakken kan den styre en
+kørende Editor uden at genstarte den.
+
+Status: **experimental** (2026). Brug det alligevel — det er den rigtige overflade.
+Fald tilbage til gammel Editor-batchmode (niveau 2b) hvis en kommando mangler eller fejler.
+
+Verificér og pin version:
 
 ```bash
-# Åbn/importér projekt
-Unity -batchmode -nographics -quit -projectPath . -logFile -
-
-# Kør editor-metode
-Unity -batchmode -nographics -quit -projectPath . \
-  -executeMethod CatanRoguelike.Editor.GameSceneSetup.SetupGameScene -logFile -
-
-# EditMode tests
-Unity -runTests -batchmode -projectPath . -testPlatform EditMode \
-  -testResults results.xml -logFile -
-
-# PlayMode tests (kræver grafik → xvfb på headless Linux)
-xvfb-run -a Unity -runTests -projectPath . -testPlatform PlayMode \
-  -testResults playmode.xml -logFile -
-
-# macOS build (primært target — brugeren er på Mac)
-Unity -batchmode -nographics -quit -projectPath . \
-  -buildOSXUniversalPlayer Builds/CatanRoguelike.app -logFile -
-
-# Windows build (sekundært, senere)
-Unity -batchmode -nographics -quit -projectPath . \
-  -buildWindows64Player Builds/CatanRoguelike.exe -logFile -
+unity --version
+unity editors -i
+unity install 6000.3.15f1 --accept-eula --yes   # kun hvis 6000.3.15f1 mangler
 ```
 
-`Unity` er her Editor-binæren. På macOS ligger den typisk i
-`/Applications/Unity/Hub/Editor/6000.3.15f1/Unity.app/Contents/MacOS/Unity`.
-Brug den fulde sti eller lav et alias.
+Aldrig `unity install lts` — det kan hente en nyere patch og brække serialisering.
+Vi bruger **præcis** `6000.3.15f1`.
 
-Læs altid `-logFile -` output og `results.xml` for fejl.
+Auth (Personal = Named User, stadig via login — intet serial):
+
+```bash
+unity auth status
+unity auth login          # browser-flow; med Apple ID: brugeren godkender 2FA
+unity doctor              # hvis noget fejler
+```
+
+### Pipeline-pakken — gør Editoren programmerbar for agenter
+
+```bash
+unity pipeline install    # tilføjer com.unity.pipeline til projektet
+unity command             # list kommandoer den kørende Editor eksponerer
+unity command eval "return UnityEditor.EditorApplication.isPlaying;"
+```
+
+`eval` kører C# **i den åbne Editor uden recompile**. Det er den største
+token- og tidsbesparelse efter sim-runneren: spørg brættet, tving Play Mode,
+læs Console — i millisekunder.
+
+Eksponér egne kommandoer med `[CliCommand]` på statiske metoder (samme idé som
+`[MenuItem]`, men kaldbar fra terminal og MCP).
+
+### MCP til Cursor
+
+```bash
+unity mcp configure --list
+unity mcp configure cursor    # hvis Cursor er installeret
+```
+
+Derefter kan Cursor kalde Unity direkte i stedet for at gætte batchmode-flag.
+
+### Typiske kommandoer
+
+```bash
+unity open . --format json
+unity command eval "return UnityEngine.Application.dataPath;"
+# Tests og builds: brug Pipeline-kommandoer hvis de findes,
+# ellers fald tilbage til niveau 2b
+```
+
+Altid `--format json` når output skal læses af dig eller Cursor.
+
+## Niveau 2b — gammel Editor-batchmode (fallback)
+
+Kun hvis Unity CLI / Pipeline ikke dækker opgaven:
+
+```bash
+# Editor-binæren — IKKE det samme som `unity` CLI
+Unity -batchmode -nographics -quit -projectPath . -logFile -
+Unity -batchmode -nographics -quit -projectPath . \
+  -executeMethod CatanRoguelike.Editor.GameSceneSetup.SetupGameScene -logFile -
+Unity -runTests -batchmode -projectPath . -testPlatform EditMode \
+  -testResults results.xml -logFile -
+xvfb-run -a Unity -runTests -projectPath . -testPlatform PlayMode \
+  -testResults playmode.xml -logFile -
+Unity -batchmode -nographics -quit -projectPath . \
+  -buildOSXUniversalPlayer Builds/CatanRoguelike.app -logFile -
+```
+
+`Unity` her er Editor-binæren. På macOS typisk
+`/Applications/Unity/Hub/Editor/6000.3.15f1/Unity.app/Contents/MacOS/Unity`.
 
 ## Niveau 3 — GUI på VM (sidste udvej)
 
@@ -949,17 +998,19 @@ prioritér det, og løs det.
 
 Ingen intro, ingen spørgsmål. Gør dette:
 
-1. Verificér VM-opsætning: `git`, `git-lfs`, `dotnet`, Unity Hub, Unity **6000.3.15f1**,
-   licens aktiveret, `xvfb` hvis nødvendigt. Installér og aktivér selv hvad der mangler
-2. Klon repoet, åbn projektet i batchmode, verificér at det kompilerer
-3. Kør alle EditMode tests via CLI — rapportér baseline
-4. **Kør hele Fase 0** i rækkefølge (0.1 → 0.7). Dette er den kritiske del: uden `.meta`-filer
-   og `ProjectSettings/` i git er brugerens klon brudt uanset hvad du ellers laver
-5. Byg `tools/verify-fresh-clone.sh` og bekræft at den består
-6. Tag milestonen: `v0.1-repo-foundation`
-7. Byg sim-runner og debug-hooks (de betaler sig tilbage i alt efterfølgende arbejde)
-8. Start på **Fase 1, P0 #1 (bonus-VP bug)**
-9. Kør arbejdsloopet videre ned gennem Fase 1, derefter Fase 2
+1. Verificér VM-opsætning: `git`, `git-lfs`, `dotnet`, Unity Hub, Unity CLI (`unity --version`),
+   Unity Editor **6000.3.15f1**, Cursor, `xvfb` hvis nødvendigt. Installér selv hvad der mangler.
+   `unity install 6000.3.15f1 --accept-eula --yes` hvis Editoren mangler — aldrig `lts`.
+2. Log ind i Unity Hub (Personal = Sign in with Apple; brugeren godkender 2FA).
+   `unity auth status` bagefter. `unity pipeline install` når Editoren kan åbne projektet.
+3. Klon repoet. **Læs `docs/GROKBOT_PROMPT.md` som stående instruktion** — den er source of truth.
+4. Verificér compile. Kør EditMode tests. Rapportér baseline.
+5. **Kør hele Fase 0** (0.1 → 0.7)
+6. Byg `tools/verify-fresh-clone.sh` og bekræft at den består
+7. Tag milestonen: `v0.1-repo-foundation`
+8. Byg sim-runner og debug-hooks
+9. Start på **Fase 1, P0 #1 (bonus-VP bug)**
+10. Kør arbejdsloopet videre ned gennem Fase 1, derefter Fase 2
 
 Første rapport til brugeren: hvad baseline var, hvad Fase 0 rettede, at frisk klon-test
 består, og at du er i gang med bonus-VP-buggen.
