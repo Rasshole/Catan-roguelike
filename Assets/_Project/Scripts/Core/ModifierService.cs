@@ -75,10 +75,8 @@ namespace CatanRoguelike.Core
         {
             if (state.HasUnique(UniqueBuildingId.Monastery) && !state.MonasteryUsed)
             {
-                var zero = state.TomorrowRolls.Where(kv => kv.Value == 0).ToList();
-                if (zero.Count > 0)
+                if (TryPickMonasteryTarget(state.TomorrowRolls, out var pick))
                 {
-                    var pick = zero.OrderBy(kv => kv.Key).First().Key;
                     state.TomorrowRolls[pick] = 1;
                     state.MonasteryUsed = true;
                     state.StatusMessage += " Monastery saved a 0 roll.";
@@ -87,13 +85,54 @@ namespace CatanRoguelike.Core
 
             if (state.HasPerk(LevelUpPerkId.RollInsurance))
             {
-                var zero = state.TomorrowRolls.Where(kv => kv.Value == 0).ToList();
-                if (zero.Count > 0)
-                {
-                    var pick = zero.First().Key;
+                if (TryPickRollInsuranceTarget(state, out var pick))
                     state.TomorrowRolls[pick] = 1;
-                }
             }
+        }
+
+        /// <summary>
+        /// Monastery: among tomorrow rolls at the nightly minimum, bump a 0 (once per run).
+        /// Tie-break when multiple resources share that minimum roll: ResourceType descending.
+        /// </summary>
+        internal static bool TryPickMonasteryTarget(
+            IReadOnlyDictionary<ResourceType, int> tomorrowRolls,
+            out ResourceType pick)
+        {
+            pick = default;
+            if (tomorrowRolls == null || tomorrowRolls.Count == 0)
+                return false;
+
+            int minRoll = tomorrowRolls.Values.Min();
+            if (minRoll != 0)
+                return false;
+
+            pick = tomorrowRolls
+                .Where(kv => kv.Value == minRoll)
+                .Select(kv => kv.Key)
+                .OrderByDescending(r => r)
+                .First();
+            return true;
+        }
+
+        /// <summary>
+        /// Roll insurance: among 0 rolls, bump the scarcest player inventory.
+        /// Tie-break when inventory counts tie: ResourceType ascending.
+        /// </summary>
+        internal static bool TryPickRollInsuranceTarget(GameState state, out ResourceType pick)
+        {
+            pick = default;
+            var zeros = state.TomorrowRolls.Where(kv => kv.Value == 0).ToList();
+            if (zeros.Count == 0)
+                return false;
+
+            var inv = state.PlayerInventory;
+            int minInventory = zeros.Min(kv => inv[kv.Key]);
+            pick = zeros
+                .Where(kv => inv[kv.Key] == minInventory)
+                .OrderBy(kv => kv.Key)
+                .First()
+                .Key;
+            return true;
         }
 
         private static ResourceBundle DiscountPercent(ResourceBundle cost, float percent)

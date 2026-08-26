@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-26 — P0 #7 AI risky shop penalty (efter P0 #4–#5 robber steal / AI shop afford).
+Last updated: 2026-08-26 — P0 #8/#9 Monastery + RollInsurance night-roll picks (efter P0 #4–#7 robber steal / AI shop afford / risky shop penalty).
 
 ## Done (playable prototype scope)
 
@@ -30,7 +30,7 @@ Last updated: 2026-08-26 — P0 #7 AI risky shop penalty (efter P0 #4–#5 robbe
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, ports, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**, **AI shop afford**, **risky shop penalty**)
+- [x] EditMode tests (rolls, placement, production, ports, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**, **AI shop afford**, **risky shop penalty**, **Monastery / RollInsurance night picks**)
 
 ## Explicitly out of scope
 
@@ -46,6 +46,7 @@ Last updated: 2026-08-26 — P0 #7 AI risky shop penalty (efter P0 #4–#5 robbe
 - [ ] Generic 3:1 ports (API only)
 - [ ] Bandit Raid road picker in UI
 - [x] Longest road: opponent settlement blocking
+- [x] Monastery + RollInsurance night-roll auto-picks match design text
 - [ ] Real UI (uGUI) + art pass
 - [x] Game.unity committed to repo
 - [ ] Integration / full-run tests
