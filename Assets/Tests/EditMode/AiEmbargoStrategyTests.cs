@@ -18,8 +18,8 @@ namespace CatanRoguelike.Tests
         [Test]
         public void AiPool_ContainsEmbargo()
         {
-            CollectionAssert.Contains(CardId.Embargo, CardLibrary.AiPool);
-            CollectionAssert.DoesNotContain(CardId.HarborCharter, CardLibrary.AiPool);
+            CollectionAssert.Contains(CardLibrary.AiPool, CardId.Embargo);
+            CollectionAssert.DoesNotContain(CardLibrary.AiPool, CardId.HarborCharter);
             Assert.IsTrue(CardLibrary.Get(CardId.HarborCharter).AiCanUse == false);
         }
 
