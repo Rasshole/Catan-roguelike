@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P0 #5 AI shop afford-check.
+Sidst opdateret efter P0 #7 AI risky shop penalty.
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -35,7 +35,6 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 |---------|------|------|
 | **Monastery** | `ModifierService` | Beskrivelse: laveste roll; kode: laveste enum-rækkefølge |
 | **RollInsurance** | `ModifierService` | Beskrivelse: mest knappe ressource; kode: første 0-roll |
-| **AI risky shop** | `ShopGenerator.ApplyRiskyDealPenalty` | Straf (robber) gælder kun menneskespiller |
 
 ---
 
@@ -122,12 +121,13 @@ Eksisterende EditMode-tests:
 - `GameControllerSetupTests` — AI setup places 2 settlements + 2 roads
 - `RobberStealTests` — day-move steal, knight steal, no victim, seeded RNG
 - `AiControllerShopTests` — AI shop køber ved rigtig afford-check; springer over når den ikke har råd
+- `ShopGeneratorRiskyDealTests` — risky deal flytter robber til købers bedste tile (human + AI); RiskyDealsSafe skipper kun for human
 
 **Mangler tests for:**
 - `RouteCalculator` disabled roads / loop-længde
 - `EventEngine` (alle events, timing)
 - `CardEngine` (alle 12 kort)
-- `ShopGenerator` (risky deals, embargo, MarketDay)
+- `ShopGenerator` (embargo, MarketDay)
 - `ModifierService` (leaders, uniques, perks)
 - `RunProgression` / draft
 - `AiController` (shop afford; embargo-strategi mangler)

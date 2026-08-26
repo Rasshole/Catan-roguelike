@@ -124,7 +124,7 @@ namespace CatanRoguelike.Core.Shop
             inv.Add(deal.Receive, deal.ReceiveAmount);
             state.SetInventory(player, inv);
 
-            if (deal.IsRisky && player == PlayerId.Human && !state.HasPerk(LevelUpPerkId.RiskyDealsSafe))
+            if (deal.IsRisky && !(player == PlayerId.Human && state.HasPerk(LevelUpPerkId.RiskyDealsSafe)))
                 ApplyRiskyDealPenalty(state, player);
 
             return true;
