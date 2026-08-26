@@ -48,3 +48,55 @@ Unity-open FAIL'er altid hvis Editoren selv fejler (compile, missing scripts, no
 - Gyldig Unity-licens på maskinen (ellers exit 2)
 
 Temp-mappen ryddes via `trap` ved både PASS, FAIL og licens-fejl.
+
+## `tools/core-tests` (EditMode uden Unity)
+
+NUnit-projekt der glob'er `CatanRoguelike.Core` + `Assets/Tests/EditMode`. Bruges når Unity-licens mangler.
+
+```bash
+export DOTNET_ROOT=/home/box/.dotnet PATH=/home/box/.dotnet:$PATH
+dotnet test tools/core-tests/CatanRoguelike.Core.Tests.csproj
+```
+
+## `tools/sim-runner` (headless Core-sim)
+
+net8.0 console-app der kompilerer Core via glob. Spiller N runs med seeds 1..N. **Hænger ikke:** hvert run har wall-clock timeout (default 5s) *og* max-steps/max-days. Exceptions fanges. Aldrig `Console.Read*`. Printer altid én JSON-linje plus en tabel, også hvis alle runs timer ud.
+
+### Brug
+
+```bash
+export DOTNET_ROOT=/home/box/.dotnet PATH=/home/box/.dotnet:$PATH
+
+# fra repo-roden
+dotnet run --project tools/sim-runner -- --runs 5
+
+# eller fra tools/sim-runner
+cd tools/sim-runner
+dotnet run -- --runs 5
+```
+
+| Flag | Default | Betydning |
+|------|---------|-----------|
+| `--runs N` | 1 | antal spil, seeds `seed-start` .. `+N-1` |
+| `--seed-start N` | 1 | første seed |
+| `--timeout-ms N` | 5000 | per-run wall-clock; overskridelse → `timeout`, næste seed |
+| `--max-steps N` | 300 | per-run action-cap → `max_steps` |
+| `--max-days N` | 12 | stop når `DayNumber` overstiger N → `max_days` |
+| `--map small\|medium\|large` | small | kortstørrelse |
+
+### Driver: `narrow-core`
+
+Fuld `GameController`-placement (`PlaceSettlement` / AI `GetValidSettlementSpots`) **staller** i `VertexGraph.VertexDistance` så snart der findes ét building på brættet (verificeret: timeout i `SetupPlayerSettlement1`). AI night-plan crasher desuden hvis `TodayRolls` er tom (den læses før `TomorrowRolls` kopieres).
+
+Runneren kører derfor en smallere Core-loop der stadig rører de vigtige systemer:
+
+1. `SelectMap` → leader → draft → `ConfirmRunSetup` (AI's første brik; 0 buildings → ingen VertexDistance)
+2. Injicer resterende setup direkte på `BoardState` (ingen validator-BFS)
+3. `BeginNight` (rolls, events, kort-træk)
+4. `SkipNightCard` (produktion + shop); `TodayRolls` kopieres først så AI ikke crasher
+5. Dag-skift **uden** `EndPlayerDay` / AI-placement
+6. Stop ved GameOver, max-days, max-steps eller timeout
+
+Når VertexDistance er rettet, kan driveren udvides til fuld AI-vs-AI.
+
+Aldrig blokér på Unity-licens. `--runs 5` skal returnere på under 30s (målt ~1–2s).
