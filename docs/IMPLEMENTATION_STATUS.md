@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-26 — P0 #4 robber day-move steal.
+Last updated: 2026-08-26 — P0 #5 AI shop afford-check (efter P0 #4 robber steal).
 
 ## Done (playable prototype scope)
 
@@ -26,11 +26,11 @@ Last updated: 2026-08-26 — P0 #4 robber day-move steal.
 - [x] 4 Leaders + level-ups every 5 days (max 3)
 - [x] Draft 2 of 5 unique buildings
 - [x] Random events (~22% per night)
-- [x] AI heuristic + shop + limited card pool
+- [x] AI heuristic + shop + limited card pool (shop gated on effective deal cost)
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, ports, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**)
+- [x] EditMode tests (rolls, placement, production, ports, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**, **AI shop afford**)
 
 ## Explicitly out of scope
 
