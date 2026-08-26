@@ -59,14 +59,21 @@ at blive kopieret fra en anden maskine. Grokbot laver næsten alt arbejdet:
 Skriv i din første besked til Grokbot, at hvis metode A fejler, skal den køre
 `-createManualActivationFile` og aflevere `.alf`-filen til dig med en kort instruks.
 
-**Kan du ikke finde nogen licensfil på din PC?**
+**Kan du ikke finde nogen licensfil på din maskine?**
 
-Det er forventeligt og betyder ikke at noget er galt. To grunde:
-`C:\ProgramData` er en **skjult mappe** i Windows (paste stien direkte i Explorers
-adresselinje), og moderne Unity (2020.1+ med Hub 3.x) bruger en ny licensing-klient der
-gemmer licensen i et andet format og en anden sti end den gamle `Unity_lic.ulf`.
+Det er forventeligt og betyder ikke at noget er galt. Systemmappen er skjult som standard,
+og moderne Unity (2020.1+ med Hub 3.x) bruger en ny licensing-klient der gemmer licensen
+i et andet format og en anden sti end den gamle `Unity_lic.ulf`.
 
 Du har alligevel ikke brug for den — se boksen øverst. Vil du kigge alligevel:
+
+macOS (Finder skjuler `/Library`; brug **Cmd+Shift+G** og paste stien, eller kør i Terminal):
+
+```bash
+find "/Library/Application Support/Unity" -name "*.ulf" -o -name "*.xml" 2>/dev/null
+```
+
+Windows (`C:\ProgramData` er skjult; paste stien direkte i Explorers adresselinje):
 
 ```powershell
 Get-ChildItem -Path C:\ProgramData\Unity -Recurse -Include *.ulf,*.xml -ErrorAction SilentlyContinue |
@@ -136,19 +143,36 @@ Tallet skal være langt over nul (typisk 60+).
 
 ---
 
-## Del C — Din egen PC (kun til gennemsyn)
+## Del C — Din egen maskine (kun til gennemsyn)
 
 Til at hente og spille hvad Grokbot laver:
 
 1. **Unity Hub**
 2. **Unity 6.3 LTS — præcis `6000.3.15f1`**
    Anden version trigger en projekt-upgrade og kan brække serialisering.
-3. **Git** (eller GitHub Desktop)
+   På Apple Silicon: vælg Apple Silicon-varianten i Hub.
+3. **Git** (eller GitHub Desktop). På macOS: `brew install git git-lfs`
 4. `git clone <repo-url>` — og åbn **repo-roden** direkte i Unity Hub.
    Repoet *er* Unity-projektet; du skal ikke "lægge det ind i" et andet projekt.
 5. **Git LFS** hvis Grokbot har sat det op: `git lfs install`
 
-Cursor på din PC er valgfrit — kun hvis du selv vil læse diffs.
+Cursor på din egen maskine er valgfrit — kun hvis du selv vil læse diffs.
+
+### Er du på Mac: build-target skal ændres
+
+Projektet er hidtil beskrevet som "Windows PC target". Det holder ikke hvis du selv er
+på macOS, for en Windows-build kan du ikke køre.
+
+To ting gælder:
+
+- **Play Mode i Unity Editor er platformuafhængigt.** Du kan spille og gennemgå alt
+  direkte i Editoren på din Mac uden nogen build. Det er den vej du normalt bruger.
+- **Standalone builds skal være macOS-builds** hvis du vil kunne dobbeltklikke og spille
+  uden Unity. Grokbot skal derfor bygge en macOS-player (`-buildOSXUniversalPlayer`)
+  frem for kun en Windows-`.exe`.
+
+Skriv det til Grokbot i din første besked, så den sætter primært build-target til macOS
+og opdaterer `README.md`. Windows-build kan blive en sekundær release senere.
 
 ---
 

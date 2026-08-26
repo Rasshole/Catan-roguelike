@@ -188,10 +188,18 @@ Unity -runTests -batchmode -projectPath . -testPlatform EditMode \
 xvfb-run -a Unity -runTests -projectPath . -testPlatform PlayMode \
   -testResults playmode.xml -logFile -
 
-# Windows build
+# macOS build (primært target — brugeren er på Mac)
+Unity -batchmode -nographics -quit -projectPath . \
+  -buildOSXUniversalPlayer Builds/CatanRoguelike.app -logFile -
+
+# Windows build (sekundært, senere)
 Unity -batchmode -nographics -quit -projectPath . \
   -buildWindows64Player Builds/CatanRoguelike.exe -logFile -
 ```
+
+`Unity` er her Editor-binæren. På macOS ligger den typisk i
+`/Applications/Unity/Hub/Editor/6000.3.15f1/Unity.app/Contents/MacOS/Unity`.
+Brug den fulde sti eller lav et alias.
 
 Læs altid `-logFile -` output og `results.xml` for fejl.
 
@@ -344,7 +352,15 @@ Rapportér det én gang, kort — og fortsæt derefter i degraded mode uden at s
 
 # PROJEKT-KONTEKST
 
-**Stack:** Unity 6.3 LTS (`6000.3.15f1`), Windows PC target, C#
+**Stack:** Unity 6.3 LTS (`6000.3.15f1`), C#
+
+**Target-platform:** Brugeren sidder på **macOS**. Primært standalone build-target er derfor
+**macOS** (`-buildOSXUniversalPlayer`), ikke Windows. Ældre docs og `README.md` beskriver
+projektet som "Windows PC target" — ret det.
+
+Bemærk at Play Mode i Unity Editor er platformuafhængigt: den daglige verifikationsloop kører
+i Editoren og påvirkes ikke af target-platform. Standalone-builds betyder kun noget for om
+brugeren kan spille uden at åbne Unity. En Windows-build kan blive sekundær release senere.
 
 **Packages i dag:** `test-framework` 1.4.6, `ugui` 2.0.0, `imgui`, `particlesystem`,
 `physics`, `uielements`, `ide.rider`, `ide.visualstudio`. **Ingen URP** — se Fase 0.5.
@@ -504,8 +520,10 @@ Fiks fundamentet, byg så videre.
 21. **Game over** — kun scene reload i dag; byg run-summary med VP-breakdown og seed
 22. **Events visuelt** — kun tekstlinje; vis storm/famine på brættet
 23. **Døde definitioner** — `GamePhase.DayEndCheck` og `DaySubPhase` enum er ubrugte, ryd op
-24. **Windows build** som release-artifact
-25. **README opdateret** — fjern instruktioner om manuel scene-generering når 0.7 er gjort
+24. **macOS build** som release-artifact (`-buildOSXUniversalPlayer`). Brugeren er på Mac —
+    en Windows-`.exe` kan hun ikke køre. Windows-build kan komme senere som sekundær release
+25. **README opdateret** — fjern instruktioner om manuel scene-generering når 0.7 er gjort,
+    og ret "Windows PC target" til macOS
 
 ## P3 — Test-dækning (mangler helt)
 
