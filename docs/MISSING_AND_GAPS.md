@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P1 #17 level-up preview + HUD context (efter P1 #16 Architect threshold-rabat).
+Sidst opdateret efter P1 #18 AI Embargo pool + shop-strategi (efter P1 #17 level-up preview + HUD context).
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -62,9 +62,10 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 
 ### AI
 - Setup, byg, shop, nat-kort (begrænset pool) ✓
-- **Embargo** og **Harbor Charter** ikke i AI-kortpool
+- **Embargo** i AI-kortpool; spiller mod mennesket via `PlayerShopEmbargo` (mål = menneskets lager + shop-Give) ✓
+- **Harbor Charter** — bevidst **human-only** (`aiCanUse: false`); synergy (+1 VP ved næste kyst-settlement) giver ikke mening for AI uden coastal-prioritet
 - Skjult intent — ingen debug-visning
-- Reagerer ikke strategisk på embargo
+- Under **menneskets Embargo** (`AiShopEmbargo`): springer shop-handler med den blokerede Give-ressource og køber andre tilgængelige handler ✓
 
 ### Longest road
 - DFS i `RouteCalculator`; ≥5 veje = 2 VP ✓
@@ -111,6 +112,7 @@ Eksisterende EditMode-tests:
 - `GameControllerSetupTests` — AI setup places 2 settlements + 2 roads
 - `RobberStealTests` — day-move steal, knight steal, no victim, seeded RNG
 - `AiControllerShopTests` — AI shop køber ved rigtig afford-check; springer over når den ikke har råd
+- `AiEmbargoStrategyTests` — `AiPool` indeholder Embargo (ikke Harbor Charter); AI draw; human Embargo → `AiShopEmbargo`; AI Embargo → `PlayerShopEmbargo` på strategisk ressource; shop skip under embargo; human shop blokeret af AI Embargo
 - `ShopGeneratorRiskyDealTests` — risky deal flytter robber til købers bedste tile (human + AI); RiskyDealsSafe skipper kun for human
 - `ModifierServiceNightUniquesTests` — Monastery laveste roll + tie-break; RollInsurance scarcest inventory; once-per-run; begge samme nat
 - `BanditRaidTests` — `OpponentRoadSelector` stabil sortering/index; `ApplyBanditRaid` disabler valgt kant (ikke en anden); fejler rent uden modstander-veje
@@ -122,10 +124,10 @@ Eksisterende EditMode-tests:
 **Mangler tests for:**
 - `EventEngine` (alle events, timing)
 - `CardEngine` (øvrige 11 kort)
-- `ShopGenerator` (embargo, MarketDay)
+- `ShopGenerator` (embargo for human + AI, MarketDay)
 - `RouteCalculator` disabled roads / loop-længde
 - `RunProgression` draft-flow
-- `AiController` (shop afford; embargo-strategi mangler)
+- `AiController` (shop afford + embargo skip; nat-Embargo mod spiller)
 - Fuld `GameController` integration (dag/nat-cyklus, win)
 - PlayMode / UI-tests
 
@@ -150,6 +152,7 @@ Game/BoardView.cs           — board scale efter tile count
 Game/PlaceholderUI.cs       — al UI (IMGUI); Bandit Raid road picker; Harbor Charter + Embargo + level-up preview; shop-pris årsag; VP-breakdown; LevelUpChoice med fuld HUD
 Core/Victory/VictoryBreakdown.cs — VP-dele per spiller (settlements, cities, longest, long road, bonus)
 Core/PendingStatusDisplay.cs — rene statuslinjer for Harbor Charter / Embargo / level-up preview
+Core/Cards/EmbargoTargetSelector.cs — AI Embargo-mål (spiller-lager + shop Give)
 Core/Progression/RunProgression.cs — level-up interval, `WillOfferLevelUpAfterThisDay`, seeded perk draft
 Core/Shop/ShopDealPricing.cs — klassificerer effektiv shop-pris (port / leader / event / base)
 Core/Map/OpponentRoadSelector.cs — stabil liste + index for modstander-veje

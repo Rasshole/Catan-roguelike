@@ -67,7 +67,7 @@ namespace CatanRoguelike.Core.Cards
                 CardId.RoadBuilder => ApplyRoadBuilder(state),
                 CardId.MasterBuilder => ApplyMasterBuilder(state),
                 CardId.Forecast => ApplyForecast(state, targetResource),
-                CardId.Embargo => ApplyEmbargo(state, targetResource),
+                CardId.Embargo => ApplyEmbargo(state, player, targetResource),
                 CardId.HarborCharter => ApplyHarborCharter(state),
                 _ => false
             };
@@ -179,11 +179,25 @@ namespace CatanRoguelike.Core.Cards
             return true;
         }
 
-        private static bool ApplyEmbargo(GameState state, ResourceType? resource)
+        private static bool ApplyEmbargo(GameState state, PlayerId player, ResourceType? resource)
         {
             if (!resource.HasValue) return false;
-            state.AiShopEmbargo = resource.Value;
-            state.AiEmbargoDaysLeft = state.HasPerk(Leaders.LevelUpPerkId.EmbargoExtended) ? 2 : 1;
+
+            int days = player == PlayerId.Human && state.HasPerk(Leaders.LevelUpPerkId.EmbargoExtended)
+                ? 2
+                : 1;
+
+            if (player == PlayerId.Human)
+            {
+                state.AiShopEmbargo = resource.Value;
+                state.AiEmbargoDaysLeft = days;
+            }
+            else
+            {
+                state.PlayerShopEmbargo = resource.Value;
+                state.PlayerEmbargoDaysLeft = days;
+            }
+
             return true;
         }
 

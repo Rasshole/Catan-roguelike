@@ -45,6 +45,8 @@ namespace CatanRoguelike.Core
         public bool HarborCharterPending { get; set; }
         public ResourceType? AiShopEmbargo { get; set; }
         public int AiEmbargoDaysLeft { get; set; }
+        public ResourceType? PlayerShopEmbargo { get; set; }
+        public int PlayerEmbargoDaysLeft { get; set; }
 
         // Run setup
         public LeaderId Leader { get; set; } = LeaderId.Merchant;
@@ -113,6 +115,8 @@ namespace CatanRoguelike.Core
             HarborCharterPending = false;
             AiShopEmbargo = null;
             AiEmbargoDaysLeft = 0;
+            PlayerShopEmbargo = null;
+            PlayerEmbargoDaysLeft = 0;
 
             Leader = LeaderId.Merchant;
             DraftedUniques.Clear();

@@ -65,7 +65,8 @@ namespace CatanRoguelike.Core.Cards
             CardId.BanditRaid,
             CardId.Monopoly,
             CardId.RoadBuilder,
-            CardId.YearOfPlenty
+            CardId.YearOfPlenty,
+            CardId.Embargo
         };
     }
 }

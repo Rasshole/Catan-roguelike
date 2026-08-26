@@ -309,6 +309,14 @@ namespace CatanRoguelike.Editor
             else
                 state.AiShopEmbargo = null;
 
+            if (state.PlayerEmbargoDaysLeft > 0)
+            {
+                state.PlayerEmbargoDaysLeft--;
+                if (state.PlayerEmbargoDaysLeft <= 0) state.PlayerShopEmbargo = null;
+            }
+            else
+                state.PlayerShopEmbargo = null;
+
             state.Board.DayNumber++;
 
             if (RunProgression.ShouldOfferLevelUp(state))

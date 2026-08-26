@@ -228,6 +228,14 @@ namespace CatanRoguelike.Core
             else
                 State.AiShopEmbargo = null;
 
+            if (State.PlayerEmbargoDaysLeft > 0)
+            {
+                State.PlayerEmbargoDaysLeft--;
+                if (State.PlayerEmbargoDaysLeft <= 0) State.PlayerShopEmbargo = null;
+            }
+            else
+                State.PlayerShopEmbargo = null;
+
             State.Board.DayNumber++;
 
             if (RunProgression.ShouldOfferLevelUp(State))

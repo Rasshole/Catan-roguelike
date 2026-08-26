@@ -101,6 +101,11 @@ namespace CatanRoguelike.Core.Shop
                 && state.AiShopEmbargo.Value == deal.Give)
                 return int.MaxValue;
 
+            if (player == PlayerId.Human
+                && state.PlayerShopEmbargo.HasValue
+                && state.PlayerShopEmbargo.Value == deal.Give)
+                return int.MaxValue;
+
             int give = ModifierService.GetShopGiveAmount(state, player, deal.GiveAmount, deal.Give);
             int portGive = PortAccess.GetEffectiveGiveAmount(state.Board, player, deal, state.Ports);
             return Math.Min(give, portGive);
@@ -111,6 +116,11 @@ namespace CatanRoguelike.Core.Shop
             if (player == PlayerId.Ai
                 && state.AiShopEmbargo.HasValue
                 && state.AiShopEmbargo.Value == deal.Give)
+                return false;
+
+            if (player == PlayerId.Human
+                && state.PlayerShopEmbargo.HasValue
+                && state.PlayerShopEmbargo.Value == deal.Give)
                 return false;
 
             int giveAmount = GetEffectiveGiveAmount(state, player, deal);

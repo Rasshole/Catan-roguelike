@@ -57,12 +57,16 @@ namespace CatanRoguelike.Core
             var def = CardLibrary.Get(card);
             if (!def.AiCanUse) return;
 
-            ResourceType? target = PickBestResource(game);
+            ResourceType? target = card == CardId.Embargo
+                ? EmbargoTargetSelector.PickTarget(game.State)
+                : PickBestResource(game);
             HexCoord? robber = PickRobberTarget(game);
             Edge? road = PickRoadToDisable(game);
 
             if (game.CardEngine.PlayCard(game.State, PlayerId.Ai, card, target, robber, road))
-                _hiddenIntent = $"Played {def.Name}";
+                _hiddenIntent = card == CardId.Embargo
+                    ? $"Embargo {target}"
+                    : $"Played {def.Name}";
         }
 
         public void ExecuteDayTurn(GameController game)
@@ -132,6 +136,13 @@ namespace CatanRoguelike.Core
         {
             foreach (var deal in game.State.ShopDeals.ToList())
             {
+                if (game.State.AiShopEmbargo.HasValue
+                    && game.State.AiShopEmbargo.Value == deal.Give)
+                {
+                    _hiddenIntent = $"Skip shop ({deal.Give} embargoed)";
+                    continue;
+                }
+
                 int cost = game.Shop.GetEffectiveGiveAmount(game.State, PlayerId.Ai, deal);
                 var bundle = game.State.AiInventory;
                 var need = new ResourceBundle();
