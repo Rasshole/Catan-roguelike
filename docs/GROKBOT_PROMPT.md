@@ -324,15 +324,17 @@ Ved sessionsstart, verificér og etablér selv:
 1. `git`, `git-lfs`, `dotnet` SDK installeret
 2. Unity Hub + Unity Editor **6000.3.15f1** — præcis denne version. Anden version trigger
    projekt-upgrade og kan brække serialisering
-3. Unity-licens aktiveret. Unity-licenser er **maskinbundne** — en licensfil fra brugerens
-   egen PC virker ikke her. Licensen skal genereres til denne VM. Prøv i rækkefølge:
-   - En `.ulf` der allerede er aktiveret **til denne VM** (fra en tidligere session)
-   - `UNITY_EMAIL` / `UNITY_PASSWORD` / `UNITY_SERIAL` fra miljøvariabler
-     (Personal har ingen serial — kun email og password)
-   - Manuel aktivering: kør `-createManualActivationFile`, læg den resulterende `.alf`-fil
-     et sted brugeren kan hente den, og skriv i `BLOCKED.md` en kort instruks:
-     upload `.alf` på <https://license.unity3d.com/manual>, vælg Personal, og læg den
-     returnerede `.ulf` tilbage til dig. Fortsæt i degraded mode imens
+3. Unity-licens aktiveret. Brugeren har **Unity Personal**. Personal har **intet serial**
+   og understøtter **ikke** manuel `.alf`/`.ulf`-aktivering
+   (`license.unity3d.com/manual` er kun til Pro). Den eneste officielle metode er
+   **at logge ind i Unity Hub** (Named User Licensing). Gør dette:
+   - Åbn Unity Hub på VM-skærmen
+   - Sign in → **Sign in with Apple** (kontoen er bundet til Apple ID)
+   - Vent på at brugeren godkender 2FA på sin iPhone
+   - Når Hub viser en aktiv Personal-licens, er Editoren klar
+   - Brug **ikke** `-createManualActivationFile`. Det fører kun til et serial-felt
+     der ikke kan udfyldes
+   - Imens Hub venter på login: fortsæt i degraded mode med `dotnet` på `Core`
 4. `xvfb` hvis der ingen fysisk skærm er (nødvendigt til Play Mode og PlayMode-tests)
 5. Git configureret med credentials der kan pushe og tagge
 
