@@ -165,16 +165,13 @@ namespace CatanRoguelike.Core
             return true;
         }
 
-        public bool MoveRobber(HexCoord tile, PlayerId player, bool steal = false)
+        public bool MoveRobber(HexCoord tile, PlayerId player, bool steal = true)
         {
             if (!State.Board.TryGetTile(tile, out _)) return false;
             State.Board.PlaceRobber(tile);
 
             if (steal)
-            {
-                var opponent = player == PlayerId.Human ? PlayerId.Ai : PlayerId.Human;
-                StealRandomResource(opponent, player);
-            }
+                RobberSteal.StealFromHex(State, tile, player, _random);
 
             NotifyChanged();
             return true;
@@ -482,20 +479,6 @@ namespace CatanRoguelike.Core
                 State.PendingCard = null;
 
             return true;
-        }
-
-        private void StealRandomResource(PlayerId from, PlayerId to)
-        {
-            var oppInv = State.GetInventory(from);
-            var available = oppInv.EnumerateNonZero().ToList();
-            if (available.Count == 0) return;
-
-            var pick = available[new Random().Next(available.Count)];
-            oppInv.Add(pick.type, -1);
-            var inv = State.GetInventory(to);
-            inv.Add(pick.type, 1);
-            State.SetInventory(from, oppInv);
-            State.SetInventory(to, inv);
         }
 
         private bool IsCoastalVertexOnBoard(Vertex vertex)

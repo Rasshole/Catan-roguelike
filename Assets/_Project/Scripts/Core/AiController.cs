@@ -123,7 +123,7 @@ namespace CatanRoguelike.Core
             var robberTarget = PickRobberTarget(game);
             if (robberTarget.HasValue)
             {
-                game.State.Board.PlaceRobber(robberTarget.Value);
+                game.MoveRobber(robberTarget.Value, PlayerId.Ai, steal: true);
                 _hiddenIntent = "Move robber";
             }
         }

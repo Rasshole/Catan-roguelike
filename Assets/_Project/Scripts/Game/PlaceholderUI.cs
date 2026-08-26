@@ -251,7 +251,7 @@ namespace CatanRoguelike.Game
 
             GUILayout.Space(8);
             GUILayout.Label("<b>Robber</b>");
-            DrawRobberPicker(state, steal: false);
+            DrawRobberPicker(state, steal: true);
 
             if (GUILayout.Button("End Day"))
                 _controller.EndPlayerDay();
