@@ -35,3 +35,11 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - Wired in `VictoryCalculator.RefreshVictoryPoints`: human with perk + longest route gets +1 VP on top of the regular 2. Not stored in `PlayerBonusVictoryPoints` (would stick after losing longest). Second refresh neither drops nor doubles it.
 - Tests: `LongRoadBonus_HasPerkAndLongest_AddsOneVp`, `LongRoadBonus_LosesLongest_BonusGone`, `LongRoadBonus_DoesNotDoubleCountRegularLongestRouteBonus`.
 - Docs: `MISSING_AND_GAPS`, `IMPLEMENTATION_STATUS`. P0 #3 opponent blocking **not** done.
+
+## 2026-08-26 (CEST) — P0 #3 longest-road opponent blocking
+
+- Classic Catan: DFS in `RouteCalculator` no longer paths through an opponent settlement/city. Own buildings do not split the chain. Empty board = 0; disjoint chains report the longer one.
+- `VertexGraph.Canonicalize` unchanged (9fb1f98).
+- Tests: `ContinuousRoadOfLengthN_WithoutEnemyBuildings_EqualsN`, `EnemySettlementInMiddle_SplitsChain_ReportsLongerPieceNotSum`, `OwnSettlement_DoesNotSplitOwnRoads`, `NoRoads_ReturnsZero`, `TwoDisjointChains_ReportsTheLongerOne`, `TwoDisjointChainsOfEqualLength_ReportsThatLength`, `VertexDistance_TerminatesWithBuildingsPresentOnRoadChain`.
+- Not in this pass: robber (P0 #4), loop/branch trail rewrite.
+

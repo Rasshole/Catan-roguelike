@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P0 #2 LongRoadBonus + VertexDistance-fix.
+Sidst opdateret efter P0 #3 longest-road opponent blocking.
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -82,8 +82,8 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 ### Longest road
 - DFS i `RouteCalculator`; ≥5 veje = 2 VP ✓
 - **LongRoadBonus** — +1 VP oven i de 2 når human har perk og longest; forsvinder ved tab af longest ✓
-- **Modstander-settlements blokerer ikke** ruter (klassisk Catan-regel mangler)
-- Edge cases på forgreninger kan være forkerte
+- **Modstander-settlement/city splitter ruten** (klassisk Catan) ✓ — egne bygninger splitter ikke
+- Edge cases på forgreninger/loops kan stadig være forkerte (vertex-DFS, ikke edge-trail)
 
 ### Robber
 - Tile-block + Knight-stjæl ✓
@@ -120,9 +120,10 @@ Eksisterende EditMode-tests:
 - `MapPresetsTests` — 7/13/19 tile counts
 - `VictoryCalculatorTests` — Harbor Charter + FirstCityVp overlever `RefreshVictoryPoints`; LongRoadBonus +1 / mister longest / ingen double-count
 - `VertexGraphTests` — Canonicalize idempotent; VertexDistance terminerer med buildings
+- `RouteCalculatorTests` — længde N, enemy split, own settlement splitter ikke, tom=0, disjoint/ties, VertexDistance-regression med buildings
 
 **Mangler tests for:**
-- `RouteCalculator` (longest road, ties, disabled roads)
+- `RouteCalculator` disabled roads / loop-længde
 - `EventEngine` (alle events, timing)
 - `CardEngine` (alle 12 kort)
 - `ShopGenerator` (risky deals, embargo, MarketDay)
@@ -138,7 +139,7 @@ Eksisterende EditMode-tests:
 
 1. **Bandit Raid** vej-vælger i UI
 2. **Generiske 3:1-porte** på kystvertices
-3. Longest road: **modstander-blokering** + bedre graf-algoritme
+3. Longest road: bedre graf-algoritme (loops / forgreninger)
 4. Rig UI (uGUI) + committed `Game.unity`
 5. Integrationstests + playtest på 19-hex
 

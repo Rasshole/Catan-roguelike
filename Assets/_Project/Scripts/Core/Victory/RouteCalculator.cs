@@ -21,7 +21,9 @@ namespace CatanRoguelike.Core.Victory
 
             foreach (var start in adjacency.Keys)
             {
-                longest = System.Math.Max(longest, DfsLongest(start, adjacency, new HashSet<HexMath.Vertex>()));
+                longest = System.Math.Max(
+                    longest,
+                    DfsLongest(start, adjacency, new HashSet<HexMath.Vertex>(), board, player));
             }
 
             return longest;
@@ -39,19 +41,37 @@ namespace CatanRoguelike.Core.Victory
 
             foreach (var edge in edges)
             {
-                Add(edge.A, edge.B);
-                Add(edge.B, edge.A);
+                var a = VertexGraph.Canonicalize(edge.A);
+                var b = VertexGraph.Canonicalize(edge.B);
+                Add(a, b);
+                Add(b, a);
             }
 
             return adj;
         }
 
+        /// <summary>
+        /// Classic Catan: an opponent settlement or city splits the chain.
+        /// You may arrive at that vertex (the road still counts) but cannot
+        /// continue through it. Own buildings do not interrupt.
+        /// </summary>
         private static int DfsLongest(
             HexMath.Vertex current,
             Dictionary<HexMath.Vertex, List<HexMath.Vertex>> adjacency,
-            HashSet<HexMath.Vertex> visited)
+            HashSet<HexMath.Vertex> visited,
+            BoardState board,
+            PlayerId player)
         {
             visited.Add(current);
+
+            // Arrived via a road onto an enemy building: stop. The caller already
+            // counted that last edge. Starting DFS here still explores outbound roads.
+            if (visited.Count > 1 && IsOpponentBuilding(board, current, player))
+            {
+                visited.Remove(current);
+                return 0;
+            }
+
             int best = 0;
 
             if (adjacency.TryGetValue(current, out var neighbors))
@@ -59,12 +79,21 @@ namespace CatanRoguelike.Core.Victory
                 foreach (var neighbor in neighbors)
                 {
                     if (visited.Contains(neighbor)) continue;
-                    best = System.Math.Max(best, 1 + DfsLongest(neighbor, adjacency, visited));
+                    best = System.Math.Max(
+                        best,
+                        1 + DfsLongest(neighbor, adjacency, visited, board, player));
                 }
             }
 
             visited.Remove(current);
             return best;
+        }
+
+        private static bool IsOpponentBuilding(BoardState board, HexMath.Vertex vertex, PlayerId player)
+        {
+            vertex = VertexGraph.Canonicalize(vertex);
+            return board.VertexBuildings.TryGetValue(vertex, out var building)
+                && building.owner != player;
         }
 
         public static PlayerId? GetLongestRoadOwner(BoardState board)
