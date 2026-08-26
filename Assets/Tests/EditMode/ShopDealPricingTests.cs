@@ -14,7 +14,11 @@ namespace CatanRoguelike.Tests
         private static GameState CreateState(MapSize size = MapSize.Large)
         {
             var board = MapPresets.CreateBoard(size);
-            var state = new GameState(board) { MapSize = size };
+            var state = new GameState(board)
+            {
+                MapSize = size,
+                Leader = LeaderId.Pioneer,
+            };
             state.Ports = PortAccess.DiscoverPorts(board);
             return state;
         }
