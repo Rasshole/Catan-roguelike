@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P0 #3 longest-road opponent blocking.
+Sidst opdateret efter P0 #4 robber day-move steal.
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -37,7 +37,6 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 | **RollInsurance** | `ModifierService` | Beskrivelse: mest knappe ressource; kode: første 0-roll |
 | **AI risky shop** | `ShopGenerator.ApplyRiskyDealPenalty` | Straf (robber) gælder kun menneskespiller |
 | **AI shop check** | `AiController.TryShopPurchases` | `CanAfford(empty bundle)` er no-op før rigtig check |
-| **StealRandomResource** | `GameController` | Bruger `new Random()` uden seed |
 
 ---
 
@@ -86,8 +85,8 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 - Edge cases på forgreninger/loops kan stadig være forkerte (vertex-DFS, ikke edge-trail)
 
 ### Robber
-- Tile-block + Knight-stjæl ✓
-- Dag-flytning: hex-vælger i UI, men **ingen steal** (`steal: false` hardcoded) — kun Knight stjæler
+- Tile-block + steal på dag-flytning og Knight ✓
+- Offer vælges blandt spillere med bygning på det blokerede hex (seedet RNG)
 
 ---
 
@@ -97,7 +96,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 |------|--------|
 | **IMGUI** (`PlaceholderUI`) | Fungerer, men er placeholder — ikke uGUI/UI Toolkit |
 | **3D-art** | Cylindre/kuber — ikke bordspils-look |
-| **Game.unity** | Ikke i git — kør **Catan Roguelike → Setup Game Scene** |
+| **Game.unity** | Committed (`Assets/_Project/Scenes/Game.unity`) |
 | **Render pipeline** | **Built-in RP** (beslutning 0.5). Ingen URP-pakke. Se `docs/DESIGN_RENDERING.md` |
 | **Map size** | Startmenu + inspector default |
 | **VP-breakdown** | Kun total VP — ingen opdeling (bygninger / longest / bonus) |
@@ -122,6 +121,7 @@ Eksisterende EditMode-tests:
 - `VertexGraphTests` — Canonicalize idempotent; VertexDistance terminerer med buildings
 - `RouteCalculatorTests` — længde N, enemy split, own settlement splitter ikke, tom=0, disjoint/ties, VertexDistance-regression med buildings
 - `GameControllerSetupTests` — AI setup places 2 settlements + 2 roads
+- `RobberStealTests` — day-move steal, knight steal, no victim, seeded RNG
 
 **Mangler tests for:**
 - `RouteCalculator` disabled roads / loop-længde

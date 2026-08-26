@@ -136,10 +136,8 @@ namespace CatanRoguelike.Core.Cards
             if (!target.HasValue || !state.Board.TryGetTile(target.Value, out _)) return false;
             state.Board.PlaceRobber(target.Value);
 
-            var opponent = player == PlayerId.Human ? PlayerId.Ai : PlayerId.Human;
             int steals = ModifierService.GetKnightStealAmount(state, player);
-            for (int i = 0; i < steals; i++)
-                StealOneRandom(opponent, player, state);
+            RobberSteal.StealFromHex(state, target.Value, player, _random, steals);
 
             if (player == PlayerId.Human && state.HasPerk(Leaders.LevelUpPerkId.KnightMovesRobberTwice))
             {
@@ -149,19 +147,6 @@ namespace CatanRoguelike.Core.Cards
             }
 
             return true;
-        }
-
-        private void StealOneRandom(PlayerId from, PlayerId to, GameState state)
-        {
-            var oppInv = state.GetInventory(from);
-            var available = oppInv.EnumerateNonZero().ToList();
-            if (available.Count == 0) return;
-            var pick = available[_random.Next(available.Count)];
-            oppInv.Add(pick.type, -1);
-            var inv = state.GetInventory(to);
-            inv.Add(pick.type, 1);
-            state.SetInventory(from, oppInv);
-            state.SetInventory(to, inv);
         }
 
         private bool ApplyBanditRaid(GameState state, PlayerId player, Hex.HexMath.Edge? edge)

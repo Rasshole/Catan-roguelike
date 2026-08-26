@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-26 — P0 #3 longest-road opponent blocking; AI setup 2 settlements.
+Last updated: 2026-08-26 — P0 #4 robber day-move steal.
 
 ## Done (playable prototype scope)
 
@@ -20,7 +20,7 @@ Last updated: 2026-08-26 — P0 #3 longest-road opponent blocking; AI setup 2 se
 - [x] Daily shop (3 deals) + **risky 3rd deal** (2:1, robber → best tile)
 - [x] **Ports** — resource-specific 2:1 wired in shop
 - [x] Cards: draw 1, play 1, max hand 5 — all 12 cards in `CardEngine`
-- [x] Robber (tile block + knight steal + day move)
+- [x] Robber (tile block + steal on day move and Knight; seeded victim/resource pick)
 - [x] Route sabotage (Bandit Raid card) + disabled road visuals
 - [x] Longest route VP (≥5 roads)
 - [x] 4 Leaders + level-ups every 5 days (max 3)
@@ -30,7 +30,7 @@ Last updated: 2026-08-26 — P0 #3 longest-road opponent blocking; AI setup 2 se
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, ports, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**)
+- [x] EditMode tests (rolls, placement, production, ports, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**)
 
 ## Explicitly out of scope
 
@@ -47,7 +47,7 @@ Last updated: 2026-08-26 — P0 #3 longest-road opponent blocking; AI setup 2 se
 - [ ] Bandit Raid road picker in UI
 - [x] Longest road: opponent settlement blocking
 - [ ] Real UI (uGUI) + art pass
-- [ ] Game.unity committed to repo
+- [x] Game.unity committed to repo
 - [ ] Integration / full-run tests
 
 ## Map sizes
