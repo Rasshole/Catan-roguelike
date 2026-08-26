@@ -202,9 +202,13 @@ namespace CatanRoguelike.Game
 
             if (state.PlayerHand.Count > 0)
             {
+                _selectedCardIndex = Mathf.Clamp(_selectedCardIndex, 0, state.PlayerHand.Count - 1);
                 var card = state.PlayerHand[_selectedCardIndex];
                 if (card != CardId.Forecast)
                     DrawResourcePicker();
+
+                if (card == CardId.BanditRaid)
+                    DrawOpponentRoadPicker(state);
 
                 if (GUILayout.Button("Play Selected Card"))
                 {
@@ -287,15 +291,29 @@ namespace CatanRoguelike.Game
             return tiles[_selectedHexIndex];
         }
 
+        private void DrawOpponentRoadPicker(GameState state)
+        {
+            var roads = OpponentRoadSelector.ListOpponentRoads(state.Board, PlayerId.Human);
+            if (roads.Count == 0)
+            {
+                GUILayout.Label("No opponent roads to disable.");
+                return;
+            }
+
+            _selectedRoadIndex = OpponentRoadSelector.ClampIndex(roads, _selectedRoadIndex);
+            var edge = roads[_selectedRoadIndex];
+            GUILayout.Label($"Target road: {edge}");
+            if (GUILayout.Button("◀ Road"))
+                _selectedRoadIndex = OpponentRoadSelector.ClampIndex(roads, _selectedRoadIndex - 1);
+            if (GUILayout.Button("Road ▶"))
+                _selectedRoadIndex = OpponentRoadSelector.ClampIndex(roads, _selectedRoadIndex + 1);
+        }
+
         private Edge? GetSelectedOpponentRoad(GameState state)
         {
-            var roads = state.Board.Roads
-                .Where(kv => kv.Value == PlayerId.Ai)
-                .Select(kv => kv.Key)
-                .ToList();
-            if (roads.Count == 0) return null;
-            _selectedRoadIndex = Mathf.Clamp(_selectedRoadIndex, 0, roads.Count - 1);
-            return roads[_selectedRoadIndex];
+            var roads = OpponentRoadSelector.ListOpponentRoads(state.Board, PlayerId.Human);
+            _selectedRoadIndex = OpponentRoadSelector.ClampIndex(roads, _selectedRoadIndex);
+            return OpponentRoadSelector.SelectRoad(roads, _selectedRoadIndex);
         }
 
         private static string FormatResources(string label, ResourceBundle bundle)
