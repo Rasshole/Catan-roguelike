@@ -40,7 +40,7 @@ namespace CatanRoguelike.Tests
             int humanBefore = game.State.PlayerInventory.Total;
             int aiBefore = game.State.AiInventory.Total;
 
-            Assert.IsTrue(game.CardEngine.PlayCard(game.State, PlayerId.Human, CardId.Knight, robberTile: BrickHex));
+            Assert.IsTrue(game.CardEngine.PlayCard(game.State, PlayerId.Human, CardId.Knight, robberTarget: BrickHex));
 
             Assert.AreEqual(aiBefore - 1, game.State.AiInventory.Total);
             Assert.AreEqual(humanBefore + 1, game.State.PlayerInventory.Total);
