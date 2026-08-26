@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P1 #11 generiske 3:1-porte (efter P1 #10 Bandit Raid vej-vælger).
+Sidst opdateret efter P1 #13/#14 PlaceholderUI feedback (efter P1 #11 generiske 3:1-porte og P1 #10 Bandit Raid vej-vælger).
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -36,13 +36,13 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 - **Generiske 3:1-porte** — `DiscoverPorts` opretter sparse mix (2:1 per ressource + 3:1 generic, skaleret til 7/13/19 hex) ✓
 - **PortDiscount-perk** — rabat på alle handler når du kontrollerer en port (ikke kun “unrelated trades”)
 - **Risky deal (3. handel)** — core wired; UI forklarer ikke konsekvensen tydeligt
-- **Effektiv shop-pris** — beregnes, men UI viser ikke *hvorfor* (port / leader / event)
+- **Effektiv shop-pris** — UI viser kort årsag ved siden af hver handel (`ShopDealPricing`: port 2:1 / port 3:1 / leader / event / perk / base) ✓
 
 ### Kort
 - Alle **12 kort** har logik i `CardEngine` ✓
 - **Bandit Raid** — IMGUI vej-vælger (◀/▶ + label) i nat-fase når kortet er valgt ✓
-- **Harbor Charter pending** — vises ikke i UI
-- **Embargo-status** — `AiShopEmbargo` / `AiEmbargoDaysLeft` vises ikke
+- **Harbor Charter pending** — cyan statuslinje mens `HarborCharterPending` ✓
+- **Embargo-status** — rød statuslinje med ressource + dage tilbage mens aktiv ✓
 - **Forecast** — reruller alt (korrekt), men parameter ignoreres i UI
 
 ### Events (~22 % per nat)
@@ -114,6 +114,8 @@ Eksisterende EditMode-tests:
 - `ShopGeneratorRiskyDealTests` — risky deal flytter robber til købers bedste tile (human + AI); RiskyDealsSafe skipper kun for human
 - `ModifierServiceNightUniquesTests` — Monastery laveste roll + tie-break; RollInsurance scarcest inventory; once-per-run; begge samme nat
 - `BanditRaidTests` — `OpponentRoadSelector` stabil sortering/index; `ApplyBanditRaid` disabler valgt kant (ikke en anden); fejler rent uden modstander-veje
+- `PendingStatusDisplayTests` — Harbor Charter / Embargo statuslinjer (skjult når inaktiv)
+- `ShopDealPricingTests` — pris-årsag (base, port 2:1/3:1, leader, event, perk); matcher `ShopGenerator.GetEffectiveGiveAmount`
 
 **Mangler tests for:**
 - `EventEngine` (alle events, timing)
@@ -129,7 +131,7 @@ Eksisterende EditMode-tests:
 
 ## Anbefalet rækkefølge næste gang
 
-1. **PortDiscount-perk** + effektiv shop-pris i UI
+1. **Risky deal** tydeligere konsekvens-tekst i shop-knapper
 2. Longest road: bedre graf-algoritme (loops / forgreninger)
 3. Rig UI (uGUI) + art pass
 4. Integrationstests + playtest på 19-hex
@@ -143,7 +145,9 @@ Core/Data/MapPresets.cs     — 7 / 13 / 19 hex presets
 Core/Data/MapSize.cs        — Small=7, Medium=13, Large=19
 Game/GameManager.cs         — mapSize inspector
 Game/BoardView.cs           — board scale efter tile count
-Game/PlaceholderUI.cs       — al UI (IMGUI); Bandit Raid road picker
+Game/PlaceholderUI.cs       — al UI (IMGUI); Bandit Raid road picker; Harbor Charter + Embargo status; shop-pris årsag
+Core/PendingStatusDisplay.cs — rene statuslinjer for Harbor Charter / Embargo
+Core/Shop/ShopDealPricing.cs — klassificerer effektiv shop-pris (port / leader / event / base)
 Core/Map/OpponentRoadSelector.cs — stabil liste + index for modstander-veje
 docs/IMPLEMENTATION_STATUS.md — kortere checkliste
 ```
