@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-26 — P1 #13/#14 PlaceholderUI feedback (Harbor Charter + Embargo status; shop-pris årsag) efter P1 #11 generiske 3:1-porte og P1 #10 Bandit Raid vej-vælger.
+Last updated: 2026-08-26 — P1 #15 VP-breakdown i IMGUI (`VictoryBreakdown` + `PlaceholderUI`) efter P1 #13/#14 PlaceholderUI feedback.
 
 ## Done (playable prototype scope)
 
@@ -30,7 +30,7 @@ Last updated: 2026-08-26 — P1 #13/#14 PlaceholderUI feedback (Harbor Charter +
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**, **AI shop afford**, **risky shop penalty**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**)
+- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**, **AI shop afford**, **risky shop penalty**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **VP breakdown**)
 
 ## Explicitly out of scope
 
@@ -47,6 +47,7 @@ Last updated: 2026-08-26 — P1 #13/#14 PlaceholderUI feedback (Harbor Charter +
 - [x] Bandit Raid road picker in UI (IMGUI ◀/▶ when card selected)
 - [x] Harbor Charter pending + Embargo status in IMGUI (`PendingStatusDisplay`)
 - [x] Shop deal price reason in IMGUI (`ShopDealPricing`)
+- [x] VP breakdown in IMGUI (`VictoryBreakdown` — buildings / longest / long road / bonus)
 - [x] Longest road: opponent settlement blocking
 - [x] Monastery + RollInsurance night-roll auto-picks match design text
 - [ ] Real UI (uGUI) + art pass

@@ -12,6 +12,7 @@ using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Turn;
+using CatanRoguelike.Core.Victory;
 using UnityEngine;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 
@@ -107,6 +108,10 @@ namespace CatanRoguelike.Game
 
             GUILayout.Space(8);
             GUILayout.Label($"<b>VP:</b> You {state.PlayerVictoryPoints} | AI {state.AiVictoryPoints}");
+            var humanVp = VictoryCalculator.GetBreakdown(state, PlayerId.Human);
+            var aiVp = VictoryCalculator.GetBreakdown(state, PlayerId.Ai);
+            GUILayout.Label($"  You: {humanVp.FormatLine()}");
+            GUILayout.Label($"  AI: {aiVp.FormatLine()}");
             GUILayout.Label($"<b>Level ups:</b> {state.LevelUpsTaken}/{RunProgression.MaxLevelUpsPerRun}");
             GUILayout.Label(FormatResources("You", state.PlayerInventory));
             GUILayout.Label(FormatResources("AI", state.AiInventory));

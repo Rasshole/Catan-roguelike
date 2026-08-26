@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P1 #13/#14 PlaceholderUI feedback (efter P1 #11 generiske 3:1-porte og P1 #10 Bandit Raid vej-vælger).
+Sidst opdateret efter P1 #15 VP-breakdown i IMGUI (efter P1 #13/#14 PlaceholderUI feedback).
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -87,7 +87,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 | **Game.unity** | Committed (`Assets/_Project/Scenes/Game.unity`) |
 | **Render pipeline** | **Built-in RP** (beslutning 0.5). Ingen URP-pakke. Se `docs/DESIGN_RENDERING.md` |
 | **Map size** | Startmenu + inspector default |
-| **VP-breakdown** | Kun total VP — ingen opdeling (bygninger / longest / bonus) |
+| **VP-breakdown** | IMGUI viser total + én linje per spiller (settlements / cities / longest / long road / bonus) via `VictoryBreakdown` |
 | **Pending effects** | Road Builder / Master Builder — minimal feedback |
 | **Game over** | Kun scene reload — ingen run-summary |
 | **README** | Kan være bagud ift. leaders/draft/klik-placering |
@@ -105,7 +105,7 @@ Eksisterende EditMode-tests:
 - `ProductionCalculatorTests` — multi-hex production
 - `PortAccessTests` — specifik 2:1, generisk 3:1, 2:1 vs 3:1 prioritet, base rate, sparse discovery på 7/13/19
 - `MapPresetsTests` — 7/13/19 tile counts
-- `VictoryCalculatorTests` — Harbor Charter + FirstCityVp overlever `RefreshVictoryPoints`; LongRoadBonus +1 / mister longest / ingen double-count
+- `VictoryCalculatorTests` — Harbor Charter + FirstCityVp overlever `RefreshVictoryPoints`; LongRoadBonus +1 / mister longest / ingen double-count; `VictoryBreakdown` dele summer til total
 - `VertexGraphTests` — Canonicalize idempotent; VertexDistance terminerer med buildings
 - `RouteCalculatorTests` — længde N, enemy split, own settlement splitter ikke, tom=0, disjoint/ties, VertexDistance-regression med buildings
 - `GameControllerSetupTests` — AI setup places 2 settlements + 2 roads
@@ -145,7 +145,8 @@ Core/Data/MapPresets.cs     — 7 / 13 / 19 hex presets
 Core/Data/MapSize.cs        — Small=7, Medium=13, Large=19
 Game/GameManager.cs         — mapSize inspector
 Game/BoardView.cs           — board scale efter tile count
-Game/PlaceholderUI.cs       — al UI (IMGUI); Bandit Raid road picker; Harbor Charter + Embargo status; shop-pris årsag
+Game/PlaceholderUI.cs       — al UI (IMGUI); Bandit Raid road picker; Harbor Charter + Embargo status; shop-pris årsag; VP-breakdown
+Core/Victory/VictoryBreakdown.cs — VP-dele per spiller (settlements, cities, longest, long road, bonus)
 Core/PendingStatusDisplay.cs — rene statuslinjer for Harbor Charter / Embargo
 Core/Shop/ShopDealPricing.cs — klassificerer effektiv shop-pris (port / leader / event / base)
 Core/Map/OpponentRoadSelector.cs — stabil liste + index for modstander-veje

@@ -126,6 +126,116 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(0, state.PlayerBonusVictoryPoints);
         }
 
+        [Test]
+        public void Breakdown_Buildings_CountsSettlementsAndCities()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            var state = new GameState(board);
+            PlaceBuilding(board, BuildingType.Settlement, PlayerId.Human);
+            PlaceBuilding(board, BuildingType.City, PlayerId.Human);
+
+            VictoryCalculator.RefreshVictoryPoints(state);
+            var bd = VictoryCalculator.GetBreakdown(state, PlayerId.Human);
+
+            Assert.AreEqual(1, bd.Settlements);
+            Assert.AreEqual(2, bd.Cities);
+            Assert.AreEqual(0, bd.Longest);
+            Assert.AreEqual(0, bd.LongRoadBonus);
+            Assert.AreEqual(0, bd.BonusVp);
+            Assert.AreEqual(3, bd.Total);
+            Assert.AreEqual(state.PlayerVictoryPoints, bd.Total);
+        }
+
+        [Test]
+        public void Breakdown_LongestAndLongRoadBonus_SplitCorrectly()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            var state = new GameState(board);
+            state.AcquiredPerks.Add(LevelUpPerkId.LongRoadBonus);
+            PlaceRoadPath(board, PlayerId.Human, 5, new HexCoord(0, 0), 0);
+
+            VictoryCalculator.RefreshVictoryPoints(state);
+            var bd = VictoryCalculator.GetBreakdown(state, PlayerId.Human);
+
+            Assert.AreEqual(0, bd.Settlements);
+            Assert.AreEqual(0, bd.Cities);
+            Assert.AreEqual(2, bd.Longest);
+            Assert.AreEqual(1, bd.LongRoadBonus);
+            Assert.AreEqual(0, bd.BonusVp);
+            Assert.AreEqual(3, bd.Total);
+            Assert.AreEqual(state.PlayerVictoryPoints, bd.Total);
+        }
+
+        [Test]
+        public void Breakdown_HarborCharter_InBonusVp()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            var state = new GameState(board);
+            PlaceBuilding(board, BuildingType.Settlement, PlayerId.Human);
+            state.AddVictoryPoints(PlayerId.Human, 1);
+
+            VictoryCalculator.RefreshVictoryPoints(state);
+            var bd = VictoryCalculator.GetBreakdown(state, PlayerId.Human);
+
+            Assert.AreEqual(1, bd.Settlements);
+            Assert.AreEqual(1, bd.BonusVp);
+            Assert.AreEqual(2, bd.Total);
+            Assert.AreEqual(state.PlayerVictoryPoints, bd.Total);
+        }
+
+        [Test]
+        public void Breakdown_FirstCityVp_InBonusVp()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            var state = new GameState(board);
+            state.AcquiredPerks.Add(LevelUpPerkId.FirstCityVp);
+            PlaceBuilding(board, BuildingType.City, PlayerId.Human);
+            state.FirstCityBuiltThisRun = true;
+            state.AddVictoryPoints(PlayerId.Human, 1);
+
+            VictoryCalculator.RefreshVictoryPoints(state);
+            var bd = VictoryCalculator.GetBreakdown(state, PlayerId.Human);
+
+            Assert.AreEqual(0, bd.Settlements);
+            Assert.AreEqual(2, bd.Cities);
+            Assert.AreEqual(1, bd.BonusVp);
+            Assert.AreEqual(3, bd.Total);
+            Assert.AreEqual(state.PlayerVictoryPoints, bd.Total);
+        }
+
+        [Test]
+        public void Breakdown_PartsSum_EqualsRefreshVictoryPointsTotal()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            var state = new GameState(board);
+            state.AcquiredPerks.Add(LevelUpPerkId.LongRoadBonus);
+            PlaceBuilding(board, BuildingType.Settlement, PlayerId.Human);
+            PlaceBuilding(board, BuildingType.City, PlayerId.Human);
+            PlaceRoadPath(board, PlayerId.Human, 5, new HexCoord(0, 0), 0);
+            state.AddVictoryPoints(PlayerId.Human, 1);
+            PlaceBuilding(board, BuildingType.City, PlayerId.Ai);
+            PlaceRoadPath(board, PlayerId.Ai, 6, new HexCoord(2, -2), 0);
+
+            VictoryCalculator.RefreshVictoryPoints(state);
+
+            AssertBreakdownMatchesRefresh(state, PlayerId.Human);
+            AssertBreakdownMatchesRefresh(state, PlayerId.Ai);
+        }
+
+        private static void AssertBreakdownMatchesRefresh(GameState state, PlayerId player)
+        {
+            var bd = VictoryCalculator.GetBreakdown(state, player);
+            int refreshedTotal = player == PlayerId.Human
+                ? state.PlayerVictoryPoints
+                : state.AiVictoryPoints;
+
+            Assert.AreEqual(
+                bd.Settlements + bd.Cities + bd.Longest + bd.LongRoadBonus + bd.BonusVp,
+                bd.Total,
+                $"{player} breakdown parts must sum to Total");
+            Assert.AreEqual(refreshedTotal, bd.Total, $"{player} breakdown must match RefreshVictoryPoints");
+        }
+
         private static void PlaceBuilding(BoardState board, BuildingType type, PlayerId player)
         {
             int skip = board.VertexBuildings.Count;

@@ -6,30 +6,47 @@ namespace CatanRoguelike.Core.Victory
 {
     public static class VictoryCalculator
     {
-        public static int CalculateVictoryPoints(BoardState board, PlayerId player, bool longRoadBonusPerk = false)
+        public static VictoryBreakdown GetBreakdown(GameState state, PlayerId player)
         {
-            int vp = 0;
-            vp += board.CountBuildings(player, BuildingType.Settlement);
-            vp += board.CountBuildings(player, BuildingType.City) * 2;
+            bool longRoadPerk = player == PlayerId.Human && state.HasPerk(LevelUpPerkId.LongRoadBonus);
+            return GetBreakdown(
+                state.Board,
+                player,
+                state.GetBonusVictoryPoints(player),
+                longRoadPerk);
+        }
+
+        public static VictoryBreakdown GetBreakdown(
+            BoardState board,
+            PlayerId player,
+            int bonusVp,
+            bool longRoadBonusPerk = false)
+        {
+            int settlements = board.CountBuildings(player, BuildingType.Settlement);
+            int cities = board.CountBuildings(player, BuildingType.City) * 2;
+            int longest = 0;
+            int longRoadBonus = 0;
 
             var longestOwner = RouteCalculator.GetLongestRoadOwner(board);
             if (longestOwner == player)
             {
-                vp += BalanceConfig.LongestRouteVictoryPoints;
+                longest = BalanceConfig.LongestRouteVictoryPoints;
                 if (longRoadBonusPerk)
-                    vp += 1;
+                    longRoadBonus = 1;
             }
 
-            return vp;
+            return new VictoryBreakdown(settlements, cities, longest, longRoadBonus, bonusVp);
+        }
+
+        public static int CalculateVictoryPoints(BoardState board, PlayerId player, bool longRoadBonusPerk = false)
+        {
+            return GetBreakdown(board, player, 0, longRoadBonusPerk).Total;
         }
 
         public static void RefreshVictoryPoints(GameState state)
         {
-            bool humanLongRoadPerk = state.HasPerk(LevelUpPerkId.LongRoadBonus);
-            state.PlayerVictoryPoints = CalculateVictoryPoints(state.Board, PlayerId.Human, humanLongRoadPerk)
-                + state.GetBonusVictoryPoints(PlayerId.Human);
-            state.AiVictoryPoints = CalculateVictoryPoints(state.Board, PlayerId.Ai)
-                + state.GetBonusVictoryPoints(PlayerId.Ai);
+            state.PlayerVictoryPoints = GetBreakdown(state, PlayerId.Human).Total;
+            state.AiVictoryPoints = GetBreakdown(state, PlayerId.Ai).Total;
         }
 
         public static PlayerId? CheckWinner(GameState state)
