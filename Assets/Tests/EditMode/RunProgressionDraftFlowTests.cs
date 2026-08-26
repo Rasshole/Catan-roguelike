@@ -135,8 +135,9 @@ namespace CatanRoguelike.Tests
             game.ToggleDraftUnique(UniqueBuildingId.CaravanPost);
             game.ToggleDraftUnique(UniqueBuildingId.FortressOutpost);
             Assert.AreEqual(RunProgression.DraftPickCount, game.State.DraftedUniques.Count);
+            CollectionAssert.Contains(game.State.DraftedUniques, UniqueBuildingId.GuildHall);
             CollectionAssert.Contains(game.State.DraftedUniques, UniqueBuildingId.CaravanPost);
-            CollectionAssert.Contains(game.State.DraftedUniques, UniqueBuildingId.FortressOutpost);
+            CollectionAssert.DoesNotContain(game.State.DraftedUniques, UniqueBuildingId.FortressOutpost);
         }
 
         [Test]
