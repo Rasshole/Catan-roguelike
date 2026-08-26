@@ -11,6 +11,11 @@ Prompten selv ligger i [`GROKBOT_PROMPT.md`](GROKBOT_PROMPT.md).
 Grokbot kan installere software selv, men den kan ikke logge ind for dig.
 Disse tre credentials er de eneste reelle blockers.
 
+> **Credential-hygiejne:** Skriv aldrig adgangskoder eller tokens ind i repoet, i en fil,
+> i en commit eller i en chat. De hører kun i Grokbots secret-store, hvor du selv indtaster
+> dem. Er en adgangskode alligevel havnet i en chat, log eller commit: **skift den med det
+> samme** — den skal betragtes som kompromitteret uanset hvor privat kanalen føltes.
+
 ### A1. Unity-licens til VM'en
 
 Unity nægter at starte i batchmode uden aktiveret licens. Uden dette kan Grokbot
@@ -20,7 +25,7 @@ kun arbejde på `Core` (ren C#) og ikke åbne Unity overhovedet.
 > aktiveret på din PC er knyttet til din PC's hardware-ID og virker typisk ikke på VM'en.
 > Licensen skal genereres til VM'en. Brug derfor A eller B nedenfor.
 
-**Metode A — email og password (nemmest, prøv denne først):**
+**Metode A — email og password (kun hvis kontoen har et rigtigt Unity-password):**
 
 Læg disse ind som secrets hos Grokbot og lad den aktivere sig selv:
 
@@ -30,7 +35,16 @@ Læg disse ind som secrets hos Grokbot og lad den aktivere sig selv:
 | `UNITY_PASSWORD` | Din Unity-konto adgangskode |
 | `UNITY_SERIAL` | **Kun** hvis du har Unity Pro/Plus. Personal har ingen serial |
 
-**Metode B — manuel aktivering kørt på VM'en (mest driftsikker):**
+> **Metode A virker ikke med Apple ID, Google eller Facebook-login, og heller ikke med
+> to-faktor slået til.** Tredjeparts-SSO kræver en interaktiv browser med redirect, og 2FA
+> kræver en godkendelse på din telefon. Ingen af dem kan gennemføres headless på en VM —
+> agenten får aldrig præsenteret login-knapperne i batchmode.
+> Er din konto bundet til Apple ID eller har 2FA: **spring metode A over og brug metode B.**
+
+**Metode B — manuel aktivering kørt på VM'en (virker altid, også med Apple ID):**
+
+Arbejdsfordelingen passer godt her: agenten genererer filen, og **du** logger ind i din egen
+browser, hvor Apple ID og 2FA fungerer helt normalt.
 
 Samme fremgangsmåde som CI-systemer bruger. Licensen genereres til VM'en i stedet for
 at blive kopieret fra en anden maskine. Grokbot laver næsten alt arbejdet:
@@ -154,7 +168,8 @@ Ting der stopper Grokbot midt i arbejdet hvis de mangler:
 
 ## Del E — Sanity check før du trykker start
 
-- [ ] Unity-licens leveret til Grokbot (fil eller env vars)
+- [ ] Unity-licens klar: metode A (env vars) hvis kontoen har et rigtigt Unity-password
+      uden 2FA — ellers metode B (manuel aktivering), som virker med Apple ID
 - [ ] GitHub token med Contents: write leveret
 - [ ] Cursor-adgang bekræftet, Grok 4.6 tilgængelig
 - [ ] VM har 20+ GB disk og netværk
