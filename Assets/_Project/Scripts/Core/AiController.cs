@@ -132,8 +132,6 @@ namespace CatanRoguelike.Core
         {
             foreach (var deal in game.State.ShopDeals.ToList())
             {
-                if (!game.State.AiInventory.CanAfford(new ResourceBundle())) continue;
-
                 int cost = game.Shop.GetEffectiveGiveAmount(game.State, PlayerId.Ai, deal);
                 var bundle = game.State.AiInventory;
                 var need = new ResourceBundle();

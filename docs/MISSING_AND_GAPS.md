@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P0 #4 robber day-move steal.
+Sidst opdateret efter P0 #5 AI shop afford-check.
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -36,7 +36,6 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 | **Monastery** | `ModifierService` | Beskrivelse: laveste roll; kode: laveste enum-rækkefølge |
 | **RollInsurance** | `ModifierService` | Beskrivelse: mest knappe ressource; kode: første 0-roll |
 | **AI risky shop** | `ShopGenerator.ApplyRiskyDealPenalty` | Straf (robber) gælder kun menneskespiller |
-| **AI shop check** | `AiController.TryShopPurchases` | `CanAfford(empty bundle)` er no-op før rigtig check |
 
 ---
 
@@ -122,6 +121,7 @@ Eksisterende EditMode-tests:
 - `RouteCalculatorTests` — længde N, enemy split, own settlement splitter ikke, tom=0, disjoint/ties, VertexDistance-regression med buildings
 - `GameControllerSetupTests` — AI setup places 2 settlements + 2 roads
 - `RobberStealTests` — day-move steal, knight steal, no victim, seeded RNG
+- `AiControllerShopTests` — AI shop køber ved rigtig afford-check; springer over når den ikke har råd
 
 **Mangler tests for:**
 - `RouteCalculator` disabled roads / loop-længde
@@ -130,7 +130,7 @@ Eksisterende EditMode-tests:
 - `ShopGenerator` (risky deals, embargo, MarketDay)
 - `ModifierService` (leaders, uniques, perks)
 - `RunProgression` / draft
-- `AiController`
+- `AiController` (shop afford; embargo-strategi mangler)
 - Fuld `GameController` integration (dag/nat-cyklus, win)
 - PlayMode / UI-tests
 
