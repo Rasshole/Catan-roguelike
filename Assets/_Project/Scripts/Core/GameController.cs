@@ -410,15 +410,16 @@ namespace CatanRoguelike.Core
         {
             if (player == PlayerId.Ai)
             {
-                State.Phase = State.Phase switch
+                if (State.Phase == GamePhase.SetupAiRoad1)
                 {
-                    GamePhase.SetupAiRoad1 => GamePhase.SetupPlayerSettlement1,
-                    GamePhase.SetupAiRoad2 => GamePhase.SetupPlayerSettlement2,
-                    _ => State.Phase
-                };
-                State.StatusMessage = State.Phase == GamePhase.SetupPlayerSettlement1
-                    ? "Place your first settlement."
-                    : "Place your second settlement.";
+                    State.Phase = GamePhase.SetupAiSettlement2;
+                    State.StatusMessage = "AI places second settlement...";
+                    RunAiSetupStep();
+                    return;
+                }
+
+                State.Phase = GamePhase.SetupPlayerSettlement1;
+                State.StatusMessage = "Place your first settlement.";
             }
             else
             {

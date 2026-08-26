@@ -121,6 +121,7 @@ Eksisterende EditMode-tests:
 - `VictoryCalculatorTests` — Harbor Charter + FirstCityVp overlever `RefreshVictoryPoints`; LongRoadBonus +1 / mister longest / ingen double-count
 - `VertexGraphTests` — Canonicalize idempotent; VertexDistance terminerer med buildings
 - `RouteCalculatorTests` — længde N, enemy split, own settlement splitter ikke, tom=0, disjoint/ties, VertexDistance-regression med buildings
+- `GameControllerSetupTests` — AI setup places 2 settlements + 2 roads
 
 **Mangler tests for:**
 - `RouteCalculator` disabled roads / loop-længde

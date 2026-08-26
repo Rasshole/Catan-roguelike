@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-26 — P0 #3 longest-road opponent blocking.
+Last updated: 2026-08-26 — P0 #3 longest-road opponent blocking; AI setup 2 settlements.
 
 ## Done (playable prototype scope)
 

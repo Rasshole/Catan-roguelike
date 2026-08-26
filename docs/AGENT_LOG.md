@@ -43,3 +43,8 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - Tests: `ContinuousRoadOfLengthN_WithoutEnemyBuildings_EqualsN`, `EnemySettlementInMiddle_SplitsChain_ReportsLongerPieceNotSum`, `OwnSettlement_DoesNotSplitOwnRoads`, `NoRoads_ReturnsZero`, `TwoDisjointChains_ReportsTheLongerOne`, `TwoDisjointChainsOfEqualLength_ReportsThatLength`, `VertexDistance_TerminatesWithBuildingsPresentOnRoadChain`.
 - Not in this pass: robber (P0 #4), loop/branch trail rewrite.
 
+## 2026-08-26 (CEST) — AI setup second settlement
+
+- `AdvanceSetupAfterRoad` after `SetupAiRoad1` jumped to `SetupPlayerSettlement1`, so `SetupAiSettlement2` never ran (AI placed 1 settlement). Now advances to settlement 2 and continues the AI setup chain; after road 2 the player places settlement 1.
+- Test: `ConfirmRunSetup_AiPlacesTwoSettlementsAndTwoRoads`.
+
