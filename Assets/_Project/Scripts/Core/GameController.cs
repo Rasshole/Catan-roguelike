@@ -428,8 +428,11 @@ namespace CatanRoguelike.Core
                     return;
                 }
 
-                State.Phase = GamePhase.SetupPlayerSettlement1;
-                State.StatusMessage = "Place your first settlement.";
+                if (State.Phase == GamePhase.SetupAiRoad2)
+                {
+                    State.Phase = GamePhase.SetupPlayerSettlement1;
+                    State.StatusMessage = "Place your first settlement.";
+                }
             }
             else
             {
@@ -438,7 +441,7 @@ namespace CatanRoguelike.Core
                     BeginNight();
                     State.StatusMessage = "Setup complete. Night falls — review tomorrow's rolls.";
                 }
-                else
+                else if (State.Phase == GamePhase.SetupPlayerRoad1)
                 {
                     State.Phase = GamePhase.SetupPlayerSettlement2;
                     State.StatusMessage = "Place your second settlement.";
