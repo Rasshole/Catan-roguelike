@@ -64,7 +64,7 @@ namespace CatanRoguelike.Core.Data
 
         /// <summary>
         /// 13 tiles: classic compact Catan — full 19-hex radius-2 board minus the 6 outer corner tiles.
-        /// Outer edge keeps flat sides (3 internal neighbors); corners (2 neighbors) are removed.
+        /// Outer edge keeps flat sides (4 board neighbors); corners (3 board neighbors) are removed.
         /// </summary>
         public static IEnumerable<HexCoord> ThirteenHexCoords()
         {
@@ -87,7 +87,7 @@ namespace CatanRoguelike.Core.Data
                         neighbors++;
                 }
 
-                if (neighbors >= 3)
+                if (neighbors > 3)
                     yield return coord;
             }
         }
