@@ -315,7 +315,8 @@ namespace CatanRoguelike.Editor
             {
                 state.PendingLevelUpChoices.Clear();
                 state.PendingLevelUpChoices.AddRange(
-                    RunProgression.GenerateLevelUpChoices(state, new System.Random(state.Board.DayNumber + 17)));
+                    RunProgression.GenerateLevelUpChoices(
+                        state, RunProgression.CreateLevelUpRandom(game.RunSeed, state.Board.DayNumber)));
                 if (state.PendingLevelUpChoices.Count > 0)
                 {
                     state.Phase = GamePhase.LevelUpChoice;

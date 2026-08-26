@@ -68,14 +68,6 @@ namespace CatanRoguelike.Game
                 return;
             }
 
-            if (state.Phase == GamePhase.LevelUpChoice)
-            {
-                DrawLevelUp();
-                GUILayout.EndScrollView();
-                GUILayout.EndArea();
-                return;
-            }
-
             GUILayout.Label($"<b>Day {state.Board.DayNumber}</b> — {MapPresets.GetDisplayName(state.MapSize)}");
             GUILayout.Label($"{state.Phase}");
             GUILayout.Label($"<b>Leader:</b> {LeaderLibrary.Get(state.Leader).Name}");
@@ -94,6 +86,9 @@ namespace CatanRoguelike.Game
 
             if (PendingStatusDisplay.TryGetEmbargoLine(state, out var embargoLine))
                 GUILayout.Label($"<color=red>{embargoLine}</color>");
+
+            if (PendingStatusDisplay.TryGetLevelUpPreviewLine(state, _controller.RunSeed, out var levelUpPreviewLine))
+                GUILayout.Label($"<color=lime>{levelUpPreviewLine}</color>");
 
             if (state.Winner.HasValue)
             {
@@ -126,6 +121,9 @@ namespace CatanRoguelike.Game
 
             if (state.Phase == GamePhase.DayPlayerActions)
                 DrawDayActions(state);
+
+            if (state.Phase == GamePhase.LevelUpChoice)
+                DrawLevelUp();
 
             GUILayout.EndScrollView();
             GUILayout.EndArea();
@@ -177,6 +175,7 @@ namespace CatanRoguelike.Game
 
         private void DrawLevelUp()
         {
+            GUILayout.Space(8);
             GUILayout.Label("<b>Level Up!</b> Choose one perk:");
             foreach (var perk in _controller.State.PendingLevelUpChoices)
             {

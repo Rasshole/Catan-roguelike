@@ -1,5 +1,7 @@
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Leaders;
+using CatanRoguelike.Core.Turn;
 using NUnit.Framework;
 
 namespace CatanRoguelike.Tests
@@ -70,6 +72,39 @@ namespace CatanRoguelike.Tests
             Assert.IsTrue(PendingStatusDisplay.TryGetEmbargoLine(state, out var line));
             Assert.That(line, Does.Contain("1 day"));
             Assert.That(line, Does.Not.Contain("1 days"));
+        }
+
+        [Test]
+        public void LevelUpPreviewLine_ReturnsFalse_OutsideDayPlayerActions()
+        {
+            var state = CreateState();
+            state.Board.DayNumber = 4;
+            state.Phase = GamePhase.NightRoll;
+
+            Assert.IsFalse(PendingStatusDisplay.TryGetLevelUpPreviewLine(state, 42, out _));
+        }
+
+        [Test]
+        public void LevelUpPreviewLine_ReturnsMessage_OnDayBeforeLevelUp()
+        {
+            var state = CreateState();
+            state.Board.DayNumber = 4;
+            state.Phase = GamePhase.DayPlayerActions;
+            state.Leader = LeaderId.Merchant;
+
+            Assert.IsTrue(PendingStatusDisplay.TryGetLevelUpPreviewLine(state, 42, out var line));
+            Assert.That(line, Does.Contain("Level-up after End Day"));
+            Assert.That(line, Does.Contain("choose one"));
+        }
+
+        [Test]
+        public void LevelUpPreviewLine_ReturnsFalse_WhenNoLevelUpTomorrow()
+        {
+            var state = CreateState();
+            state.Board.DayNumber = 3;
+            state.Phase = GamePhase.DayPlayerActions;
+
+            Assert.IsFalse(PendingStatusDisplay.TryGetLevelUpPreviewLine(state, 42, out _));
         }
     }
 }

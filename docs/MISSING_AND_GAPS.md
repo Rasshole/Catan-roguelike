@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P1 #16 Architect threshold-rabat (efter P1 #15 VP-breakdown).
+Sidst opdateret efter P1 #17 level-up preview + HUD context (efter P1 #16 Architect threshold-rabat).
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -53,7 +53,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 
 ### Leaders & progression
 - Leader-vælg + **level-up hver 5. dag** (max 3) ✓
-- Level-up **afbryder** dags-flow uden forhåndsvisning
+- Level-up **preview** på dagen før (lime statuslinje med seeded perk-valg) + **LevelUpChoice** viser dag/VP/rolls sammen med perk-knapper ✓
 - Nogle perks er let wired (Merchant shop, Pioneer free road, Warlord knight)
 - **Architect** threshold-rabat: 10 % kun på settlement over threshold-tælleren; Master Builder-rabat kun i `GetEffectiveCost` (0,65 vs 0,75) ✓
 
@@ -114,16 +114,17 @@ Eksisterende EditMode-tests:
 - `ShopGeneratorRiskyDealTests` — risky deal flytter robber til købers bedste tile (human + AI); RiskyDealsSafe skipper kun for human
 - `ModifierServiceNightUniquesTests` — Monastery laveste roll + tie-break; RollInsurance scarcest inventory; once-per-run; begge samme nat
 - `BanditRaidTests` — `OpponentRoadSelector` stabil sortering/index; `ApplyBanditRaid` disabler valgt kant (ikke en anden); fejler rent uden modstander-veje
-- `PendingStatusDisplayTests` — Harbor Charter / Embargo statuslinjer (skjult når inaktiv)
+- `PendingStatusDisplayTests` — Harbor Charter / Embargo / level-up preview statuslinjer (skjult når inaktiv)
 - `ShopDealPricingTests` — pris-årsag (base, port 2:1/3:1, leader, event, perk); matcher `ShopGenerator.GetEffectiveGiveAmount`
 - `ArchitectCostModifierTests` — Architect 10 % kun threshold-settlement; road/city/non-threshold fuld pris; Master Builder 0,65 vs 0,75 uden dobbeltrabat
+- `RunProgressionTests` — `WillOfferLevelUpAfterThisDay` (dag 4); `ShouldOfferLevelUp` (dag 5); max 3; `LastLevelUpDay`; seeded preview = offer
 
 **Mangler tests for:**
 - `EventEngine` (alle events, timing)
 - `CardEngine` (øvrige 11 kort)
 - `ShopGenerator` (embargo, MarketDay)
 - `RouteCalculator` disabled roads / loop-længde
-- `RunProgression` / draft
+- `RunProgression` draft-flow
 - `AiController` (shop afford; embargo-strategi mangler)
 - Fuld `GameController` integration (dag/nat-cyklus, win)
 - PlayMode / UI-tests
@@ -146,9 +147,10 @@ Core/Data/MapPresets.cs     — 7 / 13 / 19 hex presets
 Core/Data/MapSize.cs        — Small=7, Medium=13, Large=19
 Game/GameManager.cs         — mapSize inspector
 Game/BoardView.cs           — board scale efter tile count
-Game/PlaceholderUI.cs       — al UI (IMGUI); Bandit Raid road picker; Harbor Charter + Embargo status; shop-pris årsag; VP-breakdown
+Game/PlaceholderUI.cs       — al UI (IMGUI); Bandit Raid road picker; Harbor Charter + Embargo + level-up preview; shop-pris årsag; VP-breakdown; LevelUpChoice med fuld HUD
 Core/Victory/VictoryBreakdown.cs — VP-dele per spiller (settlements, cities, longest, long road, bonus)
-Core/PendingStatusDisplay.cs — rene statuslinjer for Harbor Charter / Embargo
+Core/PendingStatusDisplay.cs — rene statuslinjer for Harbor Charter / Embargo / level-up preview
+Core/Progression/RunProgression.cs — level-up interval, `WillOfferLevelUpAfterThisDay`, seeded perk draft
 Core/Shop/ShopDealPricing.cs — klassificerer effektiv shop-pris (port / leader / event / base)
 Core/Map/OpponentRoadSelector.cs — stabil liste + index for modstander-veje
 docs/IMPLEMENTATION_STATUS.md — kortere checkliste

@@ -31,11 +31,14 @@ namespace CatanRoguelike.Core
         public event Action<GameState> OnStateChanged;
         public event Action OnBoardRebuilt;
 
+        public int RunSeed { get; }
+
         private readonly Random _random;
         private Vertex? _lastPlacedSettlement;
 
         public GameController(int? seed = null, MapSize mapSize = MapSize.Small)
         {
+            RunSeed = seed ?? 0;
             _random = seed.HasValue ? new Random(seed.Value) : new Random();
             var board = MapPresets.CreateBoard(mapSize);
             State = new GameState(board) { MapSize = mapSize, Phase = GamePhase.RunSelectMap };
@@ -230,7 +233,9 @@ namespace CatanRoguelike.Core
             if (RunProgression.ShouldOfferLevelUp(State))
             {
                 State.PendingLevelUpChoices.Clear();
-                State.PendingLevelUpChoices.AddRange(RunProgression.GenerateLevelUpChoices(State, _random));
+                State.PendingLevelUpChoices.AddRange(
+                    RunProgression.GenerateLevelUpChoices(
+                        State, RunProgression.CreateLevelUpRandom(RunSeed, State.Board.DayNumber)));
                 if (State.PendingLevelUpChoices.Count > 0)
                 {
                     State.Phase = GamePhase.LevelUpChoice;
