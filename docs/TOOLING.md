@@ -100,3 +100,33 @@ Runneren kører derfor en smallere Core-loop der stadig rører de vigtige system
 Når VertexDistance er rettet, kan driveren udvides til fuld AI-vs-AI.
 
 Aldrig blokér på Unity-licens. `--runs 5` skal returnere på under 30s (målt ~1–2s).
+
+## Editor debug-hooks (`Catan Roguelike/Debug`)
+
+Editor-only (`Assets/_Project/Scripts/Editor/DebugHooks.cs`, `#if UNITY_EDITOR`, asmdef `includePlatforms: Editor`). Kommer **ikke** med i player-builds.
+
+Kræver Play Mode (undtagen selve panelet). **Ikke Unity-verificeret endnu** — VM'en har ingen Editor-licens.
+
+### Menu og genveje
+
+| Kommando | Genvej |
+|----------|--------|
+| Open Debug Panel | Ctrl/Cmd+Shift+Alt+P (`%#&p`) |
+| Fast-Forward 1 Day | Ctrl/Cmd+Shift+Alt+F (`%#&f`) |
+| Give 50 of Each Resource | Ctrl/Cmd+Shift+Alt+R (`%#&r`) |
+
+Øvrige under `Catan Roguelike/Debug`:
+
+- Fast-Forward 5 Days / Auto-Play One Day
+- Set Player VP to 9 / Force Win
+- Force Rolls (all 1s / all 2s)
+- Force Card (Knight, Harbor Charter, Year of Plenty)
+- Force Event (alle 6)
+- Skip Night Card
+- Replay Seed 42
+
+Custom EditorWindow: **Catan Roguelike → Debug → Open Debug Panel** med seed, N dage, VP-slider og knapper.
+
+Fast-forward **kalder ikke** `EndPlayerDay` / `PlaceSettlement` (VertexDistance-stall). Den hopper setup → nat, `SkipNightCard`, og et sikkert dag-skift uden AI-placement.
+
+`GameManager.DebugRestart(seed)` er wrappet i `#if UNITY_EDITOR`.

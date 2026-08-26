@@ -2,7 +2,8 @@
     "name": "CatanRoguelike.Editor",
     "rootNamespace": "CatanRoguelike.Editor",
     "references": [
-        "CatanRoguelike.Game"
+        "CatanRoguelike.Game",
+        "CatanRoguelike.Core"
     ],
     "includePlatforms": [
         "Editor"

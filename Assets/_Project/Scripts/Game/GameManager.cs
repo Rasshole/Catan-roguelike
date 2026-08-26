@@ -49,5 +49,43 @@ namespace CatanRoguelike.Game
         {
             boardView.Rebuild(Controller);
         }
+
+#if UNITY_EDITOR
+        public int DebugSeed
+        {
+            get => randomSeed;
+            set => randomSeed = value;
+        }
+
+        public MapSize DebugMapSize => mapSize;
+
+        /// <summary>
+        /// Editor-only replay: tear down the current controller and start a new
+        /// seeded run. Stripped from player builds.
+        /// </summary>
+        public void DebugRestart(int seed)
+        {
+            if (Controller != null)
+            {
+                Controller.OnStateChanged -= HandleStateChanged;
+                Controller.OnBoardRebuilt -= HandleBoardRebuilt;
+            }
+
+            randomSeed = seed;
+            Controller = new GameController(randomSeed, mapSize);
+            Controller.OnStateChanged += HandleStateChanged;
+            Controller.OnBoardRebuilt += HandleBoardRebuilt;
+
+            if (boardView != null)
+                boardView.Initialize(Controller);
+            if (ui != null)
+                ui.Initialize(Controller, boardInput);
+            if (boardInput != null)
+                boardInput.Initialize(Controller, boardView);
+
+            HandleBoardRebuilt();
+            HandleStateChanged(Controller.State);
+        }
+#endif
     }
 }
