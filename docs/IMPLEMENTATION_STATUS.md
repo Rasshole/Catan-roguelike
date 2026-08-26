@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-26 — P1 #18 AI Embargo pool + shop reaction (`EmbargoTargetSelector`, `PlayerShopEmbargo`, skip embargoed deals).
+Last updated: 2026-08-26 — P3 CardEngine EditMode tests (all 12 cards; complements Knight/Bandit Raid/Embargo tests).
 
 ## Done (playable prototype scope)
 
@@ -30,7 +30,7 @@ Last updated: 2026-08-26 — P1 #18 AI Embargo pool + shop reaction (`EmbargoTar
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **risky shop penalty**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**)
+- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **risky shop penalty**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **CardEngine all 12 cards**)
 
 ## Explicitly out of scope
 

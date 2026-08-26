@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P1 #18 AI Embargo pool + shop-strategi (efter P1 #17 level-up preview + HUD context).
+Sidst opdateret efter P3 CardEngine EditMode tests (alle 12 kort; supplerer Knight/Bandit Raid/Embargo).
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -120,10 +120,10 @@ Eksisterende EditMode-tests:
 - `ShopDealPricingTests` — pris-årsag (base, port 2:1/3:1, leader, event, perk); matcher `ShopGenerator.GetEffectiveGiveAmount`
 - `ArchitectCostModifierTests` — Architect 10 % kun threshold-settlement; road/city/non-threshold fuld pris; Master Builder 0,65 vs 0,75 uden dobbeltrabat
 - `RunProgressionTests` — `WillOfferLevelUpAfterThisDay` (dag 4); `ShouldOfferLevelUp` (dag 5); max 3; `LastLevelUpDay`; seeded preview = offer
+- `CardEngineTests` — alle 12 kort via `PlayCard` / `DrawCard` / `DrawToHand`: roll-manipulation (Ledger, Drought, Fertile, Forecast seeded), Year of Plenty, Monopoly (half / MonopolyFull / zero stock), Road Builder + Master Builder pending, Harbor Charter, Embargo fail + EmbargoExtended; Knight invalid target + KnightMovesRobberTwice; Bandit Raid på egen vej fejler; hand/max-size / not-in-hand
 
 **Mangler tests for:**
 - `EventEngine` (alle events, timing)
-- `CardEngine` (øvrige 11 kort)
 - `ShopGenerator` (embargo for human + AI, MarketDay)
 - `RouteCalculator` disabled roads / loop-længde
 - `RunProgression` draft-flow
