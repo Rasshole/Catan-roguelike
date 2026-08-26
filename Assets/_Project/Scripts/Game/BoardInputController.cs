@@ -241,9 +241,7 @@ namespace CatanRoguelike.Game
             go.transform.localScale = Vector3.one * size;
             Destroy(go.GetComponent<Collider>());
             var r = go.GetComponent<Renderer>();
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
-            mat.color = color;
-            r.material = mat;
+            r.material = BuiltInMaterials.Create(color);
             _highlights.Add(go);
         }
 
@@ -261,9 +259,7 @@ namespace CatanRoguelike.Game
             go.transform.localScale = new Vector3(0.1f, 0.06f, length * 0.95f);
             Destroy(go.GetComponent<Collider>());
             var r = go.GetComponent<Renderer>();
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
-            mat.color = color;
-            r.material = mat;
+            r.material = BuiltInMaterials.Create(color);
             _highlights.Add(go);
         }
 

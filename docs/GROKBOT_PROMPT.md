@@ -446,6 +446,8 @@ git-historikken for evigt og repoet bliver tungt at klone permanent.
 
 ## 0.5 Træf render pipeline-beslutningen bevidst
 
+> **Status 2026-08-26:** 0.5 er landet. Beslutning: **Built-in RP**. URP-shader-kald er fjernet. Se `docs/DESIGN_RENDERING.md`.
+
 `GameSceneSetup.cs` kalder `Shader.Find("Universal Render Pipeline/Lit")`, men URP er ikke
 i `Packages/manifest.json`. Projektet kører altså reelt Built-in RP via fallback til `Standard`.
 

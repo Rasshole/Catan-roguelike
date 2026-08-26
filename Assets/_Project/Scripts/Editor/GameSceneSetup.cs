@@ -1,4 +1,5 @@
 using CatanRoguelike.Core.Data;
+using CatanRoguelike.Game;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -69,8 +70,7 @@ namespace CatanRoguelike.Editor
             table.transform.localScale = new Vector3(14f, 0.5f, 12f);
 
             var renderer = table.GetComponent<Renderer>();
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
-            mat.color = new Color(0.35f, 0.22f, 0.12f);
+            var mat = BuiltInMaterials.Create(new Color(0.35f, 0.22f, 0.12f));
             renderer.sharedMaterial = mat;
         }
     }

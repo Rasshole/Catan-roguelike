@@ -80,10 +80,7 @@ namespace CatanRoguelike.Game
             table.transform.localScale = new Vector3(10f * scale / hexScale, 0.06f, 9f * scale / hexScale);
 
             var renderer = table.GetComponent<Renderer>();
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit")
-                ?? Shader.Find("Standard"));
-            mat.color = new Color(0.76f, 0.65f, 0.45f);
-            renderer.material = mat;
+            renderer.material = BuiltInMaterials.Create(new Color(0.76f, 0.65f, 0.45f));
         }
 
         private void CreatePortMarkers(BoardState board)
@@ -99,11 +96,9 @@ namespace CatanRoguelike.Game
                 go.transform.localScale = new Vector3(0.2f, 0.04f, 0.2f);
 
                 var renderer = go.GetComponent<Renderer>();
-                var mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
-                mat.color = port.IsGeneric
+                renderer.material = BuiltInMaterials.Create(port.IsGeneric
                     ? new Color(0.9f, 0.9f, 0.95f)
-                    : GetResourceColor(port.SpecificResource!.Value) * 0.7f + Color.white * 0.3f;
-                renderer.material = mat;
+                    : GetResourceColor(port.SpecificResource!.Value) * 0.7f + Color.white * 0.3f);
                 Destroy(go.GetComponent<Collider>());
             }
         }
@@ -119,9 +114,7 @@ namespace CatanRoguelike.Game
             go.transform.localScale = new Vector3(hexScale * 1.05f, tileHeight, hexScale * 1.05f);
 
             var renderer = go.GetComponent<Renderer>();
-            renderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit")
-                ?? Shader.Find("Standard"));
-            renderer.material.color = GetResourceColor(data.Resource);
+            renderer.material = BuiltInMaterials.Create(GetResourceColor(data.Resource));
 
             var view = go.AddComponent<HexTileView>();
             view.Initialize(data, renderer);
@@ -177,11 +170,9 @@ namespace CatanRoguelike.Game
                 go.transform.localScale = new Vector3(size, size * 1.2f, size);
 
                 var renderer = go.GetComponent<Renderer>();
-                renderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit")
-                    ?? Shader.Find("Standard"));
-                renderer.material.color = owner == PlayerId.Human
+                renderer.material = BuiltInMaterials.Create(owner == PlayerId.Human
                     ? new Color(0.2f, 0.4f, 0.9f)
-                    : new Color(0.9f, 0.25f, 0.2f);
+                    : new Color(0.9f, 0.25f, 0.2f));
                 Destroy(go.GetComponent<Collider>());
             }
 
@@ -201,13 +192,11 @@ namespace CatanRoguelike.Game
 
                 bool disabled = state.Board.DisabledRoads.Contains(road.Key);
                 var renderer = go.GetComponent<Renderer>();
-                renderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit")
-                    ?? Shader.Find("Standard"));
-                renderer.material.color = disabled
+                renderer.material = BuiltInMaterials.Create(disabled
                     ? Color.gray
                     : road.Value == PlayerId.Human
                         ? new Color(0.3f, 0.5f, 1f)
-                        : new Color(1f, 0.3f, 0.3f);
+                        : new Color(1f, 0.3f, 0.3f));
                 Destroy(go.GetComponent<Collider>());
             }
         }

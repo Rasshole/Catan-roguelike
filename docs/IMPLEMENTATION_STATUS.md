@@ -1,10 +1,11 @@
 # V1 Prototype — Implementation Status
 
-Last updated: map sizes 7 / 13 / 19 hex.
+Last updated: 2026-08-26 — Built-in RP (Fase 0.5).
 
 ## Done (playable prototype scope)
 
 - [x] Unity 6.3 LTS (`6000.3.15f1`) project structure
+- [x] **Built-in RP** (ikke URP) — se `docs/DESIGN_RENDERING.md`
 - [x] **In-game map menu** (7 / 13 / 19 hex) at run start
 - [x] **7 / 13 / 19-hex maps** (`MapSize`; 13 = classic shape minus 6 corners)
 - [x] 3D placeholder board (table + hex cylinders)

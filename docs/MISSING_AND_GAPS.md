@@ -99,6 +99,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 | **IMGUI** (`PlaceholderUI`) | Fungerer, men er placeholder — ikke uGUI/UI Toolkit |
 | **3D-art** | Cylindre/kuber — ikke bordspils-look |
 | **Game.unity** | Ikke i git — kør **Catan Roguelike → Setup Game Scene** |
+| **Render pipeline** | **Built-in RP** (beslutning 0.5). Ingen URP-pakke. Se `docs/DESIGN_RENDERING.md` |
 | **Map size** | Startmenu + inspector default |
 | **VP-breakdown** | Kun total VP — ingen opdeling (bygninger / longest / bonus) |
 | **Pending effects** | Road Builder / Master Builder — minimal feedback |
