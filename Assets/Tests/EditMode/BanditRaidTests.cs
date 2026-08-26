@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Cards;
@@ -32,7 +33,7 @@ namespace CatanRoguelike.Tests
             var roads = OpponentRoadSelector.ListOpponentRoads(board, PlayerId.Human);
 
             Assert.AreEqual(2, roads.Count);
-            Assert.That(roads[0].ToString(), Is.LessThan(roads[1].ToString()));
+            Assert.Less(StringComparer.Ordinal.Compare(roads[0].ToString(), roads[1].ToString()), 0);
             Assert.AreEqual(roads, OpponentRoadSelector.ListOpponentRoads(board, PlayerId.Human));
         }
 
