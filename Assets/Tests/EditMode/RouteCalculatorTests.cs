@@ -5,12 +5,16 @@ using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Victory;
 using NUnit.Framework;
+using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
 namespace CatanRoguelike.Tests
 {
     public class RouteCalculatorTests
     {
+        private static readonly HexCoord HumanRoadHex = new HexCoord(0, 0);
+        private static readonly HexCoord AiRoadHex = new HexCoord(2, -2);
+
         [Test]
         public void ContinuousRoadOfLengthN_WithoutEnemyBuildings_EqualsN()
         {
@@ -93,6 +97,142 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(2, RouteCalculator.LongestRoadLength(board, PlayerId.Human));
         }
 
+        [Test]
+        public void DisabledRoad_InMiddleOfChain_SplitsAndExcludesFromLength()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            var vertices = PlaceAlongHexCorners(board, PlayerId.Human, new HexCoord(0, 0), 0, 5);
+            var middleEdge = VertexGraph.GetEdgeBetween(vertices[1], vertices[2]);
+
+            Assert.AreEqual(5, RouteCalculator.LongestRoadLength(board, PlayerId.Human));
+
+            board.DisabledRoads.Add(middleEdge);
+
+            Assert.IsTrue(board.Roads.ContainsKey(middleEdge), "Bandit Raid keeps the road on the board");
+            CollectionAssert.Contains(board.DisabledRoads, middleEdge);
+            Assert.AreEqual(3, RouteCalculator.LongestRoadLength(board, PlayerId.Human),
+                "disabled edge is omitted; longer remaining piece is 3, not the unsplit 5");
+        }
+
+        [Test]
+        public void DisabledRoad_AtChainEnd_ReducesReportedLength()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            var vertices = PlaceAlongHexCorners(board, PlayerId.Human, new HexCoord(0, 0), 0, 5);
+            var tailEdge = VertexGraph.GetEdgeBetween(vertices[4], vertices[5]);
+
+            board.DisabledRoads.Add(tailEdge);
+
+            Assert.AreEqual(4, RouteCalculator.LongestRoadLength(board, PlayerId.Human));
+        }
+
+        [Test]
+        public void HexLoop_SixRoads_VertexDfsMeasuresCycleAsFive()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            var edges = PlaceHexPerimeter(board, PlayerId.Human, new HexCoord(0, 0), 0);
+
+            Assert.AreEqual(6, edges.Count);
+            Assert.AreEqual(5, RouteCalculator.LongestRoadLength(board, PlayerId.Human),
+                "vertex-DFS cannot re-enter the start vertex, so a 6-edge cycle reports 5");
+        }
+
+        [Test]
+        public void DisabledRoad_OnClosedLoop_TwoDisabledEdges_SplitsIntoShorterPieces()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            var vertices = PlaceAlongHexCorners(board, PlayerId.Human, HumanRoadHex, 0, 6);
+            board.DisabledRoads.Add(VertexGraph.GetEdgeBetween(vertices[2], vertices[3]));
+            board.DisabledRoads.Add(VertexGraph.GetEdgeBetween(vertices[4], vertices[5]));
+
+            Assert.AreEqual(3, RouteCalculator.LongestRoadLength(board, PlayerId.Human),
+                "two disabled edges break the loop; longest remaining simple path is 3 (5-0-1-2)");
+        }
+
+        [Test]
+        public void BranchingPath_ReportsLongestSimplePathNotSumOfBranches()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            var hex = new HexCoord(0, 0);
+            var a = VertexGraph.Canonicalize(new Vertex(hex, 0));
+            var b = VertexGraph.Canonicalize(new Vertex(hex, 1));
+            var c = VertexGraph.Canonicalize(new Vertex(hex, 2));
+            var d = VertexGraph.Canonicalize(new Vertex(hex, 3));
+            PlaceRoad(board, PlayerId.Human, a, b);
+            PlaceRoad(board, PlayerId.Human, b, c);
+            PlaceRoad(board, PlayerId.Human, c, d);
+
+            Assert.AreEqual(3, RouteCalculator.LongestRoadLength(board, PlayerId.Human));
+            Assert.AreNotEqual(4, RouteCalculator.LongestRoadLength(board, PlayerId.Human));
+        }
+
+        [Test]
+        public void GetLongestRoadOwner_BothUnderFive_ReturnsNull()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            PlaceAlongHexCorners(board, PlayerId.Human, new HexCoord(0, 0), 0, 4);
+            PlaceAlongHexCorners(board, PlayerId.Ai, AiRoadHex, 0, 3);
+
+            Assert.IsNull(RouteCalculator.GetLongestRoadOwner(board));
+        }
+
+        [Test]
+        public void GetLongestRoadOwner_TiedAtFiveOrMore_ReturnsNull()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            PlaceAlongHexCorners(board, PlayerId.Human, HumanRoadHex, 0, 5);
+            PlaceAlongHexCorners(board, PlayerId.Ai, AiRoadHex, 0, 5);
+
+            Assert.AreEqual(5, RouteCalculator.LongestRoadLength(board, PlayerId.Human));
+            Assert.AreEqual(5, RouteCalculator.LongestRoadLength(board, PlayerId.Ai));
+            Assert.IsNull(RouteCalculator.GetLongestRoadOwner(board));
+        }
+
+        [Test]
+        public void GetLongestRoadOwner_ClearWinner_ReturnsThatPlayer()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            PlaceAlongHexCorners(board, PlayerId.Human, HumanRoadHex, 0, 5);
+            PlaceAlongHexCorners(board, PlayerId.Ai, AiRoadHex, 0, 4);
+
+            Assert.AreEqual(PlayerId.Human, RouteCalculator.GetLongestRoadOwner(board));
+
+            board = MapPresets.CreateBoard(MapSize.Small);
+            PlaceAlongHexCorners(board, PlayerId.Human, HumanRoadHex, 0, 4);
+            PlaceAlongHexCorners(board, PlayerId.Ai, AiRoadHex, 0, 5);
+
+            Assert.AreEqual(PlayerId.Ai, RouteCalculator.GetLongestRoadOwner(board));
+        }
+
+        [Test]
+        public void GetLongestRoadOwner_DisabledRoadDropsLeaderBelowThreshold_ReturnsNull()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            var vertices = PlaceAlongHexCorners(board, PlayerId.Human, new HexCoord(0, 0), 0, 5);
+            PlaceAlongHexCorners(board, PlayerId.Ai, AiRoadHex, 0, 4);
+
+            Assert.AreEqual(PlayerId.Human, RouteCalculator.GetLongestRoadOwner(board));
+
+            board.DisabledRoads.Add(VertexGraph.GetEdgeBetween(vertices[4], vertices[5]));
+
+            Assert.AreEqual(4, RouteCalculator.LongestRoadLength(board, PlayerId.Human));
+            Assert.IsNull(RouteCalculator.GetLongestRoadOwner(board));
+        }
+
+        [Test]
+        public void GetLongestRoadOwner_DisabledRoadFlipsLeadership()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            var humanVertices = PlaceAlongHexCorners(board, PlayerId.Human, HumanRoadHex, 0, 5);
+            PlaceAlongHexCorners(board, PlayerId.Ai, AiRoadHex, 0, 5);
+
+            Assert.IsNull(RouteCalculator.GetLongestRoadOwner(board));
+
+            board.DisabledRoads.Add(VertexGraph.GetEdgeBetween(humanVertices[4], humanVertices[5]));
+
+            Assert.AreEqual(PlayerId.Ai, RouteCalculator.GetLongestRoadOwner(board));
+        }
+
         /// <summary>
         /// Places <paramref name="roadCount"/> consecutive roads along one hex perimeter.
         /// Returns the roadCount+1 canonical vertices in chain order.
@@ -112,6 +252,30 @@ namespace CatanRoguelike.Tests
             }
 
             return vertices;
+        }
+
+        private static List<Edge> PlaceHexPerimeter(
+            BoardState board, PlayerId player, HexCoord hex, int startCorner)
+        {
+            var edges = new List<Edge>(6);
+            for (int i = 0; i < 6; i++)
+            {
+                var v0 = VertexGraph.Canonicalize(new Vertex(hex, startCorner + i));
+                var v1 = VertexGraph.Canonicalize(new Vertex(hex, startCorner + i + 1));
+                var edge = VertexGraph.GetEdgeBetween(v0, v1);
+                Assert.IsFalse(board.Roads.ContainsKey(edge), $"loop edge {i} already occupied");
+                board.Roads[edge] = player;
+                edges.Add(edge);
+            }
+
+            return edges;
+        }
+
+        private static void PlaceRoad(BoardState board, PlayerId player, Vertex a, Vertex b)
+        {
+            var edge = VertexGraph.GetEdgeBetween(a, b);
+            Assert.IsFalse(board.Roads.ContainsKey(edge), "edge already occupied");
+            board.Roads[edge] = player;
         }
     }
 }
