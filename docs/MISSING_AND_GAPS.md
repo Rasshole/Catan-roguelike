@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P3 ShopGenerator EditMode tests (embargo human+AI, MarketDay via shop, deal generation).
+Sidst opdateret efter P3 RunProgression draft-flow EditMode tests (map → leader → unique draft → setup).
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -121,12 +121,12 @@ Eksisterende EditMode-tests:
 - `ShopDealPricingTests` — pris-årsag (base, port 2:1/3:1, leader, event, perk); matcher `ShopGenerator.GetEffectiveGiveAmount`
 - `ArchitectCostModifierTests` — Architect 10 % kun threshold-settlement; road/city/non-threshold fuld pris; Master Builder 0,65 vs 0,75 uden dobbeltrabat
 - `RunProgressionTests` — `WillOfferLevelUpAfterThisDay` (dag 4); `ShouldOfferLevelUp` (dag 5); max 3; `LastLevelUpDay`; seeded preview = offer
+- `RunProgressionDraftFlowTests` — pre-game draft via `GameController`: `RunSelectMap` start; `SelectMap` (7/13/19 + ports); phase guards; `SelectLeader` → draft status; `ToggleDraftUnique` add/remove/cap at `DraftPickCount` (alle 5 uniques); invalid `ConfirmRunSetup` (0–1 picks / forkert fase); valid confirm → `RunSetupComplete` + AI setup → `SetupPlayerSettlement1`
 - `CardEngineTests` — alle 12 kort via `PlayCard` / `DrawCard` / `DrawToHand`: roll-manipulation (Ledger, Drought, Fertile, Forecast seeded), Year of Plenty, Monopoly (half / MonopolyFull / zero stock), Road Builder + Master Builder pending, Harbor Charter, Embargo fail + EmbargoExtended; Knight invalid target + KnightMovesRobberTwice; Bandit Raid på egen vej fejler; hand/max-size / not-in-hand
 - `EventEngineTests` — alle 6 events (effekt + besked); nat apply / dag clear timing; seeded `MaybeRollEvent`; `BeginNight` Good Harvest rolls
 - `GameControllerIntegrationTests` — seeded setup → nat/dag-cyklus uden hang; `SkipNightCard` / `PlayPlayerCard` → `DayPlayerActions`; win ved 10 VP; level-up på dag 5 via `EndPlayerDay`; disabled roads + event-flags ryddes ved daggrænse
 
 **Mangler tests for:**
-- `RunProgression` draft-flow
 - `AiController` (shop afford + embargo skip; nat-Embargo mod spiller)
 - PlayMode / UI-tests
 
