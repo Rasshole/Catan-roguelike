@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P3 CardEngine EditMode tests (alle 12 kort; supplerer Knight/Bandit Raid/Embargo).
+Sidst opdateret efter P3 GameController integration EditMode tests (dag/nat-loop, win, level-up; supplerer EventEngine/CardEngine).
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -122,13 +122,13 @@ Eksisterende EditMode-tests:
 - `RunProgressionTests` — `WillOfferLevelUpAfterThisDay` (dag 4); `ShouldOfferLevelUp` (dag 5); max 3; `LastLevelUpDay`; seeded preview = offer
 - `CardEngineTests` — alle 12 kort via `PlayCard` / `DrawCard` / `DrawToHand`: roll-manipulation (Ledger, Drought, Fertile, Forecast seeded), Year of Plenty, Monopoly (half / MonopolyFull / zero stock), Road Builder + Master Builder pending, Harbor Charter, Embargo fail + EmbargoExtended; Knight invalid target + KnightMovesRobberTwice; Bandit Raid på egen vej fejler; hand/max-size / not-in-hand
 - `EventEngineTests` — alle 6 events (effekt + besked); nat apply / dag clear timing; seeded `MaybeRollEvent`; `BeginNight` Good Harvest rolls
+- `GameControllerIntegrationTests` — seeded setup → nat/dag-cyklus uden hang; `SkipNightCard` / `PlayPlayerCard` → `DayPlayerActions`; win ved 10 VP; level-up på dag 5 via `EndPlayerDay`; disabled roads + event-flags ryddes ved daggrænse
 
 **Mangler tests for:**
 - `ShopGenerator` (embargo for human + AI, MarketDay)
 - `RouteCalculator` disabled roads / loop-længde
 - `RunProgression` draft-flow
 - `AiController` (shop afford + embargo skip; nat-Embargo mod spiller)
-- Fuld `GameController` integration (dag/nat-cyklus, win)
 - PlayMode / UI-tests
 
 ---

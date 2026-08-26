@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-26 — P3 EventEngine EditMode tests (all 6 events + timing; complements CardEngine #17).
+Last updated: 2026-08-26 — P3 GameController integration EditMode tests (day/night loop, win, level-up; complements EventEngine #19).
 
 ## Done (playable prototype scope)
 
@@ -30,7 +30,7 @@ Last updated: 2026-08-26 — P3 EventEngine EditMode tests (all 6 events + timin
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **risky shop penalty**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**)
+- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **risky shop penalty**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **GameController integration (setup → day/night loop, win, level-up)**)
 
 ## Explicitly out of scope
 
@@ -55,7 +55,7 @@ Last updated: 2026-08-26 — P3 EventEngine EditMode tests (all 6 events + timin
 - [x] Monastery + RollInsurance night-roll auto-picks match design text
 - [ ] Real UI (uGUI) + art pass
 - [x] Game.unity committed to repo
-- [ ] Integration / full-run tests
+- [x] Integration / full-run tests (`GameControllerIntegrationTests` — day/night loop, 10 VP win, level-up on day 5)
 
 ## Map sizes
 
