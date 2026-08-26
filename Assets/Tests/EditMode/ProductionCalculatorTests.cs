@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using CatanRoguelike.Core;
 using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Yield;
 using NUnit.Framework;
@@ -23,7 +25,7 @@ namespace CatanRoguelike.Tests
             };
 
             var vertex = VertexGraph.Canonicalize(
-                new Hex.HexMath.Vertex(new Hex.HexCoord(0, 0), 0));
+                new HexMath.Vertex(new HexCoord(0, 0), 0));
             board.VertexBuildings[vertex] = (BuildingType.Settlement, PlayerId.Human);
 
             var production = ProductionCalculator.CalculateForPlayer(state, PlayerId.Human, rolls);

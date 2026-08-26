@@ -8,6 +8,8 @@ using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Events;
+using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Turn;
 using UnityEngine;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
@@ -79,7 +81,7 @@ namespace CatanRoguelike.Game
                 GUILayout.Label($"<b>Uniques:</b> {string.Join(", ", state.DraftedUniques)}");
             GUILayout.Label(state.StatusMessage);
 
-            if (state.ActiveEvent != Events.EventId.None)
+            if (state.ActiveEvent != EventId.None)
                 GUILayout.Label($"<color=orange><b>Event:</b> {state.EventMessage}</color>");
 
             if (state.PendingCard.HasValue)

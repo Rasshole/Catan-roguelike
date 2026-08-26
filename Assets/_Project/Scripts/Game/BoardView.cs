@@ -140,8 +140,8 @@ namespace CatanRoguelike.Game
 
             if (!state.Board.RobberTile.HasValue) return;
             var coord = state.Board.RobberTile.Value;
-            if (_tiles.TryGetValue(coord, out var tile))
-                tile.SetRobberVisible(true);
+            if (_tiles.TryGetValue(coord, out var robberView))
+                robberView.SetRobberVisible(true);
         }
 
         private void RefreshBuildings(GameState state)

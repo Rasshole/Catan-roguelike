@@ -6,6 +6,7 @@ using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Cards;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Events;
+using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Core.Victory;

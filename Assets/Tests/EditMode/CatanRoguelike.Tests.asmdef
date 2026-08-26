@@ -2,9 +2,7 @@
     "name": "CatanRoguelike.Tests",
     "rootNamespace": "CatanRoguelike.Tests",
     "references": [
-        "CatanRoguelike.Core",
-        "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "CatanRoguelike.Core"
     ],
     "includePlatforms": [
         "Editor"
