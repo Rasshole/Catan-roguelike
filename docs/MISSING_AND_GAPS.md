@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P3 GameController integration EditMode tests (dag/nat-loop, win, level-up; supplerer EventEngine/CardEngine).
+Sidst opdateret efter P3 ShopGenerator EditMode tests (embargo human+AI, MarketDay via shop, deal generation).
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -114,6 +114,7 @@ Eksisterende EditMode-tests:
 - `AiControllerShopTests` — AI shop køber ved rigtig afford-check; springer over når den ikke har råd
 - `AiEmbargoStrategyTests` — `AiPool` indeholder Embargo (ikke Harbor Charter); AI draw; human Embargo → `AiShopEmbargo`; AI Embargo → `PlayerShopEmbargo` på strategisk ressource; shop skip under embargo; human shop blokeret af AI Embargo
 - `ShopGeneratorRiskyDealTests` — risky deal flytter robber til købers bedste tile (human + AI); RiskyDealsSafe skipper kun for human
+- `ShopGeneratorTests` — seeded `GenerateDailyDeals` (3 handler, 3. risky 2:1, ExtraShopDeal perk); safe `TryPurchase`; embargo blokerer Give for human (`PlayerShopEmbargo`) og AI (`AiShopEmbargo`) via `GetEffectiveGiveAmount` / `TryPurchase`; MarketDay `EventShopBonus` → 3:1 via `ShopGenerator` (ikke kun `ModifierService` / `ShopDealPricing`)
 - `ModifierServiceNightUniquesTests` — Monastery laveste roll + tie-break; RollInsurance scarcest inventory; once-per-run; begge samme nat
 - `BanditRaidTests` — `OpponentRoadSelector` stabil sortering/index; `ApplyBanditRaid` disabler valgt kant (ikke en anden); fejler rent uden modstander-veje
 - `PendingStatusDisplayTests` — Harbor Charter / Embargo / level-up preview statuslinjer (skjult når inaktiv)
@@ -125,7 +126,6 @@ Eksisterende EditMode-tests:
 - `GameControllerIntegrationTests` — seeded setup → nat/dag-cyklus uden hang; `SkipNightCard` / `PlayPlayerCard` → `DayPlayerActions`; win ved 10 VP; level-up på dag 5 via `EndPlayerDay`; disabled roads + event-flags ryddes ved daggrænse
 
 **Mangler tests for:**
-- `ShopGenerator` (embargo for human + AI, MarketDay)
 - `RouteCalculator` disabled roads / loop-længde
 - `RunProgression` draft-flow
 - `AiController` (shop afford + embargo skip; nat-Embargo mod spiller)
