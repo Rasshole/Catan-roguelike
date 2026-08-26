@@ -10,6 +10,7 @@ using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Events;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Progression;
+using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Turn;
 using UnityEngine;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
@@ -86,6 +87,12 @@ namespace CatanRoguelike.Game
 
             if (state.PendingCard.HasValue)
                 GUILayout.Label($"<color=yellow>Pending: {CardLibrary.Get(state.PendingCard.Value).Name}</color>");
+
+            if (PendingStatusDisplay.TryGetHarborCharterLine(state, out var harborLine))
+                GUILayout.Label($"<color=cyan>{harborLine}</color>");
+
+            if (PendingStatusDisplay.TryGetEmbargoLine(state, out var embargoLine))
+                GUILayout.Label($"<color=red>{embargoLine}</color>");
 
             if (state.Winner.HasValue)
             {
@@ -235,9 +242,10 @@ namespace CatanRoguelike.Game
             GUILayout.Label("<b>Shop</b> (3 trades; 3rd is often RISKY 2:1)");
             foreach (var deal in state.ShopDeals)
             {
-                int effective = _controller.GetShopDealCost(deal);
+                var pricing = ShopDealPricing.Analyze(state, PlayerId.Human, deal);
+                string reason = ShopDealPricing.FormatShortReason(pricing.Reason);
                 string risk = deal.IsRisky ? $"\n{deal.RiskDescription}" : "";
-                if (GUILayout.Button($"Buy: {deal.Format(effective)}{risk}"))
+                if (GUILayout.Button($"Buy: {deal.Format(pricing.EffectiveGive)} ({reason}){risk}"))
                     _controller.BuyShopDeal(deal);
             }
 
