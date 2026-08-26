@@ -8,9 +8,7 @@ using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
-using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Turn;
-using CatanRoguelike.Core.Victory;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 
@@ -111,7 +109,7 @@ namespace CatanRoguelike.SimRunner
             var summary = new Summary
             {
                 runs = results.Count,
-                driver = "narrow-core",
+                driver = "full",
                 timeoutMs = opts.TimeoutMs,
                 maxSteps = opts.MaxSteps,
                 maxDays = opts.MaxDays,
@@ -171,7 +169,7 @@ namespace CatanRoguelike.SimRunner
                         break;
                     case "--help":
                     case "-h":
-                        Console.WriteLine("CatanRoguelike sim-runner (narrow-core driver)");
+                        Console.WriteLine("CatanRoguelike sim-runner (full Core driver)");
                         Console.WriteLine("  --runs N          games, seeds SeedStart..+N-1 (default 1)");
                         Console.WriteLine("  --seed-start N    first seed (default 1)");
                         Console.WriteLine("  --timeout-ms N    per-run wall clock (default 5000)");
@@ -231,12 +229,10 @@ namespace CatanRoguelike.SimRunner
     }
 
     /// <summary>
-    /// Narrow Core driver. Full GameController placement (PlaceSettlement / AI
-    /// GetValidSettlementSpots) stalls inside VertexGraph.VertexDistance once any
-    /// building exists. This driver still runs setup + N night/day cycles:
-    /// ConfirmRunSetup (AI first piece), inject remaining setup, BeginNight,
-    /// SkipNightCard (rolls/events/cards/production/shop), then a day-advance that
-    /// skips AI placement. Timeouts and step/day caps always fire.
+    /// Full Core driver: GameController placement (PlaceSettlement / PlaceRoad /
+    /// GetValidSettlementSpots / EndPlayerDay → AI ExecuteDayTurn). Timeouts and
+    /// step/day caps always fire. Copies TodayRolls before the first SkipNightCard
+    /// so AI night-plan does not crash on an empty roll map.
     /// </summary>
     internal static class MatchDriver
     {
@@ -265,7 +261,6 @@ namespace CatanRoguelike.SimRunner
                 Step(game, box, sw, opts, () => game.ToggleDraftUnique(uniques[u0]));
                 Step(game, box, sw, opts, () => game.ToggleDraftUnique(uniques[u1]));
                 Step(game, box, sw, opts, () => game.ConfirmRunSetup());
-                Step(game, box, sw, opts, () => InjectRemainingSetup(game));
 
                 while (true)
                 {
@@ -383,14 +378,15 @@ namespace CatanRoguelike.SimRunner
 
                 case GamePhase.DayPlayerActions:
                     TryBuyFirstAffordableDeal(game);
-                    AdvanceDayWithoutAiPlacement(game);
+                    TryDayBuild(game);
+                    game.EndPlayerDay();
                     break;
 
                 case GamePhase.LevelUpChoice:
                     if (game.State.PendingLevelUpChoices.Count > 0)
                         game.ChooseLevelUpPerk(game.State.PendingLevelUpChoices[0]);
                     else
-                        AdvanceDayWithoutAiPlacement(game);
+                        game.EndPlayerDay();
                     break;
 
                 case GamePhase.SetupAiSettlement1:
@@ -398,6 +394,18 @@ namespace CatanRoguelike.SimRunner
                 case GamePhase.SetupAiRoad1:
                 case GamePhase.SetupAiRoad2:
                     game.RunAiSetupStep();
+                    break;
+
+                case GamePhase.SetupPlayerSettlement1:
+                case GamePhase.SetupPlayerSettlement2:
+                    if (!TryPlaceFirstValidSettlement(game, PlayerId.Human))
+                        throw new InvalidOperationException("no valid player settlement in " + game.State.Phase);
+                    break;
+
+                case GamePhase.SetupPlayerRoad1:
+                case GamePhase.SetupPlayerRoad2:
+                    if (!TryPlaceFirstValidRoad(game, PlayerId.Human))
+                        throw new InvalidOperationException("no valid player road in " + game.State.Phase);
                     break;
 
                 default:
@@ -416,133 +424,41 @@ namespace CatanRoguelike.SimRunner
             }
         }
 
-        /// <summary>
-        /// Mirrors GameController.EndDay without Ai.ExecuteDayTurn / placement scans.
-        /// </summary>
-        private static void AdvanceDayWithoutAiPlacement(GameController game)
+        private static void TryDayBuild(GameController game)
         {
-            var state = game.State;
-            game.Events.ClearDailyEventEffects(state);
-            state.Board.DisabledRoads.Clear();
-
-            if (state.AiEmbargoDaysLeft > 0)
+            foreach (var kvp in game.State.Board.VertexBuildings)
             {
-                state.AiEmbargoDaysLeft--;
-                if (state.AiEmbargoDaysLeft <= 0) state.AiShopEmbargo = null;
-            }
-            else
-                state.AiShopEmbargo = null;
-
-            state.Board.DayNumber++;
-
-            if (RunProgression.ShouldOfferLevelUp(state))
-            {
-                state.PendingLevelUpChoices.Clear();
-                state.PendingLevelUpChoices.AddRange(
-                    RunProgression.GenerateLevelUpChoices(state, new Random(state.Board.DayNumber + 17)));
-                if (state.PendingLevelUpChoices.Count > 0)
+                if (kvp.Value.owner == PlayerId.Human && kvp.Value.type == BuildingType.Settlement)
                 {
-                    state.Phase = GamePhase.LevelUpChoice;
-                    state.StatusMessage = "Level up! Choose a perk.";
-                    return;
+                    if (game.UpgradeCity(kvp.Key, PlayerId.Human))
+                        return;
                 }
             }
 
-            var winner = VictoryCalculator.CheckWinner(state);
-            if (winner.HasValue)
-            {
-                state.Winner = winner;
-                state.Phase = GamePhase.GameOver;
-                state.StatusMessage = winner == PlayerId.Human ? "You win!" : "AI wins!";
-                return;
-            }
-
-            game.BeginNight();
+            TryPlaceFirstValidSettlement(game, PlayerId.Human);
+            TryPlaceFirstValidRoad(game, PlayerId.Human);
         }
 
-        private static void InjectRemainingSetup(GameController game)
+        private static bool TryPlaceFirstValidSettlement(GameController game, PlayerId player)
         {
-            int humanSettlements = 0;
-            foreach (var kv in game.State.Board.VertexBuildings)
+            foreach (var vertex in game.Placement.GetValidSettlementSpots(
+                         game.State.Board, player, game.State.IsSetupPhase))
             {
-                if (kv.Value.owner == PlayerId.Human)
-                    humanSettlements++;
+                if (game.PlaceSettlement(vertex, player))
+                    return true;
             }
-
-            foreach (var vertex in EnumerateVertices(game.State.Board))
-            {
-                if (humanSettlements >= 2) break;
-                if (!IsFreeAndNotAdjacent(game.State.Board, vertex))
-                    continue;
-                game.State.Board.VertexBuildings[vertex] = (BuildingType.Settlement, PlayerId.Human);
-                TryAttachRoad(game.State.Board, vertex, PlayerId.Human);
-                humanSettlements++;
-            }
-
-            int aiSettlements = 0;
-            foreach (var kv in game.State.Board.VertexBuildings)
-            {
-                if (kv.Value.owner == PlayerId.Ai)
-                    aiSettlements++;
-            }
-
-            foreach (var vertex in EnumerateVertices(game.State.Board))
-            {
-                if (aiSettlements >= 2) break;
-                if (!IsFreeAndNotAdjacent(game.State.Board, vertex))
-                    continue;
-                game.State.Board.VertexBuildings[vertex] = (BuildingType.Settlement, PlayerId.Ai);
-                TryAttachRoad(game.State.Board, vertex, PlayerId.Ai);
-                aiSettlements++;
-            }
-
-            VictoryCalculator.RefreshVictoryPoints(game.State);
-            game.BeginNight();
+            return false;
         }
 
-        private static bool IsFreeAndNotAdjacent(BoardState board, Vertex vertex)
+        private static bool TryPlaceFirstValidRoad(GameController game, PlayerId player)
         {
-            if (board.VertexBuildings.ContainsKey(vertex))
-                return false;
-
-            foreach (var existing in board.VertexBuildings.Keys)
+            foreach (var edge in game.Placement.GetValidRoadSpots(
+                         game.State.Board, player, game.State.IsSetupPhase))
             {
-                if (existing.Equals(vertex))
-                    return false;
-                foreach (var adj in VertexGraph.GetAdjacentVertices(existing))
-                {
-                    if (adj.Equals(vertex))
-                        return false;
-                }
+                if (game.PlaceRoad(edge, player))
+                    return true;
             }
-
-            return true;
-        }
-
-        private static void TryAttachRoad(BoardState board, Vertex vertex, PlayerId player)
-        {
-            foreach (var adj in VertexGraph.GetAdjacentVertices(vertex))
-            {
-                var edge = new Edge(vertex, adj);
-                if (board.Roads.ContainsKey(edge))
-                    continue;
-                board.Roads[edge] = player;
-                return;
-            }
-        }
-
-        private static IEnumerable<Vertex> EnumerateVertices(BoardState board)
-        {
-            var seen = new HashSet<Vertex>();
-            foreach (var hex in board.Tiles.Keys)
-            {
-                for (int c = 0; c < 6; c++)
-                {
-                    var v = VertexGraph.Canonicalize(new Vertex(hex, c));
-                    if (seen.Add(v))
-                        yield return v;
-                }
-            }
+            return false;
         }
     }
 }

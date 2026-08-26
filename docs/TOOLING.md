@@ -84,22 +84,17 @@ dotnet run -- --runs 5
 | `--max-days N` | 12 | stop når `DayNumber` overstiger N → `max_days` |
 | `--map small\|medium\|large` | small | kortstørrelse |
 
-### Driver: `narrow-core`
+### Driver: `full`
 
-Fuld `GameController`-placement (`PlaceSettlement` / AI `GetValidSettlementSpots`) **staller** i `VertexGraph.VertexDistance` så snart der findes ét building på brættet (verificeret: timeout i `SetupPlayerSettlement1`). AI night-plan crasher desuden hvis `TodayRolls` er tom (den læses før `TomorrowRolls` kopieres).
+`VertexGraph.Canonicalize` er idempotent, så `VertexDistance` / `PlaceSettlement` / AI `GetValidSettlementSpots` terminerer med buildings på brættet. Default-driveren spiller den rigtige Core-loop:
 
-Runneren kører derfor en smallere Core-loop der stadig rører de vigtige systemer:
+1. `SelectMap` → leader → draft → `ConfirmRunSetup` (AI setup-step)
+2. Spiller-setup via `GetValidSettlementSpots` / `PlaceSettlement` / `PlaceRoad`
+3. `SkipNightCard` (produktion + shop). `TodayRolls` kopieres først hvis tom, så AI night-plan ikke crasher
+4. Dag: shop + evt. human build, derefter `EndPlayerDay` (AI `ExecuteDayTurn` + placement)
+5. Stop ved GameOver, max-days, max-steps eller timeout
 
-1. `SelectMap` → leader → draft → `ConfirmRunSetup` (AI's første brik; 0 buildings → ingen VertexDistance)
-2. Injicer resterende setup direkte på `BoardState` (ingen validator-BFS)
-3. `BeginNight` (rolls, events, kort-træk)
-4. `SkipNightCard` (produktion + shop); `TodayRolls` kopieres først så AI ikke crasher
-5. Dag-skift **uden** `EndPlayerDay` / AI-placement
-6. Stop ved GameOver, max-days, max-steps eller timeout
-
-Når VertexDistance er rettet, kan driveren udvides til fuld AI-vs-AI.
-
-Aldrig blokér på Unity-licens. `--runs 5` skal returnere på under 30s (målt ~1–2s).
+Timeout-guards er uændrede. Aldrig blokér på Unity-licens.
 
 ## Editor debug-hooks (`Catan Roguelike/Debug`)
 

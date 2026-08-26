@@ -7,27 +7,32 @@ namespace CatanRoguelike.Core.Map
 {
     public static class VertexGraph
     {
-        /// <summary>Returns the 3 hex tiles that may touch a canonical vertex.</summary>
+        /// <summary>
+        /// Three hexes that meet at this vertex.
+        /// Corners run clockwise from north; axial directions run CCW from east,
+        /// so the other two hexes are neighbors (c+4) and (c+5).
+        /// </summary>
         public static IEnumerable<HexCoord> GetHexesForVertex(Vertex vertex)
         {
-            yield return vertex.Hex;
-
             int c = vertex.CornerIndex;
-            yield return HexMath.GetNeighbor(vertex.Hex, (c + 2) % 6);
-            yield return HexMath.GetNeighbor(vertex.Hex, (c + 3) % 6);
+            yield return vertex.Hex;
+            yield return HexMath.GetNeighbor(vertex.Hex, (c + 4) % 6);
+            yield return HexMath.GetNeighbor(vertex.Hex, (c + 5) % 6);
         }
 
+        /// <summary>
+        /// Unique representative of a geometric vertex. Idempotent: the three
+        /// (hex, corner) labels of the same point map to one lex-smallest vertex.
+        /// </summary>
         public static Vertex Canonicalize(Vertex vertex)
         {
-            var candidates = new List<Vertex> { vertex };
             int c = vertex.CornerIndex;
-
-            var h1 = HexMath.GetNeighbor(vertex.Hex, (c + 2) % 6);
-            var h2 = HexMath.GetNeighbor(vertex.Hex, (c + 3) % 6);
-
-            // Re-map corner indices for neighbor hexes (inverse mapping)
-            candidates.Add(new Vertex(h1, (c + 4) % 6));
-            candidates.Add(new Vertex(h2, (c + 1) % 6));
+            var candidates = new[]
+            {
+                vertex,
+                new Vertex(HexMath.GetNeighbor(vertex.Hex, (c + 5) % 6), (c + 4) % 6),
+                new Vertex(HexMath.GetNeighbor(vertex.Hex, (c + 4) % 6), (c + 2) % 6)
+            };
 
             Vertex best = candidates[0];
             foreach (var v in candidates)
@@ -49,34 +54,33 @@ namespace CatanRoguelike.Core.Map
 
         public static IEnumerable<Vertex> GetAdjacentVertices(Vertex vertex)
         {
+            vertex = Canonicalize(vertex);
             int c = vertex.CornerIndex;
             yield return Canonicalize(new Vertex(vertex.Hex, (c + 5) % 6));
             yield return Canonicalize(new Vertex(vertex.Hex, (c + 1) % 6));
-
-            var neighborHex = HexMath.GetNeighbor(vertex.Hex, c);
-            yield return Canonicalize(new Vertex(neighborHex, (c + 3) % 6));
+            yield return Canonicalize(new Vertex(
+                HexMath.GetNeighbor(vertex.Hex, (c + 5) % 6), (c + 5) % 6));
         }
 
         public static int VertexDistance(Vertex a, Vertex b)
         {
+            a = Canonicalize(a);
+            b = Canonicalize(b);
             if (a.Equals(b)) return 0;
 
-            var visited = new HashSet<Vertex>();
+            var visited = new HashSet<Vertex> { a };
             var queue = new Queue<(Vertex v, int dist)>();
-            queue.Enqueue((Canonicalize(a), 0));
-            visited.Add(Canonicalize(a));
+            queue.Enqueue((a, 0));
 
             while (queue.Count > 0)
             {
                 var (current, dist) = queue.Dequeue();
-                if (current.Equals(Canonicalize(b)))
-                    return dist;
-
                 foreach (var neighbor in GetAdjacentVertices(current))
                 {
-                    var canon = Canonicalize(neighbor);
-                    if (visited.Add(canon))
-                        queue.Enqueue((canon, dist + 1));
+                    if (neighbor.Equals(b))
+                        return dist + 1;
+                    if (visited.Add(neighbor))
+                        queue.Enqueue((neighbor, dist + 1));
                 }
             }
 

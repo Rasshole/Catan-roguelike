@@ -20,3 +20,12 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - Ingen fake `.meta` / `Game.unity`. Ingen v0.1-tag.
 
 **Næste:** Unity `.ulf` → 0.1/0.2/0.7. P0 #2 LongRoadBonus. `VertexDistance`-stall blokerer fuld AI-vs-AI sim.
+
+## 2026-08-26 (CEST) — VertexDistance hang
+
+- **Root cause:** `Canonicalize` was not idempotent — the (c+2)/(c+3) neighbor remap walked toward −Q, so BFS `visited` grew without bound on the infinite hex grid.
+- **Fix (Core):** corners CW from north vs directions CCW from east → other hexes are neighbors (c+4) and (c+5). `Canonicalize` / `GetHexesForVertex` / `GetAdjacentVertices` agree; `Canonicalize` is idempotent.
+- **Tests** (`tools/core-tests`): `Canonicalize_IsIdempotent_ForEveryBoardCorner`, `Canonicalize_EquivalentRepresentations_ShareTheSameCanonicalVertex`, `VertexDistance_TerminatesOnBoardWithTwoSettlementsAndRoads`, `VertexDistance_SameVertexDifferentRepresentations_IsZero`, `GetValidSettlementSpots_ReturnsInBoundedTime_WithBuildingsPresent`, `CanPlaceSettlement_ReturnsInBoundedTime_WithBuildingsPresent`.
+- **Sim-runner:** default driver `full` (`PlaceSettlement` / `EndPlayerDay`). `--runs 3` @ 5s: 2× `ok` (human), 1× `max_days`, 0 timeout/crash. Timeout-guards kept. `TodayRolls` still copied before first night so AI night-plan does not crash.
+
+**Næste:** P0 #2 LongRoadBonus. Unity `.ulf` → 0.1/0.2/0.7. Editor debug-hooks still skip `EndPlayerDay`.
