@@ -29,3 +29,9 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **Sim-runner:** default driver `full` (`PlaceSettlement` / `EndPlayerDay`). `--runs 3` @ 5s: 2× `ok` (human), 1× `max_days`, 0 timeout/crash. Timeout-guards kept. `TodayRolls` still copied before first night so AI night-plan does not crash.
 
 **Næste:** P0 #2 LongRoadBonus. Unity `.ulf` → 0.1/0.2/0.7. Editor debug-hooks still skip `EndPlayerDay`.
+
+## 2026-08-26 (CEST) — P0 #2 LongRoadBonus
+
+- Wired in `VictoryCalculator.RefreshVictoryPoints`: human with perk + longest route gets +1 VP on top of the regular 2. Not stored in `PlayerBonusVictoryPoints` (would stick after losing longest). Second refresh neither drops nor doubles it.
+- Tests: `LongRoadBonus_HasPerkAndLongest_AddsOneVp`, `LongRoadBonus_LosesLongest_BonusGone`, `LongRoadBonus_DoesNotDoubleCountRegularLongestRouteBonus`.
+- Docs: `MISSING_AND_GAPS`, `IMPLEMENTATION_STATUS`. P0 #3 opponent blocking **not** done.

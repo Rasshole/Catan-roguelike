@@ -1,11 +1,12 @@
 using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
 
 namespace CatanRoguelike.Core.Victory
 {
     public static class VictoryCalculator
     {
-        public static int CalculateVictoryPoints(BoardState board, PlayerId player)
+        public static int CalculateVictoryPoints(BoardState board, PlayerId player, bool longRoadBonusPerk = false)
         {
             int vp = 0;
             vp += board.CountBuildings(player, BuildingType.Settlement);
@@ -13,14 +14,19 @@ namespace CatanRoguelike.Core.Victory
 
             var longestOwner = RouteCalculator.GetLongestRoadOwner(board);
             if (longestOwner == player)
+            {
                 vp += BalanceConfig.LongestRouteVictoryPoints;
+                if (longRoadBonusPerk)
+                    vp += 1;
+            }
 
             return vp;
         }
 
         public static void RefreshVictoryPoints(GameState state)
         {
-            state.PlayerVictoryPoints = CalculateVictoryPoints(state.Board, PlayerId.Human)
+            bool humanLongRoadPerk = state.HasPerk(LevelUpPerkId.LongRoadBonus);
+            state.PlayerVictoryPoints = CalculateVictoryPoints(state.Board, PlayerId.Human, humanLongRoadPerk)
                 + state.GetBonusVictoryPoints(PlayerId.Human);
             state.AiVictoryPoints = CalculateVictoryPoints(state.Board, PlayerId.Ai)
                 + state.GetBonusVictoryPoints(PlayerId.Ai);

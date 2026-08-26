@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P0 #1 bonus-VP-fix (Harbor Charter / FirstCityVp).
+Sidst opdateret efter P0 #2 LongRoadBonus + VertexDistance-fix.
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -33,7 +33,6 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 
 | Problem | Hvor | Note |
 |---------|------|------|
-| **LongRoadBonus-perk** | `LeaderLibrary` / `VictoryCalculator` | Defineret (“+1 VP ved longest route”) men implementeret ingen steder |
 | **Monastery** | `ModifierService` | Beskrivelse: laveste roll; kode: laveste enum-rækkefølge |
 | **RollInsurance** | `ModifierService` | Beskrivelse: mest knappe ressource; kode: første 0-roll |
 | **AI risky shop** | `ShopGenerator.ApplyRiskyDealPenalty` | Straf (robber) gælder kun menneskespiller |
@@ -82,6 +81,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 
 ### Longest road
 - DFS i `RouteCalculator`; ≥5 veje = 2 VP ✓
+- **LongRoadBonus** — +1 VP oven i de 2 når human har perk og longest; forsvinder ved tab af longest ✓
 - **Modstander-settlements blokerer ikke** ruter (klassisk Catan-regel mangler)
 - Edge cases på forgreninger kan være forkerte
 
@@ -118,7 +118,8 @@ Eksisterende EditMode-tests:
 - `ProductionCalculatorTests` — multi-hex production
 - `PortAccessTests` — specifik 2:1 port
 - `MapPresetsTests` — 7/13/19 tile counts
-- `VictoryCalculatorTests` — Harbor Charter + FirstCityVp overlever `RefreshVictoryPoints`
+- `VictoryCalculatorTests` — Harbor Charter + FirstCityVp overlever `RefreshVictoryPoints`; LongRoadBonus +1 / mister longest / ingen double-count
+- `VertexGraphTests` — Canonicalize idempotent; VertexDistance terminerer med buildings
 
 **Mangler tests for:**
 - `RouteCalculator` (longest road, ties, disabled roads)
@@ -135,12 +136,11 @@ Eksisterende EditMode-tests:
 
 ## Anbefalet rækkefølge næste gang
 
-1. **LongRoadBonus-perk** — defineret men ikke wired i `VictoryCalculator`
-2. **Bandit Raid** vej-vælger i UI
-3. **Generiske 3:1-porte** på kystvertices
-4. Longest road: **modstander-blokering** + bedre graf-algoritme
-5. Rig UI (uGUI) + committed `Game.unity`
-6. Integrationstests + playtest på 19-hex
+1. **Bandit Raid** vej-vælger i UI
+2. **Generiske 3:1-porte** på kystvertices
+3. Longest road: **modstander-blokering** + bedre graf-algoritme
+4. Rig UI (uGUI) + committed `Game.unity`
+5. Integrationstests + playtest på 19-hex
 
 ---
 
