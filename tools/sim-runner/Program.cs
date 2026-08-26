@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Turn;
@@ -397,6 +398,10 @@ namespace CatanRoguelike.SimRunner
                     break;
 
                 case GamePhase.SetupPlayerSettlement1:
+                    if (!TryPlaceSetupSettlement1WithLookahead(game, PlayerId.Human))
+                        throw new InvalidOperationException("no valid player settlement in " + game.State.Phase);
+                    break;
+
                 case GamePhase.SetupPlayerSettlement2:
                     if (!TryPlaceFirstValidSettlement(game, PlayerId.Human))
                         throw new InvalidOperationException("no valid player settlement in " + game.State.Phase);
@@ -437,6 +442,49 @@ namespace CatanRoguelike.SimRunner
 
             TryPlaceFirstValidSettlement(game, PlayerId.Human);
             TryPlaceFirstValidRoad(game, PlayerId.Human);
+        }
+
+        private static bool TryPlaceSetupSettlement1WithLookahead(GameController game, PlayerId player)
+        {
+            var board = game.State.Board;
+            var placement = game.Placement;
+
+            foreach (var vertex in placement.GetValidSettlementSpots(board, player, setupPhase: true))
+            {
+                if (!LeavesValidSecondSetupSettlement(placement, board, player, vertex))
+                    continue;
+
+                if (game.PlaceSettlement(vertex, player))
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Greedy first-valid settlement 1 can consume every legal vertex for settlement 2
+        /// on Small maps once AI setup is on the board. Pick settlement 1 only when a
+        /// second setup settlement still exists under the distance rule.
+        /// </summary>
+        private static bool LeavesValidSecondSetupSettlement(
+            PlacementValidator placement, BoardState board, PlayerId player, Vertex first)
+        {
+            first = VertexGraph.Canonicalize(first);
+            board.VertexBuildings[first] = (BuildingType.Settlement, player);
+            try
+            {
+                foreach (var spot in placement.GetValidSettlementSpots(board, player, setupPhase: true))
+                {
+                    if (!spot.Equals(first))
+                        return true;
+                }
+
+                return false;
+            }
+            finally
+            {
+                board.VertexBuildings.Remove(first);
+            }
         }
 
         private static bool TryPlaceFirstValidSettlement(GameController game, PlayerId player)
