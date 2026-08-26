@@ -448,6 +448,7 @@ namespace CatanRoguelike.Core
         {
             if (player != PlayerId.Human) return baseCost;
 
+            // Master Builder: 25% off (0.75). Architect passive adds 10 pts → 35% off (0.65).
             float discount = State.PendingCard == CardId.MasterBuilder ? 0.75f : 1f;
             if (State.Leader == LeaderId.Architect && State.PendingCard == CardId.MasterBuilder)
                 discount = 0.65f;

@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P1 #15 VP-breakdown i IMGUI (efter P1 #13/#14 PlaceholderUI feedback).
+Sidst opdateret efter P1 #16 Architect threshold-rabat (efter P1 #15 VP-breakdown).
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -55,7 +55,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 - Leader-vælg + **level-up hver 5. dag** (max 3) ✓
 - Level-up **afbryder** dags-flow uden forhåndsvisning
 - Nogle perks er let wired (Merchant shop, Pioneer free road, Warlord knight)
-- **Architect** threshold-rabat er generel 10 %, ikke eksplicit threshold-only
+- **Architect** threshold-rabat: 10 % kun på settlement over threshold-tælleren; Master Builder-rabat kun i `GetEffectiveCost` (0,65 vs 0,75) ✓
 
 ### Unique buildings (draft 2 af 5)
 - Sawmill, Guild Hall, Monastery, Caravan Post, Fortress Outpost — wired ✓
@@ -116,6 +116,7 @@ Eksisterende EditMode-tests:
 - `BanditRaidTests` — `OpponentRoadSelector` stabil sortering/index; `ApplyBanditRaid` disabler valgt kant (ikke en anden); fejler rent uden modstander-veje
 - `PendingStatusDisplayTests` — Harbor Charter / Embargo statuslinjer (skjult når inaktiv)
 - `ShopDealPricingTests` — pris-årsag (base, port 2:1/3:1, leader, event, perk); matcher `ShopGenerator.GetEffectiveGiveAmount`
+- `ArchitectCostModifierTests` — Architect 10 % kun threshold-settlement; road/city/non-threshold fuld pris; Master Builder 0,65 vs 0,75 uden dobbeltrabat
 
 **Mangler tests for:**
 - `EventEngine` (alle events, timing)

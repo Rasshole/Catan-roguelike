@@ -24,10 +24,10 @@ namespace CatanRoguelike.Core
             if (player != PlayerId.Human) return cost;
 
             var result = cost;
-            if (state.Leader == LeaderId.Architect)
-            {
+            // Architect: 10% off settlement costs that include the threshold surcharge only.
+            // Master Builder discount lives in GameController.GetEffectiveCost (0.65 vs 0.75).
+            if (isSettlement && state.Leader == LeaderId.Architect && IsAtSettlementThreshold(state, player))
                 result = DiscountPercent(result, 0.1f);
-            }
             if (isSettlement && state.HasPerk(LevelUpPerkId.CheapSettlements))
                 result.Sheep = Math.Max(0, result.Sheep - 1);
             if (isCity && state.HasPerk(LevelUpPerkId.CheapCities))
@@ -133,6 +133,14 @@ namespace CatanRoguelike.Core
                 .First()
                 .Key;
             return true;
+        }
+
+        private static bool IsAtSettlementThreshold(GameState state, PlayerId player)
+        {
+            int threshold = GetSettlementThreshold(state);
+            int count = state.Board.CountBuildings(player, BuildingType.Settlement)
+                      + state.Board.CountBuildings(player, BuildingType.City);
+            return count >= threshold;
         }
 
         private static ResourceBundle DiscountPercent(ResourceBundle cost, float percent)
