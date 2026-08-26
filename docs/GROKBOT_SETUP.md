@@ -16,33 +16,48 @@ Disse tre credentials er de eneste reelle blockers.
 Unity nægter at starte i batchmode uden aktiveret licens. Uden dette kan Grokbot
 kun arbejde på `Core` (ren C#) og ikke åbne Unity overhovedet.
 
-**Anbefalet metode — licensfil (mest driftsikker):**
+> **Kopiér ikke din egen licensfil til VM'en.** Unity-licenser er maskinbundne — en licens
+> aktiveret på din PC er knyttet til din PC's hardware-ID og virker typisk ikke på VM'en.
+> Licensen skal genereres til VM'en. Brug derfor A eller B nedenfor.
 
-1. Installér **Unity Hub** på din egen PC
-2. Log ind med din Unity-konto
-3. Aktivér din licens (Personal er gratis)
-4. Find licensfilen:
-   - Windows: `C:\ProgramData\Unity\Unity_lic.ulf`
-   - macOS: `/Library/Application Support/Unity/Unity_lic.ulf`
-   - Linux: `~/.local/share/unity3d/Unity/Unity_lic.ulf`
-5. Åbn filen i Notepad, kopiér hele indholdet
-6. Giv den til Grokbot som en secret/fil den kan skrive til samme sti på VM'en
+**Metode A — email og password (nemmest, prøv denne først):**
 
-**Alternativ metode — miljøvariabler:**
-
-Læg disse ind som secrets hos Grokbot:
+Læg disse ind som secrets hos Grokbot og lad den aktivere sig selv:
 
 | Variabel | Værdi |
 |----------|-------|
 | `UNITY_EMAIL` | Din Unity-konto email |
 | `UNITY_PASSWORD` | Din Unity-konto adgangskode |
-| `UNITY_SERIAL` | Kun hvis du har Unity Pro/Plus |
+| `UNITY_SERIAL` | **Kun** hvis du har Unity Pro/Plus. Personal har ingen serial |
 
-Headless login er mere skrøbeligt end licensfil-metoden. Brug den kun hvis
-filmetoden ikke kan bruges.
+**Metode B — manuel aktivering kørt på VM'en (mest driftsikker):**
 
-> **Bemærk:** Tjek at din licenstype tillader aktivering på både din PC og en VM.
-> Personal-licensen har begrænsninger på antal samtidige aktiveringer.
+Samme fremgangsmåde som CI-systemer bruger. Licensen genereres til VM'en i stedet for
+at blive kopieret fra en anden maskine. Grokbot laver næsten alt arbejdet:
+
+1. Grokbot kører på VM'en:
+   `Unity -batchmode -nographics -quit -createManualActivationFile -logFile -`
+2. Det producerer en `.alf`-fil, som Grokbot lægger et sted du kan hente
+3. **Din eneste opgave:** gå til <https://license.unity3d.com/manual>, log ind,
+   upload `.alf`-filen, vælg Personal, og download den `.ulf`-fil du får tilbage
+4. Giv `.ulf`-filen tilbage til Grokbot, som aktiverer med den
+
+Skriv i din første besked til Grokbot, at hvis metode A fejler, skal den køre
+`-createManualActivationFile` og aflevere `.alf`-filen til dig med en kort instruks.
+
+**Kan du ikke finde nogen licensfil på din PC?**
+
+Det er forventeligt og betyder ikke at noget er galt. To grunde:
+`C:\ProgramData` er en **skjult mappe** i Windows (paste stien direkte i Explorers
+adresselinje), og moderne Unity (2020.1+ med Hub 3.x) bruger en ny licensing-klient der
+gemmer licensen i et andet format og en anden sti end den gamle `Unity_lic.ulf`.
+
+Du har alligevel ikke brug for den — se boksen øverst. Vil du kigge alligevel:
+
+```powershell
+Get-ChildItem -Path C:\ProgramData\Unity -Recurse -Include *.ulf,*.xml -ErrorAction SilentlyContinue |
+  Select-Object FullName
+```
 
 ### A2. GitHub push-adgang
 

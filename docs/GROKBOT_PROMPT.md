@@ -316,10 +316,15 @@ Ved sessionsstart, verificér og etablér selv:
 1. `git`, `git-lfs`, `dotnet` SDK installeret
 2. Unity Hub + Unity Editor **6000.3.15f1** — præcis denne version. Anden version trigger
    projekt-upgrade og kan brække serialisering
-3. Unity-licens aktiveret. Prøv i denne rækkefølge:
-   - Eksisterende `.ulf` licensfil på disken
+3. Unity-licens aktiveret. Unity-licenser er **maskinbundne** — en licensfil fra brugerens
+   egen PC virker ikke her. Licensen skal genereres til denne VM. Prøv i rækkefølge:
+   - En `.ulf` der allerede er aktiveret **til denne VM** (fra en tidligere session)
    - `UNITY_EMAIL` / `UNITY_PASSWORD` / `UNITY_SERIAL` fra miljøvariabler
-   - `-createManualActivationFile`, og dokumentér i `BLOCKED.md` hvad der mangler
+     (Personal har ingen serial — kun email og password)
+   - Manuel aktivering: kør `-createManualActivationFile`, læg den resulterende `.alf`-fil
+     et sted brugeren kan hente den, og skriv i `BLOCKED.md` en kort instruks:
+     upload `.alf` på <https://license.unity3d.com/manual>, vælg Personal, og læg den
+     returnerede `.ulf` tilbage til dig. Fortsæt i degraded mode imens
 4. `xvfb` hvis der ingen fysisk skærm er (nødvendigt til Play Mode og PlayMode-tests)
 5. Git configureret med credentials der kan pushe og tagge
 
