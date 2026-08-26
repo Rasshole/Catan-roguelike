@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P1 #10 Bandit Raid vej-vælger i UI (efter P0 #8/#9 Monastery + RollInsurance).
+Sidst opdateret efter P1 #11 generiske 3:1-porte (efter P1 #10 Bandit Raid vej-vælger).
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -33,7 +33,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 
 ### Shop & porte
 - **Specifikke 2:1-porte** — wired i `ShopGenerator` + `PortAccess` ✓
-- **Generiske 3:1-porte** — API findes (`PortDefinition.IsGeneric`, `HasGenericPort`), men `DiscoverPorts` opretter **kun** ressource-specifikke porte
+- **Generiske 3:1-porte** — `DiscoverPorts` opretter sparse mix (2:1 per ressource + 3:1 generic, skaleret til 7/13/19 hex) ✓
 - **PortDiscount-perk** — rabat på alle handler når du kontrollerer en port (ikke kun “unrelated trades”)
 - **Risky deal (3. handel)** — core wired; UI forklarer ikke konsekvensen tydeligt
 - **Effektiv shop-pris** — beregnes, men UI viser ikke *hvorfor* (port / leader / event)
@@ -103,7 +103,7 @@ Eksisterende EditMode-tests:
 - `RollEngineTests` — roll caps
 - `PlacementValidatorTests` — distance rule
 - `ProductionCalculatorTests` — multi-hex production
-- `PortAccessTests` — specifik 2:1 port
+- `PortAccessTests` — specifik 2:1, generisk 3:1, 2:1 vs 3:1 prioritet, base rate, sparse discovery på 7/13/19
 - `MapPresetsTests` — 7/13/19 tile counts
 - `VictoryCalculatorTests` — Harbor Charter + FirstCityVp overlever `RefreshVictoryPoints`; LongRoadBonus +1 / mister longest / ingen double-count
 - `VertexGraphTests` — Canonicalize idempotent; VertexDistance terminerer med buildings
@@ -129,7 +129,7 @@ Eksisterende EditMode-tests:
 
 ## Anbefalet rækkefølge næste gang
 
-1. **Generiske 3:1-porte** på kystvertices
+1. **PortDiscount-perk** + effektiv shop-pris i UI
 2. Longest road: bedre graf-algoritme (loops / forgreninger)
 3. Rig UI (uGUI) + art pass
 4. Integrationstests + playtest på 19-hex

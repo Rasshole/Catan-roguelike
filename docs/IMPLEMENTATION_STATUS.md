@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-26 — P1 #10 Bandit Raid road picker in night-card UI (efter P0 #8/#9 Monastery + RollInsurance night-roll picks).
+Last updated: 2026-08-26 — P1 #11 generiske 3:1-porte i `DiscoverPorts` (efter P1 #10 Bandit Raid vej-vælger).
 
 ## Done (playable prototype scope)
 
@@ -18,7 +18,7 @@ Last updated: 2026-08-26 — P1 #10 Bandit Raid road picker in night-card UI (ef
 - [x] Catan placement rules (distance, roads, connectivity)
 - [x] Catan costs + threshold pricing
 - [x] Daily shop (3 deals) + **risky 3rd deal** (2:1, robber → best tile)
-- [x] **Ports** — resource-specific 2:1 wired in shop
+- [x] **Ports** — resource-specific 2:1 + generic 3:1 wired in shop (`DiscoverPorts` sparse layout per map size)
 - [x] Cards: draw 1, play 1, max hand 5 — all 12 cards in `CardEngine`
 - [x] Robber (tile block + steal on day move and Knight; seeded victim/resource pick)
 - [x] Route sabotage (Bandit Raid card) + disabled road visuals
@@ -30,7 +30,7 @@ Last updated: 2026-08-26 — P1 #10 Bandit Raid road picker in night-card UI (ef
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, ports, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**, **AI shop afford**, **risky shop penalty**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**)
+- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**, **AI shop afford**, **risky shop penalty**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**)
 
 ## Explicitly out of scope
 
@@ -43,7 +43,7 @@ Last updated: 2026-08-26 — P1 #10 Bandit Raid road picker in night-card UI (ef
 
 - [x] Bonus VP persists across refresh (Harbor Charter / FirstCityVp)
 - [x] LongRoadBonus perk (+1 VP with longest route; drops when longest is lost)
-- [ ] Generic 3:1 ports (API only)
+- [x] Generic 3:1 ports (`DiscoverPorts` — sparse classic layout: specific 2:1 + generic 3:1 scaled to 7/13/19 hex)
 - [x] Bandit Raid road picker in UI (IMGUI ◀/▶ when card selected)
 - [x] Longest road: opponent settlement blocking
 - [x] Monastery + RollInsurance night-roll auto-picks match design text
