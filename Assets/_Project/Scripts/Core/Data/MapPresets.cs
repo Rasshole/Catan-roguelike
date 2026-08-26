@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using CatanRoguelike.Core.Hex;
+using CatanRoguelike.Core.Map;
 
 namespace CatanRoguelike.Core.Data
 {
@@ -150,7 +151,7 @@ namespace CatanRoguelike.Core.Data
             foreach (var (coord, resource) in preset)
             {
                 coords.Add(coord);
-                board.Tiles[coord] = new HexTileData(coord, resource, coastal: false);
+                board.Tiles[coord] = new HexTileData(coord, resource, isCoastal: false);
             }
 
             foreach (var coord in coords)

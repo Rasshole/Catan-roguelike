@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CatanRoguelike.Core.Buildings;
+using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Shop;
