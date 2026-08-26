@@ -44,7 +44,9 @@ namespace CatanRoguelike.Tests
             var state = CreateState(dayNumber: 5);
             state.LevelUpsTaken = RunProgression.MaxLevelUpsPerRun;
             Assert.IsFalse(RunProgression.ShouldOfferLevelUp(state));
-            Assert.IsFalse(RunProgression.WillOfferLevelUpAfterThisDay(CreateState(dayNumber: 4)));
+
+            state.Board.DayNumber = 4;
+            Assert.IsFalse(RunProgression.WillOfferLevelUpAfterThisDay(state));
         }
 
         [Test]
