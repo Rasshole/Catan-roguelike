@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-26 — P1 #15 VP-breakdown i IMGUI (`VictoryBreakdown` + `PlaceholderUI`) efter P1 #13/#14 PlaceholderUI feedback.
+Last updated: 2026-08-26 — P1 #16 Architect threshold-rabat (threshold-only 10 %; Master Builder 0,65 vs 0,75 i `GetEffectiveCost`).
 
 ## Done (playable prototype scope)
 
@@ -30,7 +30,7 @@ Last updated: 2026-08-26 — P1 #15 VP-breakdown i IMGUI (`VictoryBreakdown` + `
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**, **AI shop afford**, **risky shop penalty**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **VP breakdown**)
+- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**, **AI shop afford**, **risky shop penalty**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **VP breakdown**, **Architect threshold discount**)
 
 ## Explicitly out of scope
 
@@ -48,6 +48,7 @@ Last updated: 2026-08-26 — P1 #15 VP-breakdown i IMGUI (`VictoryBreakdown` + `
 - [x] Harbor Charter pending + Embargo status in IMGUI (`PendingStatusDisplay`)
 - [x] Shop deal price reason in IMGUI (`ShopDealPricing`)
 - [x] VP breakdown in IMGUI (`VictoryBreakdown` — buildings / longest / long road / bonus)
+- [x] Architect threshold discount — 10 % on threshold settlements only; Master Builder 0.65 vs 0.75 (no double discount)
 - [x] Longest road: opponent settlement blocking
 - [x] Monastery + RollInsurance night-roll auto-picks match design text
 - [ ] Real UI (uGUI) + art pass
