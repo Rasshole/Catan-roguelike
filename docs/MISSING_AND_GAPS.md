@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P0 #7 AI risky shop penalty.
+Sidst opdateret efter P0 #8/#9 Monastery + RollInsurance night-roll picks.
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -26,15 +26,6 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 - **Largest army** som VP-kilde
 - **Per-tile nummer-tokens** (klassisk Catan 2–12) — produktion bruger abstrakte daglige rolls per ressource
 - **Setup-bonus** fra 2. settlement (startressourcer fra tilstødende tiles)
-
----
-
-## Bugs / logik der ikke matcher design
-
-| Problem | Hvor | Note |
-|---------|------|------|
-| **Monastery** | `ModifierService` | Beskrivelse: laveste roll; kode: laveste enum-rækkefølge |
-| **RollInsurance** | `ModifierService` | Beskrivelse: mest knappe ressource; kode: første 0-roll |
 
 ---
 
@@ -67,8 +58,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 - **Architect** threshold-rabat er generel 10 %, ikke eksplicit threshold-only
 
 ### Unique buildings (draft 2 af 5)
-- Sawmill, Guild Hall, Caravan Post, Fortress Outpost — wired ✓
-- **Monastery** — auto-trigger én gang, spiller vælger ikke
+- Sawmill, Guild Hall, Monastery, Caravan Post, Fortress Outpost — wired ✓
 
 ### AI
 - Setup, byg, shop, nat-kort (begrænset pool) ✓
@@ -122,13 +112,13 @@ Eksisterende EditMode-tests:
 - `RobberStealTests` — day-move steal, knight steal, no victim, seeded RNG
 - `AiControllerShopTests` — AI shop køber ved rigtig afford-check; springer over når den ikke har råd
 - `ShopGeneratorRiskyDealTests` — risky deal flytter robber til købers bedste tile (human + AI); RiskyDealsSafe skipper kun for human
+- `ModifierServiceNightUniquesTests` — Monastery laveste roll + tie-break; RollInsurance scarcest inventory; once-per-run; begge samme nat
 
 **Mangler tests for:**
-- `RouteCalculator` disabled roads / loop-længde
 - `EventEngine` (alle events, timing)
 - `CardEngine` (alle 12 kort)
 - `ShopGenerator` (embargo, MarketDay)
-- `ModifierService` (leaders, uniques, perks)
+- `RouteCalculator` disabled roads / loop-længde
 - `RunProgression` / draft
 - `AiController` (shop afford; embargo-strategi mangler)
 - Fuld `GameController` integration (dag/nat-cyklus, win)
