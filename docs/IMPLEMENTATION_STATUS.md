@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-26 — P0 #8/#9 Monastery + RollInsurance night-roll picks (efter P0 #4–#7 robber steal / AI shop afford / risky shop penalty).
+Last updated: 2026-08-26 — P1 #10 Bandit Raid road picker in night-card UI (efter P0 #8/#9 Monastery + RollInsurance night-roll picks).
 
 ## Done (playable prototype scope)
 
@@ -30,7 +30,7 @@ Last updated: 2026-08-26 — P0 #8/#9 Monastery + RollInsurance night-roll picks
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, ports, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**, **AI shop afford**, **risky shop penalty**, **Monastery / RollInsurance night picks**)
+- [x] EditMode tests (rolls, placement, production, ports, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **robber steal**, **AI shop afford**, **risky shop penalty**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**)
 
 ## Explicitly out of scope
 
@@ -44,7 +44,7 @@ Last updated: 2026-08-26 — P0 #8/#9 Monastery + RollInsurance night-roll picks
 - [x] Bonus VP persists across refresh (Harbor Charter / FirstCityVp)
 - [x] LongRoadBonus perk (+1 VP with longest route; drops when longest is lost)
 - [ ] Generic 3:1 ports (API only)
-- [ ] Bandit Raid road picker in UI
+- [x] Bandit Raid road picker in UI (IMGUI ◀/▶ when card selected)
 - [x] Longest road: opponent settlement blocking
 - [x] Monastery + RollInsurance night-roll auto-picks match design text
 - [ ] Real UI (uGUI) + art pass

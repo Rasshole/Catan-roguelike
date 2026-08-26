@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P0 #8/#9 Monastery + RollInsurance night-roll picks.
+Sidst opdateret efter P1 #10 Bandit Raid vej-vælger i UI (efter P0 #8/#9 Monastery + RollInsurance).
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -40,7 +40,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 
 ### Kort
 - Alle **12 kort** har logik i `CardEngine` ✓
-- **Bandit Raid** — ingen UI til at vælge modstanderens vej (`_selectedRoadIndex` bruges ikke)
+- **Bandit Raid** — IMGUI vej-vælger (◀/▶ + label) i nat-fase når kortet er valgt ✓
 - **Harbor Charter pending** — vises ikke i UI
 - **Embargo-status** — `AiShopEmbargo` / `AiEmbargoDaysLeft` vises ikke
 - **Forecast** — reruller alt (korrekt), men parameter ignoreres i UI
@@ -113,10 +113,11 @@ Eksisterende EditMode-tests:
 - `AiControllerShopTests` — AI shop køber ved rigtig afford-check; springer over når den ikke har råd
 - `ShopGeneratorRiskyDealTests` — risky deal flytter robber til købers bedste tile (human + AI); RiskyDealsSafe skipper kun for human
 - `ModifierServiceNightUniquesTests` — Monastery laveste roll + tie-break; RollInsurance scarcest inventory; once-per-run; begge samme nat
+- `BanditRaidTests` — `OpponentRoadSelector` stabil sortering/index; `ApplyBanditRaid` disabler valgt kant (ikke en anden); fejler rent uden modstander-veje
 
 **Mangler tests for:**
 - `EventEngine` (alle events, timing)
-- `CardEngine` (alle 12 kort)
+- `CardEngine` (øvrige 11 kort)
 - `ShopGenerator` (embargo, MarketDay)
 - `RouteCalculator` disabled roads / loop-længde
 - `RunProgression` / draft
@@ -128,11 +129,10 @@ Eksisterende EditMode-tests:
 
 ## Anbefalet rækkefølge næste gang
 
-1. **Bandit Raid** vej-vælger i UI
-2. **Generiske 3:1-porte** på kystvertices
-3. Longest road: bedre graf-algoritme (loops / forgreninger)
-4. Rig UI (uGUI) + committed `Game.unity`
-5. Integrationstests + playtest på 19-hex
+1. **Generiske 3:1-porte** på kystvertices
+2. Longest road: bedre graf-algoritme (loops / forgreninger)
+3. Rig UI (uGUI) + art pass
+4. Integrationstests + playtest på 19-hex
 
 ---
 
@@ -143,6 +143,7 @@ Core/Data/MapPresets.cs     — 7 / 13 / 19 hex presets
 Core/Data/MapSize.cs        — Small=7, Medium=13, Large=19
 Game/GameManager.cs         — mapSize inspector
 Game/BoardView.cs           — board scale efter tile count
-Game/PlaceholderUI.cs       — al UI (IMGUI)
+Game/PlaceholderUI.cs       — al UI (IMGUI); Bandit Raid road picker
+Core/Map/OpponentRoadSelector.cs — stabil liste + index for modstander-veje
 docs/IMPLEMENTATION_STATUS.md — kortere checkliste
 ```
