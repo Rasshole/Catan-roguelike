@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CatanRoguelike.Core;
 using CatanRoguelike.Core.Cards;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Hex;
