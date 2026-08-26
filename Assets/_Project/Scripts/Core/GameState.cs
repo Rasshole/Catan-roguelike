@@ -31,6 +31,13 @@ namespace CatanRoguelike.Core
         public int PlayerVictoryPoints { get; set; }
         public int AiVictoryPoints { get; set; }
 
+        /// <summary>
+        /// VP not derived from the board (Harbor Charter, FirstCityVp, etc.).
+        /// RefreshVictoryPoints adds this on top of buildings + longest road.
+        /// </summary>
+        public int PlayerBonusVictoryPoints { get; set; }
+        public int AiBonusVictoryPoints { get; set; }
+
         public PlayerId? Winner { get; set; }
         public string StatusMessage { get; set; } = "Choose your leader.";
 
@@ -98,6 +105,8 @@ namespace CatanRoguelike.Core
 
             PlayerVictoryPoints = 0;
             AiVictoryPoints = 0;
+            PlayerBonusVictoryPoints = 0;
+            AiBonusVictoryPoints = 0;
             Winner = null;
             StatusMessage = "Choose your leader.";
             PendingCard = null;
@@ -137,9 +146,20 @@ namespace CatanRoguelike.Core
 
         public void AddVictoryPoints(PlayerId player, int points)
         {
-            if (player == PlayerId.Human) PlayerVictoryPoints += points;
-            else AiVictoryPoints += points;
+            if (player == PlayerId.Human)
+            {
+                PlayerBonusVictoryPoints += points;
+                PlayerVictoryPoints += points;
+            }
+            else
+            {
+                AiBonusVictoryPoints += points;
+                AiVictoryPoints += points;
+            }
         }
+
+        public int GetBonusVictoryPoints(PlayerId player) =>
+            player == PlayerId.Human ? PlayerBonusVictoryPoints : AiBonusVictoryPoints;
 
         public int GetVictoryPoints(PlayerId player) =>
             player == PlayerId.Human ? PlayerVictoryPoints : AiVictoryPoints;

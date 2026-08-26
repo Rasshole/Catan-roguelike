@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-26 — Built-in RP (Fase 0.5).
+Last updated: 2026-08-26 — P0 #1 bonus-VP fix.
 
 ## Done (playable prototype scope)
 
@@ -30,7 +30,7 @@ Last updated: 2026-08-26 — Built-in RP (Fase 0.5).
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, ports, **map sizes**)
+- [x] EditMode tests (rolls, placement, production, ports, **map sizes**, **bonus VP**)
 
 ## Explicitly out of scope
 
@@ -41,7 +41,7 @@ Last updated: 2026-08-26 — Built-in RP (Fase 0.5).
 
 ## Known gaps (see `MISSING_AND_GAPS.md` for full list)
 
-- [ ] Bonus VP bug (Harbor Charter / FirstCityVp overwritten on refresh)
+- [x] Bonus VP persists across refresh (Harbor Charter / FirstCityVp)
 - [ ] LongRoadBonus perk not implemented
 - [ ] Generic 3:1 ports (API only)
 - [ ] Bandit Raid road picker in UI

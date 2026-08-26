@@ -20,8 +20,10 @@ namespace CatanRoguelike.Core.Victory
 
         public static void RefreshVictoryPoints(GameState state)
         {
-            state.PlayerVictoryPoints = CalculateVictoryPoints(state.Board, PlayerId.Human);
-            state.AiVictoryPoints = CalculateVictoryPoints(state.Board, PlayerId.Ai);
+            state.PlayerVictoryPoints = CalculateVictoryPoints(state.Board, PlayerId.Human)
+                + state.GetBonusVictoryPoints(PlayerId.Human);
+            state.AiVictoryPoints = CalculateVictoryPoints(state.Board, PlayerId.Ai)
+                + state.GetBonusVictoryPoints(PlayerId.Ai);
         }
 
         public static PlayerId? CheckWinner(GameState state)

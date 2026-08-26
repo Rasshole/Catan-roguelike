@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter tilføjelse af **7 / 13 / 19-hex** kort.
+Sidst opdateret efter P0 #1 bonus-VP-fix (Harbor Charter / FirstCityVp).
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -33,7 +33,6 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 
 | Problem | Hvor | Note |
 |---------|------|------|
-| **Bonus-VP forsvinder** | `VictoryCalculator.RefreshVictoryPoints` | Harbor Charter (+1 VP) og FirstCityVp tilføjes via `AddVictoryPoints`, men overskrives ved refresh (kun bygninger + longest road tælles) |
 | **LongRoadBonus-perk** | `LeaderLibrary` / `VictoryCalculator` | Defineret (“+1 VP ved longest route”) men implementeret ingen steder |
 | **Monastery** | `ModifierService` | Beskrivelse: laveste roll; kode: laveste enum-rækkefølge |
 | **RollInsurance** | `ModifierService` | Beskrivelse: mest knappe ressource; kode: første 0-roll |
@@ -119,9 +118,9 @@ Eksisterende EditMode-tests:
 - `ProductionCalculatorTests` — multi-hex production
 - `PortAccessTests` — specifik 2:1 port
 - `MapPresetsTests` — 7/13/19 tile counts
+- `VictoryCalculatorTests` — Harbor Charter + FirstCityVp overlever `RefreshVictoryPoints`
 
 **Mangler tests for:**
-- `VictoryCalculator` / bonus-VP-bug
 - `RouteCalculator` (longest road, ties, disabled roads)
 - `EventEngine` (alle events, timing)
 - `CardEngine` (alle 12 kort)
@@ -136,7 +135,7 @@ Eksisterende EditMode-tests:
 
 ## Anbefalet rækkefølge næste gang
 
-1. Fix **bonus-VP refresh**-bug (Harbor Charter, FirstCityVp, LongRoadBonus)
+1. **LongRoadBonus-perk** — defineret men ikke wired i `VictoryCalculator`
 2. **Bandit Raid** vej-vælger i UI
 3. **Generiske 3:1-porte** på kystvertices
 4. Longest road: **modstander-blokering** + bedre graf-algoritme
