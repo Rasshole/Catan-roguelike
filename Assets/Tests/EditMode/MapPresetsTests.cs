@@ -40,12 +40,12 @@ namespace CatanRoguelike.Tests.EditMode
                     continue;
 
                 int neighbors = HexCoord.Directions.Count(dir => full.Contains(coord + dir));
-                if (neighbors == 2)
+                if (neighbors == 3)
                 {
                     cornerCount++;
                     Assert.IsFalse(set.Contains(coord), $"Corner tile {coord} should be removed.");
                 }
-                else if (neighbors == 3)
+                else if (neighbors == 4)
                 {
                     Assert.IsTrue(set.Contains(coord), $"Edge tile {coord} should remain.");
                 }
