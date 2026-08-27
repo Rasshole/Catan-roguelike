@@ -1,4 +1,6 @@
+using CatanRoguelike.Core;
 using CatanRoguelike.Core.Leaders;
+using CatanRoguelike.Core.Map;
 
 namespace CatanRoguelike.Core.Shop
 {
