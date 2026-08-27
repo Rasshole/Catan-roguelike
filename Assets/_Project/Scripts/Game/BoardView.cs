@@ -107,6 +107,17 @@ namespace CatanRoguelike.Game
 
             var waterRenderer = water.GetComponent<Renderer>();
             waterRenderer.material = BoardWaterMaterial.Create();
+
+            var feltScale = TableCameraFraming.ComputeFeltDiskScale(boundingRadius);
+            var felt = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            felt.name = "FeltSurface";
+            felt.transform.SetParent(boardRoot, false);
+            felt.transform.SetAsFirstSibling();
+            felt.transform.localPosition = new Vector3(0f, TableCameraFraming.FeltSurfaceLocalY, 0f);
+            felt.transform.localScale = feltScale;
+
+            var feltRenderer = felt.GetComponent<Renderer>();
+            feltRenderer.material = BoardFeltMaterial.Create();
         }
 
         private static void DisableLegacySceneTable()

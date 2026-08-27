@@ -115,5 +115,65 @@ namespace CatanRoguelike.Tests
                 orbitDistance,
                 0.001f);
         }
+
+        [Test]
+        public void ComputeFeltDiskWorldRadius_IsGreaterThanWaterRadius()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            float boundingRadius = TableCameraFraming.ComputeBoardBoundingRadius(board, HexScale);
+            float waterRadius = TableCameraFraming.ComputeWaterDiskWorldRadius(boundingRadius);
+            float feltRadius = TableCameraFraming.ComputeFeltDiskWorldRadius(boundingRadius);
+
+            Assert.Greater(feltRadius, waterRadius);
+        }
+
+        [Test]
+        public void ComputeFeltDiskWorldRadius_IsAtMostOnePointSixTimesWaterRadius()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            float boundingRadius = TableCameraFraming.ComputeBoardBoundingRadius(board, HexScale);
+            float waterRadius = TableCameraFraming.ComputeWaterDiskWorldRadius(boundingRadius);
+            float feltRadius = TableCameraFraming.ComputeFeltDiskWorldRadius(boundingRadius);
+
+            Assert.LessOrEqual(feltRadius, waterRadius * TableCameraFraming.MaxFeltToWaterRadiusRatio);
+        }
+
+        [Test]
+        public void ComputeFeltDiskScale_Small_IsModestRimAroundWater()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            float boundingRadius = TableCameraFraming.ComputeBoardBoundingRadius(board, HexScale);
+            var waterScale = TableCameraFraming.ComputeWaterDiskScale(boundingRadius);
+            var feltScale = TableCameraFraming.ComputeFeltDiskScale(boundingRadius);
+
+            Assert.Greater(feltScale.x, waterScale.x);
+            Assert.Less(feltScale.x, waterScale.x * TableCameraFraming.MaxFeltToWaterRadiusRatio);
+            Assert.AreEqual(feltScale.x, feltScale.z, 0.001f);
+            Assert.AreEqual(TableCameraFraming.FeltSurfaceThinY, feltScale.y * 2f, 0.001f);
+        }
+
+        [Test]
+        public void FeltSurfaceLocalY_IsBelowWaterSurfaceLocalY()
+        {
+            Assert.Less(
+                TableCameraFraming.FeltSurfaceLocalY,
+                TableCameraFraming.WaterSurfaceLocalY);
+        }
+
+        [Test]
+        public void ComputeOrbitDistance_IsUnchangedByFeltSurfaceConstants()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            float boundingRadius = TableCameraFraming.ComputeBoardBoundingRadius(board, HexScale);
+            float orbitDistance = TableCameraFraming.ComputeOrbitDistance(boundingRadius);
+
+            Assert.AreEqual(2.0f, TableCameraFraming.DistanceToRadiusRatio);
+            Assert.AreEqual(
+                Mathf.Max(TableCameraFraming.MinOrbitDistance,
+                    boundingRadius * TableCameraFraming.DistanceToRadiusRatio
+                    * TableCameraFraming.DefaultMarginFactor),
+                orbitDistance,
+                0.001f);
+        }
     }
 }
