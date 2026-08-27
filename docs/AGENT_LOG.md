@@ -200,3 +200,8 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 
 - **`BoardPickPlane`:** raycast horizontal plane at `BoardView.TileHeight` (fallback y=0); `BoardInputController` uses it for hover/click hit points so angled `TableCamera` aims at visible corners, not pixels below.
 - **Tests:** `BoardPickPlaneTests` (EditMode). No v0.1 tag.
+
+## 2026-08-27 (UTC) — AiController.ExecuteDayTurn EditMode coverage
+
+- **`AiControllerDayTurnTests`:** city upgrade (Act 1 one vs Act 2+ all affordable), highest-scored settlement/road placement, robber target + steal, no-op when no human buildings / empty inventory.
+- Does not duplicate shop or night-card suites. No v0.1 tag.
