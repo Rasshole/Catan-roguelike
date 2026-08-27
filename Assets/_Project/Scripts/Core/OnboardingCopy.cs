@@ -21,11 +21,25 @@ namespace CatanRoguelike.Core
 
         public readonly struct Context
         {
-            public GamePhase Phase { get; init; }
-            public int DayNumber { get; init; }
-            public bool TipsEnabled { get; init; }
-            public bool HasWinner { get; init; }
-            public int StarsEarnedThisRun { get; init; }
+            public GamePhase Phase { get; }
+            public int DayNumber { get; }
+            public bool TipsEnabled { get; }
+            public bool HasWinner { get; }
+            public int StarsEarnedThisRun { get; }
+
+            public Context(
+                GamePhase phase,
+                int dayNumber = 0,
+                bool tipsEnabled = true,
+                bool hasWinner = false,
+                int starsEarnedThisRun = 0)
+            {
+                Phase = phase;
+                DayNumber = dayNumber;
+                TipsEnabled = tipsEnabled;
+                HasWinner = hasWinner;
+                StarsEarnedThisRun = starsEarnedThisRun;
+            }
         }
 
         public static OnboardingBeat ResolveBeat(GamePhase phase, int dayNumber, bool hasWinner)
