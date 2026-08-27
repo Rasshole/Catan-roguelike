@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P3 RunProgression draft-flow EditMode tests (map → leader → unique draft → setup).
+Sidst opdateret efter P2 game-over run-summary (IMGUI VP breakdown + seed/day/map/leader).
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -90,7 +90,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 | **Map size** | Startmenu + inspector default |
 | **VP-breakdown** | IMGUI viser total + én linje per spiller (settlements / cities / longest / long road / bonus) via `VictoryBreakdown` |
 | **Pending effects** | Road Builder / Master Builder — minimal feedback |
-| **Game over** | Kun scene reload — ingen run-summary |
+| **Game over** | IMGUI run-summary (VP breakdown, seed, day, map, leader) + scene reload ✓ |
 | **README** | Kan være bagud ift. leaders/draft/klik-placering |
 
 ### Døde / ubrugte definitioner
@@ -125,6 +125,7 @@ Eksisterende EditMode-tests:
 - `RunProgressionDraftFlowTests` — pre-game draft via `GameController`: `RunSelectMap` start; `SelectMap` (7/13/19 + ports); phase guards; `SelectLeader` → draft status; `ToggleDraftUnique` add/remove/cap at `DraftPickCount` (alle 5 uniques); invalid `ConfirmRunSetup` (0–1 picks / forkert fase); valid confirm → `RunSetupComplete` + AI setup → `SetupPlayerSettlement1`
 - `CardEngineTests` — alle 12 kort via `PlayCard` / `DrawCard` / `DrawToHand`: roll-manipulation (Ledger, Drought, Fertile, Forecast seeded), Year of Plenty, Monopoly (half / MonopolyFull / zero stock), Road Builder + Master Builder pending, Harbor Charter, Embargo fail + EmbargoExtended; Knight invalid target + KnightMovesRobberTwice; Bandit Raid på egen vej fejler; hand/max-size / not-in-hand
 - `EventEngineTests` — alle 6 events (effekt + besked); nat apply / dag clear timing; seeded `MaybeRollEvent`; `BeginNight` Good Harvest rolls
+- `RunSummaryDisplayTests` — game-over summary lines (human vs AI win wording; seed/day/map/leader; VP breakdown; safe when no winner)
 - `GameControllerIntegrationTests` — seeded setup → nat/dag-cyklus uden hang; `SkipNightCard` / `PlayPlayerCard` → `DayPlayerActions`; win ved 10 VP; level-up på dag 5 via `EndPlayerDay`; disabled roads + event-flags ryddes ved daggrænse
 
 **Mangler tests for:**
@@ -149,8 +150,9 @@ Core/Data/MapPresets.cs     — 7 / 13 / 19 hex presets
 Core/Data/MapSize.cs        — Small=7, Medium=13, Large=19
 Game/GameManager.cs         — mapSize inspector
 Game/BoardView.cs           — board scale efter tile count
-Game/PlaceholderUI.cs       — al UI (IMGUI); Bandit Raid road picker; Harbor Charter + Embargo + level-up preview; shop-pris årsag + risky konsekvens; VP-breakdown; LevelUpChoice med fuld HUD
+Game/PlaceholderUI.cs       — al UI (IMGUI); Bandit Raid road picker; Harbor Charter + Embargo + level-up preview; shop-pris årsag + risky konsekvens; VP-breakdown; LevelUpChoice med fuld HUD; game-over run-summary
 Core/Shop/ShopDealDisplay.cs — shop-knap labels + risky robber-konsekvens-tekst
+Core/RunSummaryDisplay.cs — rene game-over linjer (winner, dag, kort, leader, seed, VP-breakdown)
 Core/Victory/VictoryBreakdown.cs — VP-dele per spiller (settlements, cities, longest, long road, bonus)
 Core/PendingStatusDisplay.cs — rene statuslinjer for Harbor Charter / Embargo / level-up preview
 Core/Cards/EmbargoTargetSelector.cs — AI Embargo-mål (spiller-lager + shop Give)

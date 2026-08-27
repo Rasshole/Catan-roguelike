@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-26 — P3 RunProgression draft-flow EditMode tests (pre-game map/leader/unique draft → setup).
+Last updated: 2026-08-27 — P2 game-over run-summary (IMGUI VP breakdown + seed/day/map/leader).
 
 ## Done (playable prototype scope)
 
@@ -30,7 +30,7 @@ Last updated: 2026-08-26 — P3 RunProgression draft-flow EditMode tests (pre-ga
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **GameController integration (setup → day/night loop, win, level-up)**)
+- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**)
 
 ## Explicitly out of scope
 
@@ -47,6 +47,7 @@ Last updated: 2026-08-26 — P3 RunProgression draft-flow EditMode tests (pre-ga
 - [x] Bandit Raid road picker in UI (IMGUI ◀/▶ when card selected)
 - [x] Harbor Charter pending + Embargo status in IMGUI (`PendingStatusDisplay`)
 - [x] Shop deal price reason in IMGUI (`ShopDealPricing`)
+- [x] Risky shop deal consequence text in IMGUI (`ShopDealDisplay`)
 - [x] VP breakdown in IMGUI (`VictoryBreakdown` — buildings / longest / long road / bonus)
 - [x] Architect threshold discount — 10 % on threshold settlements only; Master Builder 0.65 vs 0.75 (no double discount)
 - [x] Level-up preview on day before interval + full HUD during LevelUpChoice (`RunProgression.WillOfferLevelUpAfterThisDay`, `PendingStatusDisplay`)
@@ -56,6 +57,7 @@ Last updated: 2026-08-26 — P3 RunProgression draft-flow EditMode tests (pre-ga
 - [ ] Real UI (uGUI) + art pass
 - [x] Game.unity committed to repo
 - [x] Integration / full-run tests (`GameControllerIntegrationTests` — day/night loop, 10 VP win, level-up on day 5)
+- [x] Game-over run-summary in IMGUI (`RunSummaryDisplay` — winner, day, map, leader, seed, VP breakdown + Restart)
 
 ## Map sizes
 

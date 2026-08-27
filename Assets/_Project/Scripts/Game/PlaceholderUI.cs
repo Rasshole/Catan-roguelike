@@ -92,7 +92,26 @@ namespace CatanRoguelike.Game
 
             if (state.Winner.HasValue)
             {
-                GUILayout.Label(state.Winner == PlayerId.Human ? "<color=green>You Win!</color>" : "<color=red>AI Wins!</color>");
+                if (RunSummaryDisplay.TryGetSummaryLines(state, _controller.RunSeed, out var summaryLines))
+                {
+                    for (int i = 0; i < summaryLines.Count; i++)
+                    {
+                        if (i == 0)
+                        {
+                            var color = state.Winner == PlayerId.Human ? "green" : "red";
+                            GUILayout.Label($"<color={color}>{summaryLines[i]}</color>");
+                        }
+                        else
+                        {
+                            GUILayout.Label(summaryLines[i]);
+                        }
+                    }
+                }
+                else
+                {
+                    GUILayout.Label(state.Winner == PlayerId.Human ? "<color=green>You Win!</color>" : "<color=red>AI Wins!</color>");
+                }
+
                 if (GUILayout.Button("Restart (reload scene)"))
                     UnityEngine.SceneManagement.SceneManager.LoadScene(
                         UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
