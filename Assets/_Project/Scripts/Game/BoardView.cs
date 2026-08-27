@@ -122,10 +122,9 @@ namespace CatanRoguelike.Game
 
             var (x, z) = HexMath.ToWorldPosition(data.Coord, hexScale);
             go.transform.localPosition = new Vector3(x, 0f, z);
-            float xzScale = hexScale * HexPrismMesh.BoardScaleMultiplier;
-            go.transform.localScale = new Vector3(xzScale, tileHeight, xzScale);
+            go.transform.localScale = new Vector3(1f, tileHeight, 1f);
 
-            var mesh = HexPrismMesh.Create();
+            var mesh = HexPrismMesh.Create(data.Coord, hexScale);
             var meshFilter = go.AddComponent<MeshFilter>();
             meshFilter.sharedMesh = mesh;
 

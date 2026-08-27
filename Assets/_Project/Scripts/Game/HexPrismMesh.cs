@@ -1,25 +1,25 @@
+using CatanRoguelike.Core.Hex;
+using CatanRoguelike.Core.Map;
 using UnityEngine;
+using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
 namespace CatanRoguelike.Game
 {
     /// <summary>
-    /// Pointy-top hexagonal prism matching <see cref="Core.Hex.HexMath"/> vertex orientation
-    /// (corner 0 at +Z). Top at local y=+1, bottom at y=-1, circumradius 0.5 on XZ — same
-    /// vertical span and horizontal scale convention as Unity's unit cylinder.
+    /// Pointy-top hexagonal prism whose top ring matches settlement vertex positions from
+    /// <see cref="HexMath.VertexToWorldPosition"/> on the canonical graph vertex for each
+    /// corner. Top at local y=+1, bottom at y=-1; XZ vertices are already in world units at
+    /// <paramref name="hexScale"/> so tile transforms use XZ scale 1.
     /// </summary>
     public static class HexPrismMesh
     {
-        public const float DefaultRadius = 0.5f;
         public const float TopY = 1f;
         public const float BottomY = -1f;
         public const int SideCount = 6;
 
-        /// <summary>XZ scale multiplier so mesh circumradius matches HexMath OuterRadius at BoardView hexScale.</summary>
-        public const float BoardScaleMultiplier = 2f;
-
-        public static Mesh Create(float radius = DefaultRadius)
+        public static Mesh Create(HexCoord hex, float hexScale)
         {
-            var mesh = new Mesh { name = "HexPrism" };
+            var mesh = new Mesh { name = $"HexPrism_{hex.Q}_{hex.R}" };
 
             int ringVerts = SideCount;
             int vertCount = ringVerts * 2 + 2;
@@ -31,14 +31,16 @@ namespace CatanRoguelike.Game
             vertices[topCenter] = new Vector3(0f, TopY, 0f);
             vertices[bottomCenter] = new Vector3(0f, BottomY, 0f);
 
+            var (centerX, centerZ) = HexMath.ToWorldPosition(hex, hexScale);
             for (int i = 0; i < SideCount; i++)
             {
-                float angleRad = i * 60f * Mathf.Deg2Rad;
-                float x = radius * Mathf.Sin(angleRad);
-                float z = radius * Mathf.Cos(angleRad);
+                var canonical = VertexGraph.Canonicalize(new Vertex(hex, i));
+                var (worldX, worldZ) = HexMath.VertexToWorldPosition(canonical, hexScale);
+                float localX = worldX - centerX;
+                float localZ = worldZ - centerZ;
 
-                vertices[i] = new Vector3(x, TopY, z);
-                vertices[i + ringVerts] = new Vector3(x, BottomY, z);
+                vertices[i] = new Vector3(localX, TopY, localZ);
+                vertices[i + ringVerts] = new Vector3(localX, BottomY, localZ);
             }
 
             int tri = 0;
