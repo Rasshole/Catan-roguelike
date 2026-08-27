@@ -23,10 +23,11 @@ namespace CatanRoguelike.Game
 
         private const float RoofPitchDegrees = 38f;
         private const float BaseGapAboveHex = 0.02f;
-        private const float BodyTopBelowRoofEave = 0.04f;
-        private const float RidgeLift = 0.03f;
-        private const float RidgeThickness = 0.06f;
+        private const float BodyTopBelowRoofEave = 0.06f;
+        private const float RidgeLift = 0.02f;
+        private const float RidgeThickness = 0.10f;
         public const float RoofColorMultiply = 0.55f;
+        public const float RoofGlossiness = 0.02f;
 
         public static Color ColorForPlayer(PlayerId owner) =>
             owner == PlayerId.Human ? HumanColor : AiColor;
@@ -34,11 +35,19 @@ namespace CatanRoguelike.Game
         public static Color DarkenForRoof(Color color) =>
             new(color.r * RoofColorMultiply, color.g * RoofColorMultiply, color.b * RoofColorMultiply, color.a);
 
+        public static Material CreateRoofMaterial(Color playerColor)
+        {
+            var mat = BuiltInMaterials.Create(DarkenForRoof(playerColor));
+            mat.SetFloat("_Glossiness", RoofGlossiness);
+            mat.SetFloat("_Metallic", 0f);
+            return mat;
+        }
+
         public static GameObject CreateSettlement(Transform parent, Vector3 worldPosition, Color color, float hexTopY)
         {
             var root = CreateRoot(parent, SettlementName, worldPosition);
             var bodyMaterial = BuiltInMaterials.Create(color);
-            var roofMaterial = BuiltInMaterials.Create(DarkenForRoof(color));
+            var roofMaterial = CreateRoofMaterial(color);
 
             const float bodyWidth = 0.24f;
             const float bodyNominalHeight = 0.19f;
@@ -61,7 +70,7 @@ namespace CatanRoguelike.Game
         {
             var root = CreateRoot(parent, CityName, worldPosition);
             var bodyMaterial = BuiltInMaterials.Create(color);
-            var roofMaterial = BuiltInMaterials.Create(DarkenForRoof(color));
+            var roofMaterial = CreateRoofMaterial(color);
 
             const float bodyWidth = 0.30f;
             const float bodyNominalHeight = 0.22f;
@@ -183,7 +192,7 @@ namespace CatanRoguelike.Game
                 Quaternion.Euler(RoofPitchDegrees, 0f, 0f),
                 material);
 
-            float ridgeDepth = bodyDepth * 1.06f;
+            float ridgeDepth = bodyDepth * 1.10f;
             float ridgeCenterY = roofBaseY + RidgeLift + RidgeThickness * 0.5f;
 
             CreatePrimitivePart(
