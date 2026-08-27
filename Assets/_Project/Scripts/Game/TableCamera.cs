@@ -8,8 +8,15 @@ namespace CatanRoguelike.Game
         [SerializeField] private float distance = 8f;
         [SerializeField] private float height = 7f;
         [SerializeField] private float orbitSpeed = 40f;
+        [SerializeField] private bool frameBoardRightOfHud = true;
 
         private float _angle;
+        private Camera _camera;
+
+        private void Awake()
+        {
+            _camera = GetComponent<Camera>();
+        }
 
         private void Start()
         {
@@ -19,8 +26,9 @@ namespace CatanRoguelike.Game
                 lookTarget = target.transform;
             }
 
-            transform.position = lookTarget.position + new Vector3(0f, height, -distance);
-            transform.LookAt(lookTarget);
+            ApplyOrbitPose();
+            if (frameBoardRightOfHud && _camera != null)
+                ApplyBoardFramingOffset();
         }
 
         private void Update()
@@ -30,8 +38,33 @@ namespace CatanRoguelike.Game
             if (Input.GetKey(KeyCode.E))
                 _angle += orbitSpeed * Time.deltaTime;
 
+            ApplyOrbitPose();
+            if (frameBoardRightOfHud && _camera != null)
+                ApplyBoardFramingOffset();
+        }
+
+        private void ApplyOrbitPose()
+        {
             var offset = Quaternion.Euler(55f, _angle, 0f) * new Vector3(0f, 0f, -distance);
             transform.position = lookTarget.position + offset + Vector3.up * (height * 0.3f);
+            transform.LookAt(lookTarget.position + Vector3.up * 0.5f);
+        }
+
+        private void ApplyBoardFramingOffset()
+        {
+            float desiredScreenX = Screen.width * 0.5f
+                + PlaceholderHudLayout.GetBoardScreenOffsetX(PlaceholderHudLayout.LastPanelWidth, Screen.width);
+            Vector3 boardScreen = _camera.WorldToScreenPoint(lookTarget.position);
+            float deltaPx = desiredScreenX - boardScreen.x;
+            if (Mathf.Abs(deltaPx) <= 0.5f)
+                return;
+
+            Vector3 worldAtBoard = _camera.ScreenToWorldPoint(
+                new Vector3(boardScreen.x, boardScreen.y, boardScreen.z));
+            Vector3 worldShifted = _camera.ScreenToWorldPoint(
+                new Vector3(boardScreen.x + deltaPx, boardScreen.y, boardScreen.z));
+            // Move camera opposite to the desired on-screen board shift (LookAt(+delta) inverts).
+            transform.position -= worldShifted - worldAtBoard;
             transform.LookAt(lookTarget.position + Vector3.up * 0.5f);
         }
     }
