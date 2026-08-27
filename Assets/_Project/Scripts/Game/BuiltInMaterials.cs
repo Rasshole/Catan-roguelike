@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace CatanRoguelike.Game
 {
@@ -26,6 +27,21 @@ namespace CatanRoguelike.Game
         {
             var mat = new Material(Standard);
             mat.color = color;
+            return mat;
+        }
+
+        /// <summary>Translucent Standard material for placement hover silhouettes.</summary>
+        public static Material CreateGhost(Color color)
+        {
+            var mat = Create(color);
+            mat.SetFloat("_Mode", 3f);
+            mat.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+            mat.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
+            mat.SetInt("_ZWrite", 0);
+            mat.DisableKeyword("_ALPHATEST_ON");
+            mat.EnableKeyword("_ALPHABLEND_ON");
+            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            mat.renderQueue = 3000;
             return mat;
         }
     }

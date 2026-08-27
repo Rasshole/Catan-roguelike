@@ -154,6 +154,12 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **`TableCamera`:** enforce `nearClipPlane` ≥ 0.3 to reduce hex-top z-fighting at orbit pitch.
 - **Tests:** orbit distance > board radius for Small/Large; ordering only, no magic radius floats.
 
+## 2026-08-27 (UTC) — Placement hover ghost silhouettes
+
+- **`PlacementMarkerVisuals`:** settlement/city/road hover markers reuse `PlayerPieceVisuals` geometry with translucent `BuiltInMaterials.CreateGhost` tints (no sphere/cube debug primitives).
+- **`BoardInputController`:** spawns ghosts at `BoardView.TileHeight` via the helper; pick/hit logic unchanged.
+- **Tests:** `PlacementMarkerVisualsTests` (EditMode). No v0.1 tag.
+
 ## 2026-08-27 (UTC) — Sea ring around wood board disk
 
 - **`TableCameraFraming`:** `WaterSurfacePadFactor` (1.55× wood radius, clamped ≤1.75×) + `ComputeWaterDiskScale` / world-radius helpers; camera orbit still uses hex bounding radius only.

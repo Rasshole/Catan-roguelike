@@ -19,6 +19,7 @@ namespace CatanRoguelike.Game
         [SerializeField] private Transform buildingsRoot;
 
         public float HexScale => hexScale;
+        public float TileHeight => tileHeight;
 
         public float GetBoardBoundingRadius()
         {
