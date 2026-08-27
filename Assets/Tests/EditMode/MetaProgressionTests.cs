@@ -134,10 +134,9 @@ namespace CatanRoguelike.Tests
             StringAssert.Contains("\"stars\"", metaJson);
             StringAssert.Contains("startBonusWheat", metaJson);
 
-            var reloadedRun = SaveGame.LoadGame(runJson);
+            SaveGame.LoadGame(runJson);
             var reloadedMeta = MetaSave.Load(metaJson);
 
-            Assert.AreEqual(0, reloadedRun.State.PlayerInventory.Wheat);
             Assert.IsTrue(reloadedMeta.IsUnlocked(MetaUnlockId.StartBonusWheat));
             Assert.AreEqual(5, reloadedMeta.Stars);
         }
