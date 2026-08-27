@@ -62,7 +62,9 @@ Unity Editor → **Catan Roguelike → Capture Game View Screenshot**.
 
 ### CLI (headless Linux + xvfb)
 
-`CaptureAndQuit` calls `BeginCapture` **synchronously** (do not defer via `EditorApplication.delayCall` — that queue is not flushed in `-batchmode -executeMethod`). Batchmode does not advance Play Mode frames on its own; `GameViewCapture` calls `EditorApplication.QueuePlayerLoopUpdate()` each editor tick while waiting for boot/visual frames and for Play Mode enter/exit. Each wait phase fails with `EditorApplication.Exit(1)` after 120s if frames stall. A wall-clock watchdog (`System.Threading.Timer`, 180s) calls `Exit(1)` even if `EditorApplication.update` never ticks.
+`CaptureAndQuit` drives capture **synchronously inside the static entry** — it does not return until the PNG is written or a timeout/failure occurs. `-batchmode -executeMethod` does not pump `EditorApplication.update` after the entry returns, so the CLI path calls `AdvanceCapture()` directly in a loop with `EditorApplication.QueuePlayerLoopUpdate()` + a short sleep. Per-phase stalls fail after 120s; an overall 180s wall-clock deadline calls `Environment.FailFast`. Success/failure then calls `EditorApplication.Exit` with `Environment.Exit` as a fallback.
+
+Do **not** defer startup with `EditorApplication.delayCall` (that queue is not flushed in batchmode).
 
 ```bash
 export UNITY_EDITOR="${UNITY_EDITOR:-/home/box/Unity/Hub/Editor/6000.3.15f1/Editor/Unity}"

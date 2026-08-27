@@ -33,5 +33,15 @@ namespace CatanRoguelike.Tests
             var deadline = GameViewCaptureFrameWait.ComputeOverallDeadline(50);
             Assert.AreEqual(50 + GameViewCaptureFrameWait.OverallTimeoutSeconds, deadline, 0.0001);
         }
+
+        [Test]
+        public void IsOverallTimedOutUtc_WhenPastDeadline_ReturnsTrue()
+        {
+            var started = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            var deadline = GameViewCaptureFrameWait.ComputeOverallDeadlineUtc(started);
+
+            Assert.False(GameViewCaptureFrameWait.IsOverallTimedOutUtc(started.AddSeconds(60), deadline));
+            Assert.True(GameViewCaptureFrameWait.IsOverallTimedOutUtc(deadline.AddSeconds(1), deadline));
+        }
     }
 }
