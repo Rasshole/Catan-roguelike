@@ -374,12 +374,13 @@ namespace CatanRoguelike.SimRunner
                 case GamePhase.NightPlayCard:
                     if (game.State.TodayRolls.Count == 0 && game.State.TomorrowRolls.Count > 0)
                         game.State.TodayRolls = new Dictionary<ResourceType, int>(game.State.TomorrowRolls);
-                    game.SkipNightCard();
+                    if (!SimDriver.TryPlayUsefulNightCard(game))
+                        game.SkipNightCard();
                     break;
 
                 case GamePhase.DayPlayerActions:
-                    TryBuyFirstAffordableDeal(game);
-                    TryDayBuild(game);
+                    SimDriver.TryBuyAffordableDeals(game);
+                    SimDriver.TryAllDayBuilds(game);
                     game.EndPlayerDay();
                     break;
 
@@ -416,32 +417,6 @@ namespace CatanRoguelike.SimRunner
                 default:
                     throw new InvalidOperationException("unhandled phase " + game.State.Phase);
             }
-        }
-
-        private static void TryBuyFirstAffordableDeal(GameController game)
-        {
-            if (game.State.ShopDeals == null || game.State.ShopDeals.Count == 0)
-                return;
-            foreach (var deal in game.State.ShopDeals)
-            {
-                if (game.BuyShopDeal(deal))
-                    return;
-            }
-        }
-
-        private static void TryDayBuild(GameController game)
-        {
-            foreach (var kvp in game.State.Board.VertexBuildings)
-            {
-                if (kvp.Value.owner == PlayerId.Human && kvp.Value.type == BuildingType.Settlement)
-                {
-                    if (game.UpgradeCity(kvp.Key, PlayerId.Human))
-                        return;
-                }
-            }
-
-            TryPlaceFirstValidSettlement(game, PlayerId.Human);
-            TryPlaceFirstValidRoad(game, PlayerId.Human);
         }
 
         private static bool TryPlaceSetupSettlement1WithLookahead(GameController game, PlayerId player)
