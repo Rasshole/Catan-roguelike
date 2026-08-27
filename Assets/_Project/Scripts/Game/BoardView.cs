@@ -210,20 +210,13 @@ namespace CatanRoguelike.Game
             {
                 var (building, owner) = kvp.Value;
                 var (x, z) = HexMath.VertexToWorldPosition(kvp.Key, hexScale);
-                float y = building == BuildingType.City ? 0.45f : 0.32f;
-                float size = building == BuildingType.City ? 0.22f : 0.16f;
+                var position = new Vector3(x, 0f, z);
+                var color = PlayerPieceVisuals.ColorForPlayer(owner);
 
-                var go = GameObject.CreatePrimitive(
-                    building == BuildingType.City ? PrimitiveType.Cube : PrimitiveType.Cylinder);
-                go.transform.SetParent(buildingsRoot, false);
-                go.transform.position = new Vector3(x, y, z);
-                go.transform.localScale = new Vector3(size, size * 1.2f, size);
-
-                var renderer = go.GetComponent<Renderer>();
-                renderer.material = BuiltInMaterials.Create(owner == PlayerId.Human
-                    ? new Color(0.2f, 0.4f, 0.9f)
-                    : new Color(0.9f, 0.25f, 0.2f));
-                Destroy(go.GetComponent<Collider>());
+                if (building == BuildingType.City)
+                    PlayerPieceVisuals.CreateCity(buildingsRoot, position, color, tileHeight);
+                else
+                    PlayerPieceVisuals.CreateSettlement(buildingsRoot, position, color, tileHeight);
             }
 
             foreach (var road in state.Board.Roads)
@@ -234,20 +227,15 @@ namespace CatanRoguelike.Game
                 var (bx, bz) = HexMath.VertexToWorldPosition(road.Key.B, hexScale);
                 float length = Vector3.Distance(new Vector3(ax, 0, az), new Vector3(bx, 0, bz));
 
-                var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                go.transform.SetParent(buildingsRoot, false);
-                go.transform.position = new Vector3(mx, 0.14f, mz);
-                go.transform.rotation = Quaternion.Euler(0f, angle, 0f);
-                go.transform.localScale = new Vector3(0.07f, 0.05f, length * 0.92f);
-
                 bool disabled = state.Board.DisabledRoads.Contains(road.Key);
-                var renderer = go.GetComponent<Renderer>();
-                renderer.material = BuiltInMaterials.Create(disabled
-                    ? Color.gray
-                    : road.Value == PlayerId.Human
-                        ? new Color(0.3f, 0.5f, 1f)
-                        : new Color(1f, 0.3f, 0.3f));
-                Destroy(go.GetComponent<Collider>());
+                var color = disabled ? Color.gray : PlayerPieceVisuals.ColorForPlayer(road.Value);
+                PlayerPieceVisuals.CreateRoad(
+                    buildingsRoot,
+                    new Vector3(mx, 0f, mz),
+                    angle,
+                    length,
+                    color,
+                    tileHeight);
             }
         }
 
