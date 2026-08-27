@@ -32,7 +32,6 @@ namespace CatanRoguelike.Game
 
         private readonly Dictionary<HexCoord, HexTileView> _tiles = new();
         private GameController _controller;
-        private int _tileCount;
 
         private static readonly Color WoodColor = new(0.2f, 0.55f, 0.2f);
         private static readonly Color BrickColor = new(0.7f, 0.35f, 0.2f);
@@ -70,26 +69,27 @@ namespace CatanRoguelike.Game
         {
             if (boardRoot == null) boardRoot = transform;
 
-            _tileCount = board.Tiles.Count;
-            CreateTableSurface();
-
             foreach (var kvp in board.Tiles)
             {
                 var tile = CreateHexTile(kvp.Value);
                 _tiles[kvp.Key] = tile;
             }
 
+            CreateTableSurface(board);
             CreatePortMarkers(board);
         }
 
-        private void CreateTableSurface()
+        private void CreateTableSurface(BoardState board)
         {
+            float boundingRadius = TableCameraFraming.ComputeBoardBoundingRadius(board, hexScale);
+            var tableScale = TableCameraFraming.ComputeTableSurfaceScale(boundingRadius);
+
             var table = GameObject.CreatePrimitive(PrimitiveType.Cube);
             table.name = "BoardSurface";
             table.transform.SetParent(boardRoot, false);
+            table.transform.SetAsFirstSibling();
             table.transform.localPosition = new Vector3(0f, -0.08f, 0f);
-            float scale = Mathf.Sqrt(_tileCount / 7f) * hexScale;
-            table.transform.localScale = new Vector3(10f * scale / hexScale, 0.06f, 9f * scale / hexScale);
+            table.transform.localScale = tableScale;
 
             var renderer = table.GetComponent<Renderer>();
             renderer.material = BuiltInMaterials.Create(new Color(0.76f, 0.65f, 0.45f));

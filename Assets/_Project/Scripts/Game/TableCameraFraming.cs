@@ -15,6 +15,14 @@ namespace CatanRoguelike.Game
         public const float DefaultMarginFactor = 1.08f;
         public const float MinOrbitDistance = 2.4f;
 
+        /// <summary>Thin Y scale for the decorative table cube under the hex cluster.</summary>
+        public const float TableSurfaceThinY = 0.06f;
+
+        /// <summary>
+        /// Pad beyond <see cref="ComputeBoardBoundingRadius"/> on each XZ half-axis (1.0 = flush with farthest hex edge).
+        /// </summary>
+        public const float TableSurfaceRadiusFactor = 1.15f;
+
         public static float ComputeBoardBoundingRadius(BoardState board, float hexScale) =>
             ComputeBoardBoundingRadius(board.Tiles.Keys, hexScale);
 
@@ -43,5 +51,11 @@ namespace CatanRoguelike.Game
 
         public static float ComputeOrbitHeight(float orbitDistance) =>
             orbitDistance * HeightToDistanceRatio;
+
+        public static Vector3 ComputeTableSurfaceScale(float boardBoundingRadius)
+        {
+            float halfExtent = boardBoundingRadius * TableSurfaceRadiusFactor;
+            return new Vector3(2f * halfExtent, TableSurfaceThinY, 2f * halfExtent);
+        }
     }
 }
