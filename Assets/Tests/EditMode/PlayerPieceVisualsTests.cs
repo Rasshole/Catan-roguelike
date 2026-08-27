@@ -8,7 +8,7 @@ namespace CatanRoguelike.Tests
     {
         private const float HexTopY = 0.15f;
         private const float MinBaseAboveHex = 0.01f;
-        private const float MinRidgeGapAboveBodyTop = 0.03f;
+        private const float MinRidgeGapAboveBodyTop = 0.05f;
         private const float MaxSettlementHeight = 0.50f;
         private const float MinCityHeight = 0.25f;
         private const float MaxCityHeight = 0.72f;
@@ -106,6 +106,38 @@ namespace CatanRoguelike.Tests
             var roofLeftRenderer = piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName).GetComponent<Renderer>();
 
             AssertRoofRidgeCoversTop(upperRenderer, roofLeftRenderer, piece);
+        }
+
+        [Test]
+        public void CreateSettlement_RoofUsesLowGlossMaterial()
+        {
+            var piece = PlayerPieceVisuals.CreateSettlement(
+                _testRoot.transform,
+                Vector3.zero,
+                PlayerPieceVisuals.AiColor,
+                HexTopY);
+
+            var roofRenderer = piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName).GetComponent<Renderer>();
+
+            Assert.Less(roofRenderer.sharedMaterial.GetFloat("_Glossiness"), 0.1f);
+            Assert.AreEqual(0f, roofRenderer.sharedMaterial.GetFloat("_Metallic"));
+        }
+
+        [Test]
+        public void CreateSettlement_RidgeTopCoversRoofPanelPeaks()
+        {
+            var piece = PlayerPieceVisuals.CreateSettlement(
+                _testRoot.transform,
+                Vector3.zero,
+                PlayerPieceVisuals.AiColor,
+                HexTopY);
+
+            var roofLeftRenderer = piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName).GetComponent<Renderer>();
+            var roofRightRenderer = piece.transform.Find(PlayerPieceVisuals.RoofRightPartName).GetComponent<Renderer>();
+            var ridgeRenderer = piece.transform.Find(PlayerPieceVisuals.RoofRidgePartName).GetComponent<Renderer>();
+
+            float panelPeakY = Mathf.Max(roofLeftRenderer.bounds.max.y, roofRightRenderer.bounds.max.y);
+            Assert.GreaterOrEqual(ridgeRenderer.bounds.max.y, panelPeakY);
         }
 
         [Test]
@@ -225,6 +257,9 @@ namespace CatanRoguelike.Tests
             Assert.LessOrEqual(ridgeBounds.min.z, bodyBounds.min.z);
             Assert.GreaterOrEqual(ridgeBounds.max.z, bodyBounds.max.z);
             Assert.Greater(ridgeBounds.min.y, bodyBounds.max.y + MinRidgeGapAboveBodyTop);
+
+            float panelPeakY = Mathf.Max(roofLeftRenderer.bounds.max.y, piece.transform.Find(PlayerPieceVisuals.RoofRightPartName).GetComponent<Renderer>().bounds.max.y);
+            Assert.GreaterOrEqual(ridgeBounds.max.y, panelPeakY);
         }
     }
 }
