@@ -179,9 +179,10 @@ namespace CatanRoguelike.Game
             if (cam == null) return null;
 
             var ray = cam.ScreenPointToRay(Input.mousePosition);
-            var plane = new Plane(Vector3.up, Vector3.zero);
-            if (!plane.Raycast(ray, out float enter)) return null;
-            return ray.GetPoint(enter);
+            float planeY = BoardPickPlane.GetPickPlaneY(boardView.TileHeight);
+            if (!BoardPickPlane.TryRaycast(ray, planeY, out var hit))
+                return null;
+            return hit;
         }
 
         private float Dist(Vector3 point, Vertex v, float scale)

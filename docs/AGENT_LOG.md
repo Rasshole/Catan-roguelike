@@ -182,3 +182,8 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **`ThinDiskMesh`:** 64-segment disk (mesh radius 0.5, height 2) shared by wood/sea/felt surfaces; existing `Compute*DiskScale` helpers unchanged.
 - **`BoardView`:** `BoardSurface`, `WaterSurface`, `FeltSurface` use custom mesh instead of `PrimitiveType.Cylinder` (no collider).
 - **Tests:** `ThinDiskMeshTests` (vertex/triangle counts, radius, no NaNs). No v0.1 tag.
+
+## 2026-08-27 (UTC) — Board pick plane at hex top
+
+- **`BoardPickPlane`:** raycast horizontal plane at `BoardView.TileHeight` (fallback y=0); `BoardInputController` uses it for hover/click hit points so angled `TableCamera` aims at visible corners, not pixels below.
+- **Tests:** `BoardPickPlaneTests` (EditMode). No v0.1 tag.
