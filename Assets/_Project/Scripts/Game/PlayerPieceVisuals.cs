@@ -21,6 +21,7 @@ namespace CatanRoguelike.Game
         public static readonly Color AiColor = new(0.9f, 0.25f, 0.2f);
 
         private const float RoofPitchDegrees = 38f;
+        private const float BaseGapAboveHex = 0.02f;
 
         public static Color ColorForPlayer(PlayerId owner) =>
             owner == PlayerId.Human ? HumanColor : AiColor;
@@ -35,7 +36,12 @@ namespace CatanRoguelike.Game
             const float bodyDepth = 0.13f;
 
             AddBody(root.transform, bodyWidth, bodyHeight, bodyDepth, hexTopY, material);
-            AddPitchedRoof(root.transform, bodyWidth, bodyDepth, hexTopY + bodyHeight, material);
+            AddPitchedRoof(
+                root.transform,
+                bodyWidth,
+                bodyDepth,
+                hexTopY + BaseGapAboveHex + bodyHeight,
+                material);
 
             return root;
         }
@@ -54,7 +60,8 @@ namespace CatanRoguelike.Game
 
             AddBody(root.transform, bodyWidth, bodyHeight, bodyDepth, hexTopY, material);
 
-            float upperCenterY = hexTopY + bodyHeight + upperHeight * 0.5f;
+            float buildingBaseY = hexTopY + BaseGapAboveHex;
+            float upperCenterY = buildingBaseY + bodyHeight + upperHeight * 0.5f;
             CreatePrimitivePart(
                 root.transform,
                 PrimitiveType.Cube,
@@ -68,7 +75,7 @@ namespace CatanRoguelike.Game
                 root.transform,
                 upperWidth,
                 upperDepth,
-                hexTopY + bodyHeight + upperHeight,
+                buildingBaseY + bodyHeight + upperHeight,
                 material);
 
             return root;
@@ -118,7 +125,7 @@ namespace CatanRoguelike.Game
             float hexTopY,
             Material material)
         {
-            float centerY = hexTopY + height * 0.5f;
+            float centerY = hexTopY + BaseGapAboveHex + height * 0.5f;
             CreatePrimitivePart(
                 parent,
                 PrimitiveType.Cube,
@@ -179,7 +186,7 @@ namespace CatanRoguelike.Game
             var renderer = go.GetComponent<Renderer>();
             renderer.sharedMaterial = material;
 
-            Object.Destroy(go.GetComponent<Collider>());
+            Object.DestroyImmediate(go.GetComponent<Collider>());
         }
     }
 }
