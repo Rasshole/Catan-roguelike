@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 
 namespace CatanRoguelike.Core.Progression
@@ -17,7 +18,8 @@ namespace CatanRoguelike.Core.Progression
         {
             Formatting = Formatting.Indented,
             NullValueHandling = NullValueHandling.Ignore,
-            ContractResolver = new CamelCasePropertyNamesContractResolver()
+            ContractResolver = new CamelCasePropertyNamesContractResolver(),
+            Converters = { new StringEnumConverter(new CamelCaseNamingStrategy()) }
         };
 
         public static string Serialize(MetaProgression progression)

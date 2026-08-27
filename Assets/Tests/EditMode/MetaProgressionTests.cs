@@ -59,7 +59,7 @@ namespace CatanRoguelike.Tests
             game.ToggleDraftUnique(UniqueBuildingId.GuildHall);
             game.ConfirmRunSetup();
 
-            Assert.AreEqual(GamePhase.SetupAiSettlement1, game.State.Phase);
+            Assert.AreEqual(GamePhase.SetupPlayerSettlement1, game.State.Phase);
             Assert.IsTrue(game.State.RunSetupComplete);
             Assert.AreEqual(2, game.State.DraftedUniques.Count);
         }
@@ -92,12 +92,12 @@ namespace CatanRoguelike.Tests
             var meta = MetaProgression.CreateFresh();
 
             Assert.IsTrue(meta.TryAwardRun(Seed, 8, 10, PlayerId.Human, out int first));
-            Assert.AreEqual(13, first);
-            Assert.AreEqual(13, meta.Stars);
+            Assert.AreEqual(15, first);
+            Assert.AreEqual(15, meta.Stars);
 
             Assert.IsFalse(meta.TryAwardRun(Seed, 8, 10, PlayerId.Human, out int second));
             Assert.AreEqual(0, second);
-            Assert.AreEqual(13, meta.Stars);
+            Assert.AreEqual(15, meta.Stars);
         }
 
         [Test]
@@ -132,7 +132,7 @@ namespace CatanRoguelike.Tests
             StringAssert.DoesNotContain("unlockedIds", runJson);
             StringAssert.Contains("\"formatVersion\"", metaJson);
             StringAssert.Contains("\"stars\"", metaJson);
-            StringAssert.Contains("StartBonusWheat", metaJson);
+            StringAssert.Contains("startBonusWheat", metaJson);
 
             var reloadedRun = SaveGame.LoadGame(runJson);
             var reloadedMeta = MetaSave.Load(metaJson);
