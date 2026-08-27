@@ -4,7 +4,6 @@ using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Progression;
-using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Yield;
 using NUnit.Framework;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
@@ -29,7 +28,7 @@ namespace CatanRoguelike.Tests
 
     public class HybridProductionTests
     {
-        private static readonly HexCoord WoodHex = new HexCoord(0, 0);
+        private static readonly HexCoord WoodHex = new HexCoord(-1, 1);
 
         [Test]
         public void Production_RequiresMatchingDiceAndPositiveResourceRoll()

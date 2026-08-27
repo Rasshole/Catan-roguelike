@@ -35,6 +35,21 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
+        public void ExpandBoard_MediumToLarge_CenterBecomesDesertWithNoToken()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Medium);
+            MapPresets.ExpandBoard(board, MapSize.Large);
+
+            var center = new HexCoord(0, 0);
+            Assert.IsTrue(board.Tiles[center].IsDesert);
+            Assert.IsFalse(board.Tiles[center].NumberToken.HasValue);
+
+            int numbered = board.Tiles.Values.Count(t => t.NumberToken.HasValue);
+            Assert.AreEqual(18, numbered);
+            Assert.IsFalse(board.Tiles.Values.Any(t => t.NumberToken == 7));
+        }
+
+        [Test]
         public void ExpandBoard_PreservesExistingBuildings()
         {
             var board = MapPresets.CreateBoard(MapSize.Small);

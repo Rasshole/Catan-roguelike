@@ -17,7 +17,7 @@ namespace CatanRoguelike.Tests
     public class EventEngineTests
     {
         private static readonly HexCoord BrickHex = new HexCoord(1, 0);
-        private static readonly HexCoord StoneHex = new HexCoord(0, -1);
+        private static readonly HexCoord StoneHex = new HexCoord(-1, 0);
 
         private static GameState CreateState()
         {
