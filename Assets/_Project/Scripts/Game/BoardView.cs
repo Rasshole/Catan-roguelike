@@ -85,39 +85,39 @@ namespace CatanRoguelike.Game
         private void CreateTableSurface(BoardState board)
         {
             float boundingRadius = TableCameraFraming.ComputeBoardBoundingRadius(board, hexScale);
-            var tableScale = TableCameraFraming.ComputeTableDiskScale(boundingRadius);
 
-            var table = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            table.name = "BoardSurface";
-            table.transform.SetParent(boardRoot, false);
-            table.transform.SetAsFirstSibling();
-            table.transform.localPosition = new Vector3(0f, TableCameraFraming.TableSurfaceLocalY, 0f);
-            table.transform.localScale = tableScale;
+            CreateTableDisk(
+                "BoardSurface",
+                TableCameraFraming.TableSurfaceLocalY,
+                TableCameraFraming.ComputeTableDiskScale(boundingRadius),
+                BoardSurfaceMaterial.Create());
 
-            var renderer = table.GetComponent<Renderer>();
-            renderer.material = BoardSurfaceMaterial.Create();
+            CreateTableDisk(
+                "WaterSurface",
+                TableCameraFraming.WaterSurfaceLocalY,
+                TableCameraFraming.ComputeWaterDiskScale(boundingRadius),
+                BoardWaterMaterial.Create());
 
-            var waterScale = TableCameraFraming.ComputeWaterDiskScale(boundingRadius);
-            var water = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            water.name = "WaterSurface";
-            water.transform.SetParent(boardRoot, false);
-            water.transform.SetAsFirstSibling();
-            water.transform.localPosition = new Vector3(0f, TableCameraFraming.WaterSurfaceLocalY, 0f);
-            water.transform.localScale = waterScale;
+            CreateTableDisk(
+                "FeltSurface",
+                TableCameraFraming.FeltSurfaceLocalY,
+                TableCameraFraming.ComputeFeltDiskScale(boundingRadius),
+                BoardFeltMaterial.Create());
+        }
 
-            var waterRenderer = water.GetComponent<Renderer>();
-            waterRenderer.material = BoardWaterMaterial.Create();
+        private void CreateTableDisk(string name, float localY, Vector3 localScale, Material material)
+        {
+            var disk = new GameObject(name);
+            disk.transform.SetParent(boardRoot, false);
+            disk.transform.SetAsFirstSibling();
+            disk.transform.localPosition = new Vector3(0f, localY, 0f);
+            disk.transform.localScale = localScale;
 
-            var feltScale = TableCameraFraming.ComputeFeltDiskScale(boundingRadius);
-            var felt = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            felt.name = "FeltSurface";
-            felt.transform.SetParent(boardRoot, false);
-            felt.transform.SetAsFirstSibling();
-            felt.transform.localPosition = new Vector3(0f, TableCameraFraming.FeltSurfaceLocalY, 0f);
-            felt.transform.localScale = feltScale;
+            var meshFilter = disk.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = ThinDiskMesh.Shared;
 
-            var feltRenderer = felt.GetComponent<Renderer>();
-            feltRenderer.material = BoardFeltMaterial.Create();
+            var renderer = disk.AddComponent<MeshRenderer>();
+            renderer.material = material;
         }
 
         private static void DisableLegacySceneTable()
