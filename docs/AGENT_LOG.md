@@ -100,6 +100,10 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **Docs:** `BLOCKED.md` #3 Windows-Mono tarball 404 from Linux-VM; `ROADMAP_V3` PlayMode + Windows build rows updated.
 - **Core:** `dotnet test tools/core-tests` unchanged.
 
+## 2026-08-27 (UTC) — Robber/storm markers above hex cylinders
+
+- **`HexTileView`:** robber sphere and storm cube raised to parent-local y=1.28 (above chip/label); XZ offsets so robber sits toward a hex corner and storm the opposite side. `localScale` divided by hex `lossyScale` for ~0.30 world robber diameter and ~0.22 storm slab. Token chip constants unchanged.
+
 ## 2026-08-27 (UTC) — Number-token chip visibility above hex cylinders
 
 - **`HexTileView`:** chip/label elevation raised to parent-local y≈1.08/1.18 (cylinder top = 1.0); disc `localScale` compensated for hex `lossyScale` so world rim ~0.62, face ~0.52, thickness ~0.04. Robber/storm markers unchanged. **`NumberTokenVisualStyle`** colors untouched.
