@@ -52,7 +52,9 @@ Vælg i **startmenuen** når spillet starter (eller sæt standard på **GameMana
 Assets/_Project/Scripts/
   Core/          # Ren C# spil-logik (testbar uden Unity)
   Game/          # MonoBehaviours, 3D board, placeholder UI
-Assets/Tests/    # EditMode unit tests
+Assets/Tests/
+  EditMode/      # Core unit + integration tests
+  PlayMode/      # Scene boot smoke tests (Game.unity wiring)
 ```
 
 ## Design-dokumentation
@@ -64,17 +66,36 @@ Assets/Tests/    # EditMode unit tests
 
 Unity → **Window → General → Test Runner** → EditMode → Run All
 
+**PlayMode (scene smoke):** Test Runner → PlayMode → Run All. På headless Linux kræver PlayMode grafik — brug `xvfb-run`:
+
+```bash
+# Unity CLI (anbefalet på VM/CI)
+xvfb-run -a unity test . --mode PlayMode --output /tmp/playmode-results.xml --timeout 300
+
+# Eller Editor direkte
+xvfb-run -a Unity -runTests -batchmode -projectPath . -testPlatform PlayMode \
+  -testResults playmode-results.xml -logFile -
+```
+
+EditMode uden grafik:
+
+```bash
+unity test . --mode EditMode --output /tmp/editmode-results.xml --timeout 300
+```
+
+Se også `docs/TOOLING.md`.
+
 ## Kendte begrænsninger (prototype)
 
 - Placeholder 3D (cylindre/primitiver) — ikke endelig bordspils-look
 - IMGUI placeholder UI — ikke uGUI
 - Events kun som tekstlinje — ingen visuel effekt på brættet
 - Ingen save/load eller meta progression mellem runs
-- Ingen PlayMode/UI-tests (EditMode dækker core-logik)
+- PlayMode scene-boot smoke findes (`GameSceneSmokeTests`); fuld IMGUI/UI-interaktion mangler stadig
 - Se `docs/MISSING_AND_GAPS.md` for fuld liste
 
 ## Næste skridt (forslag)
 
 - [ ] Rig UI (uGUI) + art pass
 - [ ] Visuelle events på brættet
-- [ ] PlayMode-tests
+- [x] PlayMode-tests (scene boot smoke)

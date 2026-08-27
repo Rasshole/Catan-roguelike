@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-27 — P2 game-over run-summary + event board overlays (`RunSummaryDisplay`, `EventBoardVisual`).
+Last updated: 2026-08-27 — P3 PlayMode scene smoke tests (`GameSceneSmokeTests`).
 
 ## Done (playable prototype scope)
 
@@ -32,6 +32,7 @@ Last updated: 2026-08-27 — P2 game-over run-summary + event board overlays (`R
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
 - [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**)
+- [x] PlayMode smoke tests (`GameSceneSmokeTests` — `Game.unity` boot, required MonoBehaviours, `GameManager.Controller` after Start)
 
 ## Explicitly out of scope
 
@@ -78,3 +79,4 @@ Set on **GameManager → Map Size** in the inspector (or re-run Setup Game Scene
 3. On `GameManager`, set **Map Size** to Small / Medium / Large
 4. Play — leader → draft → setup → day/night loop
 5. Test Runner → EditMode → Run All
+6. Test Runner → PlayMode → Run All (eller headless — se nedenfor)

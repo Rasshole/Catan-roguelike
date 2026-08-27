@@ -125,9 +125,10 @@ Eksisterende EditMode-tests:
 - `RunSummaryDisplayTests` — game-over summary lines (human vs AI win wording; seed/day/map/leader; VP breakdown; safe when no winner)
 - `EventBoardVisualTests` — tile overlays: none; storm on `EventStormTile`; famine wheat; gold rush stone; good harvest all tiles; market day / bandit raid none
 - `GameControllerIntegrationTests` — seeded setup → nat/dag-cyklus uden hang; `SkipNightCard` / `PlayPlayerCard` → `DayPlayerActions`; win ved 10 VP; level-up på dag 5 via `EndPlayerDay`; disabled roads + event-flags ryddes ved daggrænse
+- `GameSceneSmokeTests` (PlayMode) — `Game.unity` loader; `GameManager` / `BoardView` / `PlaceholderUI` findes; efter Start har `GameManager.Controller` + state i run-select eller setup-fase (ingen umiddelbar NRE)
 
 **Mangler tests for:**
-- PlayMode / UI-tests
+- PlayMode / UI-tests ud over scene-boot smoke (fx fuld IMGUI-interaktion)
 
 `AiController` nat/dag-adfærd er dækket af `AiControllerShopTests` (shop afford) og `AiEmbargoStrategyTests` (embargo skip, `ExecuteNightPlan` Embargo mod spiller inkl. `PlayerShopEmbargo` + blokeret human shop).
 

@@ -26,6 +26,23 @@ Miljøvariabler:
 | `UNITY_TEST_TIMEOUT` | `300` | sekunder for `unity test --timeout` (EditMode) |
 | `DISPLAY` | (tom) | hvis unset, køres Unity via `xvfb-run -a` |
 
+### PlayMode-tests (Unity CLI)
+
+PlayMode kræver grafik. På headless Linux, wrap med `xvfb-run -a`:
+
+```bash
+xvfb-run -a unity test . --mode PlayMode --output /tmp/playmode-results.xml --timeout 300
+```
+
+Fallback (Editor):
+
+```bash
+xvfb-run -a "$UNITY_EDITOR" -runTests -batchmode -projectPath . -testPlatform PlayMode \
+  -testResults /tmp/playmode-results.xml -logFile -
+```
+
+Smoke: `GameSceneSmokeTests` loader `Game.unity` og tjekker `GameManager` / `BoardView` / `PlaceholderUI` + controller efter Start.
+
 ### EditMode-tests (Unity CLI)
 
 Primær kommando (fra klon-mappen):
