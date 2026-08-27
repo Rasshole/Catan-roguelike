@@ -15,7 +15,7 @@ Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færd
 | Item | Hvorfor det løfter spillet | Impact | Effort | Linux-VM? | Noter |
 |------|---------------------------|--------|--------|-----------|-------|
 | **Sim-driven day-ceiling / win-rate balance** | Runs skal ende ved 10 VP — ikke ved `--max-days`. Act 2/3 + hybrid tokens gør det værre end før sim-baseline (~790/1000 timeout *før* 2.4–2.6; ikke genmålt). | **H** | **M** | **yes** | `BalanceConfig`, `ActProgression`, evt. AI VP-jagt. Sim-runner + nye metrics. |
-| **Autosave + multi-slot + RNG roll-tællere (2.1 rest)** | Spilleren kan pause uden at miste determinisme; QA kan gemme lige før en bug. | **M** | **M** | partial | Core + IMGUI; kræver Unity for round-trip i Play Mode, men logik/testes med EditMode + `dotnet`. |
+| **Autosave + multi-slot + RNG roll-tællere (2.1 rest)** | Spilleren kan pause uden at miste determinisme; QA kan gemme lige før en bug. | **M** | **M** | partial | **Done:** autosave ved `DayPlayerActions`, slot 0/1, legacy `save.json`. RNG roll-tællere udskudt — roll-lister nok til resume. |
 | **Meta: lås kort- og unique-*pools* bag stjerner** | Roguelike-identitet: nye runs føles anderledes, ikke kun nye leaders. | **H** | **M** | **yes** | **Done:** 2 free uniques + 7 starter cards; 3 unique unlocks + 2 card packs i `MetaCatalog`. AI bruger fuld `AiPool`. |
 | **First-run / onboarding beats (IMGUI)** | Nye spillere forstår hybrid produktion, acts og meta uden wiki. | **H** | **M** | partial | Primært copy + fase-bannere i `PlaceholderUI`; fuld “feel” kræver Play Mode på Mac. |
 | **uGUI-erstatning + art pass** | Føles som et spil, ikke et debug-værktøj. | **H** | **H** | **no** | P2 uafgjort. Kræver Mac/Windows til visuel QA; Linux-VM kan skrive prefabs, ikke validere look. |
@@ -29,15 +29,23 @@ Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færd
 
 ---
 
-## PICK: autosave + multi-slot + RNG roll-tællere (2.1 rest)
+## PICK: first-run / onboarding beats (IMGUI)
 
-**Gør dette næste.** Meta pool locks er landet; balance-pass er grøn.
+**Gør dette næste.** Autosave + multi-slot er landet.
 
-- **Meta progression har nu pool-variation.** Fresh runs: Sawmill + Guild Hall, 7 starter-kort; unlocks udvider draft og nat-draw. AI bruger stadig fuld `AiPool`.
-- **Pause/resume mangler stadig.** Autosave ved nat + multi-slot gør lange runs spilbare uden editor.
-- **Determinisme kræver RNG roll-tællere** i save-formatet — ellers kan load/load ikke reproducere hybrid rolls.
-- **Ren Core + IMGUI — partial Unity.** EditMode + `dotnet test` dækker logik; Play Mode round-trip kræver Mac/Unity.
-- **Onboarding beats** (næste kandidat efter autosave) er copy-only i IMGUI — lav risiko, høj læring for nye spillere.
+- **Pause/resume virker.** Autosave ved nat→dag i slot 0; manuel Save/Load i to slots; legacy `save.json` compat.
+- **Onboarding beats** er copy-only i IMGUI — lav risiko, høj læring for nye spillere (hybrid produktion, acts, meta).
+- **uGUI + art** forbliver P2 — kræver Mac til visuel QA.
+
+---
+
+## Done recently: autosave + multi-slot (2.1 rest)
+
+- Autosave når nat løses til `DayPlayerActions` (`GameController.OnAutosavePoint`).
+- Slot 0 = `save.json`, slot 1 = `save_1.json`; `SaveGameSlotStore` path-agnostic til EditMode/`dotnet`.
+- IMGUI: Save 1/2, Load 1/2, Autosaved-timestamp. `meta.json` påvirkes ikke.
+- RNG roll-tællere **ikke** tilføjet — v1 roll-lister + infereret `MetaStartCardGranted` er nok til resume.
+- Tests: 312/312 `dotnet test tools/core-tests`.
 
 ---
 

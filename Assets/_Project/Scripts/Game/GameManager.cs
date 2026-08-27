@@ -19,19 +19,25 @@ namespace CatanRoguelike.Game
 
         public void SaveMeta() => MetaProgressionFile.Save(Meta);
 
-        public void SaveRun()
+        public void SaveRun(int slotIndex = 0)
         {
             if (Controller != null)
-                SaveGameFile.Save(Controller);
+                SaveGameFile.Save(Controller, slotIndex);
         }
 
-        public bool TryLoadRun()
+        public bool TryLoadRun(int slotIndex = 0)
         {
-            if (!SaveGameFile.TryLoad(out var loaded))
+            if (!SaveGameFile.TryLoad(out var loaded, slotIndex))
                 return false;
 
             SwapController(loaded);
             return true;
+        }
+
+        public void AutosaveRun()
+        {
+            if (Controller != null)
+                SaveGameFile.Autosave(Controller);
         }
 
         private void SwapController(GameController newController)
@@ -40,12 +46,14 @@ namespace CatanRoguelike.Game
             {
                 Controller.OnStateChanged -= HandleStateChanged;
                 Controller.OnBoardRebuilt -= HandleBoardRebuilt;
+                Controller.OnAutosavePoint -= HandleAutosavePoint;
             }
 
             Controller = newController;
             Controller.SetMeta(Meta);
             Controller.OnStateChanged += HandleStateChanged;
             Controller.OnBoardRebuilt += HandleBoardRebuilt;
+            Controller.OnAutosavePoint += HandleAutosavePoint;
 
             if (boardView != null)
                 boardView.Initialize(Controller);
@@ -64,6 +72,7 @@ namespace CatanRoguelike.Game
             Controller = new GameController(randomSeed, mapSize, Meta);
             Controller.OnStateChanged += HandleStateChanged;
             Controller.OnBoardRebuilt += HandleBoardRebuilt;
+            Controller.OnAutosavePoint += HandleAutosavePoint;
 
             boardView.Initialize(Controller);
             ui.Initialize(Controller, Meta, boardInput);
@@ -81,7 +90,10 @@ namespace CatanRoguelike.Game
             if (Controller == null) return;
             Controller.OnStateChanged -= HandleStateChanged;
             Controller.OnBoardRebuilt -= HandleBoardRebuilt;
+            Controller.OnAutosavePoint -= HandleAutosavePoint;
         }
+
+        private void HandleAutosavePoint() => AutosaveRun();
 
         private void HandleStateChanged(GameState state)
         {

@@ -486,19 +486,36 @@ namespace CatanRoguelike.Game
         private void DrawSaveLoadButtons()
         {
             GUILayout.Space(8);
+            var manager = FindFirstObjectByType<GameManager>();
+            var lastAutosave = SaveGameFile.LastAutosaveUtc;
+            if (lastAutosave.HasValue)
+                GUILayout.Label($"Autosaved: {lastAutosave.Value.ToLocalTime():g}");
+
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Save"))
+            if (GUILayout.Button("Save 1"))
             {
-                var manager = FindFirstObjectByType<GameManager>();
                 if (manager != null)
-                    manager.SaveRun();
+                    manager.SaveRun(0);
             }
 
-            if (GUILayout.Button("Load"))
+            if (GUILayout.Button("Load 1"))
             {
-                var manager = FindFirstObjectByType<GameManager>();
                 if (manager != null)
-                    manager.TryLoadRun();
+                    manager.TryLoadRun(0);
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Save 2"))
+            {
+                if (manager != null)
+                    manager.SaveRun(1);
+            }
+
+            if (GUILayout.Button("Load 2"))
+            {
+                if (manager != null)
+                    manager.TryLoadRun(1);
             }
             GUILayout.EndHorizontal();
         }
