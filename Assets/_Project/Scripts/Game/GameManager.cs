@@ -1,5 +1,6 @@
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Turn;
 using UnityEngine;
 
@@ -14,6 +15,9 @@ namespace CatanRoguelike.Game
         [SerializeField] private MapSize mapSize = MapSize.Small;
 
         public GameController Controller { get; private set; }
+        public MetaProgression Meta { get; private set; }
+
+        public void SaveMeta() => MetaProgressionFile.Save(Meta);
 
         public void SaveRun()
         {
@@ -39,13 +43,14 @@ namespace CatanRoguelike.Game
             }
 
             Controller = newController;
+            Controller.SetMeta(Meta);
             Controller.OnStateChanged += HandleStateChanged;
             Controller.OnBoardRebuilt += HandleBoardRebuilt;
 
             if (boardView != null)
                 boardView.Initialize(Controller);
             if (ui != null)
-                ui.Initialize(Controller, boardInput);
+                ui.Initialize(Controller, Meta, boardInput);
             if (boardInput != null)
                 boardInput.Initialize(Controller, boardView);
 
@@ -55,12 +60,13 @@ namespace CatanRoguelike.Game
 
         private void Start()
         {
-            Controller = new GameController(randomSeed, mapSize);
+            Meta = MetaProgressionFile.LoadOrCreate();
+            Controller = new GameController(randomSeed, mapSize, Meta);
             Controller.OnStateChanged += HandleStateChanged;
             Controller.OnBoardRebuilt += HandleBoardRebuilt;
 
             boardView.Initialize(Controller);
-            ui.Initialize(Controller, boardInput);
+            ui.Initialize(Controller, Meta, boardInput);
 
             if (boardInput != null)
                 boardInput.Initialize(Controller, boardView);
@@ -104,7 +110,7 @@ namespace CatanRoguelike.Game
         public void DebugRestart(int seed)
         {
             randomSeed = seed;
-            SwapController(new GameController(randomSeed, mapSize));
+            SwapController(new GameController(randomSeed, mapSize, Meta));
         }
 #endif
     }
