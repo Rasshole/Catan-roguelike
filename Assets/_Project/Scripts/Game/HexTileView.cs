@@ -1,5 +1,6 @@
 using CatanRoguelike.Core.Events;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Yield;
 using UnityEngine;
 
 namespace CatanRoguelike.Game
@@ -11,6 +12,7 @@ namespace CatanRoguelike.Game
         private Color _baseColor;
         private GameObject _robberMarker;
         private GameObject _stormMarker;
+        private TextMesh _tokenLabel;
 
         private static readonly Color FamineTint = new(0.55f, 0.35f, 0.15f);
         private static readonly Color GoldRushTint = new(0.95f, 0.75f, 0.1f);
@@ -29,6 +31,42 @@ namespace CatanRoguelike.Game
             Data = data;
             if (_robberMarker != null)
                 _robberMarker.SetActive(data.HasRobber);
+            RefreshNumberToken(data);
+        }
+
+        public void RefreshNumberToken(HexTileData data)
+        {
+            if (data.IsDesert || !data.NumberToken.HasValue)
+            {
+                if (_tokenLabel != null)
+                    _tokenLabel.gameObject.SetActive(false);
+                return;
+            }
+
+            EnsureTokenLabel();
+            _tokenLabel.gameObject.SetActive(true);
+            _tokenLabel.text = data.NumberToken.Value.ToString();
+            _tokenLabel.color = NumberTokenLibrary.IsRedNumber(data.NumberToken.Value)
+                ? Color.red
+                : Color.black;
+        }
+
+        private void EnsureTokenLabel()
+        {
+            if (_tokenLabel != null)
+                return;
+
+            var labelGo = new GameObject("NumberToken");
+            labelGo.transform.SetParent(transform, false);
+            labelGo.transform.localPosition = new Vector3(0f, 0.52f, 0f);
+            labelGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            labelGo.transform.localScale = Vector3.one * 0.08f;
+
+            _tokenLabel = labelGo.AddComponent<TextMesh>();
+            _tokenLabel.anchor = TextAnchor.MiddleCenter;
+            _tokenLabel.alignment = TextAlignment.Center;
+            _tokenLabel.fontSize = 48;
+            _tokenLabel.characterSize = 0.5f;
         }
 
         public void SetRobberVisible(bool visible)

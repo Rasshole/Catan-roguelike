@@ -18,6 +18,9 @@ namespace CatanRoguelike.Core.Map
         /// <summary>Desert / no-production tile (classic Catan center). Yields nothing in setup bonus.</summary>
         public bool IsDesert;
 
+        /// <summary>Classic Catan number token (2–12). Null = no token (desert or unassigned).</summary>
+        public int? NumberToken;
+
         public HexTileData(HexCoord coord, ResourceType resource, bool isCoastal = false)
         {
             Coord = coord;

@@ -13,11 +13,13 @@ namespace CatanRoguelike.Core.Cards
     {
         private readonly Random _random;
         private readonly RollEngine _rollEngine;
+        private readonly DiceRollEngine _diceEngine;
 
         public CardEngine(int? seed = null)
         {
             _random = seed.HasValue ? new Random(seed.Value) : new Random();
             _rollEngine = new RollEngine(seed);
+            _diceEngine = new DiceRollEngine(seed);
         }
 
         public CardId DrawCard(bool forAi = false, int aiAct = 1)
@@ -200,6 +202,7 @@ namespace CatanRoguelike.Core.Cards
             state.TomorrowRolls = passes > 1
                 ? _rollEngine.RollNightlyCombined(passes, maxRoll)
                 : _rollEngine.RollNightly(maxRoll);
+            state.TomorrowDiceRolls = _diceEngine.RollNightly(passes);
             return true;
         }
 

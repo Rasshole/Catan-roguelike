@@ -24,6 +24,7 @@ namespace CatanRoguelike.Core
         public GameState State { get; private set; }
         public PlacementValidator Placement { get; }
         public RollEngine RollEngine { get; }
+        public DiceRollEngine DiceRollEngine { get; }
         public CardEngine CardEngine { get; }
         public ShopGenerator Shop { get; }
         public AiController Ai { get; }
@@ -49,6 +50,7 @@ namespace CatanRoguelike.Core
             _lastPlacedSettlement = null;
             Placement = new PlacementValidator();
             RollEngine = new RollEngine(seed);
+            DiceRollEngine = new DiceRollEngine(seed);
             CardEngine = new CardEngine(seed);
             Shop = new ShopGenerator(seed);
             Ai = new AiController(seed);
@@ -63,6 +65,7 @@ namespace CatanRoguelike.Core
             _lastPlacedSettlement = lastPlacedSettlement;
             Placement = new PlacementValidator();
             RollEngine = new RollEngine(runSeed);
+            DiceRollEngine = new DiceRollEngine(runSeed);
             CardEngine = new CardEngine(runSeed);
             Shop = new ShopGenerator(runSeed);
             Ai = new AiController(runSeed);
@@ -73,6 +76,7 @@ namespace CatanRoguelike.Core
         {
             var doc = SaveGame.Parse(json);
             var state = SaveGame.RestoreState(doc);
+            NumberTokenLibrary.AssignMissingTokens(state.Board, doc.RunSeed);
             Vertex? lastSettlement = null;
             if (doc.LastPlacedSettlement != null)
                 lastSettlement = VertexGraph.Canonicalize(new Vertex(
@@ -364,6 +368,7 @@ namespace CatanRoguelike.Core
             State.TomorrowRolls = rollPasses > 1
                 ? RollEngine.RollNightlyCombined(rollPasses, maxRoll)
                 : RollEngine.RollNightly(maxRoll);
+            State.TomorrowDiceRolls = DiceRollEngine.RollNightly(rollPasses);
 
             var eventId = Events.MaybeRollEvent(act);
             if (eventId != EventId.None)
@@ -413,6 +418,7 @@ namespace CatanRoguelike.Core
             Ai.ExecuteNightPlan(this);
 
             State.TodayRolls = new Dictionary<ResourceType, int>(State.TomorrowRolls);
+            State.TodayDiceRolls = new List<int>(State.TomorrowDiceRolls);
             State.Phase = GamePhase.DayProduction;
             ApplyProduction();
 

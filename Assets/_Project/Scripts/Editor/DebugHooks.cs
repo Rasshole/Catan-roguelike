@@ -230,6 +230,8 @@ namespace CatanRoguelike.Editor
         {
             if (game.State.TodayRolls.Count == 0 && game.State.TomorrowRolls.Count > 0)
                 game.State.TodayRolls = new Dictionary<ResourceType, int>(game.State.TomorrowRolls);
+            if (game.State.TodayDiceRolls.Count == 0 && game.State.TomorrowDiceRolls.Count > 0)
+                game.State.TodayDiceRolls = new List<int>(game.State.TomorrowDiceRolls);
         }
 
         /// <summary>

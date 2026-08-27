@@ -23,6 +23,10 @@ namespace CatanRoguelike.Core
         public Dictionary<ResourceType, int> TomorrowRolls { get; set; } = new();
         public Dictionary<ResourceType, int> TodayRolls { get; set; } = new();
 
+        /// <summary>2d6 sums previewed at night; applied to production when day starts.</summary>
+        public List<int> TomorrowDiceRolls { get; set; } = new();
+        public List<int> TodayDiceRolls { get; set; } = new();
+
         public List<CardId> PlayerHand { get; } = new();
         public List<CardId> AiHand { get; } = new();
         public List<ShopDeal> ShopDeals { get; set; } = new();
@@ -108,6 +112,8 @@ namespace CatanRoguelike.Core
             AiInventory = ResourceBundle.Zero;
             TomorrowRolls.Clear();
             TodayRolls.Clear();
+            TomorrowDiceRolls.Clear();
+            TodayDiceRolls.Clear();
             PlayerHand.Clear();
             AiHand.Clear();
             ShopDeals.Clear();

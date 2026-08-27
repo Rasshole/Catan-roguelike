@@ -222,6 +222,13 @@ namespace CatanRoguelike.Game
             }
             foreach (var kv in rolls.OrderBy(k => k.Key))
                 GUILayout.Label($"  {kv.Key}: {kv.Value}");
+
+            var dice = state.IsNightPhase ? state.TomorrowDiceRolls : state.TodayDiceRolls;
+            if (dice != null && dice.Count > 0)
+            {
+                string diceLabel = state.IsNightPhase ? "Tomorrow's Dice" : "Today's Dice";
+                GUILayout.Label($"<b>{diceLabel}</b> (2d6): {string.Join(", ", dice)}");
+            }
         }
 
         private void DrawNightCards(GameState state)

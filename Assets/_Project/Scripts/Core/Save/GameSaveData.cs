@@ -48,6 +48,9 @@ namespace CatanRoguelike.Core.Save
         public PlayerId? Owner { get; set; }
         public int VertexIndex { get; set; }
         public bool IsCoastal { get; set; }
+        public bool IsDesert { get; set; }
+        /// <summary>Optional v1 — classic number token 2–12.</summary>
+        public int? NumberToken { get; set; }
     }
 
     public sealed class RoadSaveData
@@ -113,6 +116,8 @@ namespace CatanRoguelike.Core.Save
         public ResourceBundleSaveData AiInventory { get; set; }
         public List<ResourceRollSaveData> TomorrowRolls { get; set; } = new();
         public List<ResourceRollSaveData> TodayRolls { get; set; } = new();
+        public List<int> TomorrowDiceRolls { get; set; }
+        public List<int> TodayDiceRolls { get; set; }
         public List<CardId> PlayerHand { get; set; } = new();
         public List<CardId> AiHand { get; set; } = new();
         public List<ShopDealSaveData> ShopDeals { get; set; } = new();

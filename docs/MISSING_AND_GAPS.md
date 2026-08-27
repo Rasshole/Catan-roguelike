@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter Fase 2.4 Act progression (yield, events, AI, map growth) på main med save/load, setup-bonus og largest army.
+Sidst opdateret efter Fase 2.5 per-tile number tokens (hybrid) på main med 2.4 Act progression, save/load, setup-bonus og largest army.
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -21,8 +21,8 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 ## Bevidst uden for scope (v1)
 
 - **Meta progression** mellem runs (permanente unlocks)
-- **Save / load** — **første slice (Fase 2.1):** versioneret JSON (`SaveGame`, format v1), én slot `save.json`, IMGUI Save/Load på `PlaceholderUI`, EditMode round-trip test. Autosave ved nat, multi-slot menu og RNG roll-tællere venter.
-- **Per-tile nummer-tokens** (klassisk Catan 2–12) — produktion bruger abstrakte daglige rolls per ressource
+- **Save / load** — **første slice (Fase 2.1):** versioneret JSON (`SaveGame`, format v1), én slot `save.json`, IMGUI Save/Load på `PlaceholderUI`, EditMode round-trip test. Autosave ved nat, multi-slot menu og RNG roll-tællere venter. **Number tokens + dice** er valgfrie v1-felter.
+- **Per-tile nummer-tokens** — **implementeret (Fase 2.5, hybrid b):** klassiske 2–12 per hex + 2d6 + resource rolls; se `docs/DESIGN_NUMBER_TOKENS.md`
 
 ---
 
@@ -103,6 +103,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 ## Test-dækning
 
 Eksisterende EditMode-tests:
+- `NumberTokenTests` / `HybridProductionTests` / `DiceRollEngineTests` / `AiTokenStrategyTests` — token assignment (7/13/19, expansion, red adjacency), desert, hybrid production, Act 2 double dice, save round-trip tokens, BanditRaid pip targeting
 - `RollEngineTests` — roll caps
 - `PlacementValidatorTests` — distance rule
 - `ProductionCalculatorTests` — multi-hex production

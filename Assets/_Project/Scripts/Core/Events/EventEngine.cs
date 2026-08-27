@@ -5,6 +5,7 @@ using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Progression;
+using CatanRoguelike.Core.Yield;
 
 namespace CatanRoguelike.Core.Events
 {
@@ -164,7 +165,17 @@ namespace CatanRoguelike.Core.Events
                 }
             }
             if (counts.Count == 0) return PickRandomTile(state);
-            return counts.OrderByDescending(kv => kv.Value).First().Key;
+            return counts
+                .Select(kv =>
+                {
+                    state.Board.TryGetTile(kv.Key, out var tile);
+                    int pip = tile.NumberToken.HasValue
+                        ? NumberTokenLibrary.GetPipWeight(tile.NumberToken.Value)
+                        : 1;
+                    return (coord: kv.Key, score: kv.Value * pip);
+                })
+                .OrderByDescending(x => x.score)
+                .First().coord;
         }
     }
 }

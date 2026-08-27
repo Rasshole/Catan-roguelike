@@ -6,6 +6,7 @@ using CatanRoguelike.Core.Cards;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Events;
 using CatanRoguelike.Core.Hex;
+using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Turn;
@@ -62,6 +63,45 @@ namespace CatanRoguelike.Tests
             var act2 = engine2.RollNightlyCombined(2, 2);
 
             CollectionAssert.AreNotEquivalent(act1, act2);
+        }
+
+        [Test]
+        public void BeginNight_Act2_RollsTwoDiceSums()
+        {
+            var game = new GameController(4242, MapSize.Small);
+            CompleteSetup(game);
+            game.State.Board.DayNumber = 6;
+            game.BeginNight();
+
+            Assert.AreEqual(2, game.State.TomorrowDiceRolls.Count);
+            Assert.AreEqual(5, game.State.TomorrowRolls.Count);
+        }
+
+        private static void CompleteSetup(GameController game)
+        {
+            game.SelectMap(MapSize.Small);
+            game.SelectLeader(LeaderId.Merchant);
+            game.ToggleDraftUnique(UniqueBuildingId.Sawmill);
+            game.ToggleDraftUnique(UniqueBuildingId.GuildHall);
+            game.ConfirmRunSetup();
+
+            while (game.State.Phase <= GamePhase.SetupPlayerRoad2)
+            {
+                if (game.State.Phase == GamePhase.SetupPlayerSettlement1
+                    || game.State.Phase == GamePhase.SetupPlayerSettlement2)
+                {
+                    var spot = game.GetValidSettlements(PlayerId.Human).First();
+                    game.PlaceSettlement(spot, PlayerId.Human);
+                }
+                else if (game.State.Phase == GamePhase.SetupPlayerRoad1
+                         || game.State.Phase == GamePhase.SetupPlayerRoad2)
+                {
+                    var road = game.GetValidRoads(PlayerId.Human).First();
+                    game.PlaceRoad(road, PlayerId.Human);
+                }
+                else
+                    game.RunAiSetupStep();
+            }
         }
     }
 
@@ -205,6 +245,7 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(6, game.State.Board.DayNumber);
             Assert.AreEqual(MapSize.Medium, game.State.MapSize);
             Assert.AreEqual(13, game.State.Board.Tiles.Count);
+            Assert.AreEqual(13, game.State.Board.Tiles.Values.Count(t => t.NumberToken.HasValue || t.IsDesert));
             Assert.AreEqual(2, ActProgression.GetAct(game.State.Board.DayNumber));
             Assert.That(game.State.ActUnlockMessage, Does.Contain("Act 2"));
         }

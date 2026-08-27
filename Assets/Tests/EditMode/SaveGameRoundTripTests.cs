@@ -78,6 +78,8 @@ namespace CatanRoguelike.Tests
                 [ResourceType.Sheep] = 2,
                 [ResourceType.Stone] = 0
             };
+            game.State.TomorrowDiceRolls = new List<int> { 6, 8 };
+            game.State.TodayDiceRolls = new List<int> { 5, 9 };
 
             game.State.PlayerHand.Clear();
             game.State.PlayerHand.Add(CardId.Knight);
@@ -174,6 +176,8 @@ namespace CatanRoguelike.Tests
             AssertResourceBundlesEqual(expected.AiInventory, actual.AiInventory);
             AssertRollsEqual(expected.TomorrowRolls, actual.TomorrowRolls);
             AssertRollsEqual(expected.TodayRolls, actual.TodayRolls);
+            CollectionAssert.AreEqual(expected.TomorrowDiceRolls, actual.TomorrowDiceRolls);
+            CollectionAssert.AreEqual(expected.TodayDiceRolls, actual.TodayDiceRolls);
             CollectionAssert.AreEquivalent(expected.PlayerHand, actual.PlayerHand);
             CollectionAssert.AreEquivalent(expected.AiHand, actual.AiHand);
             AssertShopDealsEqual(expected.ShopDeals, actual.ShopDeals);
@@ -268,6 +272,8 @@ namespace CatanRoguelike.Tests
                 Assert.AreEqual(expectedTile.Owner, actualTile.Owner);
                 Assert.AreEqual(expectedTile.VertexIndex, actualTile.VertexIndex);
                 Assert.AreEqual(expectedTile.IsCoastal, actualTile.IsCoastal);
+                Assert.AreEqual(expectedTile.IsDesert, actualTile.IsDesert);
+                Assert.AreEqual(expectedTile.NumberToken, actualTile.NumberToken);
             }
 
             Assert.AreEqual(expected.Roads.Count, actual.Roads.Count);
