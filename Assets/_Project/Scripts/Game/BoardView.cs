@@ -82,9 +82,9 @@ namespace CatanRoguelike.Game
         private void CreateTableSurface(BoardState board)
         {
             float boundingRadius = TableCameraFraming.ComputeBoardBoundingRadius(board, hexScale);
-            var tableScale = TableCameraFraming.ComputeTableSurfaceScale(boundingRadius);
+            var tableScale = TableCameraFraming.ComputeTableDiskScale(boundingRadius);
 
-            var table = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var table = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             table.name = "BoardSurface";
             table.transform.SetParent(boardRoot, false);
             table.transform.SetAsFirstSibling();
