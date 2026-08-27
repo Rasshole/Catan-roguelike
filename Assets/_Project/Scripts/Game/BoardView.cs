@@ -91,11 +91,22 @@ namespace CatanRoguelike.Game
             table.name = "BoardSurface";
             table.transform.SetParent(boardRoot, false);
             table.transform.SetAsFirstSibling();
-            table.transform.localPosition = new Vector3(0f, -0.08f, 0f);
+            table.transform.localPosition = new Vector3(0f, TableCameraFraming.TableSurfaceLocalY, 0f);
             table.transform.localScale = tableScale;
 
             var renderer = table.GetComponent<Renderer>();
             renderer.material = BoardSurfaceMaterial.Create();
+
+            var waterScale = TableCameraFraming.ComputeWaterDiskScale(boundingRadius);
+            var water = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            water.name = "WaterSurface";
+            water.transform.SetParent(boardRoot, false);
+            water.transform.SetAsFirstSibling();
+            water.transform.localPosition = new Vector3(0f, TableCameraFraming.WaterSurfaceLocalY, 0f);
+            water.transform.localScale = waterScale;
+
+            var waterRenderer = water.GetComponent<Renderer>();
+            waterRenderer.material = BoardWaterMaterial.Create();
         }
 
         private static void DisableLegacySceneTable()

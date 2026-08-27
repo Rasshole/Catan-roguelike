@@ -1,6 +1,7 @@
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Game;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace CatanRoguelike.Tests
 {
@@ -52,6 +53,66 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(
                 boundingRadius * TableCameraFraming.TableSurfacePadFactor,
                 diskRadius,
+                0.001f);
+        }
+
+        [Test]
+        public void ComputeWaterDiskWorldRadius_IsGreaterThanWoodRadius()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            float boundingRadius = TableCameraFraming.ComputeBoardBoundingRadius(board, HexScale);
+            float woodRadius = TableCameraFraming.ComputeTableDiskWorldRadius(boundingRadius);
+            float waterRadius = TableCameraFraming.ComputeWaterDiskWorldRadius(boundingRadius);
+
+            Assert.Greater(waterRadius, woodRadius);
+        }
+
+        [Test]
+        public void ComputeWaterDiskWorldRadius_IsAtMostOnePointSevenFiveTimesWoodRadius()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            float boundingRadius = TableCameraFraming.ComputeBoardBoundingRadius(board, HexScale);
+            float woodRadius = TableCameraFraming.ComputeTableDiskWorldRadius(boundingRadius);
+            float waterRadius = TableCameraFraming.ComputeWaterDiskWorldRadius(boundingRadius);
+
+            Assert.LessOrEqual(waterRadius, woodRadius * TableCameraFraming.MaxWaterToWoodRadiusRatio);
+        }
+
+        [Test]
+        public void ComputeWaterDiskScale_Small_IsModestRingAroundWood()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            float boundingRadius = TableCameraFraming.ComputeBoardBoundingRadius(board, HexScale);
+            var woodScale = TableCameraFraming.ComputeTableDiskScale(boundingRadius);
+            var waterScale = TableCameraFraming.ComputeWaterDiskScale(boundingRadius);
+
+            Assert.Greater(waterScale.x, woodScale.x);
+            Assert.Less(waterScale.x, woodScale.x * TableCameraFraming.MaxWaterToWoodRadiusRatio);
+            Assert.AreEqual(waterScale.x, waterScale.z, 0.001f);
+            Assert.AreEqual(TableCameraFraming.WaterSurfaceThinY, waterScale.y * 2f, 0.001f);
+        }
+
+        [Test]
+        public void WaterSurfaceLocalY_IsBelowTableSurfaceLocalY()
+        {
+            Assert.Less(
+                TableCameraFraming.WaterSurfaceLocalY,
+                TableCameraFraming.TableSurfaceLocalY);
+        }
+
+        [Test]
+        public void ComputeOrbitDistance_IsUnchangedByWaterSurfaceConstants()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Small);
+            float boundingRadius = TableCameraFraming.ComputeBoardBoundingRadius(board, HexScale);
+            float orbitDistance = TableCameraFraming.ComputeOrbitDistance(boundingRadius);
+
+            Assert.AreEqual(2.0f, TableCameraFraming.DistanceToRadiusRatio);
+            Assert.AreEqual(
+                Mathf.Max(TableCameraFraming.MinOrbitDistance,
+                    boundingRadius * TableCameraFraming.DistanceToRadiusRatio
+                    * TableCameraFraming.DefaultMarginFactor),
+                orbitDistance,
                 0.001f);
         }
     }
