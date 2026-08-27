@@ -26,11 +26,12 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 |------|--------|
 | **meta.json** | Separat fra `save.json`; run reset sletter ikke meta |
 | **Stars** | VP + days/2 + 2 ved sejr; tildeles én gang per run-key |
-| **Default** | Small map, Merchant + Pioneer, draft 2 af 5 uniques |
-| **Unlocks** | Medium/Large map, Warlord/Architect, +1 draft, +1 wheat, start Road Builder |
+| **Default** | Small map, Merchant + Pioneer, draft 2 af 2 free uniques (Sawmill + Guild Hall), 7 starter night-draw cards |
+| **Unlocks** | Medium/Large map, Warlord/Architect, +1 draft (capped by pool), +1 wheat, start Road Builder, 3 unique unlocks, Sabotage + Market card packs |
 | **IMGUI** | Stars + unlock-panel på map-select og game over |
+| **AI cards** | Human draw filtered by meta; AI uses full `CardLibrary.AiPool` (+ Act 3 extras) |
 
-**Risiko / mangler:** Ingen cloud-sync; ingen dedikeret “meta hub”-scene (kun IMGUI-panel); card/unique *pool* er ikke låst (kun playstyle-unlocks).
+**Risiko / mangler:** Ingen cloud-sync; ingen dedikeret “meta hub”-scene (kun IMGUI-panel); card/unique *pool* låst bag stjerner (**done** 2026-08-27).
 
 ---
 

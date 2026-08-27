@@ -364,6 +364,17 @@ namespace CatanRoguelike.Core
             if (State.Phase != GamePhase.RunSelectDraft) return;
             if (State.DraftedUniques.Count != GetRequiredDraftCount()) return;
 
+            if (Meta != null)
+            {
+                var pool = Meta.GetDraftPool().ToHashSet();
+                if (State.DraftedUniques.Any(id => !pool.Contains(id)))
+                {
+                    State.StatusMessage = "One or more drafted uniques are locked — spend stars in Unlocks.";
+                    NotifyChanged();
+                    return;
+                }
+            }
+
             if (Meta != null && Meta.HasStartWheatBonus())
             {
                 var inv = State.PlayerInventory;
@@ -423,7 +434,8 @@ namespace CatanRoguelike.Core
             if (State.HasUnique(UniqueBuildingId.CaravanPost)) draws++;
             if (State.HasPerk(LevelUpPerkId.ExtraCardDraw)) draws++;
 
-            CardEngine.DrawToHand(State, PlayerId.Human, draws);
+            var humanCardPool = Meta?.GetCardPool().ToList();
+            CardEngine.DrawToHand(State, PlayerId.Human, draws, humanPool: humanCardPool);
             CardEngine.DrawToHand(State, PlayerId.Ai, ActProgression.GetAiNightDraws(act), act);
 
             State.Phase = GamePhase.NightPlayCard;
@@ -638,7 +650,12 @@ namespace CatanRoguelike.Core
 
         public Vertex? GetLastPlacedSettlement() => _lastPlacedSettlement;
 
-        private int GetRequiredDraftCount() =>
-            Meta?.GetDraftPickCount() ?? RunProgression.DraftPickCount;
+        private int GetRequiredDraftCount()
+        {
+            if (Meta != null)
+                return Meta.GetDraftPickCount();
+
+            return RunProgression.DraftPickCount;
+        }
     }
 }

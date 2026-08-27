@@ -22,11 +22,11 @@ namespace CatanRoguelike.Core.Cards
             _diceEngine = new DiceRollEngine(seed);
         }
 
-        public CardId DrawCard(bool forAi = false, int aiAct = 1)
+        public CardId DrawCard(bool forAi = false, int aiAct = 1, IReadOnlyList<CardId> humanPool = null)
         {
             var pool = forAi
                 ? GetAiDrawPool(aiAct)
-                : CardLibrary.AllCards
+                : (humanPool ?? CardLibrary.AllCards)
                     .Where(id => CardLibrary.Get(id).AiCanUse || !forAi)
                     .ToList();
 
@@ -57,13 +57,14 @@ namespace CatanRoguelike.Core.Cards
             return pool;
         }
 
-        public void DrawToHand(GameState state, PlayerId player, int count = 1, int aiAct = 1)
+        public void DrawToHand(GameState state, PlayerId player, int count = 1, int aiAct = 1,
+            IReadOnlyList<CardId> humanPool = null)
         {
             var hand = player == PlayerId.Human ? state.PlayerHand : state.AiHand;
             for (int i = 0; i < count; i++)
             {
                 if (hand.Count >= BalanceConfig.MaxHandSize) break;
-                hand.Add(DrawCard(player == PlayerId.Ai, aiAct));
+                hand.Add(DrawCard(player == PlayerId.Ai, aiAct, humanPool));
             }
         }
 

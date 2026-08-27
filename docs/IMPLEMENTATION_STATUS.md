@@ -2,7 +2,7 @@
 
 **Næste backlog:** [`docs/ROADMAP_V3.md`](ROADMAP_V3.md) — founder roadmap efter Fase 2 (impact×effort + valgt første item).
 
-Last updated: 2026-08-27 — balance pass (day-ceiling / win-rate) on top of Fase 2.6.
+Last updated: 2026-08-27 — meta pool locks (unique + card draft/draw gating) on top of balance pass.
 
 ## Done (playable prototype scope)
 
@@ -23,13 +23,14 @@ Last updated: 2026-08-27 — balance pass (day-ceiling / win-rate) on top of Fas
 - [x] Catan costs + threshold pricing
 - [x] Daily shop (3 deals) + **risky 3rd deal** (2:1, robber → best tile)
 - [x] **Ports** — resource-specific 2:1 + generic 3:1 wired in shop (`DiscoverPorts` sparse layout per map size)
-- [x] Cards: draw 1, play 1, max hand 5 — all 12 cards in `CardEngine`
+- [x] Cards: draw 1, play 1, max hand 5 — all 12 cards in `CardEngine` (human pool filtered by meta; AI uses full `AiPool`)
 - [x] Robber (tile block + steal on day move and Knight; seeded victim/resource pick)
 - [x] Route sabotage (Bandit Raid card) + disabled road visuals
 - [x] Longest route VP (≥3 roads, **3 VP**)
 - [x] Largest army VP (≥2 played Knight cards, **3 VP**; classic tie = incumbent keeps until surpassed)
 - [x] 4 Leaders + level-ups every **3** days (max 3)
-- [x] Draft 2 of 5 unique buildings
+- [x] Draft 2 of 5 unique buildings — **fresh meta: 2 free (Sawmill + Guild Hall); 3 unlocks expand pool**
+- [x] Cards: draw 1, play 1, max hand 5 — **fresh meta: 7 starter cards; Sabotage + Market packs unlock rest**
 - [x] Random events (~14% per night in Act 1; scales by act)
 - [x] **Act progression (Fase 2.4 + balance)** — `ActProgression`: days 1–4 Act 1, 5–8 Act 2, 9+ Act 3; 2/3/3 dice passes, max mult 3 from Act 2, event chance down, AI extra night plays + Act 3 draw pool, Small→Medium→Large map growth
 - [x] Event board overlays (storm marker, famine/gold rush/good harvest tints via `EventBoardVisual`)
@@ -95,10 +96,11 @@ Set on **GameManager → Map Size** in the inspector (or re-run Setup Game Scene
 |------|--------|
 | File | `meta.json` in `persistentDataPath` (separate from `save.json`) |
 | Currency | Stars = human VP + days÷2 + 2 on win (`MetaCatalog.WinBonusStars`) |
-| Default free | Small map, Merchant + Pioneer, all 5 uniques in draft (pick 2) |
-| Unlock tree | Medium/Large maps, Warlord/Architect leaders, +1 draft pick, +1 wheat at run start, Road Builder on first night |
+| Default free | Small map, Merchant + Pioneer, Sawmill + Guild Hall in draft (pick 2), 7 starter night-draw cards |
+| Unlock tree | Medium/Large maps, Warlord/Architect leaders, +1 draft pick (capped by pool), +1 wheat at run start, Road Builder on first night, Monastery/Caravan Post/Fortress Outpost, Sabotage + Market card packs |
+| Human draw | Filtered by `MetaProgression.GetCardPool()`; AI uses full `CardLibrary.AiPool` |
 | UI | `PlaceholderUI` — stars + Spend/Unlocks on map select and game over |
-| Tests | `MetaProgressionTests` — award formula, persist/load, defaults, purchase, isolation from run save |
+| Tests | `MetaProgressionTests` — pool defaults, purchase expansion, draft/draw filter, serialize round-trip, isolation from run save |
 
 ## Sim-runner (measurement)
 
