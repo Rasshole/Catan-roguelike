@@ -65,8 +65,8 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 - **Forecast** — reruller alt inkl. 2d6; kort-tekst og UI (ingen resource-picker) matcher ✓
 
 ### Events (~22 % per nat i Act 1; skalerer med act)
-- 6 events i `EventEngine` ✓
-- **Board overlays** for storm/famine/gold rush/good harvest via `EventBoardVisual` + `HexTileView` (market day / bandit raid use text or robber only) ✓
+- **8 events** i `EventEngine` (6 alle acts + **2 Act 3-only:** Port Blockade, Resource Levy) ✓
+- **Board overlays** for storm/famine/gold rush/good harvest/**port blockade** via `EventBoardVisual` + `HexTileView` (market day / bandit raid / resource levy use text or robber only) ✓
 - **Famine / Good Harvest** — påvirker `TomorrowRolls`; event-tekst siger "tomorrow" ✓
 - Nat-event **BanditRaid** ≠ kort **BanditRaid** (forskellige effekter)
 
@@ -83,6 +83,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 - Setup, byg, shop, nat-kort (begrænset pool) ✓
 - **Act 2+** — 2 nat-kortspil, smartere kortvalg, flere city-upgrades, stærkere road-blocking ✓
 - **Act 3** — ekstra AI-draw + bredere pool (Fertile/Ledger/Forecast) ✓
+- **Act 3 events** — Port Blockade (spatial trade-route shutdown) + Resource Levy (economy tax) ✓
 - **Embargo** i AI-kortpool; spiller mod mennesket via `PlayerShopEmbargo` (mål = menneskets lager + shop-Give) ✓
 - **Harbor Charter** — bevidst **human-only** (`aiCanUse: false`); synergy (+1 VP ved næste kyst-settlement) giver ikke mening for AI uden coastal-prioritet
 - Skjult intent — ingen debug-visning

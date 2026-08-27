@@ -171,6 +171,7 @@ namespace CatanRoguelike.Tests
 
             Assert.AreEqual(EventId.None, state.ActiveEvent);
             Assert.IsNull(state.EventStormTile);
+            Assert.IsNull(state.EventBlockedPortVertex);
             Assert.IsFalse(state.EventStoneDouble);
             Assert.AreEqual(0, state.EventShopBonus);
         }

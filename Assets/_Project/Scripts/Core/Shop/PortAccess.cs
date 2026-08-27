@@ -133,29 +133,36 @@ namespace CatanRoguelike.Core.Shop
         }
 
         public static bool HasSpecificPort(BoardState board, PlayerId player, ResourceType resource,
-            IReadOnlyList<PortDefinition> ports)
+            IReadOnlyList<PortDefinition> ports, HexMath.Vertex? blockedPortVertex = null)
         {
             return ports.Any(p => p.SpecificResource == resource
-                && PlayerControlsVertex(board, player, p.Vertex));
+                && PlayerControlsVertex(board, player, p.Vertex)
+                && !IsPortVertexBlocked(p.Vertex, blockedPortVertex));
         }
 
-        public static bool HasGenericPort(BoardState board, PlayerId player, IReadOnlyList<PortDefinition> ports)
+        public static bool HasGenericPort(BoardState board, PlayerId player, IReadOnlyList<PortDefinition> ports,
+            HexMath.Vertex? blockedPortVertex = null)
         {
-            return ports.Any(p => p.IsGeneric && PlayerControlsVertex(board, player, p.Vertex));
+            return ports.Any(p => p.IsGeneric
+                && PlayerControlsVertex(board, player, p.Vertex)
+                && !IsPortVertexBlocked(p.Vertex, blockedPortVertex));
         }
 
         public static int GetEffectiveGiveAmount(BoardState board, PlayerId player, ShopDeal deal,
-            IReadOnlyList<PortDefinition> ports)
+            IReadOnlyList<PortDefinition> ports, HexMath.Vertex? blockedPortVertex = null)
         {
             int amount = deal.GiveAmount;
 
-            if (HasSpecificPort(board, player, deal.Give, ports))
+            if (HasSpecificPort(board, player, deal.Give, ports, blockedPortVertex))
                 return System.Math.Min(amount, 2);
 
-            if (HasGenericPort(board, player, ports))
+            if (HasGenericPort(board, player, ports, blockedPortVertex))
                 return System.Math.Min(amount, 3);
 
             return amount;
         }
+
+        private static bool IsPortVertexBlocked(HexMath.Vertex portVertex, HexMath.Vertex? blockedPortVertex) =>
+            blockedPortVertex.HasValue && portVertex.Equals(blockedPortVertex.Value);
     }
 }

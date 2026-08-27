@@ -6,6 +6,7 @@ namespace CatanRoguelike.Core.Events
         Storm,
         Famine,
         GoldRush,
-        GoodHarvest
+        GoodHarvest,
+        PortBlockade
     }
 }

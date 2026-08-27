@@ -38,7 +38,11 @@ namespace CatanRoguelike.Core.Events
             [EventId.GoodHarvest] = new(EventId.GoodHarvest, "Good Harvest",
                 "All resource rolls are +1 tomorrow (respects cap)."),
             [EventId.BanditRaid] = new(EventId.BanditRaid, "Bandit Raid",
-                "Robber moves to the tile where you produce the most.")
+                "Robber moves to the tile where you produce the most."),
+            [EventId.PortBlockade] = new(EventId.PortBlockade, "Port Blockade",
+                "A random port is blockaded — no port trade discount there today."),
+            [EventId.ResourceLevy] = new(EventId.ResourceLevy, "Resource Levy",
+                "The crown levies 1 of your most abundant resource today.")
         };
     }
 
@@ -54,7 +58,9 @@ namespace CatanRoguelike.Core.Events
             (EventId.GoldRush, 1, 1, 2),
             (EventId.MarketDay, 1, 1, 1),
             (EventId.GoodHarvest, 1, 1, 1),
-            (EventId.BanditRaid, 1, 2, 3)
+            (EventId.BanditRaid, 1, 2, 3),
+            (EventId.PortBlockade, 0, 0, 2),
+            (EventId.ResourceLevy, 0, 0, 2)
         };
 
         public EventEngine(int? seed = null)
@@ -134,15 +140,50 @@ namespace CatanRoguelike.Core.Events
                 case EventId.BanditRaid:
                     state.Board.PlaceRobber(PickPlayerBestTile(state));
                     break;
+                case EventId.PortBlockade:
+                    state.EventBlockedPortVertex = PickRandomPortVertex(state);
+                    break;
+                case EventId.ResourceLevy:
+                    ApplyResourceLevy(state);
+                    break;
             }
         }
 
         public void ClearDailyEventEffects(GameState state)
         {
             state.EventStormTile = null;
+            state.EventBlockedPortVertex = null;
             state.EventStoneDouble = false;
             state.EventShopBonus = 0;
             state.ActiveEvent = EventId.None;
+        }
+
+        private static void ApplyResourceLevy(GameState state)
+        {
+            var inv = state.PlayerInventory;
+            int maxCount = 0;
+            foreach (ResourceType resource in Enum.GetValues(typeof(ResourceType)))
+                maxCount = Math.Max(maxCount, inv[resource]);
+
+            if (maxCount <= 0)
+                return;
+
+            ResourceType taxed = Enum.GetValues(typeof(ResourceType))
+                .Cast<ResourceType>()
+                .Where(resource => inv[resource] == maxCount)
+                .OrderByDescending(resource => resource)
+                .First();
+
+            inv.Set(taxed, maxCount - 1);
+            state.PlayerInventory = inv;
+        }
+
+        private HexMath.Vertex PickRandomPortVertex(GameState state)
+        {
+            if (state.Ports.Count == 0)
+                return default;
+
+            return state.Ports[_random.Next(state.Ports.Count)].Vertex;
         }
 
         private HexCoord PickRandomTile(GameState state)

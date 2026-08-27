@@ -2,7 +2,7 @@
 
 **Næste backlog:** [`docs/ROADMAP_V3.md`](ROADMAP_V3.md) — founder roadmap efter Fase 2 (impact×effort + valgt første item).
 
-Last updated: 2026-08-27 — first-run onboarding beats (IMGUI) + Forecast/Famine copy fixes on top of autosave + multi-slot.
+Last updated: 2026-08-27 — Act 3-only events (Port Blockade, Resource Levy) on top of onboarding + autosave.
 
 ## Done (playable prototype scope)
 
@@ -31,15 +31,16 @@ Last updated: 2026-08-27 — first-run onboarding beats (IMGUI) + Forecast/Famin
 - [x] 4 Leaders + level-ups every **3** days (max 3)
 - [x] Draft 2 of 5 unique buildings — **fresh meta: 2 free (Sawmill + Guild Hall); 3 unlocks expand pool**
 - [x] Cards: draw 1, play 1, max hand 5 — **fresh meta: 7 starter cards; Sabotage + Market packs unlock rest**
-- [x] Random events (~14% per night in Act 1; scales by act)
+- [x] Random events (~14% per night in Act 1; scales by act) — **8 events** (6 all acts + **2 Act 3-only:** Port Blockade, Resource Levy)
+- [x] **Act 3 content variation** — `PortBlockade` (blocked port trade discount + board overlay) and `ResourceLevy` (−1 of human's most abundant resource); Act 3-only weights (0/0/2); save round-trip for `EventBlockedPortVertex`
 - [x] **Act progression (Fase 2.4 + balance)** — `ActProgression`: days 1–4 Act 1, 5–8 Act 2, 9+ Act 3; 2/3/3 dice passes, max mult 3 from Act 2, event chance down, AI extra night plays + Act 3 draw pool, Small→Medium→Large map growth
-- [x] Event board overlays (storm marker, famine/gold rush/good harvest tints via `EventBoardVisual`)
+- [x] Event board overlays (storm marker, famine/gold rush/good harvest/**port blockade** tints via `EventBoardVisual`)
 - [x] AI heuristic + shop + limited card pool (Embargo in pool; skips embargoed shop Give; plays Embargo vs human inventory/shop)
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
 - [x] **First-run onboarding beats (IMGUI)** — phase banners via `OnboardingCopy` (map, draft, setup, first night/day, game over); hybrid-yield hint on first night; dismissible Tips toggle (`PlayerPrefs`); EditMode tests
-- [x] EditMode tests (rolls, **number tokens (assignment, desert, hybrid production, expansion, save round-trip, AI/event robber targeting)**, placement, production, **setup-bonus (2nd settlement, desert skip)**, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **Largest Army (grant/tie/overtake/breakdown/save)**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **AI Largest Army Knight priority**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**, **SaveGame round-trip JSON (format v1)**, **ActProgression thresholds + yield/events/AI/map expansion**, **MetaProgression (stars, unlock tree, meta.json isolation, award formula, purchase, start bonuses)**)
+- [x] EditMode tests (rolls, **number tokens (assignment, desert, hybrid production, expansion, save round-trip, AI/event robber targeting)**, placement, production, **setup-bonus (2nd settlement, desert skip)**, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **Largest Army (grant/tie/overtake/breakdown/save)**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **AI Largest Army Knight priority**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 8 events + timing**, **Act3EventTests (Act 3-only weights, apply/clear)**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**, **SaveGame round-trip JSON (format v1)**, **ActProgression thresholds + yield/events/AI/map expansion**, **MetaProgression (stars, unlock tree, meta.json isolation, award formula, purchase, start bonuses)**)
 - [x] PlayMode smoke tests (`GameSceneSmokeTests` — `Game.unity` boot, required MonoBehaviours, `GameManager.Controller` after Start)
 
 ## Explicitly out of scope

@@ -36,7 +36,8 @@ namespace CatanRoguelike.Core.Shop
         public static ShopPriceBreakdown Analyze(GameState state, PlayerId player, ShopDeal deal)
         {
             int modifierGive = ModifierService.GetShopGiveAmount(state, player, deal.GiveAmount, deal.Give);
-            int portGive = PortAccess.GetEffectiveGiveAmount(state.Board, player, deal, state.Ports);
+            int portGive = PortAccess.GetEffectiveGiveAmount(
+                state.Board, player, deal, state.Ports, state.EventBlockedPortVertex);
             int effective = Math.Min(modifierGive, portGive);
             var reason = ClassifyReason(state, player, deal, modifierGive, portGive, effective);
             return new ShopPriceBreakdown(effective, reason);
@@ -63,8 +64,10 @@ namespace CatanRoguelike.Core.Shop
             if (effective >= deal.GiveAmount)
                 return ShopPriceReasonKind.Base;
 
-            bool hasSpecific = PortAccess.HasSpecificPort(state.Board, player, deal.Give, state.Ports);
-            bool hasGeneric = PortAccess.HasGenericPort(state.Board, player, state.Ports);
+            bool hasSpecific = PortAccess.HasSpecificPort(
+                state.Board, player, deal.Give, state.Ports, state.EventBlockedPortVertex);
+            bool hasGeneric = PortAccess.HasGenericPort(
+                state.Board, player, state.Ports, state.EventBlockedPortVertex);
 
             if (effective == portGive && portGive < modifierGive)
             {

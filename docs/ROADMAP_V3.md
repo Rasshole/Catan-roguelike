@@ -19,7 +19,7 @@ Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færd
 | **Meta: lås kort- og unique-*pools* bag stjerner** | Roguelike-identitet: nye runs føles anderledes, ikke kun nye leaders. | **H** | **M** | **yes** | **Done:** 2 free uniques + 7 starter cards; 3 unique unlocks + 2 card packs i `MetaCatalog`. AI bruger fuld `AiPool`. |
 | **First-run / onboarding beats (IMGUI)** | Nye spillere forstår hybrid produktion, acts og meta uden wiki. | **H** | **M** | partial | **Done (copy):** `OnboardingCopy` + Tips toggle + hybrid hint; fuld “feel” kræver Play Mode på Mac. |
 | **uGUI-erstatning + art pass** | Føles som et spil, ikke et debug-værktøj. | **H** | **H** | **no** | P2 uafgjort. Kræver Mac/Windows til visuel QA; Linux-VM kan skrive prefabs, ikke validere look. |
-| **Act 3 indholdsvariation (events/kort)** | Sent game må ikke kun være talinflation (max roll 3, dobbelt dice). | **M** | **M** | **yes** | Nye `EventEngine`-entries eller Act 3-only kort; sim for at undgå spike/dead runs. |
+| **Act 3 indholdsvariation (events/kort)** | Sent game må ikke kun være talinflation (max roll 3, dobbelt dice). | **M** | **M** | **yes** | **Done:** 2 Act 3-only nat-events (`PortBlockade`, `ResourceLevy`); weights act1/2=0. Ingen nyt kort. |
 | **PlayMode ud over smoke (playtest harness)** | Scene-boot beviser ikke at man kan spille en run. Kun 2 PlayMode-tests i dag. | **M** | **M** | partial | `xvfb` + Unity-licens; auto-play via `DebugHooks` eller scripted input. |
 | **Windows standalone build** | Distribuerbar `.exe` til playtest uden Unity Editor. | **M** | **L** | **yes** | Modsat macOS: Linux-VM *kan* bygge Windows64 (`-buildWindows64Player`). macOS build blokeret (`BLOCKED.md`). |
 | **Token/hex visuel pass** | Spilleren ser *hvor* 6/8 sidder — ikke bare IMGUI-labels på cylindre. | **M** | **M** | partial | `HexTileView` har token-tekst; 3D stadig placeholder (`DESIGN_RENDERING`: Built-in). |
@@ -36,6 +36,14 @@ Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færd
 - **Pause/resume virker.** Autosave ved nat→dag i slot 0; manuel Save/Load i to slots; legacy `save.json` compat.
 - **Onboarding beats** — copy-only fase-bannere + Tips toggle + hybrid hint på dag 1 nat.
 - **uGUI + art** forbliver P2 — kræver Mac til visuel QA.
+
+---
+
+## Done recently: Act 3 content variation (events)
+
+- **`PortBlockade`** — Act 3-only (weight 0/0/2): random port vertex blockaded for the day; no 2:1/3:1 discount at that harbor; coastal hex overlay (`EventTileOverlayKind.PortBlockade`).
+- **`ResourceLevy`** — Act 3-only (weight 0/0/2): human loses 1 of their most abundant resource when the event fires (text-only; cleared with other daily flags).
+- Existing 6 events unchanged in Act 3 pool. Save v1 optional `EventBlockedPortVertex`. **333/333** `dotnet test tools/core-tests`. No new card (Act 3 find/shop/level-up is enough).
 
 ---
 

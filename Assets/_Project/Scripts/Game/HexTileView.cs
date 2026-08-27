@@ -17,6 +17,7 @@ namespace CatanRoguelike.Game
         private static readonly Color FamineTint = new(0.55f, 0.35f, 0.15f);
         private static readonly Color GoldRushTint = new(0.95f, 0.75f, 0.1f);
         private static readonly Color GoodHarvestTint = new(0.3f, 0.75f, 0.3f);
+        private static readonly Color PortBlockadeTint = new(0.55f, 0.12f, 0.12f);
         private static readonly Color StormMarkerColor = new(0.1f, 0.15f, 0.55f);
 
         public void Initialize(HexTileData data, Renderer renderer)
@@ -106,6 +107,9 @@ namespace CatanRoguelike.Game
                     break;
                 case EventTileOverlayKind.GoodHarvest:
                     _renderer.material.color = Color.Lerp(_baseColor, GoodHarvestTint, 0.25f);
+                    break;
+                case EventTileOverlayKind.PortBlockade:
+                    _renderer.material.color = Color.Lerp(_baseColor, PortBlockadeTint, 0.45f);
                     break;
                 default:
                     ApplyBaseColor();

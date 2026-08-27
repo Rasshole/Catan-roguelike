@@ -129,6 +129,12 @@ namespace CatanRoguelike.Tests
             var vertex = VertexGraph.Canonicalize(new Vertex(desert, 0));
             board.VertexBuildings[vertex] = (BuildingType.Settlement, PlayerId.Human);
 
+            foreach (var hex in VertexGraph.GetHexesForVertex(vertex))
+            {
+                if (board.TryGetTile(hex, out var tile) && !tile.IsDesert)
+                    tile.NumberToken = null;
+            }
+
             var production = ProductionCalculator.CalculateForPlayer(state, PlayerId.Human, state.TodayRolls);
             Assert.AreEqual(0, production.Total);
         }

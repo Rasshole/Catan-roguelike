@@ -79,6 +79,13 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **RNG roll counters:** not added — existing roll lists sufficient for resume; documented in `SaveGame` remarks.
 - **Tests:** `SaveGameSlotsTests` (autosave hook, slot isolation, legacy load, metadata). **312/312** `dotnet test tools/core-tests`.
 
+## 2026-08-27 (UTC) — Act 3 content variation (events)
+
+- **`PortBlockade`** — Act 3-only (weights 0/0/2): picks a random port vertex; that harbor gives no 2:1/3:1 discount today (`PortAccess` + `ShopGenerator`); coastal hex overlay. Save v1 optional `EventBlockedPortVertex`.
+- **`ResourceLevy`** — Act 3-only (weights 0/0/2): human loses 1 of their most abundant resource when the event fires (text-only status via `EventMessage`).
+- Existing 6 events unchanged in Act 1–3 pools. No new card (save/UI cost skipped). **`HybridProductionTests` desert case** — clear neighbor tokens so RNG token shuffle cannot flake.
+- **Tests:** `Act3EventTests` + overlay/save updates. **333/333** `dotnet test tools/core-tests`.
+
 ## 2026-08-27 — First-run onboarding beats (IMGUI)
 
 - **`OnboardingCopy`** — pure Core helper: phase banners (map, leader, draft, setup, day-1 night/day, game over), hybrid-yield hint, stars persist line. `OnboardingTipsStore` uses `PlayerPrefs` (default on).

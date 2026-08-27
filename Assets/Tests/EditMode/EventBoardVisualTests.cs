@@ -5,6 +5,7 @@ using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Events;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Shop;
 using NUnit.Framework;
 
 namespace CatanRoguelike.Tests
@@ -122,6 +123,37 @@ namespace CatanRoguelike.Tests
             state.Board.PlaceRobber(StoneHex);
 
             Assert.IsEmpty(OverlayCoords(state));
+        }
+
+        [Test]
+        public void TryGetOverlay_ResourceLevy_NoTileOverlays()
+        {
+            var state = CreateState();
+            state.ActiveEvent = EventId.ResourceLevy;
+
+            Assert.IsEmpty(OverlayCoords(state));
+        }
+
+        [Test]
+        public void TryGetOverlay_PortBlockade_OnCoastalHexesAtBlockedPort()
+        {
+            var state = CreateState();
+            state.Ports = PortAccess.DiscoverPorts(state.Board);
+            var blockedPort = state.Ports[0];
+            state.ActiveEvent = EventId.PortBlockade;
+            state.EventBlockedPortVertex = blockedPort.Vertex;
+
+            var expected = VertexGraph.GetHexesForVertex(blockedPort.Vertex)
+                .Where(hex => state.Board.TryGetTile(hex, out var tile) && tile.IsCoastal)
+                .ToList();
+
+            CollectionAssert.AreEquivalent(expected, OverlayCoords(state).ToList());
+
+            foreach (var coord in expected)
+            {
+                Assert.IsTrue(EventBoardVisual.TryGetOverlay(state, coord, out var overlay));
+                Assert.AreEqual(EventTileOverlayKind.PortBlockade, overlay);
+            }
         }
     }
 }
