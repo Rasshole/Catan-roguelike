@@ -19,18 +19,7 @@ namespace CatanRoguelike.Core.Turn
         DayProduction,
         DayPlayerActions,
         DayAiTurn,
-        DayEndCheck,
         LevelUpChoice,
         GameOver
-    }
-
-    public enum DaySubPhase
-    {
-        Main,
-        PlacingRoad,
-        PlacingSettlement,
-        UpgradingCity,
-        MovingRobber,
-        PlayingCard
     }
 }
