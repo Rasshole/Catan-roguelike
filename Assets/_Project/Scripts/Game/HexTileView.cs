@@ -28,7 +28,7 @@ namespace CatanRoguelike.Game
         private const float WorldFaceDiameter = 0.52f;
         private const float WorldChipThickness = 0.04f;
 
-        // Hex cylinder mesh top is parent-local y=1; place chip/label above that surface.
+        // Hex prism mesh top is parent-local y=1; place chip/label above that surface.
         private const float ChipElevationY = 1.08f;
         private const float LabelElevationY = 1.18f;
 
