@@ -63,6 +63,9 @@ namespace CatanRoguelike.Tests
             game.State.PlayerInventory = new ResourceBundle { Wheat = 6, Wood = 1 };
             game.State.ShopDeals.Add(new ShopDeal(
                 ResourceType.Wood, ShopGenerator.BaseTradeRate, ResourceType.Brick, 1));
+            var wheatDeal = new ShopDeal(
+                ResourceType.Wheat, ShopGenerator.BaseTradeRate, ResourceType.Stone, 1);
+            game.State.ShopDeals.Add(wheatDeal);
 
             var ai = new AiController(42);
             ai.ExecuteNightPlan(game);
@@ -71,6 +74,10 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(1, game.State.PlayerEmbargoDaysLeft);
             Assert.IsFalse(game.State.AiHand.Contains(CardId.Embargo));
             Assert.IsFalse(game.State.AiShopEmbargo.HasValue);
+
+            Assert.AreEqual(int.MaxValue, game.Shop.GetEffectiveGiveAmount(game.State, PlayerId.Human, wheatDeal));
+            Assert.IsFalse(game.Shop.TryPurchase(game.State, PlayerId.Human, wheatDeal));
+            Assert.AreEqual(6, game.State.PlayerInventory.Wheat);
         }
 
         [Test]

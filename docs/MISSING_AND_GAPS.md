@@ -127,8 +127,9 @@ Eksisterende EditMode-tests:
 - `GameControllerIntegrationTests` — seeded setup → nat/dag-cyklus uden hang; `SkipNightCard` / `PlayPlayerCard` → `DayPlayerActions`; win ved 10 VP; level-up på dag 5 via `EndPlayerDay`; disabled roads + event-flags ryddes ved daggrænse
 
 **Mangler tests for:**
-- `AiController` (shop afford + embargo skip; nat-Embargo mod spiller)
 - PlayMode / UI-tests
+
+`AiController` nat/dag-adfærd er dækket af `AiControllerShopTests` (shop afford) og `AiEmbargoStrategyTests` (embargo skip, `ExecuteNightPlan` Embargo mod spiller inkl. `PlayerShopEmbargo` + blokeret human shop).
 
 ---
 
