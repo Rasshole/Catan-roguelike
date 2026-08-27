@@ -6,10 +6,10 @@ namespace CatanRoguelike.Core.Yield
     /// </summary>
     public static class NumberTokenVisualStyle
     {
-        public static readonly Rgb ChipFaceStandard = new(0.95f, 0.90f, 0.78f);
-        public static readonly Rgb ChipFaceRedAccent = new(0.96f, 0.86f, 0.76f);
-        public static readonly Rgb ChipRimStandard = new(0.82f, 0.74f, 0.58f);
-        public static readonly Rgb ChipRimRedAccent = new(0.78f, 0.38f, 0.28f);
+        public static readonly Rgb ChipFaceStandard = new(0.92f, 0.86f, 0.72f);
+        public static readonly Rgb ChipFaceRedAccent = new(0.94f, 0.84f, 0.72f);
+        public static readonly Rgb ChipRimStandard = new(0.68f, 0.58f, 0.40f);
+        public static readonly Rgb ChipRimRedAccent = new(0.72f, 0.22f, 0.14f);
         public static readonly Rgb LabelStandard = new(0.08f, 0.08f, 0.08f);
         public static readonly Rgb LabelRed = new(0.82f, 0.12f, 0.10f);
 
