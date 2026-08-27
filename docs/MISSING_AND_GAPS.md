@@ -23,7 +23,6 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 - **Meta progression** mellem runs (permanente unlocks)
 - **Save / load** — **første slice (Fase 2.1):** versioneret JSON (`SaveGame`, format v1), én slot `save.json`, IMGUI Save/Load på `PlaceholderUI`, EditMode round-trip test. Autosave ved nat, multi-slot menu og RNG roll-tællere venter.
 - **Act 2** progression (flere yield-rolls, større kort over tid)
-- **Largest army** som VP-kilde
 - **Per-tile nummer-tokens** (klassisk Catan 2–12) — produktion bruger abstrakte daglige rolls per ressource
 
 ---
@@ -72,6 +71,12 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 - **Modstander-settlement/city splitter ruten** (klassisk Catan) ✓ — egne bygninger splitter ikke
 - Lukkede hex-loops tæller alle kanter (komponent med max degree 2); forgreninger bruger længste simple sti ✓
 
+### Largest army
+- Tæller spillede Knight-kort (ikke dag-fase robber-flytning) ✓
+- 3+ knights og flest = 2 VP via `VictoryCalculator` / `VictoryBreakdown` ✓
+- Klassisk Catan tie: første beholder indtil nogen **overgår** (lige antal stjæler ikke) ✓
+- AI foretrækker Knight når tæt på threshold eller når human holder og AI kan overhale (`AiController.PickNightCard`) ✓
+
 ### Robber
 - Tile-block + steal på dag-flytning og Knight ✓
 - Offer vælges blandt spillere med bygning på det blokerede hex (seedet RNG)
@@ -87,7 +92,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 | **Game.unity** | Committed (`Assets/_Project/Scenes/Game.unity`) |
 | **Render pipeline** | **Built-in RP** (beslutning 0.5). Ingen URP-pakke. Se `docs/DESIGN_RENDERING.md` |
 | **Map size** | Startmenu + inspector default |
-| **VP-breakdown** | IMGUI viser total + én linje per spiller (settlements / cities / longest / long road / bonus) via `VictoryBreakdown` |
+| **VP-breakdown** | IMGUI viser total + én linje per spiller (settlements / cities / longest / long road / largest army / bonus) via `VictoryBreakdown` |
 | **Pending effects** | Road Builder / Master Builder — minimal feedback |
 | **Game over** | IMGUI run-summary (VP breakdown, seed, day, map, leader) + scene reload ✓ |
 | **README** | Opdateret til fresh-clone flow (Game.unity, macOS Editor, playflow) ✓ |
@@ -103,6 +108,8 @@ Eksisterende EditMode-tests:
 - `PortAccessTests` — specifik 2:1, generisk 3:1, 2:1 vs 3:1 prioritet, base rate, sparse discovery på 7/13/19
 - `MapPresetsTests` — 7/13/19 tile counts
 - `VictoryCalculatorTests` — Harbor Charter + FirstCityVp overlever `RefreshVictoryPoints`; LongRoadBonus +1 / mister longest / ingen double-count; `VictoryBreakdown` dele summer til total
+- `ArmyCalculatorTests` / `LargestArmyVictoryTests` — grant ved 3; tie beholder holder; overtake stjæler; tab ved overgang; breakdown inkl. army; failed Knight tæller ikke
+- `AiLargestArmyStrategyTests` — AI foretrækker Knight ved threshold-1 og når human holder army og AI kan overhale
 - `VertexGraphTests` — Canonicalize idempotent; VertexDistance terminerer med buildings
 - `RouteCalculatorTests` — længde N, enemy split, own settlement splitter ikke, tom=0, disjoint/ties, VertexDistance-regression med buildings, **disabled roads (Bandit Raid / `DisabledRoads`)**, **hex-loop counts all 6 edges**, **forgrening**, **`GetLongestRoadOwner` tie / threshold / disabled flip**
 - `GameControllerSetupTests` — AI setup places 2 settlements + 2 roads
@@ -152,7 +159,8 @@ Game/BoardView.cs           — board scale efter tile count
 Game/PlaceholderUI.cs       — al UI (IMGUI); Bandit Raid road picker; Harbor Charter + Embargo + level-up preview; shop-pris årsag + risky konsekvens; VP-breakdown; LevelUpChoice med fuld HUD; game-over run-summary
 Core/Shop/ShopDealDisplay.cs — shop-knap labels + risky robber-konsekvens-tekst
 Core/RunSummaryDisplay.cs — rene game-over linjer (winner, dag, kort, leader, seed, VP-breakdown)
-Core/Victory/VictoryBreakdown.cs — VP-dele per spiller (settlements, cities, longest, long road, bonus)
+Core/Victory/VictoryBreakdown.cs — VP-dele per spiller (settlements, cities, longest, long road, largest army, bonus)
+Core/Victory/ArmyCalculator.cs — knight counts + Largest Army owner (classic tie rules)
 Core/PendingStatusDisplay.cs — rene statuslinjer for Harbor Charter / Embargo / level-up preview
 Core/Cards/EmbargoTargetSelector.cs — AI Embargo-mål (spiller-lager + shop Give)
 Core/Progression/RunProgression.cs — level-up interval, `WillOfferLevelUpAfterThisDay`, seeded perk draft

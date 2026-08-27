@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Victory;
 using CatanRoguelike.Core.Yield;
 
 namespace CatanRoguelike.Core.Cards
@@ -146,6 +147,8 @@ namespace CatanRoguelike.Core.Cards
                     state.Board.DisabledRoads.Add(humanRoads[_random.Next(humanRoads.Count)]);
             }
 
+            ArmyCalculator.RecordKnightPlayed(state, player);
+            VictoryCalculator.RefreshVictoryPoints(state);
             return true;
         }
 

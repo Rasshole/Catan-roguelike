@@ -6,6 +6,8 @@ namespace CatanRoguelike.Core.Data
     {
         public const int VictoryPointGoal = 10;
         public const int LongestRouteVictoryPoints = 2;
+        public const int LargestArmyThreshold = 3;
+        public const int LargestArmyVictoryPoints = 2;
         public const int MaxHandSize = 5;
         public const int CardsDrawnPerNight = 1;
         public const int MaxCardsPlayedPerNight = 1;

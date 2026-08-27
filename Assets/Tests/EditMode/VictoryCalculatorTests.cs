@@ -141,6 +141,7 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(2, bd.Cities);
             Assert.AreEqual(0, bd.Longest);
             Assert.AreEqual(0, bd.LongRoadBonus);
+            Assert.AreEqual(0, bd.LargestArmy);
             Assert.AreEqual(0, bd.BonusVp);
             Assert.AreEqual(3, bd.Total);
             Assert.AreEqual(state.PlayerVictoryPoints, bd.Total);
@@ -161,6 +162,7 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(0, bd.Cities);
             Assert.AreEqual(2, bd.Longest);
             Assert.AreEqual(1, bd.LongRoadBonus);
+            Assert.AreEqual(0, bd.LargestArmy);
             Assert.AreEqual(0, bd.BonusVp);
             Assert.AreEqual(3, bd.Total);
             Assert.AreEqual(state.PlayerVictoryPoints, bd.Total);
@@ -230,7 +232,7 @@ namespace CatanRoguelike.Tests
                 : state.AiVictoryPoints;
 
             Assert.AreEqual(
-                bd.Settlements + bd.Cities + bd.Longest + bd.LongRoadBonus + bd.BonusVp,
+                bd.Settlements + bd.Cities + bd.Longest + bd.LongRoadBonus + bd.LargestArmy + bd.BonusVp,
                 bd.Total,
                 $"{player} breakdown parts must sum to Total");
             Assert.AreEqual(refreshedTotal, bd.Total, $"{player} breakdown must match RefreshVictoryPoints");
