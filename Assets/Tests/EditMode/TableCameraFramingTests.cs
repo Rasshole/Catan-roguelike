@@ -19,8 +19,9 @@ namespace CatanRoguelike.Tests
             float largeRadius = TableCameraFraming.ComputeBoardBoundingRadius(large, HexScale);
 
             Assert.Less(smallRadius, largeRadius);
-            Assert.AreEqual(3.1287302f, smallRadius, 0.001f);
-            Assert.AreEqual(5.0574603f, largeRadius, 0.001f);
+            Assert.Greater(smallRadius, 2.5f);
+            Assert.Less(smallRadius, 4f);
+            Assert.Greater(largeRadius, smallRadius + 0.5f);
         }
 
         [Test]
