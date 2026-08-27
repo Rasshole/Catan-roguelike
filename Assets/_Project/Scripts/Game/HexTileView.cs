@@ -138,10 +138,17 @@ namespace CatanRoguelike.Game
             var labelGo = new GameObject("NumberToken");
             labelGo.transform.SetParent(transform, false);
             labelGo.transform.localPosition = new Vector3(0f, LabelElevationY, 0f);
-            labelGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             labelGo.transform.localScale = Vector3.one * 0.08f;
 
             _tokenLabel = labelGo.AddComponent<TextMesh>();
+            labelGo.AddComponent<FlatTokenLabelFacing>();
+
+            var camera = Camera.main;
+            labelGo.transform.rotation = camera != null
+                ? NumberTokenLabelOrientation.ComputeWorldRotation(
+                    labelGo.transform.position,
+                    camera.transform.position)
+                : Quaternion.Euler(NumberTokenLabelOrientation.FlatPitchDegrees, 180f, 0f);
             _tokenLabel.anchor = TextAnchor.MiddleCenter;
             _tokenLabel.alignment = TextAlignment.Center;
             _tokenLabel.fontSize = 48;
