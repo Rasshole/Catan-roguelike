@@ -6,7 +6,7 @@
 
 ## Hvor vi er
 
-Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færdig: save/load (første slice), setup-bonus, largest army, Act 1→3 med kortvækst og dobbelt yield, hybrid nummer-tokens (2–12 + resource rolls + 2d6), og meta med stjerner + unlock-træ i IMGUI. Spilleren mærker en fuld run-loop — leader, draft, setup, nat/dag, shop, kort, events, level-ups, VP-kapløb mod 10 — men UI'en er stadig IMGUI-soup, brættet er cylindre, og mange runs **slutter på dag-loft i stedet for sejr/nederlag**. Meta giver nye leaders og kortstørrelser, men alle 12 kort og 5 uniques er stadig i poolen fra dag ét.
+Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færdig: save/load (første slice), setup-bonus, largest army, Act 1→3 med kortvækst og dobbelt yield, hybrid nummer-tokens (2–12 + resource rolls + 2d6), og meta med stjerner + unlock-træ i IMGUI. Spilleren mærker en fuld run-loop — leader, draft, shop, kort, events, level-ups, VP-kapløb mod 10 — men UI'en er stadig IMGUI-soup, brættet er cylindre, og balance er nu sim-tuned (89% win/timeout inden dag 20). Meta låser nu uniques og kort-pools bag stjerner; playstyle-unlocks (maps/leaders) uændret.
 
 ---
 
@@ -16,7 +16,7 @@ Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færd
 |------|---------------------------|--------|--------|-----------|-------|
 | **Sim-driven day-ceiling / win-rate balance** | Runs skal ende ved 10 VP — ikke ved `--max-days`. Act 2/3 + hybrid tokens gør det værre end før sim-baseline (~790/1000 timeout *før* 2.4–2.6; ikke genmålt). | **H** | **M** | **yes** | `BalanceConfig`, `ActProgression`, evt. AI VP-jagt. Sim-runner + nye metrics. |
 | **Autosave + multi-slot + RNG roll-tællere (2.1 rest)** | Spilleren kan pause uden at miste determinisme; QA kan gemme lige før en bug. | **M** | **M** | partial | Core + IMGUI; kræver Unity for round-trip i Play Mode, men logik/testes med EditMode + `dotnet`. |
-| **Meta: lås kort- og unique-*pools* bag stjerner** | Roguelike-identitet: nye runs føles anderledes, ikke kun nye leaders. | **H** | **M** | **yes** | I dag: kun playstyle-unlocks (`MetaCatalog`). Udvid `MetaUnlockId` + draft/draw-filtre. |
+| **Meta: lås kort- og unique-*pools* bag stjerner** | Roguelike-identitet: nye runs føles anderledes, ikke kun nye leaders. | **H** | **M** | **yes** | **Done:** 2 free uniques + 7 starter cards; 3 unique unlocks + 2 card packs i `MetaCatalog`. AI bruger fuld `AiPool`. |
 | **First-run / onboarding beats (IMGUI)** | Nye spillere forstår hybrid produktion, acts og meta uden wiki. | **H** | **M** | partial | Primært copy + fase-bannere i `PlaceholderUI`; fuld “feel” kræver Play Mode på Mac. |
 | **uGUI-erstatning + art pass** | Føles som et spil, ikke et debug-værktøj. | **H** | **H** | **no** | P2 uafgjort. Kræver Mac/Windows til visuel QA; Linux-VM kan skrive prefabs, ikke validere look. |
 | **Act 3 indholdsvariation (events/kort)** | Sent game må ikke kun være talinflation (max roll 3, dobbelt dice). | **M** | **M** | **yes** | Nye `EventEngine`-entries eller Act 3-only kort; sim for at undgå spike/dead runs. |
@@ -29,18 +29,15 @@ Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færd
 
 ---
 
-## PICK: sim-driven day-ceiling / win-rate balance pass
+## PICK: autosave + multi-slot + RNG roll-tællere (2.1 rest)
 
-**Gør dette næste.** Alt andet bygger på at en run faktisk *slutter*.
+**Gør dette næste.** Meta pool locks er landet; balance-pass er grøn.
 
-- **Kerne-loop er ufuldstændigt uden afslutning.** ~79 % af gamle sim-runs ramte dag-loft; Act 3 starter dag 11 og sim-default `--max-days 12` — næsten ingen plads til sejr efter 2.4–2.6 uden genmåling.
-- **Fase 2-investering er spildt hvis Act 3 kun er “længere timeout”.** Hybrid tokens, dobbelt dice og map expansion skal accelerere VP — ikke bare produktion uden vinder.
-- **Ren Core + sim — ingen Unity-licens, ingen art.** Kan køre tusindvis af runs på Linux-VM med det samme værktøj vi allerede har.
-- **Meta og onboarding giver mening først når runs slutter.** Stjerner ved game over og “sådan vinder du”-tekst kræver at nogen faktisk vinder eller taber inden for rimelig tid.
-- **uGUI/art kan vi ikke færdiggøre her.** Polish på et spil der timeout'er føles som makeup på en ødelagt kamp.
-- **Målbart done.** Win-rate, median dage til 10 VP, andel `max_days` — ikke subjektiv “føles bedre”.
-- **Lav risiko for scope creep.** Juster `BalanceConfig` / AI-heuristik / evt. VP-kilder — ikke nye systemer.
-- **Sim-runner metrics er forudsætning for Act 3-indhold senere.** Uden baseline ved vi ikke om nye events hjælper eller skader.
+- **Meta progression har nu pool-variation.** Fresh runs: Sawmill + Guild Hall, 7 starter-kort; unlocks udvider draft og nat-draw. AI bruger stadig fuld `AiPool`.
+- **Pause/resume mangler stadig.** Autosave ved nat + multi-slot gør lange runs spilbare uden editor.
+- **Determinisme kræver RNG roll-tællere** i save-formatet — ellers kan load/load ikke reproducere hybrid rolls.
+- **Ren Core + IMGUI — partial Unity.** EditMode + `dotnet test` dækker logik; Play Mode round-trip kræver Mac/Unity.
+- **Onboarding beats** (næste kandidat efter autosave) er copy-only i IMGUI — lav risiko, høj læring for nye spillere.
 
 ---
 
@@ -85,4 +82,4 @@ Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færd
 
 200-run sim (`--max-days 20 --map small`): `ok` 89.5%, `max_days` 10.5%, median win day 13, median human VP at `max_days` 7, 0 crash/timeout. See `IMPLEMENTATION_STATUS.md` for before/after table.
 
-*Næste Cursor-opgave: meta pool locks, autosave slice, eller onboarding beats per ROADMAP_V3 backlog.*
+*Næste Cursor-opgave: autosave slice, onboarding beats, eller Act 3 indhold per ROADMAP_V3 backlog.*

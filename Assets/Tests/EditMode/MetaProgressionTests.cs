@@ -41,8 +41,21 @@ namespace CatanRoguelike.Tests
             CollectionAssert.Contains(meta.GetAvailableLeaders().ToList(), LeaderId.Pioneer);
             Assert.AreEqual(2, meta.GetAvailableLeaders().Count());
 
-            Assert.AreEqual(5, meta.GetDraftPool().Count());
+            CollectionAssert.AreEquivalent(
+                MetaCatalog.DefaultFreeUniques.ToList(),
+                meta.GetDraftPool().ToList());
+            Assert.AreEqual(2, meta.GetDraftPool().Count());
             Assert.AreEqual(RunProgression.DraftPickCount, meta.GetDraftPickCount());
+
+            CollectionAssert.AreEquivalent(
+                MetaCatalog.DefaultFreeCards.ToList(),
+                meta.GetCardPool().ToList());
+            Assert.AreEqual(7, meta.GetCardPool().Count());
+
+            Assert.IsFalse(meta.IsUniqueAvailable(UniqueBuildingId.Monastery));
+            Assert.IsFalse(meta.IsCardAvailable(CardId.BanditRaid));
+            Assert.IsFalse(meta.IsCardAvailable(CardId.Forecast));
+
             Assert.IsFalse(meta.HasStartWheatBonus());
             Assert.IsFalse(meta.GetStartBonusCard().HasValue);
         }
@@ -62,6 +75,91 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(GamePhase.SetupPlayerSettlement1, game.State.Phase);
             Assert.IsTrue(game.State.RunSetupComplete);
             Assert.AreEqual(2, game.State.DraftedUniques.Count);
+        }
+
+        [Test]
+        public void ToggleDraftUnique_RejectsLockedUniques_WithMeta()
+        {
+            var meta = MetaProgression.CreateFresh();
+            var game = new GameController(Seed, MapSize.Small, meta);
+            AdvanceToDraft(game);
+
+            game.ToggleDraftUnique(UniqueBuildingId.Monastery);
+
+            Assert.AreEqual(0, game.State.DraftedUniques.Count);
+        }
+
+        [Test]
+        public void ConfirmRunSetup_RejectsLockedUniques()
+        {
+            var meta = MetaProgression.CreateFresh();
+            var game = new GameController(Seed, MapSize.Small, meta);
+            AdvanceToDraft(game);
+
+            game.State.DraftedUniques.Add(UniqueBuildingId.Monastery);
+            game.State.DraftedUniques.Add(UniqueBuildingId.Sawmill);
+            game.ConfirmRunSetup();
+
+            Assert.AreEqual(GamePhase.RunSelectDraft, game.State.Phase);
+            Assert.IsFalse(game.State.RunSetupComplete);
+        }
+
+        [Test]
+        public void UniqueUnlocks_ExpandDraftPool()
+        {
+            var meta = MetaProgression.CreateFresh();
+            meta.AddStarsForTesting(10);
+
+            Assert.IsTrue(meta.TryPurchase(MetaUnlockId.UniqueMonastery));
+            CollectionAssert.Contains(meta.GetDraftPool().ToList(), UniqueBuildingId.Monastery);
+            Assert.AreEqual(3, meta.GetDraftPool().Count());
+        }
+
+        [Test]
+        public void CardPackUnlocks_ExpandDrawPool()
+        {
+            var meta = MetaProgression.CreateFresh();
+            meta.AddStarsForTesting(10);
+
+            Assert.IsTrue(meta.TryPurchase(MetaUnlockId.CardPackSabotage));
+            Assert.IsTrue(meta.IsCardAvailable(CardId.BanditRaid));
+            Assert.IsTrue(meta.IsCardAvailable(CardId.Embargo));
+            Assert.IsFalse(meta.IsCardAvailable(CardId.Forecast));
+            Assert.AreEqual(9, meta.GetCardPool().Count());
+
+            Assert.IsTrue(meta.TryPurchase(MetaUnlockId.CardPackMarket));
+            Assert.IsTrue(meta.IsCardAvailable(CardId.Forecast));
+            Assert.AreEqual(12, meta.GetCardPool().Count());
+        }
+
+        [Test]
+        public void DrawCard_ForHuman_WithFreshMeta_OnlyDrawsUnlockedCards()
+        {
+            var meta = MetaProgression.CreateFresh();
+            var pool = meta.GetCardPool().ToList();
+            var engine = new CardEngine(Seed);
+
+            for (int i = 0; i < 300; i++)
+            {
+                var card = engine.DrawCard(forAi: false, humanPool: pool);
+                Assert.IsTrue(meta.IsCardAvailable(card),
+                    $"Human draw returned locked card {card}");
+            }
+        }
+
+        [Test]
+        public void DrawCard_ForAi_UsesFullAiPool_RegardlessOfMeta()
+        {
+            var meta = MetaProgression.CreateFresh();
+            var engine = new CardEngine(Seed);
+            var lockedPool = meta.GetCardPool().ToList();
+
+            for (int i = 0; i < 100; i++)
+            {
+                var card = engine.DrawCard(forAi: true, humanPool: lockedPool);
+                Assert.IsTrue(CardLibrary.Get(card).AiCanUse,
+                    $"AI draw returned human-only card {card}");
+            }
         }
 
         [Test]
@@ -106,6 +204,8 @@ namespace CatanRoguelike.Tests
             var original = MetaProgression.CreateFresh();
             original.AddStarsForTesting(20);
             original.TryPurchase(MetaUnlockId.LeaderWarlord);
+            original.TryPurchase(MetaUnlockId.UniqueMonastery);
+            original.TryPurchase(MetaUnlockId.CardPackSabotage);
             original.TryAwardRun(Seed, 5, 4, PlayerId.Ai, out _);
 
             var json = MetaSave.Serialize(original);
@@ -114,6 +214,26 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(original.Stars, loaded.Stars);
             CollectionAssert.AreEquivalent(original.UnlockedIds.ToList(), loaded.UnlockedIds.ToList());
             CollectionAssert.AreEquivalent(original.AwardedRunKeys.ToList(), loaded.AwardedRunKeys.ToList());
+            CollectionAssert.Contains(loaded.UnlockedIds.ToList(), MetaUnlockId.UniqueMonastery);
+            CollectionAssert.Contains(loaded.UnlockedIds.ToList(), MetaUnlockId.CardPackSabotage);
+        }
+
+        [Test]
+        public void SerializeRoundTrip_NewUnlockIds_UseCamelCase()
+        {
+            var meta = MetaProgression.CreateFresh();
+            meta.AddStarsForTesting(20);
+            meta.TryPurchase(MetaUnlockId.UniqueCaravanPost);
+            meta.TryPurchase(MetaUnlockId.CardPackMarket);
+
+            var json = MetaSave.Serialize(meta);
+
+            StringAssert.Contains("uniqueCaravanPost", json);
+            StringAssert.Contains("cardPackMarket", json);
+
+            var loaded = MetaSave.Load(json);
+            Assert.IsTrue(loaded.IsUnlocked(MetaUnlockId.UniqueCaravanPost));
+            Assert.IsTrue(loaded.IsUnlocked(MetaUnlockId.CardPackMarket));
         }
 
         [Test]
@@ -171,11 +291,25 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void ExtraDraftPick_AllowsThreeUniques()
+        public void ExtraDraftPick_IsCappedByAvailablePool()
         {
             var meta = MetaProgression.CreateFresh();
             meta.AddStarsForTesting(10);
             meta.TryPurchase(MetaUnlockId.ExtraDraftPick);
+
+            Assert.AreEqual(2, meta.GetDraftPickCount());
+
+            meta.TryPurchase(MetaUnlockId.UniqueMonastery);
+            Assert.AreEqual(3, meta.GetDraftPickCount());
+        }
+
+        [Test]
+        public void ExtraDraftPick_AllowsThreeUniques_WhenPoolHasThreeOrMore()
+        {
+            var meta = MetaProgression.CreateFresh();
+            meta.AddStarsForTesting(20);
+            meta.TryPurchase(MetaUnlockId.ExtraDraftPick);
+            meta.TryPurchase(MetaUnlockId.UniqueMonastery);
 
             var game = new GameController(Seed, MapSize.Small, meta);
             AdvanceToDraft(game);

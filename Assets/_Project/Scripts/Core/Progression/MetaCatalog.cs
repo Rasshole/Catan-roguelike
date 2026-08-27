@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Cards;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Leaders;
@@ -15,8 +17,26 @@ namespace CatanRoguelike.Core.Progression
     {
         public const int WinBonusStars = 2;
 
-        // Small map, Merchant + Pioneer, and all 5 uniques are always available without ids.
+        // Small map, Merchant + Pioneer, Sawmill + Guild Hall, and starter cards are free without ids.
         public static readonly IReadOnlyList<MetaUnlockId> DefaultUnlocked = Array.Empty<MetaUnlockId>();
+
+        public static readonly IReadOnlyList<UniqueBuildingId> DefaultFreeUniques = new[]
+        {
+            UniqueBuildingId.Sawmill,
+            UniqueBuildingId.GuildHall
+        };
+
+        /// <summary>Starter night-draw pool for fresh profiles (7 of 12 cards).</summary>
+        public static readonly IReadOnlyList<CardId> DefaultFreeCards = new[]
+        {
+            CardId.Knight,
+            CardId.RoadBuilder,
+            CardId.YearOfPlenty,
+            CardId.Monopoly,
+            CardId.Drought,
+            CardId.MasterBuilder,
+            CardId.FertileSeason
+        };
 
         public static readonly IReadOnlyDictionary<MetaUnlockId, MetaUnlockDefinition> All =
             new Dictionary<MetaUnlockId, MetaUnlockDefinition>
@@ -49,7 +69,7 @@ namespace CatanRoguelike.Core.Progression
                     MetaUnlockId.ExtraDraftPick,
                     6,
                     "Extra unique draft",
-                    "Draft 3 unique buildings instead of 2 at run start."),
+                    "Draft 3 unique buildings instead of 2 at run start (when enough are unlocked)."),
 
                 [MetaUnlockId.StartBonusWheat] = new(
                     MetaUnlockId.StartBonusWheat,
@@ -61,7 +81,37 @@ namespace CatanRoguelike.Core.Progression
                     MetaUnlockId.StartBonusCard,
                     4,
                     "Road Builder voucher",
-                    "Start the first night with a free Road Builder card.")
+                    "Start the first night with a free Road Builder card."),
+
+                [MetaUnlockId.UniqueMonastery] = new(
+                    MetaUnlockId.UniqueMonastery,
+                    3,
+                    "Unique: Monastery",
+                    "Add Monastery to the run-start unique draft pool."),
+
+                [MetaUnlockId.UniqueCaravanPost] = new(
+                    MetaUnlockId.UniqueCaravanPost,
+                    4,
+                    "Unique: Caravan Post",
+                    "Add Caravan Post to the run-start unique draft pool."),
+
+                [MetaUnlockId.UniqueFortressOutpost] = new(
+                    MetaUnlockId.UniqueFortressOutpost,
+                    5,
+                    "Unique: Fortress Outpost",
+                    "Add Fortress Outpost to the run-start unique draft pool."),
+
+                [MetaUnlockId.CardPackSabotage] = new(
+                    MetaUnlockId.CardPackSabotage,
+                    3,
+                    "Sabotage card pack",
+                    "Unlock Bandit Raid and Embargo in your night draw pool."),
+
+                [MetaUnlockId.CardPackMarket] = new(
+                    MetaUnlockId.CardPackMarket,
+                    4,
+                    "Market card pack",
+                    "Unlock Harbor Charter, Merchant's Ledger, and Forecast in your night draw pool.")
             };
 
         public static MetaUnlockDefinition Get(MetaUnlockId id) => All[id];
@@ -70,6 +120,12 @@ namespace CatanRoguelike.Core.Progression
 
         public static bool IsLeaderAlwaysAvailable(LeaderId leader) =>
             leader == LeaderId.Merchant || leader == LeaderId.Pioneer;
+
+        public static bool IsUniqueAlwaysAvailable(UniqueBuildingId id) =>
+            DefaultFreeUniques.Contains(id);
+
+        public static bool IsCardAlwaysAvailable(CardId id) =>
+            DefaultFreeCards.Contains(id);
 
         public static MetaUnlockId? MapUnlockFor(MapSize size) => size switch
         {
@@ -82,6 +138,24 @@ namespace CatanRoguelike.Core.Progression
         {
             LeaderId.Warlord => MetaUnlockId.LeaderWarlord,
             LeaderId.Architect => MetaUnlockId.LeaderArchitect,
+            _ => null
+        };
+
+        public static MetaUnlockId? UniqueUnlockFor(UniqueBuildingId id) => id switch
+        {
+            UniqueBuildingId.Monastery => MetaUnlockId.UniqueMonastery,
+            UniqueBuildingId.CaravanPost => MetaUnlockId.UniqueCaravanPost,
+            UniqueBuildingId.FortressOutpost => MetaUnlockId.UniqueFortressOutpost,
+            _ => null
+        };
+
+        public static MetaUnlockId? CardUnlockFor(CardId id) => id switch
+        {
+            CardId.BanditRaid => MetaUnlockId.CardPackSabotage,
+            CardId.Embargo => MetaUnlockId.CardPackSabotage,
+            CardId.HarborCharter => MetaUnlockId.CardPackMarket,
+            CardId.MerchantsLedger => MetaUnlockId.CardPackMarket,
+            CardId.Forecast => MetaUnlockId.CardPackMarket,
             _ => null
         };
 

@@ -62,6 +62,22 @@ namespace CatanRoguelike.Core.Progression
             return unlock.HasValue && IsUnlocked(unlock.Value);
         }
 
+        public bool IsUniqueAvailable(UniqueBuildingId id)
+        {
+            if (MetaCatalog.IsUniqueAlwaysAvailable(id))
+                return true;
+            var unlock = MetaCatalog.UniqueUnlockFor(id);
+            return unlock.HasValue && IsUnlocked(unlock.Value);
+        }
+
+        public bool IsCardAvailable(CardId id)
+        {
+            if (MetaCatalog.IsCardAlwaysAvailable(id))
+                return true;
+            var unlock = MetaCatalog.CardUnlockFor(id);
+            return unlock.HasValue && IsUnlocked(unlock.Value);
+        }
+
         public IEnumerable<MapSize> GetAvailableMapSizes()
         {
             foreach (MapSize size in Enum.GetValues(typeof(MapSize)))
@@ -82,14 +98,30 @@ namespace CatanRoguelike.Core.Progression
 
         public IEnumerable<UniqueBuildingId> GetDraftPool()
         {
-            foreach (var kv in UniqueBuildingLibrary.All)
-                yield return kv.Key;
+            foreach (UniqueBuildingId id in Enum.GetValues(typeof(UniqueBuildingId)))
+            {
+                if (IsUniqueAvailable(id))
+                    yield return id;
+            }
         }
 
-        public int GetDraftPickCount() =>
-            IsUnlocked(MetaUnlockId.ExtraDraftPick)
+        public IEnumerable<CardId> GetCardPool()
+        {
+            foreach (var id in CardLibrary.AllCards)
+            {
+                if (IsCardAvailable(id))
+                    yield return id;
+            }
+        }
+
+        public int GetDraftPickCount()
+        {
+            int requested = IsUnlocked(MetaUnlockId.ExtraDraftPick)
                 ? RunProgression.DraftPickCount + 1
                 : RunProgression.DraftPickCount;
+            int available = GetDraftPool().Count();
+            return Math.Min(requested, available);
+        }
 
         public bool HasStartWheatBonus() => IsUnlocked(MetaUnlockId.StartBonusWheat);
 

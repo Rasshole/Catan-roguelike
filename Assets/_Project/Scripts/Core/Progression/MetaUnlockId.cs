@@ -9,6 +9,11 @@ namespace CatanRoguelike.Core.Progression
         LeaderArchitect,
         ExtraDraftPick,
         StartBonusWheat,
-        StartBonusCard
+        StartBonusCard,
+        UniqueMonastery,
+        UniqueCaravanPost,
+        UniqueFortressOutpost,
+        CardPackSabotage,
+        CardPackMarket
     }
 }

@@ -67,3 +67,7 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 
 **Knobs:** `BalanceConfig` (roll weights 5/45/50, act days 1–4/5–8/9+, 2/3/3 dice passes, max mult 3 Act 2+, city 1W+2S, settlement threshold 7, longest route min 3 / 3 VP, largest army threshold 2 / 3 VP, lower event %), hybrid production floor (dice match → min 1 yield), setup bonus ×2, Small-map robber on `(1,-1)`, `LevelUpIntervalDays` 3. **Sim-driver:** road→settlement→city build order, scored settlements, VP-aware level-up picks. **Tests:** 299/299 `dotnet test tools/core-tests`.
 
+## 2026-08-27 (UTC) — meta pool locks (unique + card draft/draw gating)
+
+**Fresh meta:** draft pool = Sawmill + Guild Hall (pick 2); night draw = 7 starter cards (Knight, Road Builder, Year of Plenty, Monopoly, Drought, Master Builder, Fertile Season). **Unlocks:** Monastery (3★), Caravan Post (4★), Fortress Outpost (5★); Sabotage pack — Bandit Raid + Embargo (3★); Market pack — Harbor Charter + Merchant's Ledger + Forecast (4★). Extra draft pick capped at available uniques. **AI:** full `AiPool` unchanged. **Tests:** 307/307 `dotnet test tools/core-tests`.
+
