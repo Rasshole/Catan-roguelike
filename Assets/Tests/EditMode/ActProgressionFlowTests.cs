@@ -66,14 +66,14 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void BeginNight_Act2_RollsTwoDiceSums()
+        public void BeginNight_Act2_RollsMultipleDiceSums()
         {
             var game = new GameController(4242, MapSize.Small);
             CompleteSetup(game);
             game.State.Board.DayNumber = 6;
             game.BeginNight();
 
-            Assert.AreEqual(2, game.State.TomorrowDiceRolls.Count);
+            Assert.AreEqual(BalanceConfig.Act2NightlyRollPasses, game.State.TomorrowDiceRolls.Count);
             Assert.AreEqual(5, game.State.TomorrowRolls.Count);
         }
 
@@ -116,8 +116,8 @@ namespace CatanRoguelike.Tests
         [Test]
         public void MaybeRollEvent_Act2_HigherChanceThanAct1_ForSameSeed()
         {
-            var act1 = new EventEngine(3).MaybeRollEvent(1);
-            var act2 = new EventEngine(3).MaybeRollEvent(2);
+            var act1 = new EventEngine(20).MaybeRollEvent(1);
+            var act2 = new EventEngine(20).MaybeRollEvent(2);
 
             Assert.AreEqual(EventId.None, act1);
             Assert.AreNotEqual(EventId.None, act2);
@@ -230,11 +230,11 @@ namespace CatanRoguelike.Tests
     public class ActIntegrationTests
     {
         [Test]
-        public void EndDay_WhenDayBecomesSix_ExpandsSmallMapToMedium()
+        public void EndDay_WhenDayBecomesFive_ExpandsSmallMapToMedium()
         {
             var game = new GameController(7, MapSize.Small);
             game.SelectMap(MapSize.Small);
-            game.State.Board.DayNumber = 5;
+            game.State.Board.DayNumber = 4;
             game.State.Phase = GamePhase.DayPlayerActions;
 
             game.EndPlayerDay();
@@ -242,7 +242,7 @@ namespace CatanRoguelike.Tests
             if (game.State.Phase == GamePhase.LevelUpChoice)
                 game.ChooseLevelUpPerk(game.State.PendingLevelUpChoices[0]);
 
-            Assert.AreEqual(6, game.State.Board.DayNumber);
+            Assert.AreEqual(5, game.State.Board.DayNumber);
             Assert.AreEqual(MapSize.Medium, game.State.MapSize);
             Assert.AreEqual(13, game.State.Board.Tiles.Count);
             Assert.AreEqual(13, game.State.Board.Tiles.Values.Count(t => t.NumberToken.HasValue || t.IsDesert));

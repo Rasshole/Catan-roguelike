@@ -167,17 +167,17 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void GetLongestRoadOwner_BothUnderFive_ReturnsNull()
+        public void GetLongestRoadOwner_BothUnderMinimum_ReturnsNull()
         {
             var board = MapPresets.CreateBoard(MapSize.Small);
-            PlaceAlongHexCorners(board, PlayerId.Human, new HexCoord(0, 0), 0, 4);
+            PlaceAlongHexCorners(board, PlayerId.Human, new HexCoord(0, 0), 0, 3);
             PlaceAlongHexCorners(board, PlayerId.Ai, AiRoadHex, 0, 3);
 
             Assert.IsNull(RouteCalculator.GetLongestRoadOwner(board));
         }
 
         [Test]
-        public void GetLongestRoadOwner_TiedAtFiveOrMore_ReturnsNull()
+        public void GetLongestRoadOwner_TiedAtMinimumOrMore_ReturnsNull()
         {
             var board = MapPresets.CreateBoard(MapSize.Small);
             PlaceAlongHexCorners(board, PlayerId.Human, HumanRoadHex, 0, 5);

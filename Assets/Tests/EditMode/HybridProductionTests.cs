@@ -18,7 +18,7 @@ namespace CatanRoguelike.Tests
             var engine = new DiceRollEngine(12345);
             var rolls = engine.RollNightly(ActProgression.GetNightlyRollPasses(2));
 
-            Assert.AreEqual(2, rolls.Count);
+            Assert.AreEqual(BalanceConfig.Act2NightlyRollPasses, rolls.Count);
             foreach (var roll in rolls)
                 Assert.GreaterOrEqual(roll, 2);
             foreach (var roll in rolls)
@@ -81,7 +81,7 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void Production_ZeroResourceRoll_YieldsNothingEvenWhenDiceMatch()
+        public void Production_ZeroResourceRoll_StillYieldsOneWhenDiceMatch()
         {
             var board = MapPresets.CreateBoard(MapSize.Small);
             board.Tiles[WoodHex].NumberToken = 8;
@@ -102,7 +102,7 @@ namespace CatanRoguelike.Tests
             board.VertexBuildings[vertex] = (BuildingType.Settlement, PlayerId.Human);
 
             var production = ProductionCalculator.CalculateForPlayer(state, PlayerId.Human, state.TodayRolls);
-            Assert.AreEqual(0, production.Total);
+            Assert.AreEqual(1, production.Wood, "Dice match floors yield at 1 even when weather roll is 0");
         }
 
         [Test]
@@ -115,7 +115,7 @@ namespace CatanRoguelike.Tests
 
             var state = new GameState(board)
             {
-                TodayDiceRolls = new List<int> { 6, 8 },
+                TodayDiceRolls = new List<int> { 2, 3 },
                 TodayRolls = new Dictionary<ResourceType, int>
                 {
                     [ResourceType.Stone] = 2,

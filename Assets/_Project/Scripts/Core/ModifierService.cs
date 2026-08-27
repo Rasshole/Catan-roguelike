@@ -16,7 +16,7 @@ namespace CatanRoguelike.Core
     {
         public static int GetSettlementThreshold(GameState state) =>
             state.HasUnique(UniqueBuildingId.GuildHall) || state.HasPerk(LevelUpPerkId.ThresholdDelay)
-                ? 6 : BalanceConfig.SettlementThresholdCount;
+                ? BalanceConfig.SettlementThresholdCount + 1 : BalanceConfig.SettlementThresholdCount;
 
         public static ResourceBundle ApplyLeaderCostModifiers(GameState state, PlayerId player, ResourceBundle cost,
             bool isSettlement, bool isCity, bool isRoad)

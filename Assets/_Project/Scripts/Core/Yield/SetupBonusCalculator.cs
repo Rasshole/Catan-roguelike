@@ -19,7 +19,7 @@ namespace CatanRoguelike.Core.Yield
             {
                 if (!board.TryGetTile(hex, out var tile)) continue;
                 if (tile.IsDesert) continue;
-                bonus.Add(tile.Resource, 1);
+                bonus.Add(tile.Resource, 2);
             }
 
             return bonus;

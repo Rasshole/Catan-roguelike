@@ -88,7 +88,7 @@ namespace CatanRoguelike.Tests
         public void LevelUpPreviewLine_ReturnsMessage_OnDayBeforeLevelUp()
         {
             var state = CreateState();
-            state.Board.DayNumber = 4;
+            state.Board.DayNumber = 2;
             state.Phase = GamePhase.DayPlayerActions;
             state.Leader = LeaderId.Merchant;
 
@@ -101,7 +101,7 @@ namespace CatanRoguelike.Tests
         public void LevelUpPreviewLine_ReturnsFalse_WhenNoLevelUpTomorrow()
         {
             var state = CreateState();
-            state.Board.DayNumber = 3;
+            state.Board.DayNumber = 1;
             state.Phase = GamePhase.DayPlayerActions;
 
             Assert.IsFalse(PendingStatusDisplay.TryGetLevelUpPreviewLine(state, 42, out _));

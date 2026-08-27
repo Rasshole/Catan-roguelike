@@ -60,7 +60,7 @@ namespace CatanRoguelike.Core.Leaders
             [LevelUpPerkId.CheapCities] = "Cities cost 1 less stone.",
             [LevelUpPerkId.ExtraCardDraw] = "Draw 1 extra card each night.",
             [LevelUpPerkId.RollInsurance] = "One 0 roll becomes 1 each night (auto: your scarcest resource).",
-            [LevelUpPerkId.ThresholdDelay] = "Settlement threshold penalty starts at 6 instead of 5."
+            [LevelUpPerkId.ThresholdDelay] = "Settlement threshold penalty starts at 8 instead of 7.",
         };
 
         public static string GetDescription(LevelUpPerkId id) => Descriptions[id];

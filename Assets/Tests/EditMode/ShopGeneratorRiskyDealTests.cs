@@ -12,7 +12,7 @@ namespace CatanRoguelike.Tests
     {
         private static readonly HexCoord BrickHex = new HexCoord(1, 0);
         private static readonly HexCoord SheepHex = new HexCoord(0, -1);
-        private static readonly HexCoord RobberStart = new HexCoord(0, 0);
+        private static readonly HexCoord RobberStart = new HexCoord(1, -1);
 
         private static ShopDeal CreateRiskyDeal(ResourceType give = ResourceType.Wood) =>
             new ShopDeal(give, ShopGenerator.RiskyTradeRate, ResourceType.Brick, 1,

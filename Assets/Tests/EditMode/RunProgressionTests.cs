@@ -20,61 +20,61 @@ namespace CatanRoguelike.Tests
         [Test]
         public void WillOfferLevelUpAfterThisDay_True_OnDayBeforeInterval()
         {
-            var state = CreateState(dayNumber: 4);
+            var state = CreateState(dayNumber: 2);
             Assert.IsTrue(RunProgression.WillOfferLevelUpAfterThisDay(state));
         }
 
         [Test]
         public void WillOfferLevelUpAfterThisDay_False_WhenNextDayNotOnInterval()
         {
-            var state = CreateState(dayNumber: 3);
+            var state = CreateState(dayNumber: 1);
             Assert.IsFalse(RunProgression.WillOfferLevelUpAfterThisDay(state));
         }
 
         [Test]
-        public void ShouldOfferLevelUp_True_OnDayFiveAfterIncrement()
+        public void ShouldOfferLevelUp_True_OnDayThreeAfterIncrement()
         {
-            var state = CreateState(dayNumber: 5);
+            var state = CreateState(dayNumber: 3);
             Assert.IsTrue(RunProgression.ShouldOfferLevelUp(state));
         }
 
         [Test]
         public void ShouldOfferLevelUp_False_WhenMaxLevelUpsTaken()
         {
-            var state = CreateState(dayNumber: 5);
+            var state = CreateState(dayNumber: 3);
             state.LevelUpsTaken = RunProgression.MaxLevelUpsPerRun;
             Assert.IsFalse(RunProgression.ShouldOfferLevelUp(state));
 
-            state.Board.DayNumber = 4;
+            state.Board.DayNumber = 2;
             Assert.IsFalse(RunProgression.WillOfferLevelUpAfterThisDay(state));
         }
 
         [Test]
         public void ShouldOfferLevelUp_False_WhenAlreadyOfferedOnSameDay()
         {
-            var state = CreateState(dayNumber: 5);
-            state.LastLevelUpDay = 5;
+            var state = CreateState(dayNumber: 3);
+            state.LastLevelUpDay = 3;
             Assert.IsFalse(RunProgression.ShouldOfferLevelUp(state));
         }
 
         [Test]
         public void LastLevelUpDay_PreventsDoubleOfferOnSameDayNumber()
         {
-            var state = CreateState(dayNumber: 5);
-            state.LastLevelUpDay = 5;
+            var state = CreateState(dayNumber: 3);
+            state.LastLevelUpDay = 3;
             Assert.IsFalse(RunProgression.ShouldOfferLevelUp(state));
 
-            state.LastLevelUpDay = 4;
+            state.LastLevelUpDay = 2;
             Assert.IsTrue(RunProgression.ShouldOfferLevelUp(state));
         }
 
         [Test]
         public void PreviewChoices_MatchOfferedChoices_ForSeededDay()
         {
-            var state = CreateState(dayNumber: 4);
+            var state = CreateState(dayNumber: 2);
             var preview = RunProgression.PreviewLevelUpChoices(state, RunSeed);
 
-            state.Board.DayNumber = 5;
+            state.Board.DayNumber = 3;
             var offered = RunProgression.GenerateLevelUpChoices(
                 state, RunProgression.CreateLevelUpRandom(RunSeed, state.Board.DayNumber));
 
@@ -84,7 +84,7 @@ namespace CatanRoguelike.Tests
         [Test]
         public void CreateLevelUpRandom_IsDeterministicForSeedAndDay()
         {
-            var state = CreateState(dayNumber: 4);
+            var state = CreateState(dayNumber: 2);
             var first = RunProgression.PreviewLevelUpChoices(state, RunSeed);
             var second = RunProgression.PreviewLevelUpChoices(state, RunSeed);
 

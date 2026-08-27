@@ -13,7 +13,7 @@ namespace CatanRoguelike.Tests
         private const int Seed = 42;
 
         [Test]
-        public void LargestArmy_ThirdKnight_GrantsTwoVp()
+        public void LargestArmy_SecondKnight_GrantsThreeVp()
         {
             var state = CreateState();
             var engine = new CardEngine(Seed);
@@ -21,12 +21,11 @@ namespace CatanRoguelike.Tests
 
             PlayKnight(engine, state, PlayerId.Human, hex);
             PlayKnight(engine, state, PlayerId.Human, hex);
-            PlayKnight(engine, state, PlayerId.Human, hex);
 
             Assert.AreEqual(PlayerId.Human, state.LargestArmyOwner);
-            Assert.AreEqual(2, state.PlayerVictoryPoints);
+            Assert.AreEqual(3, state.PlayerVictoryPoints);
             var bd = VictoryCalculator.GetBreakdown(state, PlayerId.Human);
-            Assert.AreEqual(2, bd.LargestArmy);
+            Assert.AreEqual(3, bd.LargestArmy);
             StringAssert.Contains("largest army", bd.FormatLine());
         }
 
@@ -45,7 +44,7 @@ namespace CatanRoguelike.Tests
             PlayKnight(engine, state, PlayerId.Human, hex);
 
             Assert.AreEqual(PlayerId.Ai, state.LargestArmyOwner);
-            Assert.AreEqual(2, state.AiVictoryPoints);
+            Assert.AreEqual(3, state.AiVictoryPoints);
             Assert.AreEqual(0, state.PlayerVictoryPoints);
         }
 
@@ -60,13 +59,13 @@ namespace CatanRoguelike.Tests
             state.AiKnightsPlayed = 3;
             state.LargestArmyOwner = PlayerId.Human;
             VictoryCalculator.RefreshVictoryPoints(state);
-            Assert.AreEqual(2, state.PlayerVictoryPoints);
+            Assert.AreEqual(3, state.PlayerVictoryPoints);
 
             PlayKnight(engine, state, PlayerId.Ai, hex);
 
             Assert.AreEqual(PlayerId.Ai, state.LargestArmyOwner);
             Assert.AreEqual(0, state.PlayerVictoryPoints, "former holder loses army VP");
-            Assert.AreEqual(2, state.AiVictoryPoints);
+            Assert.AreEqual(3, state.AiVictoryPoints);
         }
 
         [Test]
@@ -92,7 +91,7 @@ namespace CatanRoguelike.Tests
             VictoryCalculator.RefreshVictoryPoints(state);
             var bd = VictoryCalculator.GetBreakdown(state, PlayerId.Human);
 
-            Assert.AreEqual(2, bd.LargestArmy);
+            Assert.AreEqual(3, bd.LargestArmy);
             Assert.AreEqual(
                 bd.Settlements + bd.Cities + bd.Longest + bd.LongRoadBonus + bd.LargestArmy + bd.BonusVp,
                 bd.Total);

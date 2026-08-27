@@ -18,7 +18,7 @@ namespace CatanRoguelike.Tests
         public void GetLargestArmyOwner_UnderThreshold_ReturnsNull()
         {
             var state = CreateState();
-            state.PlayerKnightsPlayed = 2;
+            state.PlayerKnightsPlayed = 1;
             state.AiKnightsPlayed = 1;
 
             ArmyCalculator.UpdateLargestArmyOwner(state);
@@ -27,29 +27,29 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void RecordKnightPlayed_ThirdKnightWithLead_GrantsHolder()
+        public void RecordKnightPlayed_SecondKnightWithLead_GrantsHolder()
         {
             var state = CreateState();
-            state.PlayerKnightsPlayed = 2;
-            state.AiKnightsPlayed = 1;
+            state.PlayerKnightsPlayed = 1;
+            state.AiKnightsPlayed = 0;
 
             ArmyCalculator.RecordKnightPlayed(state, PlayerId.Human);
 
-            Assert.AreEqual(3, state.PlayerKnightsPlayed);
+            Assert.AreEqual(2, state.PlayerKnightsPlayed);
             Assert.AreEqual(PlayerId.Human, state.LargestArmyOwner);
         }
 
         [Test]
-        public void RecordKnightPlayed_TieAtThree_KeepsIncumbent()
+        public void RecordKnightPlayed_TieAtTwo_KeepsIncumbent()
         {
             var state = CreateState();
-            state.PlayerKnightsPlayed = 2;
-            state.AiKnightsPlayed = 3;
+            state.PlayerKnightsPlayed = 1;
+            state.AiKnightsPlayed = 2;
             state.LargestArmyOwner = PlayerId.Ai;
 
             ArmyCalculator.RecordKnightPlayed(state, PlayerId.Human);
 
-            Assert.AreEqual(3, state.PlayerKnightsPlayed);
+            Assert.AreEqual(2, state.PlayerKnightsPlayed);
             Assert.AreEqual(PlayerId.Ai, state.LargestArmyOwner, "equal count must not steal Largest Army");
         }
 

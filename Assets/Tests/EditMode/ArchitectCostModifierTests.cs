@@ -64,7 +64,7 @@ namespace CatanRoguelike.Tests
         [Test]
         public void Architect_ThresholdSettlement_IsTenPercentOffThresholdedCost()
         {
-            var state = CreateState(LeaderId.Architect, humanSettlements: 5);
+            var state = CreateState(LeaderId.Architect, humanSettlements: 7);
             var thresholded = BalanceConfig.GetSettlementCost(
                 state.Board, PlayerId.Human, ModifierService.GetSettlementThreshold(state));
 
@@ -77,7 +77,7 @@ namespace CatanRoguelike.Tests
         [Test]
         public void NonArchitect_ThresholdSettlement_IsFullThresholdedCost()
         {
-            var state = CreateState(LeaderId.Merchant, humanSettlements: 5);
+            var state = CreateState(LeaderId.Merchant, humanSettlements: 7);
             var thresholded = BalanceConfig.GetSettlementCost(
                 state.Board, PlayerId.Human, ModifierService.GetSettlementThreshold(state));
 

@@ -331,7 +331,7 @@ namespace CatanRoguelike.Tests
             var state = CreateState();
             state.TomorrowRolls = Rolls(0, 2, 1, 0, 2);
             AddToHand(state, PlayerId.Human, CardId.Forecast);
-            var expected = new RollEngine(Seed).RollNightly(2);
+            var expected = new RollEngine(Seed).RollNightlyCombined(2, 2);
             var engine = new CardEngine(Seed);
 
             Assert.IsTrue(engine.PlayCard(state, PlayerId.Human, CardId.Forecast));
