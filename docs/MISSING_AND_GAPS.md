@@ -25,7 +25,6 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 - **Act 2** progression (flere yield-rolls, større kort over tid)
 - **Largest army** som VP-kilde
 - **Per-tile nummer-tokens** (klassisk Catan 2–12) — produktion bruger abstrakte daglige rolls per ressource
-- **Setup-bonus** fra 2. settlement (startressourcer fra tilstødende tiles)
 
 ---
 
@@ -107,6 +106,7 @@ Eksisterende EditMode-tests:
 - `VertexGraphTests` — Canonicalize idempotent; VertexDistance terminerer med buildings
 - `RouteCalculatorTests` — længde N, enemy split, own settlement splitter ikke, tom=0, disjoint/ties, VertexDistance-regression med buildings, **disabled roads (Bandit Raid / `DisabledRoads`)**, **hex-loop counts all 6 edges**, **forgrening**, **`GetLongestRoadOwner` tie / threshold / disabled flip**
 - `GameControllerSetupTests` — AI setup places 2 settlements + 2 roads
+- `SetupBonusTests` — 2. settlement (spiller + AI) giver startressourcer fra tilstødende tiles; 1. settlement giver ikke; desert/`IsDesert` springes over
 - `RobberStealTests` — day-move steal, knight steal, no victim, seeded RNG
 - `AiControllerShopTests` — AI shop køber ved rigtig afford-check; springer over når den ikke har råd
 - `AiEmbargoStrategyTests` — `AiPool` indeholder Embargo (ikke Harbor Charter); AI draw; human Embargo → `AiShopEmbargo`; AI Embargo → `PlayerShopEmbargo` på strategisk ressource; shop skip under embargo; human shop blokeret af AI Embargo

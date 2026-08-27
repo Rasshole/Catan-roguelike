@@ -160,6 +160,10 @@ namespace CatanRoguelike.Core.Data
             }
 
             board.PlaceRobber(new HexCoord(0, 0));
+
+            if (size == MapSize.Large && board.TryGetTile(new HexCoord(0, 0), out var center))
+                center.IsDesert = true;
+
             return board;
         }
 

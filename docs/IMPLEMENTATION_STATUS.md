@@ -11,6 +11,7 @@ Last updated: 2026-08-27 — P3 PlayMode scene smoke tests + Fase 2.1 save/load 
 - [x] 3D placeholder board (table + hex cylinders)
 - [x] Run start: leader select → draft 2 unique buildings
 - [x] Setup: AI 2 settlements + roads, then player 2 + roads
+- [x] **Setup-bonus** — 2. settlement (spiller + AI) giver 1 af hver tilstødende ressource; desert springes over (`SetupBonusCalculator`)
 - [x] Day/night turn loop
 - [x] Yield rolls (15/55/25, max 1×0 and 1×2, 50/50 tie-break)
 - [x] Rolls at night, production uses today's rolls
@@ -31,7 +32,7 @@ Last updated: 2026-08-27 — P3 PlayMode scene smoke tests + Fase 2.1 save/load 
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**, **SaveGame round-trip JSON (format v1)**)
+- [x] EditMode tests (rolls, placement, production, **setup-bonus (2nd settlement, desert skip)**, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**, **SaveGame round-trip JSON (format v1)**)
 - [x] PlayMode smoke tests (`GameSceneSmokeTests` — `Game.unity` boot, required MonoBehaviours, `GameManager.Controller` after Start)
 
 ## Explicitly out of scope
