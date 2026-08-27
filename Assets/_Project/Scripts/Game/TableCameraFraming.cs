@@ -38,9 +38,22 @@ namespace CatanRoguelike.Game
         /// <summary>Local Y for the sea disk — slightly below the wood table.</summary>
         public const float WaterSurfaceLocalY = -0.09f;
 
+        /// <summary>Multiplier on the sea disk world radius for the felt tablecloth (not camera framing).</summary>
+        public const float FeltSurfacePadFactor = 1.45f;
+
+        /// <summary>Maximum felt disk radius as a multiple of the sea disk world radius.</summary>
+        public const float MaxFeltToWaterRadiusRatio = 1.6f;
+
+        /// <summary>World thickness of the decorative felt disk under the sea ring.</summary>
+        public const float FeltSurfaceThinY = 0.05f;
+
+        /// <summary>Local Y for the felt disk — below the sea ring.</summary>
+        public const float FeltSurfaceLocalY = -0.11f;
+
         private const float CylinderMeshRadius = 0.5f;
         private const float CylinderMeshHeight = 2f;
         private const float MinWaterWoodRadiusGap = 0.001f;
+        private const float MinFeltWaterRadiusGap = 0.001f;
 
         public static float ComputeBoardBoundingRadius(BoardState board, float hexScale) =>
             ComputeBoardBoundingRadius(board.Tiles.Keys, hexScale);
@@ -99,6 +112,23 @@ namespace CatanRoguelike.Game
             ComputeCylinderDiskScale(
                 ComputeWaterDiskWorldRadius(boardBoundingRadius),
                 WaterSurfaceThinY);
+
+        public static float ComputeFeltDiskWorldRadius(float boardBoundingRadius)
+        {
+            float waterRadius = ComputeWaterDiskWorldRadius(boardBoundingRadius);
+            float feltRadius = waterRadius * FeltSurfacePadFactor;
+            feltRadius = Mathf.Max(feltRadius, waterRadius + MinFeltWaterRadiusGap);
+            feltRadius = Mathf.Min(feltRadius, waterRadius * MaxFeltToWaterRadiusRatio);
+            return feltRadius;
+        }
+
+        /// <summary>
+        /// Local scale for a Unity cylinder primitive sized to the felt tablecloth around the sea ring.
+        /// </summary>
+        public static Vector3 ComputeFeltDiskScale(float boardBoundingRadius) =>
+            ComputeCylinderDiskScale(
+                ComputeFeltDiskWorldRadius(boardBoundingRadius),
+                FeltSurfaceThinY);
 
         private static Vector3 ComputeCylinderDiskScale(float worldRadius, float thinY)
         {

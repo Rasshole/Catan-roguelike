@@ -165,3 +165,9 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **`GameViewCapture`:** MenuItem + `CaptureAndQuit` (`-executeMethod`); Play Mode scripted setup via shared `GameScenePlayHarness`, `Camera.main` → 1920×1080 PNG (`/workspace/game-view.png` or `GAME_VIEW_SHOT`). Exits Play Mode without saving `Game.unity`.
 - **Tests:** `GameScenePlayHarnessTests` (EditMode). Documented in `docs/TOOLING.md`.
 
+## 2026-08-27 (UTC) — Felt tablecloth under sea ring
+
+- **`TableCameraFraming`:** `FeltSurfacePadFactor` (1.45× water radius, clamped ≤1.6×) + `ComputeFeltDiskScale` / world-radius helpers; camera orbit still hex-only.
+- **`BoardView`:** runtime `FeltSurface` cylinder behind `WaterSurface` (`BoardFeltMaterial`, matte felt green).
+- **Tests:** `BoardSurfaceSizingTests` felt sizing/Y; `BoardFeltMaterialTests`. No v0.1 tag.
+
