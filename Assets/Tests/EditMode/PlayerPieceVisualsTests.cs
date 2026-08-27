@@ -76,6 +76,34 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
+        public void CreateSettlement_RoofPanelsCoverBodyTop()
+        {
+            var piece = PlayerPieceVisuals.CreateSettlement(
+                _testRoot.transform,
+                Vector3.zero,
+                PlayerPieceVisuals.HumanColor,
+                HexTopY);
+
+            var bodyRenderer = piece.transform.Find(PlayerPieceVisuals.BodyPartName).GetComponent<Renderer>();
+            var roofLeftRenderer = piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName).GetComponent<Renderer>();
+            var roofRightRenderer = piece.transform.Find(PlayerPieceVisuals.RoofRightPartName).GetComponent<Renderer>();
+
+            var bodyTop = new Vector3(
+                bodyRenderer.bounds.center.x,
+                bodyRenderer.bounds.max.y,
+                bodyRenderer.bounds.center.z);
+
+            var roofBounds = roofLeftRenderer.bounds;
+            roofBounds.Encapsulate(roofRightRenderer.bounds);
+
+            Assert.LessOrEqual(roofBounds.min.x, bodyTop.x);
+            Assert.GreaterOrEqual(roofBounds.max.x, bodyTop.x);
+            Assert.LessOrEqual(roofBounds.min.z, bodyTop.z);
+            Assert.GreaterOrEqual(roofBounds.max.z, bodyTop.z);
+            Assert.Greater(roofBounds.max.y, bodyTop.y);
+        }
+
+        [Test]
         public void CreateSettlement_RoofIsDarkerThanBody()
         {
             var piece = PlayerPieceVisuals.CreateSettlement(

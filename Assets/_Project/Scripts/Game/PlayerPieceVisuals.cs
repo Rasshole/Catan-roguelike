@@ -151,7 +151,8 @@ namespace CatanRoguelike.Game
         {
             const float panelThickness = 0.046f;
             float panelWidth = bodyWidth * 1.18f;
-            float panelDepth = bodyDepth * 0.58f;
+            // Depth must reach the ridge: panelDepth/2 * cos(pitch) >= bodyDepth * 0.24 (panel Z offset).
+            float panelDepth = bodyDepth * 0.62f;
             float panelLift = panelDepth * Mathf.Sin(RoofPitchDegrees * Mathf.Deg2Rad) * 0.5f;
 
             CreatePrimitivePart(
