@@ -43,6 +43,8 @@ xvfb-run -a "$UNITY_EDITOR" -runTests -batchmode -projectPath . -testPlatform Pl
 
 Smoke: `GameSceneSmokeTests` loader `Game.unity` og tjekker `GameManager` / `BoardView` / `PlaceholderUI` + controller efter Start.
 
+Play harness: `GameScenePlayTests` driver run select → setup → første dag via `GameManager.Controller` (ingen GUI-klik).
+
 ### EditMode-tests (Unity CLI)
 
 Primær kommando (fra klon-mappen):

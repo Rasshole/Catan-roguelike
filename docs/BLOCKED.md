@@ -29,3 +29,9 @@ Core (ren C#) kan stadig kompileres med `dotnet`.
 Linux-host kan ikke hente Mac Editor-target tarballs for `6000.3.15f1` (404). Der findes kun en macOS `.pkg`.
 
 Konsekvens: **OSX standalone-player kan ikke bygges fra denne Linux-VM.** Play Mode i Editoren er platformuafhængigt og virker, når licensen er på plads. macOS-build skal ske på en Mac (eller når Unity udgiver Linux-host Mac-modulet).
+
+## 3. Windows standalone-modul (blokerer Windows64-player fra Linux-VM)
+
+Linux-host kan ikke hente Windows Editor-target tarballs for `6000.3.15f1` (changeset `c1aa84e375f6`): `LinuxEditorTargetInstaller` Windows-Mono tarball returnerer **404**. Kun macOS `.pkg` er tilgængelig via Hub — samme klasse som Mac-modul (#2).
+
+Konsekvens: **Windows64 standalone-player kan ikke bygges fra denne Linux-VM** (`-buildWindows64Player` kræver Windows build support). Distribuerbar `.exe` skal bygges på en Windows-maskine (eller når Unity udgiver Linux-host Windows-modulet).
