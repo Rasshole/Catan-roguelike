@@ -25,13 +25,36 @@ namespace CatanRoguelike.Tests
             game.ToggleDraftUnique(UniqueBuildingId.Sawmill);
             game.ToggleDraftUnique(UniqueBuildingId.GuildHall);
             game.State.RunSetupComplete = true;
+            SeedNumberTokens(game, seed);
             return game;
         }
 
-        private static Vertex PlaceAiFirstSetupSettlement(GameController game)
+        /// <summary>
+        /// <see cref="MapPresets.CreateBoard"/> assigns tokens with an unseeded RNG.
+        /// Re-assign from <paramref name="seed"/> so scoring is replayable.
+        /// </summary>
+        private static void SeedNumberTokens(GameController game, int seed)
+        {
+            foreach (var tile in game.State.Board.Tiles.Values)
+                tile.NumberToken = null;
+
+            NumberTokenLibrary.AssignMissingTokens(game.State.Board, seed);
+        }
+
+        /// <summary>
+        /// <see cref="GameController.PlaceSettlement"/> auto-runs the rest of AI setup
+        /// when phase is <see cref="GamePhase.SetupAiSettlement1"/>. Use a setup phase
+        /// that does not chain so one <see cref="AiController.PlaceSetupSettlement"/>
+        /// call places a single settlement (same idea as injecting pieces in the road suite).
+        /// </summary>
+        private static void ReadyForIsolatedAiSettlement(GameController game)
+        {
+            game.State.Phase = GamePhase.SetupPlayerSettlement1;
+        }
+
+        private static Vertex PlaceAiSetupSettlement(GameController game)
         {
             var before = game.State.Board.VertexBuildings.Keys.ToHashSet();
-            game.State.Phase = GamePhase.SetupAiSettlement1;
             game.Ai.PlaceSetupSettlement(game);
             return game.State.Board.VertexBuildings
                 .Where(kv => kv.Value.owner == PlayerId.Ai && kv.Value.type == BuildingType.Settlement)
@@ -41,7 +64,7 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void PlaceSetupSettlement_AfterSetupAiSettlement1_PlacesExactlyOneValidSetupSpot()
+        public void PlaceSetupSettlement_OnSetupAiSettlement1_FirstPickIsInValidSetupSpots()
         {
             var game = CreateReadyForAiSetup();
             game.State.Phase = GamePhase.SetupAiSettlement1;
@@ -49,11 +72,33 @@ namespace CatanRoguelike.Tests
             var validSpots = game.Placement
                 .GetValidSettlementSpots(game.State.Board, PlayerId.Ai, setupPhase: true)
                 .ToList();
-            Assert.Greater(validSpots.Count, 0, "Expected at least one valid setup settlement spot");
+            Assert.Greater(validSpots.Count, 0);
 
-            var vertex = PlaceAiFirstSetupSettlement(game);
+            var vertex = PlaceAiSetupSettlement(game);
 
             CollectionAssert.Contains(validSpots, vertex);
+            Assert.GreaterOrEqual(
+                game.State.Board.CountBuildings(PlayerId.Ai, BuildingType.Settlement),
+                1);
+        }
+
+        [Test]
+        public void PlaceSetupSettlement_AfterSetupAiSettlement1_PlacesExactlyOneValidSetupSpot()
+        {
+            var game = CreateReadyForAiSetup();
+            ReadyForIsolatedAiSettlement(game);
+
+            var validSpots = game.Placement
+                .GetValidSettlementSpots(game.State.Board, PlayerId.Ai, setupPhase: true)
+                .ToList();
+            Assert.Greater(validSpots.Count, 0, "Expected at least one valid setup settlement spot");
+
+            var vertex = PlaceAiSetupSettlement(game);
+
+            CollectionAssert.Contains(validSpots, vertex);
+            Assert.IsFalse(
+                game.Placement.CanPlaceSettlement(game.State.Board, vertex, PlayerId.Ai, setupPhase: true),
+                "Chosen vertex should now be occupied");
             Assert.AreEqual(1, game.State.Board.CountBuildings(PlayerId.Ai, BuildingType.Settlement));
             Assert.AreEqual(0, game.State.Board.CountBuildings(PlayerId.Human, BuildingType.Settlement));
         }
@@ -67,14 +112,17 @@ namespace CatanRoguelike.Tests
                     .GetValidSettlementSpots(game.State.Board, PlayerId.Human, setupPhase: true)
                     .First());
             game.State.Board.VertexBuildings[occupied] = (BuildingType.Settlement, PlayerId.Human);
-            game.State.Phase = GamePhase.SetupAiSettlement1;
+            ReadyForIsolatedAiSettlement(game);
 
             var validSpots = game.Placement
                 .GetValidSettlementSpots(game.State.Board, PlayerId.Ai, setupPhase: true)
                 .ToList();
             Assert.Greater(validSpots.Count, 0, "Blocking one vertex should still leave AI setup spots");
 
-            var vertex = PlaceAiFirstSetupSettlement(game);
+            foreach (var adjacent in VertexGraph.GetAdjacentVertices(occupied))
+                CollectionAssert.DoesNotContain(validSpots, VertexGraph.Canonicalize(adjacent));
+
+            var vertex = PlaceAiSetupSettlement(game);
 
             CollectionAssert.Contains(validSpots, vertex);
             Assert.GreaterOrEqual(
@@ -86,10 +134,9 @@ namespace CatanRoguelike.Tests
         [Test]
         public void PlaceSetupSettlement_SameSeed_PicksSameVertex()
         {
-            // Scoring is pure (no Random in PlaceSetupSettlement); seed still matters
-            // because map tokens and tile layout come from GameController(seed).
-            Vertex firstRun = RunFirstSetupSettlement(Seed);
-            Vertex secondRun = RunFirstSetupSettlement(Seed);
+            // ScoreSettlementSpot is pure (no Random). Seed still matters for number tokens.
+            Vertex firstRun = RunIsolatedSetupSettlement(Seed);
+            Vertex secondRun = RunIsolatedSetupSettlement(Seed);
 
             Assert.AreEqual(firstRun, secondRun);
         }
@@ -98,7 +145,7 @@ namespace CatanRoguelike.Tests
         public void PlaceSetupSettlement_NoValidSpots_NoOpsWithoutThrowing()
         {
             var game = CreateReadyForAiSetup();
-            game.State.Phase = GamePhase.SetupAiSettlement1;
+            ReadyForIsolatedAiSettlement(game);
             OccupyUntilNoValidSetupSpots(game);
 
             Assert.AreEqual(
@@ -117,7 +164,7 @@ namespace CatanRoguelike.Tests
         public void PlaceSetupSettlement_MultipleSpots_PicksHighestScore()
         {
             var game = CreateReadyForAiSetup();
-            game.State.Phase = GamePhase.SetupAiSettlement1;
+            ReadyForIsolatedAiSettlement(game);
 
             var validSpots = game.Placement
                 .GetValidSettlementSpots(game.State.Board, PlayerId.Ai, setupPhase: true)
@@ -130,14 +177,15 @@ namespace CatanRoguelike.Tests
                 .First()
                 .vertex;
 
-            var placed = PlaceAiFirstSetupSettlement(game);
+            var placed = PlaceAiSetupSettlement(game);
             Assert.AreEqual(expected, placed);
         }
 
-        private static Vertex RunFirstSetupSettlement(int seed)
+        private static Vertex RunIsolatedSetupSettlement(int seed)
         {
             var game = CreateReadyForAiSetup(seed);
-            return PlaceAiFirstSetupSettlement(game);
+            ReadyForIsolatedAiSettlement(game);
+            return PlaceAiSetupSettlement(game);
         }
 
         private static void OccupyUntilNoValidSetupSpots(GameController game)
@@ -155,8 +203,8 @@ namespace CatanRoguelike.Tests
         }
 
         /// <summary>
-        /// Mirrors <c>AiController.ScoreSettlementSpot</c> so tests can assert the public
-        /// placement result without exposing the private scorer.
+        /// Mirrors private <c>AiController.ScoreSettlementSpot</c> so the public placement
+        /// result can be checked without exposing the scorer.
         /// </summary>
         private static float ScoreSettlementSpotLikeAi(GameController game, Vertex vertex)
         {

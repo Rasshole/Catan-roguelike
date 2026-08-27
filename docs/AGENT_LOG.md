@@ -156,7 +156,7 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 
 ## 2026-08-27 (UTC) — AiController.PlaceSetupSettlement EditMode tests
 
-- **`AiControllerSetupSettlementTests`:** after `SetupAiSettlement1`, places exactly one valid setup spot (Catan distance / valid-list membership); same seed → same vertex (scoring is pure, no RNG); no-op when no valid spots; highest-score pick among multiple spots. No production bug found.
+- **`AiControllerSetupSettlementTests`:** valid setup spot + Catan distance; same seed → same vertex after seeding tokens (scoring is pure; `CreateBoard` tokens are otherwise unseeded); no-op when no valid spots; highest-score pick. Isolated count==1 uses a non-chaining setup phase because `PlaceSettlement` auto-runs AI road/settlement 2 from `SetupAiSettlement1`. No production bug found.
 
 ## 2026-08-27 (UTC) — AiController.PlaceSetupRoad EditMode tests
 
