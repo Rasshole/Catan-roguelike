@@ -45,6 +45,34 @@ Smoke: `GameSceneSmokeTests` loader `Game.unity` og tjekker `GameManager` / `Boa
 
 Play harness: `GameScenePlayTests` driver run select → setup → første dag via `GameManager.Controller` (ingen GUI-klik).
 
+## Game-view screenshot (`GameViewCapture`)
+
+Editor-only (`Assets/_Project/Scripts/Editor/GameViewCapture.cs`). Åbner `Game.unity`, går i Play Mode, kører `GameScenePlayHarness` (samme scripted run-select + setup som `GameScenePlayTests`), venter på BoardView/camera, renderer `Camera.main` via `RenderTexture` (1920×1080 PNG) — **ikke** Editor Game-view pixels.
+
+| Kommando | Betydning |
+|----------|-----------|
+| **Catan Roguelike → Capture Game View Screenshot** | MenuItem; efterlader Editoren åben |
+| `CaptureAndQuit` | `-executeMethod` til batchmode/CI; `EditorApplication.Exit(0)` ved success, `1` ved fejl |
+
+Standard PNG-sti: `/workspace/game-view.png`. Override med miljøvariabel `GAME_VIEW_SHOT` eller public const `GameViewCapture.DefaultOutputPath`.
+
+### Editor-menu (interaktiv)
+
+Unity Editor → **Catan Roguelike → Capture Game View Screenshot**.
+
+### CLI (headless Linux + xvfb)
+
+```bash
+export UNITY_EDITOR="${UNITY_EDITOR:-/home/box/Unity/Hub/Editor/6000.3.15f1/Editor/Unity}"
+export GAME_VIEW_SHOT="/workspace/game-view.png"   # valgfri
+
+xvfb-run -a "$UNITY_EDITOR" -batchmode -nographics -projectPath . \
+  -executeMethod CatanRoguelike.Editor.GameViewCapture.CaptureAndQuit \
+  -logFile -
+```
+
+Efter kørsel: Play Mode er sluttet; `Game.unity` er ikke gemt. Delt setup-logik: `GameScenePlayHarness` i Game-asmdef (bruges også af PlayMode-tests).
+
 ### EditMode-tests (Unity CLI)
 
 Primær kommando (fra klon-mappen):
