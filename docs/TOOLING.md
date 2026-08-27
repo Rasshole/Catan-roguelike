@@ -2,7 +2,7 @@
 
 ## `tools/verify-fresh-clone.sh`
 
-Frisk-klon-test: kloner origin til en temp-mappe, åbner projektet i Unity batchmode, tjekker compile/missing scripts, kører EditMode-tests, og sletter mappen bagefter (også ved fejl).
+Frisk-klon-test: kloner origin til en temp-mappe, åbner projektet i Unity batchmode (compile/missing-script check), kører EditMode-tests via **Unity CLI** `unity test`, og sletter mappen bagefter (også ved fejl).
 
 Kør efter hver push til `main`. Det er den eneste garanti for at brugerens `git pull` → åbn → Play kan virke, når `Game.unity` er committed (Fase 0.7).
 
@@ -20,9 +20,29 @@ Miljøvariabler:
 
 | Variabel | Default | Betydning |
 |----------|---------|-----------|
-| `UNITY_EDITOR` | `/home/box/Unity/Hub/Editor/6000.3.15f1/Editor/Unity` | Unity Editor-binær |
-| `UNITY_TIMEOUT` | `180` | sekunder; processen kills så scriptet aldrig hænger |
+| `UNITY_EDITOR` | `/home/box/Unity/Hub/Editor/6000.3.15f1/Editor/Unity` | Unity Editor-binær (batchmode open + fallback tests) |
+| `UNITY_CLI` | (auto) | Unity CLI (`unity test`). Resolves `~/.local/bin/unity`, then `PATH`. |
+| `UNITY_TIMEOUT` | `180` | sekunder for batchmode Editor-open; processen kills så scriptet aldrig hænger |
+| `UNITY_TEST_TIMEOUT` | `300` | sekunder for `unity test --timeout` (EditMode) |
 | `DISPLAY` | (tom) | hvis unset, køres Unity via `xvfb-run -a` |
+
+### EditMode-tests (Unity CLI)
+
+Primær kommando (fra klon-mappen):
+
+```bash
+unity test . --mode EditMode --output /tmp/editmode-results.xml --timeout 300
+```
+
+På VM'en: Unity CLI **1.0.0-beta.6** ved `~/.local/bin/unity`, Editor **6000.3.15f1**.
+
+**Fallback:** Hvis `unity` ikke findes, scriptet falder tilbage til Editor `-batchmode -runTests -testPlatform EditMode`. Det kan **ikke** emitte XML på dette projekt — installér CLI i stedet:
+
+```bash
+curl -fsSL https://public-cdn.cloud.unity3d.com/hub/prod/cli/install.sh | UNITY_CLI_CHANNEL=beta bash
+```
+
+`unity test` exit-koder: `0` = pass, `6` = test-fejl (XML læses alligevel), andre = tooling-fejl.
 
 Origin-URL tages fra `git remote get-url origin` i den mappe scriptet ligger i.
 
@@ -43,8 +63,8 @@ Unity-open FAIL'er altid hvis Editoren selv fejler (compile, missing scripts, no
 
 ### Krav
 
-- `git`, `timeout`, Unity 6000.3.15f1
-- `xvfb-run` når der ingen `DISPLAY` er
+- `git`, `timeout`, Unity Editor **6000.3.15f1**, Unity CLI **1.0.0-beta.6+** (`unity test`)
+- `xvfb-run` når der ingen `DISPLAY` er (batchmode open)
 - Gyldig Unity-licens på maskinen (ellers exit 2)
 
 Temp-mappen ryddes via `trap` ved både PASS, FAIL og licens-fejl.
