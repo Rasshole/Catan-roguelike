@@ -15,6 +15,8 @@ namespace CatanRoguelike.Core.Map
 
         public bool IsEmpty => Building == BuildingType.None;
         public bool IsCoastal;
+        /// <summary>Desert / no-production tile (classic Catan center). Yields nothing in setup bonus.</summary>
+        public bool IsDesert;
 
         public HexTileData(HexCoord coord, ResourceType resource, bool isCoastal = false)
         {

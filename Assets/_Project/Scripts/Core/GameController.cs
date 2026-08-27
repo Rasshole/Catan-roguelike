@@ -115,8 +115,15 @@ namespace CatanRoguelike.Core
                 if (!TryPay(player, cost)) return false;
             }
 
+            bool grantSetupBonus = setup && (
+                State.Phase == GamePhase.SetupAiSettlement2
+                || State.Phase == GamePhase.SetupPlayerSettlement2);
+
             State.Board.VertexBuildings[vertex] = (BuildingType.Settlement, player);
             _lastPlacedSettlement = vertex;
+
+            if (grantSetupBonus)
+                GrantSetupBonus(vertex, player);
 
             if (State.HarborCharterPending && player == PlayerId.Human && IsCoastalVertexOnBoard(vertex))
             {
@@ -397,6 +404,16 @@ namespace CatanRoguelike.Core
             var aInv = State.AiInventory;
             aInv.Add(aiProd);
             State.AiInventory = aInv;
+        }
+
+        private void GrantSetupBonus(Vertex vertex, PlayerId player)
+        {
+            var bonus = SetupBonusCalculator.CalculateForVertex(State.Board, vertex);
+            if (bonus.Total == 0) return;
+
+            var inv = State.GetInventory(player);
+            inv.Add(bonus);
+            State.SetInventory(player, inv);
         }
 
         public void RunAiSetupStep()
