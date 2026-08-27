@@ -21,7 +21,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 ## Bevidst uden for scope (v1)
 
 - **Meta progression** mellem runs (permanente unlocks)
-- **Save / load**
+- **Save / load** — **første slice (Fase 2.1):** versioneret JSON (`SaveGame`, format v1), én slot `save.json`, IMGUI Save/Load på `PlaceholderUI`, EditMode round-trip test. Autosave ved nat, multi-slot menu og RNG roll-tællere venter.
 - **Act 2** progression (flere yield-rolls, større kort over tid)
 - **Largest army** som VP-kilde
 - **Per-tile nummer-tokens** (klassisk Catan 2–12) — produktion bruger abstrakte daglige rolls per ressource

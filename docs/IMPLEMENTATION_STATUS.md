@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-27 — P3 PlayMode scene smoke tests (`GameSceneSmokeTests`).
+Last updated: 2026-08-27 — P3 PlayMode scene smoke tests + Fase 2.1 save/load first slice (`SaveGame`, `SaveGameFile`, `SaveGameRoundTripTests`).
 
 ## Done (playable prototype scope)
 
@@ -31,13 +31,13 @@ Last updated: 2026-08-27 — P3 PlayMode scene smoke tests (`GameSceneSmokeTests
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**)
+- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**, **SaveGame round-trip JSON (format v1)**)
 - [x] PlayMode smoke tests (`GameSceneSmokeTests` — `Game.unity` boot, required MonoBehaviours, `GameManager.Controller` after Start)
 
 ## Explicitly out of scope
 
 - [ ] Meta progression between runs
-- [ ] Save/load
+- [x] Save/load — **first slice:** JSON format v1, single slot, IMGUI Save/Load, round-trip test (autosave, slots, RNG roll counters deferred)
 - [ ] Largest army VP
 - [ ] Per-tile number tokens (classic Catan dice numbers)
 

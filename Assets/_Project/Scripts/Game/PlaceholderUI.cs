@@ -144,6 +144,9 @@ namespace CatanRoguelike.Game
             if (state.Phase == GamePhase.LevelUpChoice)
                 DrawLevelUp();
 
+            if (!state.Winner.HasValue)
+                DrawSaveLoadButtons();
+
             GUILayout.EndScrollView();
             GUILayout.EndArea();
         }
@@ -345,6 +348,26 @@ namespace CatanRoguelike.Game
             var roads = OpponentRoadSelector.ListOpponentRoads(state.Board, PlayerId.Human);
             _selectedRoadIndex = OpponentRoadSelector.ClampIndex(roads, _selectedRoadIndex);
             return OpponentRoadSelector.SelectRoad(roads, _selectedRoadIndex);
+        }
+
+        private void DrawSaveLoadButtons()
+        {
+            GUILayout.Space(8);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Save"))
+            {
+                var manager = FindFirstObjectByType<GameManager>();
+                if (manager != null)
+                    manager.SaveRun();
+            }
+
+            if (GUILayout.Button("Load"))
+            {
+                var manager = FindFirstObjectByType<GameManager>();
+                if (manager != null)
+                    manager.TryLoadRun();
+            }
+            GUILayout.EndHorizontal();
         }
 
         private static string FormatResources(string label, ResourceBundle bundle)
