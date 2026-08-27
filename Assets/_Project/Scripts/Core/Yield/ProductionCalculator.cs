@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Leaders;
@@ -11,10 +12,11 @@ namespace CatanRoguelike.Core.Yield
         public static ResourceBundle CalculateForPlayer(
             GameState state,
             PlayerId player,
-            System.Collections.Generic.Dictionary<ResourceType, int> rolls)
+            Dictionary<ResourceType, int> resourceRolls)
         {
             var board = state.Board;
             var production = ResourceBundle.Zero;
+            var diceRolls = state.TodayDiceRolls;
 
             foreach (var kvp in board.VertexBuildings)
             {
@@ -27,13 +29,17 @@ namespace CatanRoguelike.Core.Yield
                 foreach (var hex in VertexGraph.GetHexesForVertex(kvp.Key))
                 {
                     if (!board.TryGetTile(hex, out var tile)) continue;
+                    if (tile.IsDesert || !tile.NumberToken.HasValue) continue;
                     if (IsBlocked(state, hex, player)) continue;
                     if (state.EventStormTile.HasValue && state.EventStormTile.Value.Equals(hex)) continue;
-                    if (!rolls.TryGetValue(tile.Resource, out int rollValue)) continue;
+                    if (!resourceRolls.TryGetValue(tile.Resource, out int rollValue) || rollValue <= 0) continue;
+                    int hits = CountDiceHits(tile.NumberToken.Value, diceRolls);
+                    if (hits <= 0) continue;
 
-                    int amount = isCity
+                    int perHit = isCity
                         ? (int)Math.Ceiling(rollValue * 1.5)
                         : rollValue;
+                    int amount = perHit * hits;
 
                     if (state.EventStoneDouble && tile.Resource == ResourceType.Stone)
                         amount *= 2;
@@ -52,8 +58,7 @@ namespace CatanRoguelike.Core.Yield
                 if (player == PlayerId.Human && isCity && state.HasPerk(LevelUpPerkId.CityProductionBoost)
                     && bestOnVertex > 0)
                 {
-                    // +1 on best resource already counted per hex; add flat +1 once per city
-                    production.Add(ResourceType.Wheat, 0); // no-op placeholder — apply below
+                    production.Add(ResourceType.Wheat, 0);
                 }
             }
 
@@ -67,7 +72,9 @@ namespace CatanRoguelike.Core.Yield
                     foreach (var hex in VertexGraph.GetHexesForVertex(kvp.Key))
                     {
                         if (!board.TryGetTile(hex, out var tile)) continue;
-                        if (!rolls.TryGetValue(tile.Resource, out int rv)) continue;
+                        if (tile.IsDesert || !tile.NumberToken.HasValue) continue;
+                        if (!resourceRolls.TryGetValue(tile.Resource, out int rv) || rv <= 0) continue;
+                        if (CountDiceHits(tile.NumberToken.Value, state.TodayDiceRolls) <= 0) continue;
                         int amt = (int)Math.Ceiling(rv * 1.5);
                         if (amt > bestAmt) { bestAmt = amt; best = tile.Resource; }
                     }
@@ -76,6 +83,21 @@ namespace CatanRoguelike.Core.Yield
             }
 
             return production;
+        }
+
+        private static int CountDiceHits(int token, IReadOnlyList<int> diceRolls)
+        {
+            if (diceRolls == null || diceRolls.Count == 0)
+                return 0;
+
+            int hits = 0;
+            foreach (var roll in diceRolls)
+            {
+                if (roll == token)
+                    hits++;
+            }
+
+            return hits;
         }
 
         private static bool IsBlocked(GameState state, HexCoord hex, PlayerId player)

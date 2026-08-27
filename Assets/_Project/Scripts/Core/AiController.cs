@@ -8,6 +8,7 @@ using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Victory;
+using CatanRoguelike.Core.Yield;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 
@@ -258,7 +259,9 @@ namespace CatanRoguelike.Core
             foreach (var hex in VertexGraph.GetHexesForVertex(vertex))
             {
                 if (!game.State.Board.TryGetTile(hex, out var tile)) continue;
+                if (tile.IsDesert || !tile.NumberToken.HasValue) continue;
                 score += ResourceValue(tile.Resource);
+                score += NumberTokenLibrary.GetPipWeight(tile.NumberToken.Value);
                 if (game.State.TodayRolls.TryGetValue(tile.Resource, out int roll))
                     score += roll;
             }
@@ -308,8 +311,16 @@ namespace CatanRoguelike.Core
                 .SelectMany(kv => VertexGraph.GetHexesForVertex(kv.Key))
                 .Where(h => game.State.Board.TryGetTile(h, out _))
                 .GroupBy(h => h)
-                .OrderByDescending(g => g.Count())
-                .Select(g => g.Key)
+                .Select(g =>
+                {
+                    game.State.Board.TryGetTile(g.Key, out var tile);
+                    int pip = tile.NumberToken.HasValue
+                        ? NumberTokenLibrary.GetPipWeight(tile.NumberToken.Value)
+                        : 1;
+                    return (coord: g.Key, score: g.Count() * pip);
+                })
+                .OrderByDescending(x => x.score)
+                .Select(x => x.coord)
                 .FirstOrDefault();
 
             if (humanTiles.Equals(default(HexCoord))) return null;

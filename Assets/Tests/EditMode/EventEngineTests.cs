@@ -64,6 +64,8 @@ namespace CatanRoguelike.Tests
             var state = CreateState();
             PlaceTwoSettlementsOnHex(state.Board, BrickHex, PlayerId.Human);
             var rolls = Rolls(0, 2, 0, 0, 0);
+            state.Board.Tiles[BrickHex].NumberToken = 8;
+            state.TodayDiceRolls = new List<int> { 8 };
 
             state.EventStormTile = BrickHex;
             state.ActiveEvent = EventId.Storm;
@@ -71,7 +73,7 @@ namespace CatanRoguelike.Tests
             var production = ProductionCalculator.CalculateForPlayer(state, PlayerId.Human, rolls);
 
             Assert.AreEqual(0, production.Brick,
-                "Storm tile should produce nothing even when brick roll is high");
+                "Storm tile should produce nothing even when brick roll and dice match");
         }
 
         [Test]
@@ -96,6 +98,8 @@ namespace CatanRoguelike.Tests
             var state = CreateState();
             PlaceTwoSettlementsOnHex(state.Board, StoneHex, PlayerId.Human);
             var rolls = Rolls(0, 0, 0, 0, 1);
+            state.Board.Tiles[StoneHex].NumberToken = 10;
+            state.TodayDiceRolls = new List<int> { 10 };
             var engine = new EventEngine();
 
             engine.ApplyEvent(state, EventId.GoldRush);
@@ -103,7 +107,7 @@ namespace CatanRoguelike.Tests
             Assert.IsTrue(state.EventStoneDouble);
             var production = ProductionCalculator.CalculateForPlayer(state, PlayerId.Human, rolls);
             Assert.GreaterOrEqual(production.Stone, 2,
-                "Gold Rush should double stone production from adjacent settlements");
+                "Gold Rush should double stone production when dice match token");
         }
 
         [Test]

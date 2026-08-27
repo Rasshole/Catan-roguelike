@@ -119,6 +119,7 @@ namespace CatanRoguelike.Game
 
             var view = go.AddComponent<HexTileView>();
             view.Initialize(data, renderer);
+            view.RefreshNumberToken(data);
             return view;
         }
 
@@ -127,7 +128,10 @@ namespace CatanRoguelike.Game
             foreach (var kvp in state.Board.Tiles)
             {
                 if (_tiles.TryGetValue(kvp.Key, out var view))
+                {
                     view.Refresh(kvp.Value);
+                    view.RefreshNumberToken(kvp.Value);
+                }
             }
 
             RefreshBuildings(state);

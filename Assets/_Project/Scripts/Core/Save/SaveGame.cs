@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using CatanRoguelike.Core.Yield;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Cards;
@@ -90,6 +91,12 @@ namespace CatanRoguelike.Core.Save
                 AiInventory = ToBundleSaveData(state.AiInventory),
                 TomorrowRolls = ToRollSaveList(state.TomorrowRolls),
                 TodayRolls = ToRollSaveList(state.TodayRolls),
+                TomorrowDiceRolls = state.TomorrowDiceRolls.Count > 0
+                    ? new List<int>(state.TomorrowDiceRolls)
+                    : null,
+                TodayDiceRolls = state.TodayDiceRolls.Count > 0
+                    ? new List<int>(state.TodayDiceRolls)
+                    : null,
                 PlayerHand = new List<CardId>(state.PlayerHand),
                 AiHand = new List<CardId>(state.AiHand),
                 ShopDeals = state.ShopDeals.Select(ToShopDealSaveData).ToList(),
@@ -139,6 +146,12 @@ namespace CatanRoguelike.Core.Save
             state.AiInventory = ToResourceBundle(data.AiInventory);
             state.TomorrowRolls = ToRollDictionary(data.TomorrowRolls);
             state.TodayRolls = ToRollDictionary(data.TodayRolls);
+            state.TomorrowDiceRolls = data.TomorrowDiceRolls != null
+                ? new List<int>(data.TomorrowDiceRolls)
+                : new List<int>();
+            state.TodayDiceRolls = data.TodayDiceRolls != null
+                ? new List<int>(data.TodayDiceRolls)
+                : new List<int>();
 
             state.PlayerHand.Clear();
             state.PlayerHand.AddRange(data.PlayerHand ?? new List<CardId>());
@@ -213,7 +226,9 @@ namespace CatanRoguelike.Core.Save
                     Building = tile.Building,
                     Owner = tile.Owner,
                     VertexIndex = tile.VertexIndex,
-                    IsCoastal = tile.IsCoastal
+                    IsCoastal = tile.IsCoastal,
+                    IsDesert = tile.IsDesert,
+                    NumberToken = tile.NumberToken
                 });
             }
 
@@ -254,7 +269,9 @@ namespace CatanRoguelike.Core.Save
                     HasRobber = tileData.HasRobber,
                     Building = tileData.Building,
                     Owner = tileData.Owner,
-                    VertexIndex = tileData.VertexIndex
+                    VertexIndex = tileData.VertexIndex,
+                    IsDesert = tileData.IsDesert,
+                    NumberToken = tileData.NumberToken
                 };
                 board.Tiles[coord] = tile;
             }
@@ -293,7 +310,9 @@ namespace CatanRoguelike.Core.Save
                     HasRobber = tileData.HasRobber,
                     Building = tileData.Building,
                     Owner = tileData.Owner,
-                    VertexIndex = tileData.VertexIndex
+                    VertexIndex = tileData.VertexIndex,
+                    IsDesert = tileData.IsDesert,
+                    NumberToken = tileData.NumberToken
                 };
                 board.Tiles[coord] = tile;
             }

@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-27 — Fase 2.4 Act progression + save/load, setup-bonus, largest army (main).
+Last updated: 2026-08-27 — Fase 2.5 per-tile number tokens (hybrid model) on top of 2.4 Act progression.
 
 ## Done (playable prototype scope)
 
@@ -13,8 +13,9 @@ Last updated: 2026-08-27 — Fase 2.4 Act progression + save/load, setup-bonus, 
 - [x] Setup: AI 2 settlements + roads, then player 2 + roads
 - [x] **Setup-bonus** — 2. settlement (spiller + AI) giver 1 af hver tilstødende ressource; desert springes over (`SetupBonusCalculator`)
 - [x] Day/night turn loop
-- [x] Yield rolls (15/55/25, max 1×0 and 1×2, 50/50 tie-break)
-- [x] Rolls at night, production uses today's rolls
+- [x] **Hybrid production (Fase 2.5)** — per-tile number tokens (2–12) gate which hexes fire; per-resource nightly rolls remain weather multipliers; 2d6 sums per yield pass (Act 2+ = 2 dice). See `docs/DESIGN_NUMBER_TOKENS.md`.
+- [x] Yield rolls (15/55/25, max 1×0 and 1×2, 50/50 tie-break; Act 3 max 3)
+- [x] Rolls + dice at night, production uses today's rolls + dice
 - [x] Multi-hex production per settlement/city
 - [x] Catan placement rules (distance, roads, connectivity)
 - [x] Catan costs + threshold pricing
@@ -34,14 +35,14 @@ Last updated: 2026-08-27 — Fase 2.4 Act progression + save/load, setup-bonus, 
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, **setup-bonus (2nd settlement, desert skip)**, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **Largest Army (grant/tie/overtake/breakdown/save)**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **AI Largest Army Knight priority**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**, **SaveGame round-trip JSON (format v1)**, **ActProgression thresholds + yield/events/AI/map expansion**)
+- [x] EditMode tests (rolls, **number tokens (assignment, desert, hybrid production, expansion, save round-trip, AI/event robber targeting)**, placement, production, **setup-bonus (2nd settlement, desert skip)**, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **Largest Army (grant/tie/overtake/breakdown/save)**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **AI Largest Army Knight priority**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**, **SaveGame round-trip JSON (format v1)**, **ActProgression thresholds + yield/events/AI/map expansion**)
 - [x] PlayMode smoke tests (`GameSceneSmokeTests` — `Game.unity` boot, required MonoBehaviours, `GameManager.Controller` after Start)
 
 ## Explicitly out of scope
 
 - [ ] Meta progression between runs
-- [x] Save/load — **first slice:** JSON format v1, single slot, IMGUI Save/Load, round-trip test (autosave, slots, RNG roll counters deferred). Army fields are optional v1 properties with defaults.
-- [ ] Per-tile number tokens (classic Catan dice numbers)
+- [x] Save/load — **first slice:** JSON format v1, single slot, IMGUI Save/Load, round-trip test (autosave, slots, RNG roll counters deferred). Army fields are optional v1 properties with defaults. **Number tokens + dice rolls** are optional v1 tile/state fields.
+- [x] Per-tile number tokens (classic Catan 2–12) — **hybrid model (b):** tokens + resource rolls + 2d6; see `docs/DESIGN_NUMBER_TOKENS.md`
 
 ## Known gaps (see `MISSING_AND_GAPS.md` for full list)
 
@@ -76,9 +77,11 @@ Last updated: 2026-08-27 — Fase 2.4 Act progression + save/load, setup-bonus, 
 
 | Act | Days | Yield | Events | AI | Map |
 |-----|------|-------|--------|-----|-----|
-| 1 | 1–5 | 1 roll pass, max 2 | 22% uniform | 1 night card play | start size |
-| 2 | 6–10 | 2 passes summed, max 2 | 32%, hard events weighted | 2 night card plays, smarter pick | Small→Medium |
-| 3 | 11+ | 2 passes summed, max 3 | 42%, harder weights | +1 AI draw, wider pool | →Large if not already |
+| 1 | 1–5 | 1 resource roll pass + 1× 2d6, max mult 2 | 22% uniform | 1 night card play | start size |
+| 2 | 6–10 | 2 resource passes summed + 2× 2d6, max mult 2 | 32%, hard events weighted | 2 night card plays, smarter pick | Small→Medium |
+| 3 | 11+ | 2 resource passes summed + 2× 2d6, max mult 3 | 42%, harder weights | +1 AI draw, wider pool | →Large if not already |
+
+Production: hex yields only when a **dice sum matches its number token** and the **resource multiplier > 0** (hybrid). IMGUI shows tokens on hexes + dice line.
 
 Constants in `BalanceConfig`; logic in `ActProgression`. IMGUI shows current Act + unlock line.
 

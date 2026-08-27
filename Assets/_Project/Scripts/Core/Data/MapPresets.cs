@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Yield;
 
 namespace CatanRoguelike.Core.Data
 {
@@ -166,6 +167,8 @@ namespace CatanRoguelike.Core.Data
             foreach (var coord in allCoords)
                 board.Tiles[coord].IsCoastal = IsCoastalTile(coord, allCoords);
 
+            NumberTokenLibrary.AssignMissingTokens(board);
+
             return added;
         }
 
@@ -196,6 +199,8 @@ namespace CatanRoguelike.Core.Data
 
             if (size == MapSize.Large && board.TryGetTile(new HexCoord(0, 0), out var center))
                 center.IsDesert = true;
+
+            NumberTokenLibrary.AssignMissingTokens(board);
 
             return board;
         }
