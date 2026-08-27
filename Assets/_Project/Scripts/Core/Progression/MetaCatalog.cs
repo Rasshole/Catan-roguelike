@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CatanRoguelike.Core.Cards;
 using CatanRoguelike.Core.Data;
@@ -14,10 +15,8 @@ namespace CatanRoguelike.Core.Progression
     {
         public const int WinBonusStars = 2;
 
-        public static readonly IReadOnlyList<MetaUnlockId> DefaultUnlocked = new[]
-        {
-            // Small map, Merchant + Pioneer, and all 5 uniques are always available without ids.
-        };
+        // Small map, Merchant + Pioneer, and all 5 uniques are always available without ids.
+        public static readonly IReadOnlyList<MetaUnlockId> DefaultUnlocked = Array.Empty<MetaUnlockId>();
 
         public static readonly IReadOnlyDictionary<MetaUnlockId, MetaUnlockDefinition> All =
             new Dictionary<MetaUnlockId, MetaUnlockDefinition>
