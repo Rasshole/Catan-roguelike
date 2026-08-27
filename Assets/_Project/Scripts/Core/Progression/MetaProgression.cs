@@ -109,11 +109,14 @@ namespace CatanRoguelike.Core.Progression
 
         public bool TryAwardRun(int runSeed, int humanVp, int dayNumber, PlayerId winner, out int starsEarned)
         {
-            starsEarned = CalculateStarsEarned(humanVp, dayNumber, winner);
             var key = BuildRunAwardKey(runSeed, humanVp, dayNumber, winner);
             if (!_awardedRunKeys.Add(key))
+            {
+                starsEarned = 0;
                 return false;
+            }
 
+            starsEarned = CalculateStarsEarned(humanVp, dayNumber, winner);
             Stars += starsEarned;
             return true;
         }
