@@ -100,6 +100,11 @@ Set on **GameManager → Map Size** in the inspector (or re-run Setup Game Scene
 | UI | `PlaceholderUI` — stars + Spend/Unlocks on map select and game over |
 | Tests | `MetaProgressionTests` — award formula, persist/load, defaults, purchase, isolation from run save |
 
+## Sim-runner (measurement)
+
+- [x] **Compile fix** — `tools/sim-runner` references Newtonsoft.Json 13.0.3 (Fase 2.6); was broken on `MetaSave`/`SaveGame`
+- [ ] **Balance baseline** — `endAct` + summary metrics landed; win-rate / day-ceiling targets not met yet (see `ROADMAP_V3.md`)
+
 ## How to test when back at PC
 
 1. Open in **Unity 6.3 LTS (6000.3.15f1)**

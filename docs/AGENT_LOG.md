@@ -55,3 +55,7 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 
 **Næste:** implementér balance-pass per `ROADMAP_V3.md` acceptance.
 
+## 2026-08-27 (UTC) — sim-runner unblock + metrics
+
+- `tools/sim-runner`: Newtonsoft.Json 13.0.3 (Fase 2.6 compile fix). `endAct` + summary `max_days` / `medianMaxDaysPlayerVp`. Balance knobs unchanged.
+
