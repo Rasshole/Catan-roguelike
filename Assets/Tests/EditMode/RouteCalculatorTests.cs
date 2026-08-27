@@ -127,14 +127,14 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void HexLoop_SixRoads_VertexDfsMeasuresCycleAsFive()
+        public void HexLoop_SixRoads_CountsAllSixEdges()
         {
             var board = MapPresets.CreateBoard(MapSize.Small);
             var edges = PlaceHexPerimeter(board, PlayerId.Human, new HexCoord(0, 0), 0);
 
             Assert.AreEqual(6, edges.Count);
-            Assert.AreEqual(5, RouteCalculator.LongestRoadLength(board, PlayerId.Human),
-                "vertex-DFS cannot re-enter the start vertex, so a 6-edge cycle reports 5");
+            Assert.AreEqual(6, RouteCalculator.LongestRoadLength(board, PlayerId.Human),
+                "a closed hex loop counts every road in the cycle");
         }
 
         [Test]
