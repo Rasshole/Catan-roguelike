@@ -71,7 +71,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 - DFS i `RouteCalculator`; ≥5 veje = 2 VP ✓
 - **LongRoadBonus** — +1 VP oven i de 2 når human har perk og longest; forsvinder ved tab af longest ✓
 - **Modstander-settlement/city splitter ruten** (klassisk Catan) ✓ — egne bygninger splitter ikke
-- Edge cases på forgreninger/loops kan stadig være forkerte (vertex-DFS, ikke edge-trail)
+- Lukkede hex-loops tæller alle kanter (komponent med max degree 2); forgreninger bruger længste simple sti ✓
 
 ### Robber
 - Tile-block + steal på dag-flytning og Knight ✓
