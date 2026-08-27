@@ -79,3 +79,10 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **RNG roll counters:** not added — existing roll lists sufficient for resume; documented in `SaveGame` remarks.
 - **Tests:** `SaveGameSlotsTests` (autosave hook, slot isolation, legacy load, metadata). **312/312** `dotnet test tools/core-tests`.
 
+## 2026-08-27 — First-run onboarding beats (IMGUI)
+
+- **`OnboardingCopy`** — pure Core helper: phase banners (map, leader, draft, setup, day-1 night/day, game over), hybrid-yield hint, stars persist line. `OnboardingTipsStore` uses `PlayerPrefs` (default on).
+- **`PlaceholderUI`** — Tips toggle + cyan banners; hybrid hint near dice on first night; game-over meta line after star award.
+- **Copy fixes:** Forecast card text mentions 2d6 reroll; Famine + Good Harvest event descriptions say "tomorrow" (matches `TomorrowRolls`).
+- **Tests:** `OnboardingCopyTests`, Famine message assertion. **323/323** `dotnet test tools/core-tests`.
+

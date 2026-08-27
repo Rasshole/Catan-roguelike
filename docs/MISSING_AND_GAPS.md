@@ -51,17 +51,23 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 - **Risky deal (3. handel)** — core wired; IMGUI shop-knapper viser konsekvens via `ShopDealDisplay` (røver → bedste felt) ✓
 - **Effektiv shop-pris** — UI viser kort årsag ved siden af hver handel (`ShopDealPricing`: port 2:1 / port 3:1 / leader / event / perk / base) ✓
 
+### Onboarding (first run)
+- **Phase banners** — `OnboardingCopy` one-liners på map, leader, draft, setup, dag 1 nat/dag, game over ✓
+- **Hybrid hint** — dag 1 nat ved dice-linjen (token + weather + 2d6) ✓
+- **Tips toggle** — `OnboardingTipsStore` via `PlayerPrefs`, default on, uden for save/meta ✓
+- **Play Mode feel** — fuld visuel QA kræver stadig Mac (IMGUI copy testbar via EditMode)
+
 ### Kort
 - Alle **12 kort** har logik i `CardEngine` ✓
 - **Bandit Raid** — IMGUI vej-vælger (◀/▶ + label) i nat-fase når kortet er valgt ✓
 - **Harbor Charter pending** — cyan statuslinje mens `HarborCharterPending` ✓
 - **Embargo-status** — rød statuslinje med ressource + dage tilbage mens aktiv ✓
-- **Forecast** — reruller alt (korrekt), men parameter ignoreres i UI
+- **Forecast** — reruller alt inkl. 2d6; kort-tekst og UI (ingen resource-picker) matcher ✓
 
 ### Events (~22 % per nat i Act 1; skalerer med act)
 - 6 events i `EventEngine` ✓
 - **Board overlays** for storm/famine/gold rush/good harvest via `EventBoardVisual` + `HexTileView` (market day / bandit raid use text or robber only) ✓
-- **Famine** påvirker `TomorrowRolls`; UI-tekst kan være misvisende om timing
+- **Famine / Good Harvest** — påvirker `TomorrowRolls`; event-tekst siger "tomorrow" ✓
 - Nat-event **BanditRaid** ≠ kort **BanditRaid** (forskellige effekter)
 
 ### Leaders & progression
