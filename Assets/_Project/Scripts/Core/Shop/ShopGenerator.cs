@@ -27,13 +27,8 @@ namespace CatanRoguelike.Core.Shop
             RiskDescription = riskDescription;
         }
 
-        public string Format(int effectiveGive = -1)
-        {
-            int give = effectiveGive >= 0 ? effectiveGive : GiveAmount;
-            string risky = IsRisky ? " ⚠ RISKY" : "";
-            string bonus = effectiveGive >= 0 && effectiveGive < GiveAmount ? " (bonus)" : "";
-            return $"Give {give} {Give} → Get {ReceiveAmount} {Receive}{bonus}{risky}";
-        }
+        public string Format(int effectiveGive = -1) =>
+            ShopDealDisplay.FormatTradeSummary(this, effectiveGive);
 
         public override string ToString() => Format();
     }
@@ -81,7 +76,7 @@ namespace CatanRoguelike.Core.Shop
                     give, rate, receive, 1,
                     risky: risky,
                     riskDescription: risky
-                        ? "Robber moves to your best tile when you buy."
+                        ? ShopDealDisplay.RiskyRobberConsequence
                         : ""));
             }
 

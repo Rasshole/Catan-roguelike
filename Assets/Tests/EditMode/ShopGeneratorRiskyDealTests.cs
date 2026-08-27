@@ -16,7 +16,7 @@ namespace CatanRoguelike.Tests
 
         private static ShopDeal CreateRiskyDeal(ResourceType give = ResourceType.Wood) =>
             new ShopDeal(give, ShopGenerator.RiskyTradeRate, ResourceType.Brick, 1,
-                risky: true, riskDescription: "Robber moves to your best tile when you buy.");
+                risky: true, riskDescription: ShopDealDisplay.RiskyRobberConsequence);
 
         [Test]
         public void TryPurchase_RiskyDeal_Human_PlacesRobberOnHumanBestTile()
