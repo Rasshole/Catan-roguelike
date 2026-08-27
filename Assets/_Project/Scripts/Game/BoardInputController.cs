@@ -73,7 +73,7 @@ namespace CatanRoguelike.Game
                 var cities = _controller.GetUpgradeableCities(player).ToList();
                 _hoverVertex = FindNearestVertex(hit.Value, cities, scale);
                 if (_hoverVertex.HasValue)
-                    SpawnVertexMarker(_hoverVertex.Value, CityColor, 0.2f, scale);
+                    SpawnVertexMarker(_hoverVertex.Value, CityColor, scale, isCity: true);
                 return;
             }
 
@@ -82,7 +82,7 @@ namespace CatanRoguelike.Game
                 var settlements = _controller.GetValidSettlements(player).ToList();
                 _hoverVertex = FindNearestVertex(hit.Value, settlements, scale);
                 if (_hoverVertex.HasValue)
-                    SpawnVertexMarker(_hoverVertex.Value, ValidVertexColor, 0.18f, scale);
+                    SpawnVertexMarker(_hoverVertex.Value, ValidVertexColor, scale, isCity: false);
             }
 
             if (_mode == BuildMode.Road || ShouldPickRoad())
@@ -232,16 +232,15 @@ namespace CatanRoguelike.Game
             return best;
         }
 
-        private void SpawnVertexMarker(Vertex v, Color color, float size, float scale)
+        private void SpawnVertexMarker(Vertex v, Color color, float scale, bool isCity)
         {
             var (x, z) = HexMath.VertexToWorldPosition(v, scale);
-            var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            go.transform.SetParent(_highlightsRoot, false);
-            go.transform.position = new Vector3(x, 0.22f, z);
-            go.transform.localScale = Vector3.one * size;
-            Destroy(go.GetComponent<Collider>());
-            var r = go.GetComponent<Renderer>();
-            r.material = BuiltInMaterials.Create(color);
+            var position = new Vector3(x, 0f, z);
+            float hexTopY = boardView.TileHeight;
+
+            GameObject go = isCity
+                ? PlacementMarkerVisuals.CreateCityGhost(_highlightsRoot, position, color, hexTopY)
+                : PlacementMarkerVisuals.CreateSettlementGhost(_highlightsRoot, position, color, hexTopY);
             _highlights.Add(go);
         }
 
@@ -252,14 +251,13 @@ namespace CatanRoguelike.Game
             var (bx, bz) = HexMath.VertexToWorldPosition(e.B, scale);
             float length = Vector3.Distance(new Vector3(ax, 0, az), new Vector3(bx, 0, bz));
 
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.transform.SetParent(_highlightsRoot, false);
-            go.transform.position = new Vector3(mx, 0.18f, mz);
-            go.transform.rotation = Quaternion.Euler(0f, HexMath.EdgeAngle(e), 0f);
-            go.transform.localScale = new Vector3(0.1f, 0.06f, length * 0.95f);
-            Destroy(go.GetComponent<Collider>());
-            var r = go.GetComponent<Renderer>();
-            r.material = BuiltInMaterials.Create(color);
+            var go = PlacementMarkerVisuals.CreateRoadGhost(
+                _highlightsRoot,
+                new Vector3(mx, 0f, mz),
+                HexMath.EdgeAngle(e),
+                length,
+                color,
+                boardView.TileHeight);
             _highlights.Add(go);
         }
 
