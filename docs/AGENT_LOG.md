@@ -148,3 +148,9 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 
 - **`GetBoardBoundingRadius`:** use built `_tiles.Keys`, else live `BoardState` keys; return `0` before init so `MinOrbitDistance` applies. Removed per-frame `MapPresets.CreateBoard` fallback (CS0103 + allocation).
 
+## 2026-08-27 (UTC) — TableCamera distance ratio retune
+
+- **`DistanceToRadiusRatio`:** 0.78 → **2.0** (~2.16× radius with margin). Small orbit ~6.8 (> cluster radius ~3.1) so the 7-hex flower is not clipped; still closer than old fixed 8 for modest fill in the HUD-free region.
+- **`TableCamera`:** enforce `nearClipPlane` ≥ 0.3 to reduce hex-top z-fighting at orbit pitch.
+- **Tests:** orbit distance > board radius for Small/Large; ordering only, no magic radius floats.
+

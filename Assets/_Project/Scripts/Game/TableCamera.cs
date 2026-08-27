@@ -16,6 +16,8 @@ namespace CatanRoguelike.Game
         private void Awake()
         {
             _camera = GetComponent<Camera>();
+            if (_camera.nearClipPlane < 0.3f)
+                _camera.nearClipPlane = 0.3f;
             if (boardView == null)
                 boardView = FindFirstObjectByType<BoardView>();
         }
