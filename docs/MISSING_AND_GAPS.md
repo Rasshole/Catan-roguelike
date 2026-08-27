@@ -112,7 +112,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 | Emne | Status |
 |------|--------|
 | **IMGUI** (`PlaceholderUI`) | Fungerer, men er placeholder — ikke uGUI/UI Toolkit |
-| **3D-art** | Cylindre/kuber + **cream number-token chips** (flat disc under `TextMesh`; 6/8 warmer rim) — ikke fuld bordspils-look |
+| **3D-art** | Cylindre/kuber + **cream number-token chips** (flat disc under `TextMesh`; 6/8 warmer rim); **wood table disk + dark sea ring** placeholders under hex cluster — ikke fuld bordspils-look |
 | **Game.unity** | Committed (`Assets/_Project/Scenes/Game.unity`) |
 | **Render pipeline** | **Built-in RP** (beslutning 0.5). Ingen URP-pakke. Se `docs/DESIGN_RENDERING.md` |
 | **Map size** | Startmenu + inspector default |
