@@ -34,12 +34,15 @@ namespace CatanRoguelike.Core
         public event Action OnBoardRebuilt;
 
         public int RunSeed { get; }
+        public MetaProgression Meta { get; private set; }
 
         private readonly Random _random;
         private Vertex? _lastPlacedSettlement;
+        private bool _metaStartCardGranted;
 
-        public GameController(int? seed = null, MapSize mapSize = MapSize.Small)
+        public GameController(int? seed = null, MapSize mapSize = MapSize.Small, MetaProgression meta = null)
         {
+            Meta = meta;
             RunSeed = seed ?? 0;
             var board = MapPresets.CreateBoard(mapSize);
             var state = new GameState(board) { MapSize = mapSize, Phase = GamePhase.RunSelectMap };
@@ -57,9 +60,12 @@ namespace CatanRoguelike.Core
             Events = new EventEngine(seed);
         }
 
-        private GameController(int runSeed, GameState state, Vertex? lastPlacedSettlement)
+        public void SetMeta(MetaProgression meta) => Meta = meta;
+
+        private GameController(int runSeed, GameState state, Vertex? lastPlacedSettlement, MetaProgression meta = null)
         {
             RunSeed = runSeed;
+            Meta = meta;
             State = state;
             _random = new Random(runSeed);
             _lastPlacedSettlement = lastPlacedSettlement;
@@ -88,6 +94,12 @@ namespace CatanRoguelike.Core
         public void SelectMap(MapSize mapSize)
         {
             if (State.Phase != GamePhase.RunSelectMap) return;
+            if (Meta != null && !Meta.IsMapAvailable(mapSize))
+            {
+                State.StatusMessage = $"{MapPresets.GetDisplayName(mapSize)} is locked — spend stars in Unlocks.";
+                NotifyChanged();
+                return;
+            }
 
             var board = MapPresets.CreateBoard(mapSize);
             State.ResetForNewMap(board, mapSize);
@@ -316,18 +328,33 @@ namespace CatanRoguelike.Core
         public void SelectLeader(LeaderId leader)
         {
             if (State.Phase != GamePhase.RunSelectLeader) return;
+            if (Meta != null && !Meta.IsLeaderAvailable(leader))
+            {
+                State.StatusMessage = $"{LeaderLibrary.Get(leader).Name} is locked — spend stars in Unlocks.";
+                NotifyChanged();
+                return;
+            }
+
             State.Leader = leader;
             State.Phase = GamePhase.RunSelectDraft;
-            State.StatusMessage = $"Leader: {LeaderLibrary.Get(leader).Name}. Draft {RunProgression.DraftPickCount} uniques.";
+            State.StatusMessage =
+                $"Leader: {LeaderLibrary.Get(leader).Name}. Draft {GetRequiredDraftCount()} uniques.";
             NotifyChanged();
         }
 
         public void ToggleDraftUnique(UniqueBuildingId id)
         {
             if (State.Phase != GamePhase.RunSelectDraft) return;
+            if (Meta != null)
+            {
+                var pool = Meta.GetDraftPool().ToHashSet();
+                if (!pool.Contains(id))
+                    return;
+            }
+
             if (State.DraftedUniques.Contains(id))
                 State.DraftedUniques.Remove(id);
-            else if (State.DraftedUniques.Count < RunProgression.DraftPickCount)
+            else if (State.DraftedUniques.Count < GetRequiredDraftCount())
                 State.DraftedUniques.Add(id);
             NotifyChanged();
         }
@@ -335,8 +362,16 @@ namespace CatanRoguelike.Core
         public void ConfirmRunSetup()
         {
             if (State.Phase != GamePhase.RunSelectDraft) return;
-            if (State.DraftedUniques.Count != RunProgression.DraftPickCount) return;
+            if (State.DraftedUniques.Count != GetRequiredDraftCount()) return;
 
+            if (Meta != null && Meta.HasStartWheatBonus())
+            {
+                var inv = State.PlayerInventory;
+                inv.Wheat += 1;
+                State.PlayerInventory = inv;
+            }
+
+            _metaStartCardGranted = false;
             State.RunSetupComplete = true;
             State.Phase = GamePhase.SetupAiSettlement1;
             State.StatusMessage = "AI places first settlement...";
@@ -375,6 +410,14 @@ namespace CatanRoguelike.Core
                 Events.ApplyEvent(State, eventId);
 
             ModifierService.ApplyNightUniques(State);
+
+            if (Meta != null && !_metaStartCardGranted)
+            {
+                var bonusCard = Meta.GetStartBonusCard();
+                if (bonusCard.HasValue)
+                    State.PlayerHand.Add(bonusCard.Value);
+                _metaStartCardGranted = true;
+            }
 
             int draws = BalanceConfig.CardsDrawnPerNight;
             if (State.HasUnique(UniqueBuildingId.CaravanPost)) draws++;
@@ -594,5 +637,8 @@ namespace CatanRoguelike.Core
             new Edge(VertexGraph.Canonicalize(edge.A), VertexGraph.Canonicalize(edge.B));
 
         public Vertex? GetLastPlacedSettlement() => _lastPlacedSettlement;
+
+        private int GetRequiredDraftCount() =>
+            Meta?.GetDraftPickCount() ?? RunProgression.DraftPickCount;
     }
 }

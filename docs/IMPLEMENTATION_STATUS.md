@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-27 — Fase 2.5 per-tile number tokens (hybrid model) on top of 2.4 Act progression.
+Last updated: 2026-08-27 — Fase 2.6 meta progression on top of 2.5 hybrid tokens + 2.4 Act progression.
 
 ## Done (playable prototype scope)
 
@@ -35,12 +35,12 @@ Last updated: 2026-08-27 — Fase 2.5 per-tile number tokens (hybrid model) on t
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, **number tokens (assignment, desert, hybrid production, expansion, save round-trip, AI/event robber targeting)**, placement, production, **setup-bonus (2nd settlement, desert skip)**, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **Largest Army (grant/tie/overtake/breakdown/save)**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **AI Largest Army Knight priority**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**, **SaveGame round-trip JSON (format v1)**, **ActProgression thresholds + yield/events/AI/map expansion**)
+- [x] EditMode tests (rolls, **number tokens (assignment, desert, hybrid production, expansion, save round-trip, AI/event robber targeting)**, placement, production, **setup-bonus (2nd settlement, desert skip)**, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **Largest Army (grant/tie/overtake/breakdown/save)**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **AI Largest Army Knight priority**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**, **SaveGame round-trip JSON (format v1)**, **ActProgression thresholds + yield/events/AI/map expansion**, **MetaProgression (stars, unlock tree, meta.json isolation, award formula, purchase, start bonuses)**)
 - [x] PlayMode smoke tests (`GameSceneSmokeTests` — `Game.unity` boot, required MonoBehaviours, `GameManager.Controller` after Start)
 
 ## Explicitly out of scope
 
-- [ ] Meta progression between runs
+- [x] **Meta progression between runs (Fase 2.6)** — stars earned on game over; unlock tree (maps, leaders, extra draft, start wheat/card); `meta.json` separate from `save.json`; IMGUI unlock panel on map select + game over
 - [x] Save/load — **first slice:** JSON format v1, single slot, IMGUI Save/Load, round-trip test (autosave, slots, RNG roll counters deferred). Army fields are optional v1 properties with defaults. **Number tokens + dice rolls** are optional v1 tile/state fields.
 - [x] Per-tile number tokens (classic Catan 2–12) — **hybrid model (b):** tokens + resource rolls + 2d6; see `docs/DESIGN_NUMBER_TOKENS.md`
 
@@ -62,7 +62,7 @@ Last updated: 2026-08-27 — Fase 2.5 per-tile number tokens (hybrid model) on t
 - [ ] Real UI (uGUI) + art pass
 - [x] Game.unity committed to repo
 - [x] Integration / full-run tests (`GameControllerIntegrationTests` — day/night loop, 10 VP win, level-up on day 5)
-- [x] Game-over run-summary in IMGUI (`RunSummaryDisplay` — winner, day, map, leader, seed, VP breakdown + Restart)
+- [x] Game-over run-summary in IMGUI (`RunSummaryDisplay` — winner, day, map, leader, seed, VP breakdown + Restart) + stars earned / unlock shop
 - [x] P2 #23 — removed unused `GamePhase.DayEndCheck` and `DaySubPhase` enum
 
 ## Map sizes
@@ -85,7 +85,18 @@ Production: hex yields only when a **dice sum matches its number token** and the
 
 Constants in `BalanceConfig`; logic in `ActProgression`. IMGUI shows current Act + unlock line.
 
-Set on **GameManager → Map Size** in the inspector (or re-run Setup Game Scene).
+Set on **GameManager → Map Size** in the inspector (or re-run Setup Game Scene). Medium/Large require meta unlocks unless purchased.
+
+## Meta progression (Fase 2.6)
+
+| Item | Detail |
+|------|--------|
+| File | `meta.json` in `persistentDataPath` (separate from `save.json`) |
+| Currency | Stars = human VP + days÷2 + 2 on win (`MetaCatalog.WinBonusStars`) |
+| Default free | Small map, Merchant + Pioneer, all 5 uniques in draft (pick 2) |
+| Unlock tree | Medium/Large maps, Warlord/Architect leaders, +1 draft pick, +1 wheat at run start, Road Builder on first night |
+| UI | `PlaceholderUI` — stars + Spend/Unlocks on map select and game over |
+| Tests | `MetaProgressionTests` — award formula, persist/load, defaults, purchase, isolation from run save |
 
 ## How to test when back at PC
 

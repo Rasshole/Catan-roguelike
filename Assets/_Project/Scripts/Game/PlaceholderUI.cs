@@ -21,17 +21,23 @@ namespace CatanRoguelike.Game
     public sealed class PlaceholderUI : MonoBehaviour
     {
         private GameController _controller;
+        private MetaProgression _meta;
         private BoardInputController _boardInput;
         private Vector2 _scroll;
         private int _selectedCardIndex;
         private int _selectedResourceIndex;
         private int _selectedHexIndex;
         private int _selectedRoadIndex;
+        private bool _showUnlockPanel;
+        private bool _runRewardGranted;
+        private int _lastRunStarsEarned;
 
-        public void Initialize(GameController controller, BoardInputController boardInput = null)
+        public void Initialize(GameController controller, MetaProgression meta, BoardInputController boardInput = null)
         {
             _controller = controller;
+            _meta = meta;
             _boardInput = boardInput;
+            _runRewardGranted = false;
         }
 
         public void Refresh(GameState state) { }
@@ -47,6 +53,7 @@ namespace CatanRoguelike.Game
             if (state.Phase == GamePhase.RunSelectMap)
             {
                 DrawMapSelect(state);
+                DrawUnlockPanelIfOpen();
                 GUILayout.EndScrollView();
                 GUILayout.EndArea();
                 return;
@@ -95,6 +102,8 @@ namespace CatanRoguelike.Game
 
             if (state.Winner.HasValue)
             {
+                TryGrantRunReward(state);
+
                 if (RunSummaryDisplay.TryGetSummaryLines(state, _controller.RunSeed, out var summaryLines))
                 {
                     for (int i = 0; i < summaryLines.Count; i++)
@@ -114,6 +123,17 @@ namespace CatanRoguelike.Game
                 {
                     GUILayout.Label(state.Winner == PlayerId.Human ? "<color=green>You Win!</color>" : "<color=red>AI Wins!</color>");
                 }
+
+                if (_meta != null)
+                {
+                    GUILayout.Label($"<b>Stars:</b> {_meta.Stars}");
+                    if (_lastRunStarsEarned > 0)
+                        GUILayout.Label($"<color=yellow>+{_lastRunStarsEarned} stars earned this run</color>");
+                }
+
+                DrawUnlockPanelIfOpen();
+                if (GUILayout.Button(_showUnlockPanel ? "Hide Unlocks" : "Spend Stars / Unlocks"))
+                    _showUnlockPanel = !_showUnlockPanel;
 
                 if (GUILayout.Button("Restart (reload scene)"))
                     UnityEngine.SceneManagement.SceneManager.LoadScene(
@@ -157,12 +177,37 @@ namespace CatanRoguelike.Game
         private void DrawMapSelect(GameState state)
         {
             GUILayout.Label("<b>Vælg kort</b>");
+            if (_meta != null)
+                GUILayout.Label($"<b>Stars:</b> {_meta.Stars}");
             GUILayout.Label($"Nuværende forhåndsvisning: {MapPresets.GetDisplayName(state.MapSize)}");
             GUILayout.Space(8);
 
-            DrawMapButton(MapSize.Small);
-            DrawMapButton(MapSize.Medium);
-            DrawMapButton(MapSize.Large);
+            if (_meta == null)
+            {
+                DrawMapButton(MapSize.Small);
+                DrawMapButton(MapSize.Medium);
+                DrawMapButton(MapSize.Large);
+            }
+            else
+            {
+                foreach (var size in _meta.GetAvailableMapSizes())
+                    DrawMapButton(size);
+
+                foreach (MapSize size in System.Enum.GetValues(typeof(MapSize)))
+                {
+                    if (_meta.IsMapAvailable(size))
+                        continue;
+                    var unlock = MetaCatalog.MapUnlockFor(size);
+                    if (!unlock.HasValue)
+                        continue;
+                    var def = MetaCatalog.Get(unlock.Value);
+                    GUILayout.Label($"<color=grey>{MapPresets.GetDisplayName(size)} — locked ({def.Cost}★)</color>");
+                }
+            }
+
+            GUILayout.Space(8);
+            if (_meta != null && GUILayout.Button(_showUnlockPanel ? "Hide Unlocks" : "Spend Stars / Unlocks"))
+                _showUnlockPanel = !_showUnlockPanel;
         }
 
         private void DrawMapButton(MapSize size)
@@ -176,26 +221,104 @@ namespace CatanRoguelike.Game
             GUILayout.Label($"<b>Leader</b> — {MapPresets.GetDisplayName(_controller.State.MapSize)}");
             GUILayout.Space(4);
             GUILayout.Label("<b>Choose your Leader</b>");
-            foreach (var kv in LeaderLibrary.All)
+
+            if (_meta == null)
             {
-                var def = kv.Value;
+                foreach (var kv in LeaderLibrary.All)
+                {
+                    var def = kv.Value;
+                    if (GUILayout.Button($"{def.Name}\n<i>{def.PassiveDescription}</i>"))
+                        _controller.SelectLeader(def.Id);
+                }
+                return;
+            }
+
+            foreach (var leader in _meta.GetAvailableLeaders())
+            {
+                var def = LeaderLibrary.Get(leader);
                 if (GUILayout.Button($"{def.Name}\n<i>{def.PassiveDescription}</i>"))
-                    _controller.SelectLeader(def.Id);
+                    _controller.SelectLeader(leader);
+            }
+
+            foreach (LeaderId leader in System.Enum.GetValues(typeof(LeaderId)))
+            {
+                if (_meta.IsLeaderAvailable(leader))
+                    continue;
+                var unlock = MetaCatalog.LeaderUnlockFor(leader);
+                if (!unlock.HasValue)
+                    continue;
+                var def = MetaCatalog.Get(unlock.Value);
+                var leaderDef = LeaderLibrary.Get(leader);
+                GUILayout.Label($"<color=grey>{leaderDef.Name} — locked ({def.Cost}★)</color>");
             }
         }
 
         private void DrawDraftSelect()
         {
-            GUILayout.Label($"<b>Draft {RunProgression.DraftPickCount} unique buildings</b> ({_controller.State.DraftedUniques.Count} selected)");
-            foreach (var kv in UniqueBuildingLibrary.All)
+            int pickCount = _meta?.GetDraftPickCount() ?? RunProgression.DraftPickCount;
+            GUILayout.Label($"<b>Draft {pickCount} unique buildings</b> ({_controller.State.DraftedUniques.Count} selected)");
+            var pool = _meta?.GetDraftPool() ?? UniqueBuildingLibrary.All.Keys;
+            foreach (var id in pool)
             {
-                bool picked = _controller.State.DraftedUniques.Contains(kv.Key);
-                bool newPicked = GUILayout.Toggle(picked, $"{kv.Value.Name}: {kv.Value.Description}");
+                var def = UniqueBuildingLibrary.Get(id);
+                bool picked = _controller.State.DraftedUniques.Contains(id);
+                bool newPicked = GUILayout.Toggle(picked, $"{def.Name}: {def.Description}");
                 if (newPicked != picked)
-                    _controller.ToggleDraftUnique(kv.Key);
+                    _controller.ToggleDraftUnique(id);
             }
             if (GUILayout.Button("Start Run"))
                 _controller.ConfirmRunSetup();
+        }
+
+        private void TryGrantRunReward(GameState state)
+        {
+            if (_meta == null || _runRewardGranted || !state.Winner.HasValue)
+                return;
+
+            if (_meta.TryAwardRun(
+                    _controller.RunSeed,
+                    state.PlayerVictoryPoints,
+                    state.Board.DayNumber,
+                    state.Winner.Value,
+                    out int earned))
+            {
+                _lastRunStarsEarned = earned;
+                var manager = FindFirstObjectByType<GameManager>();
+                if (manager != null)
+                    manager.SaveMeta();
+            }
+
+            _runRewardGranted = true;
+        }
+
+        private void DrawUnlockPanelIfOpen()
+        {
+            if (!_showUnlockPanel || _meta == null)
+                return;
+
+            GUILayout.Space(8);
+            GUILayout.Label("<b>Unlocks</b>");
+            GUILayout.Label($"Stars: {_meta.Stars}");
+
+            foreach (var id in _meta.GetPurchasableUnlocks())
+            {
+                var def = MetaCatalog.Get(id);
+                bool canBuy = _meta.CanPurchase(id);
+                GUI.enabled = canBuy;
+                if (GUILayout.Button($"{def.Title} — {def.Cost}★\n<i>{def.Description}</i>"))
+                {
+                    if (_meta.TryPurchase(id))
+                    {
+                        var manager = FindFirstObjectByType<GameManager>();
+                        if (manager != null)
+                            manager.SaveMeta();
+                    }
+                }
+                GUI.enabled = true;
+            }
+
+            if (!_meta.GetPurchasableUnlocks().Any())
+                GUILayout.Label("<i>All unlocks purchased.</i>");
         }
 
         private void DrawLevelUp()

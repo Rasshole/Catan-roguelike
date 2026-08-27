@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter Fase 2.5 per-tile number tokens (hybrid) på main med 2.4 Act progression, save/load, setup-bonus og largest army.
+Sidst opdateret efter Fase 2.6 meta progression på main med 2.5 hybrid tokens, 2.4 Act progression, save/load, setup-bonus og largest army.
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -18,9 +18,22 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 
 ---
 
+## Meta progression (Fase 2.6 — implementeret)
+
+| Emne | Status |
+|------|--------|
+| **meta.json** | Separat fra `save.json`; run reset sletter ikke meta |
+| **Stars** | VP + days/2 + 2 ved sejr; tildeles én gang per run-key |
+| **Default** | Small map, Merchant + Pioneer, draft 2 af 5 uniques |
+| **Unlocks** | Medium/Large map, Warlord/Architect, +1 draft, +1 wheat, start Road Builder |
+| **IMGUI** | Stars + unlock-panel på map-select og game over |
+
+**Risiko / mangler:** Ingen cloud-sync; ingen dedikeret “meta hub”-scene (kun IMGUI-panel); card/unique *pool* er ikke låst (kun playstyle-unlocks).
+
+---
+
 ## Bevidst uden for scope (v1)
 
-- **Meta progression** mellem runs (permanente unlocks)
 - **Save / load** — **første slice (Fase 2.1):** versioneret JSON (`SaveGame`, format v1), én slot `save.json`, IMGUI Save/Load på `PlaceholderUI`, EditMode round-trip test. Autosave ved nat, multi-slot menu og RNG roll-tællere venter. **Number tokens + dice** er valgfrie v1-felter.
 - **Per-tile nummer-tokens** — **implementeret (Fase 2.5, hybrid b):** klassiske 2–12 per hex + 2d6 + resource rolls; se `docs/DESIGN_NUMBER_TOKENS.md`
 
@@ -95,7 +108,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 | **Map size** | Startmenu + inspector default |
 | **VP-breakdown** | IMGUI viser total + én linje per spiller (settlements / cities / longest / long road / largest army / bonus) via `VictoryBreakdown` |
 | **Pending effects** | Road Builder / Master Builder — minimal feedback |
-| **Game over** | IMGUI run-summary (VP breakdown, seed, day, map, leader) + scene reload ✓ |
+| **Game over** | IMGUI run-summary (VP breakdown, seed, day, map, leader) + stars earned / unlock shop + scene reload ✓ |
 | **README** | Opdateret til fresh-clone flow (Game.unity, macOS Editor, playflow) ✓ |
 
 ---
@@ -134,6 +147,7 @@ Eksisterende EditMode-tests:
 - `RunSummaryDisplayTests` — game-over summary lines (human vs AI win wording; seed/day/map/leader; VP breakdown; safe when no winner)
 - `EventBoardVisualTests` — tile overlays: none; storm on `EventStormTile`; famine wheat; gold rush stone; good harvest all tiles; market day / bandit raid none
 - `GameControllerIntegrationTests` — seeded setup → nat/dag-cyklus uden hang; `SkipNightCard` / `PlayPlayerCard` → `DayPlayerActions`; win ved 10 VP; level-up på dag 5 via `EndPlayerDay`; disabled roads + event-flags ryddes ved daggrænse
+- `MetaProgressionTests` — star award formula; fresh defaults; pre-game flow uden køb; purchase; run award dedup; meta/run save isolation; start wheat/card; extra draft; map gating
 - `GameSceneSmokeTests` (PlayMode) — `Game.unity` loader; `GameManager` / `BoardView` / `PlaceholderUI` findes; efter Start har `GameManager.Controller` + state i run-select eller setup-fase (ingen umiddelbar NRE)
 - `ActProgressionTests` — dag→act thresholds, yield/event/AI/map knobs
 - `MapExpansionTests` — `ExpandBoard` tile counts, buildings preserved, coastal flags
@@ -161,7 +175,10 @@ Core/Data/MapPresets.cs     — 7 / 13 / 19 hex presets
 Core/Data/MapSize.cs        — Small=7, Medium=13, Large=19
 Game/GameManager.cs         — mapSize inspector
 Game/BoardView.cs           — board scale efter tile count
-Game/PlaceholderUI.cs       — al UI (IMGUI); Bandit Raid road picker; Harbor Charter + Embargo + level-up preview; shop-pris årsag + risky konsekvens; VP-breakdown; LevelUpChoice med fuld HUD; game-over run-summary
+Game/MetaProgressionFile.cs  — meta.json IO (persistentDataPath)
+Core/Progression/MetaProgression.cs — stars, unlocks, award/purchase
+Core/Progression/MetaCatalog.cs   — unlock costs + descriptions
+Game/PlaceholderUI.cs       — al UI (IMGUI); …; game-over run-summary + meta unlock shop
 Core/Shop/ShopDealDisplay.cs — shop-knap labels + risky robber-konsekvens-tekst
 Core/RunSummaryDisplay.cs — rene game-over linjer (winner, dag, kort, leader, seed, VP-breakdown)
 Core/Victory/VictoryBreakdown.cs — VP-dele per spiller (settlements, cities, longest, long road, largest army, bonus)
