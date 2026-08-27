@@ -12,6 +12,9 @@ namespace CatanRoguelike.Game
         private Color _baseColor;
         private GameObject _robberMarker;
         private GameObject _stormMarker;
+        private GameObject _tokenChip;
+        private Renderer _chipRimRenderer;
+        private Renderer _chipFaceRenderer;
         private TextMesh _tokenLabel;
 
         private static readonly Color FamineTint = new(0.55f, 0.35f, 0.15f);
@@ -19,6 +22,13 @@ namespace CatanRoguelike.Game
         private static readonly Color GoodHarvestTint = new(0.3f, 0.75f, 0.3f);
         private static readonly Color PortBlockadeTint = new(0.55f, 0.12f, 0.12f);
         private static readonly Color StormMarkerColor = new(0.1f, 0.15f, 0.55f);
+
+        private const float ChipElevationY = 0.48f;
+        private const float LabelElevationY = 0.52f;
+        private const float ChipRimDiameter = 0.42f;
+        private const float ChipFaceDiameter = 0.34f;
+        private const float ChipRimHeight = 0.014f;
+        private const float ChipFaceHeight = 0.012f;
 
         public void Initialize(HexTileData data, Renderer renderer)
         {
@@ -39,17 +49,62 @@ namespace CatanRoguelike.Game
         {
             if (data.IsDesert || !data.NumberToken.HasValue)
             {
-                if (_tokenLabel != null)
-                    _tokenLabel.gameObject.SetActive(false);
+                SetTokenVisible(false);
                 return;
             }
 
+            int token = data.NumberToken.Value;
+            EnsureTokenChip();
             EnsureTokenLabel();
-            _tokenLabel.gameObject.SetActive(true);
-            _tokenLabel.text = data.NumberToken.Value.ToString();
-            _tokenLabel.color = NumberTokenLibrary.IsRedNumber(data.NumberToken.Value)
-                ? Color.red
-                : Color.black;
+            SetTokenVisible(true);
+            ApplyTokenChipStyle(token);
+
+            _tokenLabel.text = token.ToString();
+            var labelRgb = NumberTokenVisualStyle.GetLabel(token);
+            _tokenLabel.color = new Color(labelRgb.R, labelRgb.G, labelRgb.B);
+            _tokenLabel.characterSize = NumberTokenVisualStyle.GetLabelCharacterSize(token);
+        }
+
+        private void SetTokenVisible(bool visible)
+        {
+            if (_tokenChip != null)
+                _tokenChip.SetActive(visible);
+            if (_tokenLabel != null)
+                _tokenLabel.gameObject.SetActive(visible);
+        }
+
+        private void EnsureTokenChip()
+        {
+            if (_tokenChip != null)
+                return;
+
+            _tokenChip = new GameObject("NumberTokenChip");
+            _tokenChip.transform.SetParent(transform, false);
+            _tokenChip.transform.localPosition = new Vector3(0f, ChipElevationY, 0f);
+
+            _chipRimRenderer = CreateChipDisc("Rim", ChipRimDiameter, ChipRimHeight, 0f);
+            _chipFaceRenderer = CreateChipDisc("Face", ChipFaceDiameter, ChipFaceHeight, ChipFaceHeight * 0.5f);
+        }
+
+        private Renderer CreateChipDisc(string name, float diameter, float height, float localYOffset)
+        {
+            var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            disc.name = name;
+            disc.transform.SetParent(_tokenChip.transform, false);
+            disc.transform.localPosition = new Vector3(0f, localYOffset, 0f);
+            disc.transform.localScale = new Vector3(diameter, height, diameter);
+            Destroy(disc.GetComponent<Collider>());
+            var renderer = disc.GetComponent<Renderer>();
+            renderer.material = BuiltInMaterials.Create(Color.white);
+            return renderer;
+        }
+
+        private void ApplyTokenChipStyle(int token)
+        {
+            var faceRgb = NumberTokenVisualStyle.GetChipFace(token);
+            var rimRgb = NumberTokenVisualStyle.GetChipRim(token);
+            _chipFaceRenderer.material.color = new Color(faceRgb.R, faceRgb.G, faceRgb.B);
+            _chipRimRenderer.material.color = new Color(rimRgb.R, rimRgb.G, rimRgb.B);
         }
 
         private void EnsureTokenLabel()
@@ -59,7 +114,7 @@ namespace CatanRoguelike.Game
 
             var labelGo = new GameObject("NumberToken");
             labelGo.transform.SetParent(transform, false);
-            labelGo.transform.localPosition = new Vector3(0f, 0.52f, 0f);
+            labelGo.transform.localPosition = new Vector3(0f, LabelElevationY, 0f);
             labelGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             labelGo.transform.localScale = Vector3.one * 0.08f;
 
