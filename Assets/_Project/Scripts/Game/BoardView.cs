@@ -5,6 +5,7 @@ using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Shop;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
@@ -69,6 +70,8 @@ namespace CatanRoguelike.Game
         {
             if (boardRoot == null) boardRoot = transform;
 
+            DisableLegacySceneTable();
+
             foreach (var kvp in board.Tiles)
             {
                 var tile = CreateHexTile(kvp.Value);
@@ -93,6 +96,19 @@ namespace CatanRoguelike.Game
 
             var renderer = table.GetComponent<Renderer>();
             renderer.material = BuiltInMaterials.Create(new Color(0.76f, 0.65f, 0.45f));
+        }
+
+        private static void DisableLegacySceneTable()
+        {
+            var scene = SceneManager.GetActiveScene();
+            if (!scene.IsValid())
+                return;
+
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                if (root.name == "Table")
+                    root.SetActive(false);
+            }
         }
 
         private void CreatePortMarkers(BoardState board)
