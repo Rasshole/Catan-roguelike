@@ -93,9 +93,6 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 | **Game over** | IMGUI run-summary (VP breakdown, seed, day, map, leader) + scene reload ✓ |
 | **README** | Kan være bagud ift. leaders/draft/klik-placering |
 
-### Døde / ubrugte definitioner
-- `GamePhase.DayEndCheck` og `DaySubPhase` enum — defineret, aldrig brugt
-
 ---
 
 ## Test-dækning

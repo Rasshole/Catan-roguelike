@@ -58,6 +58,7 @@ Last updated: 2026-08-27 — P2 game-over run-summary (IMGUI VP breakdown + seed
 - [x] Game.unity committed to repo
 - [x] Integration / full-run tests (`GameControllerIntegrationTests` — day/night loop, 10 VP win, level-up on day 5)
 - [x] Game-over run-summary in IMGUI (`RunSummaryDisplay` — winner, day, map, leader, seed, VP breakdown + Restart)
+- [x] P2 #23 — removed unused `GamePhase.DayEndCheck` and `DaySubPhase` enum
 
 ## Map sizes
 
