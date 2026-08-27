@@ -1,4 +1,6 @@
+using CatanRoguelike.Core;
 using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Map;
 
 namespace CatanRoguelike.Core.Victory
 {
