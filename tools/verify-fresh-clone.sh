@@ -12,7 +12,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ORIGIN_URL="$(git -C "$ROOT" remote get-url origin)"
 REF="${1:-$(git -C "$ROOT" rev-parse HEAD)}"
 UNITY_EDITOR="${UNITY_EDITOR:-/home/box/Unity/Hub/Editor/6000.3.15f1/Editor/Unity}"
+UNITY_CLI="${UNITY_CLI:-}"
 UNITY_TIMEOUT="${UNITY_TIMEOUT:-180}"
+UNITY_TEST_TIMEOUT="${UNITY_TEST_TIMEOUT:-300}"
 SCENE_REL="Assets/_Project/Scenes/Game.unity"
 
 TMP=""
@@ -40,6 +42,28 @@ has_license_error() {
   grep -qiE 'No valid Unity Editor license' "$log"
 }
 
+resolve_unity_cli() {
+  if [[ -n "$UNITY_CLI" ]]; then
+    if [[ -x "$UNITY_CLI" ]]; then
+      return 0
+    fi
+    if command -v "$UNITY_CLI" >/dev/null 2>&1; then
+      UNITY_CLI="$(command -v "$UNITY_CLI")"
+      return 0
+    fi
+    return 1
+  fi
+  if [[ -x "${HOME}/.local/bin/unity" ]]; then
+    UNITY_CLI="${HOME}/.local/bin/unity"
+    return 0
+  fi
+  if command -v unity >/dev/null 2>&1; then
+    UNITY_CLI="$(command -v unity)"
+    return 0
+  fi
+  return 1
+}
+
 run_unity() {
   local project="$1"
   local logfile="$2"
@@ -65,6 +89,31 @@ run_unity() {
   return "$rc"
 }
 
+run_editmode_tests_batchmode() {
+  local project="$1"
+  local logfile="$2"
+  local xml="$3"
+  run_unity "$project" "$logfile" -runTests -testPlatform EditMode -testResults "$xml"
+}
+
+run_editmode_tests_cli() {
+  local project="$1"
+  local xml="$2"
+  local shell_timeout=$((UNITY_TEST_TIMEOUT + 30))
+  local -a cmd=("$UNITY_CLI" test "$project" --mode EditMode --output "$xml" --timeout "$UNITY_TEST_TIMEOUT")
+  cmd+=(--no-banner --non-interactive)
+
+  set +e
+  timeout --signal=TERM --kill-after=20 "$shell_timeout" "${cmd[@]}"
+  local rc=$?
+  set -e
+
+  if [[ $rc -eq 124 || $rc -eq 137 ]]; then
+    die "unity test timed out after ${UNITY_TEST_TIMEOUT}s (output: $xml). Process killed — will not hang."
+  fi
+  return "$rc"
+}
+
 log_has_compile_errors() {
   local log="$1"
   grep -E 'error CS[0-9]+:|Scripts have compiler errors|Compilation failed' "$log" >/dev/null 2>&1
@@ -78,6 +127,11 @@ log_has_missing_scripts() {
 echo "verify-fresh-clone: origin=${ORIGIN_URL}"
 echo "verify-fresh-clone: ref=${REF}"
 echo "verify-fresh-clone: UNITY_EDITOR=${UNITY_EDITOR}"
+if resolve_unity_cli; then
+  echo "verify-fresh-clone: UNITY_CLI=${UNITY_CLI}"
+else
+  echo "verify-fresh-clone: UNITY_CLI=missing (will fall back to Editor -batchmode -runTests; see docs/TOOLING.md)"
+fi
 
 [[ -x "$UNITY_EDITOR" ]] || die "Unity editor not executable: $UNITY_EDITOR"
 
@@ -124,16 +178,28 @@ fi
 
 echo "verify-fresh-clone: running EditMode tests..."
 set +e
-run_unity "$CLONE" "$TEST_LOG" -runTests -testPlatform EditMode -testResults "$TEST_XML"
+if resolve_unity_cli; then
+  echo "verify-fresh-clone: using unity test (CLI)..."
+  run_editmode_tests_cli "$CLONE" "$TEST_XML"
+else
+  echo "WARN: unity CLI not found — falling back to Editor -batchmode -runTests (may not emit XML on this project)."
+  echo "      Install Unity CLI 1.0.0-beta.6+ to ~/.local/bin/unity — see docs/TOOLING.md."
+  run_editmode_tests_batchmode "$CLONE" "$TEST_LOG" "$TEST_XML"
+fi
 test_rc=$?
 set -e
 
-if log_has_compile_errors "$TEST_LOG"; then
-  die "compile errors during EditMode tests"
+if [[ -f "$TEST_LOG" ]]; then
+  if log_has_compile_errors "$TEST_LOG"; then
+    die "compile errors during EditMode tests"
+  fi
+  if has_license_error "$TEST_LOG"; then
+    license_fail
+  fi
 fi
 if [[ ! -f "$TEST_XML" ]]; then
   if [[ $test_rc -ne 0 ]]; then
-    die "EditMode tests produced no XML and Unity exited ${test_rc} (log: ${TEST_LOG})"
+    die "EditMode tests produced no XML and Unity exited ${test_rc} (log: ${TEST_LOG:-none})"
   fi
   die "EditMode tests produced no results XML"
 fi
@@ -149,8 +215,9 @@ if [[ "$failed" != "0" || "$inconclusive" != "0" || "$result_failed" -gt 0 ]]; t
   cat "$TEST_XML" >&2 || true
   die "EditMode tests failed (failed=${failed} inconclusive=${inconclusive})"
 fi
-if [[ $test_rc -ne 0 ]]; then
-  die "EditMode Unity exited ${test_rc} despite XML (log: ${TEST_LOG})"
+# unity test exit 6 = test failures (already handled via XML); other non-zero = tooling error.
+if [[ $test_rc -ne 0 && $test_rc -ne 6 ]]; then
+  die "EditMode test runner exited ${test_rc} despite green XML (log: ${TEST_LOG:-unity CLI})"
 fi
 
 echo "OK: EditMode tests passed."
