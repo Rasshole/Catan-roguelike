@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Game;
 using UnityEditor;
@@ -41,6 +42,7 @@ namespace CatanRoguelike.Editor
         private static bool _exitEditorAfter;
         private static int _exitCode;
         private static string _outputPath;
+        private static Timer _overallWatchdog;
 
         [MenuItem("Catan Roguelike/Capture Game View Screenshot")]
         public static void CaptureFromMenu()
@@ -53,7 +55,10 @@ namespace CatanRoguelike.Editor
         /// </summary>
         public static void CaptureAndQuit()
         {
-            EditorApplication.delayCall += () => BeginCapture(exitEditorAfter: true);
+            // Must register EditorApplication.update synchronously. delayCall is not flushed in
+            // -batchmode -executeMethod, so deferring BeginCapture leaves the editor idle forever.
+            Debug.Log("GameViewCapture: CaptureAndQuit entry — starting capture synchronously.");
+            BeginCapture(exitEditorAfter: true);
         }
 
         public static string ResolveOutputPath()
@@ -74,9 +79,11 @@ namespace CatanRoguelike.Editor
             _exitCode = 0;
             _outputPath = ResolveOutputPath();
             BeginPhase(CapturePhase.OpenScene);
+            ArmOverallWatchdog();
 
             EditorApplication.update -= OnEditorUpdate;
             EditorApplication.update += OnEditorUpdate;
+            Debug.Log($"GameViewCapture: capture started (output={_outputPath}).");
         }
 
         private static void BeginPhase(CapturePhase phase)
@@ -98,6 +105,46 @@ namespace CatanRoguelike.Editor
         private static void StepPlayerLoop()
         {
             EditorApplication.QueuePlayerLoopUpdate();
+        }
+
+        private static void ArmOverallWatchdog()
+        {
+            DisarmOverallWatchdog();
+
+            var timeoutMs = (int)(GameViewCaptureFrameWait.OverallTimeoutSeconds * 1000);
+            _overallWatchdog = new Timer(OnOverallWatchdogFired, null, timeoutMs, Timeout.Infinite);
+        }
+
+        private static void DisarmOverallWatchdog()
+        {
+            _overallWatchdog?.Dispose();
+            _overallWatchdog = null;
+        }
+
+        private static void OnOverallWatchdogFired(object state)
+        {
+            if (_phase == CapturePhase.None || _phase == CapturePhase.Done)
+                return;
+
+            try
+            {
+                Debug.LogError(
+                    $"GameViewCapture: overall watchdog timed out after " +
+                    $"{GameViewCaptureFrameWait.OverallTimeoutSeconds}s (phase={_phase}).");
+            }
+            catch
+            {
+                // Editor logging may be unavailable from the timer thread.
+            }
+
+            try
+            {
+                EditorApplication.Exit(1);
+            }
+            catch
+            {
+                Environment.Exit(1);
+            }
         }
 
         private static void OnEditorUpdate()
@@ -259,6 +306,7 @@ namespace CatanRoguelike.Editor
 
         private static void FinishCapture()
         {
+            DisarmOverallWatchdog();
             EditorApplication.update -= OnEditorUpdate;
             _phase = CapturePhase.None;
 
@@ -271,6 +319,7 @@ namespace CatanRoguelike.Editor
             _exitCode = 1;
             Debug.LogException(ex);
 
+            DisarmOverallWatchdog();
             EditorApplication.update -= OnEditorUpdate;
             _phase = CapturePhase.None;
 
