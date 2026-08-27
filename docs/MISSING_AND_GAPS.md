@@ -47,7 +47,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 ### Shop & porte
 - **Specifikke 2:1-porte** — wired i `ShopGenerator` + `PortAccess` ✓
 - **Generiske 3:1-porte** — `DiscoverPorts` opretter sparse mix (2:1 per ressource + 3:1 generic, skaleret til 7/13/19 hex) ✓
-- **PortDiscount-perk** — rabat på alle handler når du kontrollerer en port (ikke kun “unrelated trades”)
+- **PortDiscount-perk** — wired: `ModifierService.GetShopGiveAmount` −1 (min 2) når human kontrollerer en port; `ShopDealPricing.PerkPortDiscount` ✓
 - **Risky deal (3. handel)** — core wired; IMGUI shop-knapper viser konsekvens via `ShopDealDisplay` (røver → bedste felt) ✓
 - **Effektiv shop-pris** — UI viser kort årsag ved siden af hver handel (`ShopDealPricing`: port 2:1 / port 3:1 / leader / event / perk / base) ✓
 
@@ -112,7 +112,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 | Emne | Status |
 |------|--------|
 | **IMGUI** (`PlaceholderUI`) | Fungerer, men er placeholder — ikke uGUI/UI Toolkit |
-| **3D-art** | Cylindre/kuber — ikke bordspils-look |
+| **3D-art** | Cylindre/kuber + **cream number-token chips** (flat disc under `TextMesh`; 6/8 warmer rim) — ikke fuld bordspils-look |
 | **Game.unity** | Committed (`Assets/_Project/Scenes/Game.unity`) |
 | **Render pipeline** | **Built-in RP** (beslutning 0.5). Ingen URP-pakke. Se `docs/DESIGN_RENDERING.md` |
 | **Map size** | Startmenu + inspector default |
@@ -127,6 +127,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 
 Eksisterende EditMode-tests:
 - `NumberTokenTests` / `HybridProductionTests` / `DiceRollEngineTests` / `AiTokenStrategyTests` — token assignment (7/13/19, expansion, red adjacency), desert, hybrid production, Act 2 double dice, save round-trip tokens, BanditRaid pip targeting
+- `NumberTokenVisualStyleTests` — chip face/rim/label colors for red vs standard tokens; two-digit label character size
 - `RollEngineTests` — roll caps
 - `PlacementValidatorTests` — distance rule
 - `ProductionCalculatorTests` — multi-hex production

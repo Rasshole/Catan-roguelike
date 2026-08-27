@@ -22,10 +22,10 @@ Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færd
 | **Act 3 indholdsvariation (events/kort)** | Sent game må ikke kun være talinflation (max roll 3, dobbelt dice). | **M** | **M** | **yes** | **Done:** 2 Act 3-only nat-events (`PortBlockade`, `ResourceLevy`); weights act1/2=0. Ingen nyt kort. |
 | **PlayMode ud over smoke (playtest harness)** | Scene-boot beviser ikke at man kan spille en run. | **M** | **M** | partial | **Done (Linux smoke + one run):** `GameScenePlayTests` — scripted run select → setup → first day via `GameController` APIs under `xvfb`. Smoke tests bevares. |
 | **Windows standalone build** | Distribuerbar `.exe` til playtest uden Unity Editor. | **M** | **L** | **no** | **Blokeret fra Linux-VM** — Windows-Mono tarball 404 (samme klasse som macOS). Se `BLOCKED.md` #3. Byg på Windows-host. |
-| **Token/hex visuel pass** | Spilleren ser *hvor* 6/8 sidder — ikke bare IMGUI-labels på cylindre. | **M** | **M** | partial | `HexTileView` har token-tekst; 3D stadig placeholder (`DESIGN_RENDERING`: Built-in). |
+| **Token/hex visuel pass** | Spilleren ser *hvor* 6/8 sidder — ikke bare IMGUI-labels på cylindre. | **M** | **M** | partial | **Done (placeholder):** cream chip + rim under `TextMesh` i `HexTileView`; 3D art pack stadig P2. |
 | **Forecast / Famine UI-copy fixes** | Forecast ignorerer parameter i UI; Famine-tekst lyver om timing (`TomorrowRolls`). | **L** | **L** | **yes** | **Done:** Forecast card text + no picker; Famine/Good Harvest say "tomorrow". |
 | **Sim-runner rapport udvidelse** | Balance-arbejde uden gæt: VP-fordeling, win-rate, act ved afslutning, årsag (`ok`/`max_days`/win). | **M** | **L** | **yes** | Naturlig forløber til balance-pass; ren `tools/`-ændring. |
-| **PortDiscount-perk wired** | Perk lover rabat på alle handler ved port — core findes, effekt halv. | **L** | **L** | **yes** | Lille retfærdigheds-fix; ikke blokering for balance-pass. |
+| **PortDiscount-perk wired** | Perk lover rabat på alle handler ved port — core findes, effekt halv. | **L** | **L** | **yes** | **Done:** `ModifierService.GetShopGiveAmount` + `ShopDealPricing.PerkPortDiscount` (min 2). |
 
 ---
 

@@ -100,3 +100,11 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **Docs:** `BLOCKED.md` #3 Windows-Mono tarball 404 from Linux-VM; `ROADMAP_V3` PlayMode + Windows build rows updated.
 - **Core:** `dotnet test tools/core-tests` unchanged.
 
+## 2026-08-27 (UTC) — Token/hex visual pass (placeholder chips)
+
+- Rebased onto `main` @ bb499db+; merged with Act 3 `PortBlockade` overlay/tint from #61.
+- **`NumberTokenVisualStyle` (Core):** cream chip face + rim colors; red accent for 6/8; label sizing for two-digit tokens.
+- **`HexTileView`:** flat disc chip (rim + face) slightly above hex top; `TextMesh` centered on chip; idempotent `EnsureTokenChip`; desert hides chip + label. Built-in `Standard` via `BuiltInMaterials`. Robber / storm / port-blockade tints unchanged.
+- **Tests:** `NumberTokenVisualStyleTests` (5 cases). **338/338** `dotnet test tools/core-tests` (expected after merge).
+- **Docs:** `ROADMAP_V3` — token visual pass + PortDiscount marked done on top of existing Done rows (Act 3, PlayMode, Windows blocked).
+

@@ -10,12 +10,13 @@ Last updated: 2026-08-27 — PlayMode harness (setup + one day cycle) on top of 
 - [x] **Built-in RP** (ikke URP) — se `docs/DESIGN_RENDERING.md`
 - [x] **In-game map menu** (7 / 13 / 19 hex) at run start
 - [x] **7 / 13 / 19-hex maps** (`MapSize`; 13 = classic shape minus 6 corners)
-- [x] 3D placeholder board (table + hex cylinders)
+- [x] 3D placeholder board (table + hex cylinders + **number-token chips** under labels)
 - [x] Run start: leader select → draft 2 unique buildings
 - [x] Setup: AI 2 settlements + roads, then player 2 + roads
 - [x] **Setup-bonus** — 2. settlement (spiller + AI) giver **2** af hver tilstødende ressource; desert springes over (`SetupBonusCalculator`)
 - [x] Day/night turn loop
 - [x] **Hybrid production (Fase 2.5)** — per-tile number tokens (2–12) gate which hexes fire; per-resource nightly rolls remain weather multipliers; 2d6 sums per yield pass (Act 2+ = 2 dice). See `docs/DESIGN_NUMBER_TOKENS.md`.
+- [x] **Number-token chip visuals** — cream disc + rim under `TextMesh` on non-desert hexes (`NumberTokenVisualStyle`, `HexTileView`); 6/8 warmer accent
 - [x] Yield rolls (5/45/50, max 1×0 and 1×2, 50/50 tie-break; Act 2+ max mult 3)
 - [x] Rolls + dice at night, production uses today's rolls + dice
 - [x] Multi-hex production per settlement/city
