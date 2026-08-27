@@ -36,10 +36,11 @@ namespace CatanRoguelike.Tests
                 HexTopY);
 
             Assert.AreEqual(PlayerPieceVisuals.SettlementName, piece.name);
-            Assert.AreEqual(3, piece.transform.childCount);
+            Assert.AreEqual(4, piece.transform.childCount);
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.BodyPartName));
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName));
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofRightPartName));
+            Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofRidgePartName));
         }
 
         [Test]
@@ -52,11 +53,12 @@ namespace CatanRoguelike.Tests
                 HexTopY);
 
             Assert.AreEqual(PlayerPieceVisuals.CityName, piece.name);
-            Assert.AreEqual(4, piece.transform.childCount);
+            Assert.AreEqual(5, piece.transform.childCount);
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.BodyPartName));
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.UpperStoreyPartName));
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName));
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofRightPartName));
+            Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofRidgePartName));
         }
 
         [Test]
@@ -76,7 +78,7 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void CreateSettlement_RoofPanelsCoverBodyTop()
+        public void CreateSettlement_RoofRidgeCoversBodyTop()
         {
             var piece = PlayerPieceVisuals.CreateSettlement(
                 _testRoot.transform,
@@ -86,21 +88,23 @@ namespace CatanRoguelike.Tests
 
             var bodyRenderer = piece.transform.Find(PlayerPieceVisuals.BodyPartName).GetComponent<Renderer>();
             var roofLeftRenderer = piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName).GetComponent<Renderer>();
-            var roofRightRenderer = piece.transform.Find(PlayerPieceVisuals.RoofRightPartName).GetComponent<Renderer>();
 
-            var bodyTop = new Vector3(
-                bodyRenderer.bounds.center.x,
-                bodyRenderer.bounds.max.y,
-                bodyRenderer.bounds.center.z);
+            AssertRoofRidgeCoversTop(bodyRenderer, roofLeftRenderer, piece);
+        }
 
-            var roofBounds = roofLeftRenderer.bounds;
-            roofBounds.Encapsulate(roofRightRenderer.bounds);
+        [Test]
+        public void CreateCity_RoofRidgeCoversUpperStoreyTop()
+        {
+            var piece = PlayerPieceVisuals.CreateCity(
+                _testRoot.transform,
+                Vector3.zero,
+                PlayerPieceVisuals.AiColor,
+                HexTopY);
 
-            Assert.LessOrEqual(roofBounds.min.x, bodyTop.x);
-            Assert.GreaterOrEqual(roofBounds.max.x, bodyTop.x);
-            Assert.LessOrEqual(roofBounds.min.z, bodyTop.z);
-            Assert.GreaterOrEqual(roofBounds.max.z, bodyTop.z);
-            Assert.Greater(roofBounds.max.y, bodyTop.y);
+            var upperRenderer = piece.transform.Find(PlayerPieceVisuals.UpperStoreyPartName).GetComponent<Renderer>();
+            var roofLeftRenderer = piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName).GetComponent<Renderer>();
+
+            AssertRoofRidgeCoversTop(upperRenderer, roofLeftRenderer, piece);
         }
 
         [Test]
@@ -199,5 +203,27 @@ namespace CatanRoguelike.Tests
 
         private static float MaxRgb(Color color) =>
             Mathf.Max(color.r, Mathf.Max(color.g, color.b));
+
+        private static void AssertRoofRidgeCoversTop(
+            Renderer bodyRenderer,
+            Renderer roofLeftRenderer,
+            GameObject piece)
+        {
+            var ridgeTransform = piece.transform.Find(PlayerPieceVisuals.RoofRidgePartName);
+            Assert.NotNull(ridgeTransform);
+
+            var ridgeRenderer = ridgeTransform.GetComponent<Renderer>();
+            var bodyBounds = bodyRenderer.bounds;
+            var ridgeBounds = ridgeRenderer.bounds;
+
+            Assert.AreSame(roofLeftRenderer.sharedMaterial, ridgeRenderer.sharedMaterial);
+            Assert.Less(MaxRgb(ridgeRenderer.sharedMaterial.color), MaxRgb(bodyRenderer.sharedMaterial.color));
+
+            Assert.LessOrEqual(ridgeBounds.min.x, bodyBounds.min.x);
+            Assert.GreaterOrEqual(ridgeBounds.max.x, bodyBounds.max.x);
+            Assert.LessOrEqual(ridgeBounds.min.z, bodyBounds.min.z);
+            Assert.GreaterOrEqual(ridgeBounds.max.z, bodyBounds.max.z);
+            Assert.GreaterOrEqual(ridgeBounds.min.y, bodyBounds.max.y);
+        }
     }
 }

@@ -15,6 +15,7 @@ namespace CatanRoguelike.Game
         public const string UpperStoreyPartName = "UpperStorey";
         public const string RoofLeftPartName = "RoofLeft";
         public const string RoofRightPartName = "RoofRight";
+        public const string RoofRidgePartName = "RoofRidge";
         public const string PlankPartName = "Plank";
 
         public static readonly Color HumanColor = new(0.2f, 0.4f, 0.9f);
@@ -171,6 +172,20 @@ namespace CatanRoguelike.Game
                 new Vector3(0f, roofBaseY + panelLift, bodyDepth * 0.24f),
                 new Vector3(panelWidth, panelThickness, panelDepth),
                 Quaternion.Euler(RoofPitchDegrees, 0f, 0f),
+                material);
+
+            const float ridgeThickness = 0.04f;
+            const float ridgeLift = 0.002f;
+            float ridgeDepth = bodyDepth * 1.06f;
+            float ridgeCenterY = roofBaseY + ridgeLift + ridgeThickness * 0.5f;
+
+            CreatePrimitivePart(
+                parent,
+                PrimitiveType.Cube,
+                RoofRidgePartName,
+                new Vector3(0f, ridgeCenterY, 0f),
+                new Vector3(panelWidth, ridgeThickness, ridgeDepth),
+                Quaternion.identity,
                 material);
         }
 
