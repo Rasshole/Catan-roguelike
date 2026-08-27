@@ -49,7 +49,7 @@ namespace CatanRoguelike.Core
         {
             Meta = meta;
             RunSeed = seed ?? 0;
-            var board = MapPresets.CreateBoard(mapSize);
+            var board = MapPresets.CreateBoard(mapSize, RunSeed);
             var state = new GameState(board) { MapSize = mapSize, Phase = GamePhase.RunSelectMap };
             state.Ports = PortAccess.DiscoverPorts(board);
             state.StatusMessage = "Vælg kortstørrelse.";
@@ -116,7 +116,7 @@ namespace CatanRoguelike.Core
                 return;
             }
 
-            var board = MapPresets.CreateBoard(mapSize);
+            var board = MapPresets.CreateBoard(mapSize, RunSeed);
             State.ResetForNewMap(board, mapSize);
             State.Ports = PortAccess.DiscoverPorts(board);
             State.StatusMessage = "Vælg din leader.";
@@ -466,7 +466,7 @@ namespace CatanRoguelike.Core
             var target = ActProgression.GetMapExpansionTarget(State.MapSize, act);
             if (target.HasValue && target.Value != State.MapSize)
             {
-                int added = MapPresets.ExpandBoard(State.Board, target.Value);
+                int added = MapPresets.ExpandBoard(State.Board, target.Value, RunSeed);
                 if (added > 0)
                 {
                     State.MapSize = target.Value;
