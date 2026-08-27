@@ -555,14 +555,12 @@ namespace CatanRoguelike.Game
 
         private OnboardingCopy.Context BuildOnboardingContext(GameState state, bool forceGameOver = false)
         {
-            return new OnboardingCopy.Context
-            {
-                Phase = state.Phase,
-                DayNumber = state.Board.DayNumber,
-                TipsEnabled = OnboardingTipsStore.TipsEnabled,
-                HasWinner = forceGameOver || state.Winner.HasValue,
-                StarsEarnedThisRun = _lastRunStarsEarned
-            };
+            return new OnboardingCopy.Context(
+                state.Phase,
+                state.Board.DayNumber,
+                OnboardingTipsStore.TipsEnabled,
+                forceGameOver || state.Winner.HasValue,
+                _lastRunStarsEarned);
         }
     }
 }

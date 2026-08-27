@@ -63,12 +63,7 @@ namespace CatanRoguelike.Tests
         [Test]
         public void TryGetPhaseBanner_MapSelect_ReturnsLine()
         {
-            var ctx = new OnboardingCopy.Context
-            {
-                Phase = GamePhase.RunSelectMap,
-                DayNumber = 0,
-                TipsEnabled = true
-            };
+            var ctx = new OnboardingCopy.Context(GamePhase.RunSelectMap, tipsEnabled: true);
 
             Assert.IsTrue(OnboardingCopy.TryGetPhaseBanner(ctx, out var line));
             Assert.That(line, Does.Contain("Small"));
@@ -77,11 +72,7 @@ namespace CatanRoguelike.Tests
         [Test]
         public void TryGetPhaseBanner_TipsDisabled_ReturnsFalse()
         {
-            var ctx = new OnboardingCopy.Context
-            {
-                Phase = GamePhase.RunSelectMap,
-                TipsEnabled = false
-            };
+            var ctx = new OnboardingCopy.Context(GamePhase.RunSelectMap, tipsEnabled: false);
 
             Assert.IsFalse(OnboardingCopy.TryGetPhaseBanner(ctx, out _));
         }
@@ -93,12 +84,10 @@ namespace CatanRoguelike.Tests
             state.Board.DayNumber = 1;
             state.Phase = GamePhase.NightPlayCard;
 
-            var ctx = new OnboardingCopy.Context
-            {
-                Phase = state.Phase,
-                DayNumber = state.Board.DayNumber,
-                TipsEnabled = true
-            };
+            var ctx = new OnboardingCopy.Context(
+                state.Phase,
+                state.Board.DayNumber,
+                tipsEnabled: true);
 
             Assert.IsTrue(OnboardingCopy.TryGetFirstNightHybridHint(ctx, out var line));
             Assert.That(line, Does.Contain("2d6"));
@@ -108,12 +97,7 @@ namespace CatanRoguelike.Tests
         [Test]
         public void TryGetFirstNightHybridHint_DayTwo_ReturnsFalse()
         {
-            var ctx = new OnboardingCopy.Context
-            {
-                Phase = GamePhase.NightPlayCard,
-                DayNumber = 2,
-                TipsEnabled = true
-            };
+            var ctx = new OnboardingCopy.Context(GamePhase.NightPlayCard, dayNumber: 2, tipsEnabled: true);
 
             Assert.IsFalse(OnboardingCopy.TryGetFirstNightHybridHint(ctx, out _));
         }
