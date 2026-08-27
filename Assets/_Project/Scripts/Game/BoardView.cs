@@ -95,7 +95,7 @@ namespace CatanRoguelike.Game
             table.transform.localScale = tableScale;
 
             var renderer = table.GetComponent<Renderer>();
-            renderer.material = BuiltInMaterials.Create(new Color(0.76f, 0.65f, 0.45f));
+            renderer.material = BoardSurfaceMaterial.Create();
         }
 
         private static void DisableLegacySceneTable()
