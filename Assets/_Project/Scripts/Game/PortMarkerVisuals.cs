@@ -15,13 +15,13 @@ namespace CatanRoguelike.Game
         private static readonly Color PierWoodColor = new(0.45f, 0.32f, 0.18f);
         private static readonly Color GenericPostColor = new(0.38f, 0.28f, 0.16f);
 
-        private const float PierLength = 0.18f;
-        private const float PierWidth = 0.09f;
-        private const float PierHeight = 0.035f;
-        private const float PostHeight = 0.1f;
-        private const float PostWidth = 0.04f;
-        private const float FlagHeight = 0.05f;
-        private const float FlagWidth = 0.03f;
+        private const float PierLength = 0.36f;
+        private const float PierWidth = 0.18f;
+        private const float PierHeight = 0.07f;
+        private const float PostHeight = 0.2f;
+        private const float PostWidth = 0.08f;
+        private const float FlagHeight = 0.1f;
+        private const float FlagWidth = 0.06f;
 
         public static GameObject Create(
             Transform parent,

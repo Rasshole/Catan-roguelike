@@ -11,6 +11,7 @@ namespace CatanRoguelike.Tests
     {
         private const float HexScale = 1.2f;
         private const float TileHeight = 0.15f;
+        private const float LegacyPlankLength = 0.18f;
         private static readonly Color WoodColor = new(0.2f, 0.55f, 0.2f);
 
         private GameObject _root;
@@ -51,6 +52,7 @@ namespace CatanRoguelike.Tests
 
             AssertMinWorldYAboveHexTop(marker);
             AssertSharedMaterialsAssigned(marker);
+            AssertPlankLengthReadableFromTable(marker);
         }
 
         [Test]
@@ -107,6 +109,16 @@ namespace CatanRoguelike.Tests
         {
             foreach (var renderer in marker.GetComponentsInChildren<Renderer>())
                 Assert.IsNotNull(renderer.sharedMaterial);
+        }
+
+        private static void AssertPlankLengthReadableFromTable(GameObject marker)
+        {
+            var plank = marker.transform.Find("PierPlank");
+            Assert.IsNotNull(plank);
+
+            float plankLength = plank.localScale.z;
+            Assert.Greater(plankLength, LegacyPlankLength * 1.5f);
+            Assert.Less(plankLength, HexScale);
         }
     }
 }
