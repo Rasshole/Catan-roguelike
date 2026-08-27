@@ -69,6 +69,9 @@ namespace CatanRoguelike.Game
             }
 
             GUILayout.Label($"<b>Day {state.Board.DayNumber}</b> — {MapPresets.GetDisplayName(state.MapSize)}");
+            GUILayout.Label($"<b>{ActProgression.GetActLabel(ActProgression.GetAct(state.Board.DayNumber))}</b>");
+            if (!string.IsNullOrEmpty(state.ActUnlockMessage))
+                GUILayout.Label($"<color=cyan>{state.ActUnlockMessage}</color>");
             GUILayout.Label($"{state.Phase}");
             GUILayout.Label($"<b>Leader:</b> {LeaderLibrary.Get(state.Leader).Name}");
             if (state.DraftedUniques.Count > 0)

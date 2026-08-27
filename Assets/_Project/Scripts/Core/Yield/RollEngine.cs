@@ -24,6 +24,24 @@ namespace CatanRoguelike.Core.Yield
             return rolls;
         }
 
+        /// <summary>Multiple independent nightly passes summed per resource, then global caps re-applied.</summary>
+        public Dictionary<ResourceType, int> RollNightlyCombined(int rollPasses, int maxRoll = 2)
+        {
+            if (rollPasses <= 1)
+                return RollNightly(maxRoll);
+
+            var combined = RollNightly(maxRoll);
+            for (int pass = 1; pass < rollPasses; pass++)
+            {
+                var extra = RollNightly(maxRoll);
+                foreach (ResourceType resource in Enum.GetValues(typeof(ResourceType)))
+                    combined[resource] += extra[resource];
+                ApplyGlobalCaps(combined, maxRoll);
+            }
+
+            return combined;
+        }
+
         /// <summary>Reroll one resource and re-apply global caps to the full set.</summary>
         public void RerollResource(Dictionary<ResourceType, int> rolls, ResourceType resource, int maxRoll = 2)
         {

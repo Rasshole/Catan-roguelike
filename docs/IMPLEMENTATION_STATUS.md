@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-27 — Fase 2.3 Largest Army VP (`ArmyCalculator`, knight counts, AI chase heuristic).
+Last updated: 2026-08-27 — Fase 2.4 Act progression + save/load, setup-bonus, largest army (main).
 
 ## Done (playable prototype scope)
 
@@ -27,13 +27,14 @@ Last updated: 2026-08-27 — Fase 2.3 Largest Army VP (`ArmyCalculator`, knight 
 - [x] Largest army VP (≥3 played Knight cards; classic tie = incumbent keeps until surpassed)
 - [x] 4 Leaders + level-ups every 5 days (max 3)
 - [x] Draft 2 of 5 unique buildings
-- [x] Random events (~22% per night)
+- [x] Random events (~22% per night in Act 1; scales by act)
+- [x] **Act progression (Fase 2.4)** — `ActProgression`: days 1–5 Act 1, 6–10 Act 2, 11+ Act 3; double yield rolls Act 2+, max roll 3 Act 3, event chance/weights scale, AI extra night plays + Act 3 draw pool, Small→Medium→Large map growth
 - [x] Event board overlays (storm marker, famine/gold rush/good harvest tints via `EventBoardVisual`)
 - [x] AI heuristic + shop + limited card pool (Embargo in pool; skips embargoed shop Give; plays Embargo vs human inventory/shop)
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, **setup-bonus (2nd settlement, desert skip)**, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **Largest Army (grant/tie/overtake/breakdown/save)**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **AI Largest Army Knight priority**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**, **SaveGame round-trip JSON (format v1)**)
+- [x] EditMode tests (rolls, placement, production, **setup-bonus (2nd settlement, desert skip)**, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **Largest Army (grant/tie/overtake/breakdown/save)**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **AI Largest Army Knight priority**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**, **SaveGame round-trip JSON (format v1)**, **ActProgression thresholds + yield/events/AI/map expansion**)
 - [x] PlayMode smoke tests (`GameSceneSmokeTests` — `Game.unity` boot, required MonoBehaviours, `GameManager.Controller` after Start)
 
 ## Explicitly out of scope
@@ -67,9 +68,19 @@ Last updated: 2026-08-27 — Fase 2.3 Largest Army VP (`ArmyCalculator`, knight 
 
 | `MapSize` | Hexes | Use case |
 |-----------|-------|----------|
-| Small | 7 | Fast / tutorial |
-| Medium | 13 | Mid-size |
-| Large | 19 | Classic Catan shape |
+| Small | 7 | Fast / tutorial — grows to 13 at Act 2, 19 at Act 3 |
+| Medium | 13 | Mid-size — grows to 19 at Act 3 |
+| Large | 19 | Classic Catan shape — no mid-run growth |
+
+## Act progression (Fase 2.4)
+
+| Act | Days | Yield | Events | AI | Map |
+|-----|------|-------|--------|-----|-----|
+| 1 | 1–5 | 1 roll pass, max 2 | 22% uniform | 1 night card play | start size |
+| 2 | 6–10 | 2 passes summed, max 2 | 32%, hard events weighted | 2 night card plays, smarter pick | Small→Medium |
+| 3 | 11+ | 2 passes summed, max 3 | 42%, harder weights | +1 AI draw, wider pool | →Large if not already |
+
+Constants in `BalanceConfig`; logic in `ActProgression`. IMGUI shows current Act + unlock line.
 
 Set on **GameManager → Map Size** in the inspector (or re-run Setup Game Scene).
 

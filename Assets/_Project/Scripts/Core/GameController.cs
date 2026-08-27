@@ -274,6 +274,8 @@ namespace CatanRoguelike.Core
 
             State.Board.DayNumber++;
 
+            ApplyActTransitions();
+
             if (RunProgression.ShouldOfferLevelUp(State))
             {
                 State.PendingLevelUpChoices.Clear();
@@ -356,9 +358,14 @@ namespace CatanRoguelike.Core
         {
             State.PioneerFreeRoadAvailable = State.Leader == LeaderId.Pioneer;
             State.Phase = GamePhase.NightRoll;
-            State.TomorrowRolls = RollEngine.RollNightly(2);
 
-            var eventId = Events.MaybeRollEvent();
+            int act = ActProgression.GetAct(State.Board.DayNumber);
+            var (rollPasses, maxRoll) = ActProgression.GetYieldConfig(State.Board.DayNumber);
+            State.TomorrowRolls = rollPasses > 1
+                ? RollEngine.RollNightlyCombined(rollPasses, maxRoll)
+                : RollEngine.RollNightly(maxRoll);
+
+            var eventId = Events.MaybeRollEvent(act);
             if (eventId != EventId.None)
                 Events.ApplyEvent(State, eventId);
 
@@ -369,12 +376,35 @@ namespace CatanRoguelike.Core
             if (State.HasPerk(LevelUpPerkId.ExtraCardDraw)) draws++;
 
             CardEngine.DrawToHand(State, PlayerId.Human, draws);
-            CardEngine.DrawToHand(State, PlayerId.Ai, 1);
+            CardEngine.DrawToHand(State, PlayerId.Ai, ActProgression.GetAiNightDraws(act), act);
 
             State.Phase = GamePhase.NightPlayCard;
+            string actNote = act > 1 ? $" Act {act}." : "";
             string eventNote = State.ActiveEvent != EventId.None ? $" Event: {State.EventMessage}" : "";
-            State.StatusMessage = "Night: review tomorrow's rolls. Play a card or continue." + eventNote;
+            State.StatusMessage = "Night: review tomorrow's rolls. Play a card or continue." + actNote + eventNote;
             NotifyChanged();
+        }
+
+        private void ApplyActTransitions()
+        {
+            int act = ActProgression.GetAct(State.Board.DayNumber);
+            var target = ActProgression.GetMapExpansionTarget(State.MapSize, act);
+            if (target.HasValue && target.Value != State.MapSize)
+            {
+                int added = MapPresets.ExpandBoard(State.Board, target.Value);
+                if (added > 0)
+                {
+                    State.MapSize = target.Value;
+                    State.Ports = PortAccess.DiscoverPorts(State.Board);
+                    State.ActUnlockMessage =
+                        $"{ActProgression.GetActLabel(act)}: map +{added} hex → {MapPresets.GetDisplayName(target.Value)}";
+                    OnBoardRebuilt?.Invoke();
+                }
+            }
+            else if (act > 1 && string.IsNullOrEmpty(State.ActUnlockMessage))
+            {
+                State.ActUnlockMessage = ActProgression.GetActUnlockSummary(act);
+            }
         }
 
         private void AdvanceFromNightCard()

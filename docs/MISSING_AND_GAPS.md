@@ -1,6 +1,6 @@
 # Mangler & ikke-wired endnu
 
-Sidst opdateret efter P2 game-over run-summary (IMGUI VP breakdown + seed/day/map/leader).
+Sidst opdateret efter Fase 2.4 Act progression (yield, events, AI, map growth) på main med save/load, setup-bonus og largest army.
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
 
@@ -22,7 +22,6 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 
 - **Meta progression** mellem runs (permanente unlocks)
 - **Save / load** — **første slice (Fase 2.1):** versioneret JSON (`SaveGame`, format v1), én slot `save.json`, IMGUI Save/Load på `PlaceholderUI`, EditMode round-trip test. Autosave ved nat, multi-slot menu og RNG roll-tællere venter.
-- **Act 2** progression (flere yield-rolls, større kort over tid)
 - **Per-tile nummer-tokens** (klassisk Catan 2–12) — produktion bruger abstrakte daglige rolls per ressource
 
 ---
@@ -43,7 +42,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 - **Embargo-status** — rød statuslinje med ressource + dage tilbage mens aktiv ✓
 - **Forecast** — reruller alt (korrekt), men parameter ignoreres i UI
 
-### Events (~22 % per nat)
+### Events (~22 % per nat i Act 1; skalerer med act)
 - 6 events i `EventEngine` ✓
 - **Board overlays** for storm/famine/gold rush/good harvest via `EventBoardVisual` + `HexTileView` (market day / bandit raid use text or robber only) ✓
 - **Famine** påvirker `TomorrowRolls`; UI-tekst kan være misvisende om timing
@@ -60,6 +59,8 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 
 ### AI
 - Setup, byg, shop, nat-kort (begrænset pool) ✓
+- **Act 2+** — 2 nat-kortspil, smartere kortvalg, flere city-upgrades, stærkere road-blocking ✓
+- **Act 3** — ekstra AI-draw + bredere pool (Fertile/Ledger/Forecast) ✓
 - **Embargo** i AI-kortpool; spiller mod mennesket via `PlayerShopEmbargo` (mål = menneskets lager + shop-Give) ✓
 - **Harbor Charter** — bevidst **human-only** (`aiCanUse: false`); synergy (+1 VP ved næste kyst-settlement) giver ikke mening for AI uden coastal-prioritet
 - Skjult intent — ingen debug-visning
@@ -133,6 +134,9 @@ Eksisterende EditMode-tests:
 - `EventBoardVisualTests` — tile overlays: none; storm on `EventStormTile`; famine wheat; gold rush stone; good harvest all tiles; market day / bandit raid none
 - `GameControllerIntegrationTests` — seeded setup → nat/dag-cyklus uden hang; `SkipNightCard` / `PlayPlayerCard` → `DayPlayerActions`; win ved 10 VP; level-up på dag 5 via `EndPlayerDay`; disabled roads + event-flags ryddes ved daggrænse
 - `GameSceneSmokeTests` (PlayMode) — `Game.unity` loader; `GameManager` / `BoardView` / `PlaceholderUI` findes; efter Start har `GameManager.Controller` + state i run-select eller setup-fase (ingen umiddelbar NRE)
+- `ActProgressionTests` — dag→act thresholds, yield/event/AI/map knobs
+- `MapExpansionTests` — `ExpandBoard` tile counts, buildings preserved, coastal flags
+- `ActProgressionFlowTests` — combined rolls Act 2/3, event chance/weights, AI double-play, dag 6 map growth
 
 **Mangler tests for:**
 - PlayMode / UI-tests ud over scene-boot smoke (fx fuld IMGUI-interaktion)
@@ -163,6 +167,7 @@ Core/Victory/VictoryBreakdown.cs — VP-dele per spiller (settlements, cities, l
 Core/Victory/ArmyCalculator.cs — knight counts + Largest Army owner (classic tie rules)
 Core/PendingStatusDisplay.cs — rene statuslinjer for Harbor Charter / Embargo / level-up preview
 Core/Cards/EmbargoTargetSelector.cs — AI Embargo-mål (spiller-lager + shop Give)
+Core/Progression/ActProgression.cs — day→act mapping, yield/event/AI/map scaling (Fase 2.4)
 Core/Progression/RunProgression.cs — level-up interval, `WillOfferLevelUpAfterThisDay`, seeded perk draft
 Core/Shop/ShopDealPricing.cs — klassificerer effektiv shop-pris (port / leader / event / base)
 Core/Events/EventBoardVisual.cs — tile overlay kind per hex for active night event

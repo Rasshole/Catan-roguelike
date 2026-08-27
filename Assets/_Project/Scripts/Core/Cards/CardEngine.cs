@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Victory;
 using CatanRoguelike.Core.Yield;
 
@@ -19,11 +20,13 @@ namespace CatanRoguelike.Core.Cards
             _rollEngine = new RollEngine(seed);
         }
 
-        public CardId DrawCard(bool forAi = false)
+        public CardId DrawCard(bool forAi = false, int aiAct = 1)
         {
-            var pool = (forAi ? CardLibrary.AiPool : CardLibrary.AllCards)
-                .Where(id => CardLibrary.Get(id).AiCanUse || !forAi)
-                .ToList();
+            var pool = forAi
+                ? GetAiDrawPool(aiAct)
+                : CardLibrary.AllCards
+                    .Where(id => CardLibrary.Get(id).AiCanUse || !forAi)
+                    .ToList();
 
             if (pool.Count == 0) return CardId.Knight;
 
@@ -38,13 +41,27 @@ namespace CatanRoguelike.Core.Cards
             return pool[^1];
         }
 
-        public void DrawToHand(GameState state, PlayerId player, int count = 1)
+        private static List<CardId> GetAiDrawPool(int aiAct)
+        {
+            var pool = new List<CardId>(CardLibrary.AiPool);
+            if (aiAct >= 3)
+            {
+                foreach (var id in CardLibrary.Act3AiPoolExtras)
+                {
+                    if (!pool.Contains(id))
+                        pool.Add(id);
+                }
+            }
+            return pool;
+        }
+
+        public void DrawToHand(GameState state, PlayerId player, int count = 1, int aiAct = 1)
         {
             var hand = player == PlayerId.Human ? state.PlayerHand : state.AiHand;
             for (int i = 0; i < count; i++)
             {
                 if (hand.Count >= BalanceConfig.MaxHandSize) break;
-                hand.Add(DrawCard(player == PlayerId.Ai));
+                hand.Add(DrawCard(player == PlayerId.Ai, aiAct));
             }
         }
 
@@ -98,8 +115,9 @@ namespace CatanRoguelike.Core.Cards
         private bool ApplyFertile(GameState state, ResourceType? resource)
         {
             if (!resource.HasValue) return false;
+            int maxRoll = ActProgression.GetMaxRollForDay(state.Board.DayNumber);
             int current = state.TomorrowRolls[resource.Value];
-            state.TomorrowRolls[resource.Value] = Math.Min(current + 1, 2);
+            state.TomorrowRolls[resource.Value] = Math.Min(current + 1, maxRoll);
             return true;
         }
 
@@ -178,7 +196,10 @@ namespace CatanRoguelike.Core.Cards
 
         private bool ApplyForecast(GameState state, ResourceType? resource)
         {
-            state.TomorrowRolls = _rollEngine.RollNightly(2);
+            var (passes, maxRoll) = ActProgression.GetYieldConfig(state.Board.DayNumber);
+            state.TomorrowRolls = passes > 1
+                ? _rollEngine.RollNightlyCombined(passes, maxRoll)
+                : _rollEngine.RollNightly(maxRoll);
             return true;
         }
 
