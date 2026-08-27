@@ -116,18 +116,16 @@ namespace CatanRoguelike.Game
             var ports = PortAccess.DiscoverPorts(board);
             foreach (var port in ports)
             {
-                var (x, z) = HexMath.VertexToWorldPosition(port.Vertex, hexScale);
-                var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                go.name = port.IsGeneric ? "Port_Generic" : $"Port_{port.SpecificResource}";
-                go.transform.SetParent(boardRoot, false);
-                go.transform.position = new Vector3(x, 0.05f, z);
-                go.transform.localScale = new Vector3(0.2f, 0.04f, 0.2f);
-
-                var renderer = go.GetComponent<Renderer>();
-                renderer.material = BuiltInMaterials.Create(port.IsGeneric
-                    ? new Color(0.9f, 0.9f, 0.95f)
-                    : GetResourceColor(port.SpecificResource!.Value) * 0.7f + Color.white * 0.3f);
-                Destroy(go.GetComponent<Collider>());
+                PortMarkerVisuals.Create(
+                    boardRoot,
+                    port.Vertex,
+                    hexScale,
+                    tileHeight,
+                    port.IsGeneric,
+                    port.SpecificResource,
+                    port.IsGeneric
+                        ? Color.white
+                        : GetResourceColor(port.SpecificResource!.Value));
             }
         }
 
