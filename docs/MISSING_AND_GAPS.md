@@ -91,7 +91,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 | **VP-breakdown** | IMGUI viser total + én linje per spiller (settlements / cities / longest / long road / bonus) via `VictoryBreakdown` |
 | **Pending effects** | Road Builder / Master Builder — minimal feedback |
 | **Game over** | IMGUI run-summary (VP breakdown, seed, day, map, leader) + scene reload ✓ |
-| **README** | Kan være bagud ift. leaders/draft/klik-placering |
+| **README** | Opdateret til fresh-clone flow (Game.unity, macOS Editor, playflow) ✓ |
 
 ---
 
