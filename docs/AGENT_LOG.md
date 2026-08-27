@@ -171,3 +171,8 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **`BoardView`:** runtime `FeltSurface` cylinder behind `WaterSurface` (`BoardFeltMaterial`, matte felt green).
 - **Tests:** `BoardSurfaceSizingTests` felt sizing/Y; `BoardFeltMaterialTests`. No v0.1 tag.
 
+## 2026-08-27 (UTC) — Smooth decorative disk silhouettes
+
+- **`ThinDiskMesh`:** 64-segment disk (mesh radius 0.5, height 2) shared by wood/sea/felt surfaces; existing `Compute*DiskScale` helpers unchanged.
+- **`BoardView`:** `BoardSurface`, `WaterSurface`, `FeltSurface` use custom mesh instead of `PrimitiveType.Cylinder` (no collider).
+- **Tests:** `ThinDiskMeshTests` (vertex/triangle counts, radius, no NaNs). No v0.1 tag.
