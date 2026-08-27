@@ -33,6 +33,17 @@ namespace CatanRoguelike.Editor
             var ui = gameGo.AddComponent<PlaceholderUI>();
             var manager = gameGo.AddComponent<GameManager>();
 
+            if (camera != null)
+            {
+                var tableCamera = camera.gameObject.GetComponent<TableCamera>();
+                if (tableCamera != null)
+                {
+                    var camSo = new SerializedObject(tableCamera);
+                    camSo.FindProperty("boardView").objectReferenceValue = boardView;
+                    camSo.ApplyModifiedPropertiesWithoutUndo();
+                }
+            }
+
             // IMGUI needs an EventSystem for click-through detection
             if (Object.FindObjectOfType<UnityEngine.EventSystems.EventSystem>() == null)
             {
