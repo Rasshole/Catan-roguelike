@@ -26,5 +26,12 @@ namespace CatanRoguelike.Tests
             var deadline = GameViewCaptureFrameWait.ComputeDeadline(50);
             Assert.AreEqual(50 + GameViewCaptureFrameWait.PhaseTimeoutSeconds, deadline, 0.0001);
         }
+
+        [Test]
+        public void ComputeOverallDeadline_AddsOverallTimeout()
+        {
+            var deadline = GameViewCaptureFrameWait.ComputeOverallDeadline(50);
+            Assert.AreEqual(50 + GameViewCaptureFrameWait.OverallTimeoutSeconds, deadline, 0.0001);
+        }
     }
 }
