@@ -162,14 +162,17 @@ namespace CatanRoguelike.Game
                 return;
 
             var hexScale = transform.lossyScale;
-            float localDiameter = WorldRobberDiameter / hexScale.x;
 
             _robberMarker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             _robberMarker.name = "Robber";
             _robberMarker.transform.SetParent(transform, false);
             _robberMarker.transform.localPosition = new Vector3(
                 RobberLocalOffset.x, MarkerElevationY, RobberLocalOffset.z);
-            _robberMarker.transform.localScale = Vector3.one * localDiameter;
+            // Non-uniform hex lossyScale squashes uniform localScale on Y; compensate per axis.
+            _robberMarker.transform.localScale = new Vector3(
+                WorldRobberDiameter / hexScale.x,
+                WorldRobberDiameter / hexScale.y,
+                WorldRobberDiameter / hexScale.z);
             _robberMarker.GetComponent<Renderer>().material.color = Color.black;
         }
 
