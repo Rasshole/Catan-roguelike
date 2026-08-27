@@ -11,6 +11,7 @@ using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Turn;
+using CatanRoguelike.Core.Save;
 using CatanRoguelike.Core.Victory;
 using CatanRoguelike.Core.Yield;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
@@ -20,7 +21,7 @@ namespace CatanRoguelike.Core
 {
     public sealed class GameController
     {
-        public GameState State { get; }
+        public GameState State { get; private set; }
         public PlacementValidator Placement { get; }
         public RollEngine RollEngine { get; }
         public CardEngine CardEngine { get; }
@@ -39,17 +40,45 @@ namespace CatanRoguelike.Core
         public GameController(int? seed = null, MapSize mapSize = MapSize.Small)
         {
             RunSeed = seed ?? 0;
-            _random = seed.HasValue ? new Random(seed.Value) : new Random();
             var board = MapPresets.CreateBoard(mapSize);
-            State = new GameState(board) { MapSize = mapSize, Phase = GamePhase.RunSelectMap };
-            State.Ports = PortAccess.DiscoverPorts(board);
+            var state = new GameState(board) { MapSize = mapSize, Phase = GamePhase.RunSelectMap };
+            state.Ports = PortAccess.DiscoverPorts(board);
+            state.StatusMessage = "Vælg kortstørrelse.";
+            State = state;
+            _random = seed.HasValue ? new Random(seed.Value) : new Random();
+            _lastPlacedSettlement = null;
             Placement = new PlacementValidator();
             RollEngine = new RollEngine(seed);
             CardEngine = new CardEngine(seed);
             Shop = new ShopGenerator(seed);
             Ai = new AiController(seed);
             Events = new EventEngine(seed);
-            State.StatusMessage = "Vælg kortstørrelse.";
+        }
+
+        private GameController(int runSeed, GameState state, Vertex? lastPlacedSettlement)
+        {
+            RunSeed = runSeed;
+            State = state;
+            _random = new Random(runSeed);
+            _lastPlacedSettlement = lastPlacedSettlement;
+            Placement = new PlacementValidator();
+            RollEngine = new RollEngine(runSeed);
+            CardEngine = new CardEngine(runSeed);
+            Shop = new ShopGenerator(runSeed);
+            Ai = new AiController(runSeed);
+            Events = new EventEngine(runSeed);
+        }
+
+        public static GameController FromSave(string json)
+        {
+            var doc = SaveGame.Parse(json);
+            var state = SaveGame.RestoreState(doc);
+            Vertex? lastSettlement = null;
+            if (doc.LastPlacedSettlement != null)
+                lastSettlement = VertexGraph.Canonicalize(new Vertex(
+                    new HexCoord(doc.LastPlacedSettlement.HexQ, doc.LastPlacedSettlement.HexR),
+                    doc.LastPlacedSettlement.CornerIndex));
+            return new GameController(doc.RunSeed, state, lastSettlement);
         }
 
         public void SelectMap(MapSize mapSize)

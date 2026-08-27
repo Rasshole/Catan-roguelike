@@ -15,6 +15,44 @@ namespace CatanRoguelike.Game
 
         public GameController Controller { get; private set; }
 
+        public void SaveRun()
+        {
+            if (Controller != null)
+                SaveGameFile.Save(Controller);
+        }
+
+        public bool TryLoadRun()
+        {
+            if (!SaveGameFile.TryLoad(out var loaded))
+                return false;
+
+            SwapController(loaded);
+            return true;
+        }
+
+        private void SwapController(GameController newController)
+        {
+            if (Controller != null)
+            {
+                Controller.OnStateChanged -= HandleStateChanged;
+                Controller.OnBoardRebuilt -= HandleBoardRebuilt;
+            }
+
+            Controller = newController;
+            Controller.OnStateChanged += HandleStateChanged;
+            Controller.OnBoardRebuilt += HandleBoardRebuilt;
+
+            if (boardView != null)
+                boardView.Initialize(Controller);
+            if (ui != null)
+                ui.Initialize(Controller, boardInput);
+            if (boardInput != null)
+                boardInput.Initialize(Controller, boardView);
+
+            HandleBoardRebuilt();
+            HandleStateChanged(Controller.State);
+        }
+
         private void Start()
         {
             Controller = new GameController(randomSeed, mapSize);
@@ -65,26 +103,8 @@ namespace CatanRoguelike.Game
         /// </summary>
         public void DebugRestart(int seed)
         {
-            if (Controller != null)
-            {
-                Controller.OnStateChanged -= HandleStateChanged;
-                Controller.OnBoardRebuilt -= HandleBoardRebuilt;
-            }
-
             randomSeed = seed;
-            Controller = new GameController(randomSeed, mapSize);
-            Controller.OnStateChanged += HandleStateChanged;
-            Controller.OnBoardRebuilt += HandleBoardRebuilt;
-
-            if (boardView != null)
-                boardView.Initialize(Controller);
-            if (ui != null)
-                ui.Initialize(Controller, boardInput);
-            if (boardInput != null)
-                boardInput.Initialize(Controller, boardView);
-
-            HandleBoardRebuilt();
-            HandleStateChanged(Controller.State);
+            SwapController(new GameController(randomSeed, mapSize));
         }
 #endif
     }

@@ -1,7 +1,9 @@
 {
     "name": "CatanRoguelike.Core",
     "rootNamespace": "CatanRoguelike.Core",
-    "references": [],
+    "references": [
+        "Newtonsoft.Json"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
