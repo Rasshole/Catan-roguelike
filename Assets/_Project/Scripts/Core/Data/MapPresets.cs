@@ -141,7 +141,7 @@ namespace CatanRoguelike.Core.Data
         /// Adds missing hexes from the target preset onto a live board.
         /// Existing buildings, roads, and robber position are preserved.
         /// </summary>
-        public static int ExpandBoard(BoardState board, MapSize targetSize)
+        public static int ExpandBoard(BoardState board, MapSize targetSize, int? seed = null)
         {
             var preset = targetSize switch
             {
@@ -173,12 +173,12 @@ namespace CatanRoguelike.Core.Data
                 center.NumberToken = null;
             }
 
-            NumberTokenLibrary.AssignMissingTokens(board);
+            NumberTokenLibrary.AssignMissingTokens(board, seed);
 
             return added;
         }
 
-        public static BoardState CreateBoard(MapSize size = MapSize.Small)
+        public static BoardState CreateBoard(MapSize size = MapSize.Small, int? seed = null)
         {
             var preset = size switch
             {
@@ -210,7 +210,7 @@ namespace CatanRoguelike.Core.Data
             if (size == MapSize.Large && board.TryGetTile(new HexCoord(0, 0), out var center))
                 center.IsDesert = true;
 
-            NumberTokenLibrary.AssignMissingTokens(board);
+            NumberTokenLibrary.AssignMissingTokens(board, seed);
 
             return board;
         }

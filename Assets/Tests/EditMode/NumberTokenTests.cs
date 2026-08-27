@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Linq;
+using CatanRoguelike.Core;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
@@ -9,6 +11,49 @@ namespace CatanRoguelike.Tests
 {
     public class NumberTokenTests
     {
+        [Test]
+        public void CreateBoard_SameSeedAndSize_ProducesIdenticalTokenMap()
+        {
+            const int seed = 12345;
+
+            var first = MapPresets.CreateBoard(MapSize.Medium, seed);
+            var second = MapPresets.CreateBoard(MapSize.Medium, seed);
+
+            AssertTokenMapsEqual(first, second);
+        }
+
+        [Test]
+        public void CreateBoard_DifferentSeeds_ProduceAtLeastOneDifferentToken()
+        {
+            var first = MapPresets.CreateBoard(MapSize.Small, 111);
+            var second = MapPresets.CreateBoard(MapSize.Small, 222);
+
+            Assert.IsTrue(AtLeastOneTokenDiffers(first, second));
+        }
+
+        [Test]
+        public void GameController_SameSeed_ProducesIdenticalTokenMap()
+        {
+            var first = new GameController(42, MapSize.Small);
+            var second = new GameController(42, MapSize.Small);
+
+            AssertTokenMapsEqual(first.State.Board, second.State.Board);
+        }
+
+        [Test]
+        public void ExpandBoard_SameSeed_ProducesIdenticalTokenMap()
+        {
+            const int seed = 999;
+
+            var first = MapPresets.CreateBoard(MapSize.Small, seed);
+            var second = MapPresets.CreateBoard(MapSize.Small, seed);
+
+            MapPresets.ExpandBoard(first, MapSize.Medium, seed);
+            MapPresets.ExpandBoard(second, MapSize.Medium, seed);
+
+            AssertTokenMapsEqual(first, second);
+        }
+
         [Test]
         public void CreateBoard_Small_AssignsSevenTokens_NoSevens()
         {
@@ -78,6 +123,30 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(5, NumberTokenLibrary.GetPipWeight(8));
             Assert.AreEqual(1, NumberTokenLibrary.GetPipWeight(2));
             Assert.AreEqual(0, NumberTokenLibrary.GetPipWeight(7));
+        }
+
+        private static void AssertTokenMapsEqual(BoardState first, BoardState second)
+        {
+            Assert.AreEqual(first.Tiles.Count, second.Tiles.Count);
+            foreach (var coord in first.Tiles.Keys)
+            {
+                Assert.IsTrue(second.Tiles.ContainsKey(coord), $"Missing coord {coord}");
+                Assert.AreEqual(
+                    first.Tiles[coord].NumberToken,
+                    second.Tiles[coord].NumberToken,
+                    $"Token mismatch at {coord}");
+            }
+        }
+
+        private static bool AtLeastOneTokenDiffers(BoardState first, BoardState second)
+        {
+            foreach (var coord in first.Tiles.Keys)
+            {
+                if (first.Tiles[coord].NumberToken != second.Tiles[coord].NumberToken)
+                    return true;
+            }
+
+            return false;
         }
     }
 }
