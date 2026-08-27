@@ -15,13 +15,16 @@ namespace CatanRoguelike.Game
         public const float DefaultMarginFactor = 1.08f;
         public const float MinOrbitDistance = 2.4f;
 
-        /// <summary>Thin Y scale for the decorative table cube under the hex cluster.</summary>
+        /// <summary>World thickness of the decorative table disk under the hex cluster.</summary>
         public const float TableSurfaceThinY = 0.06f;
 
         /// <summary>
-        /// Pad beyond <see cref="ComputeBoardBoundingRadius"/> on each XZ half-axis (1.0 = flush with farthest hex edge).
+        /// Pad beyond <see cref="ComputeBoardBoundingRadius"/> for the table disk (1.0 = flush with farthest hex corner).
         /// </summary>
-        public const float TableSurfaceRadiusFactor = 1.15f;
+        public const float TableSurfacePadFactor = 1.08f;
+
+        private const float CylinderMeshRadius = 0.5f;
+        private const float CylinderMeshHeight = 2f;
 
         public static float ComputeBoardBoundingRadius(BoardState board, float hexScale) =>
             ComputeBoardBoundingRadius(board.Tiles.Keys, hexScale);
@@ -52,10 +55,18 @@ namespace CatanRoguelike.Game
         public static float ComputeOrbitHeight(float orbitDistance) =>
             orbitDistance * HeightToDistanceRatio;
 
-        public static Vector3 ComputeTableSurfaceScale(float boardBoundingRadius)
+        public static float ComputeTableDiskWorldRadius(float boardBoundingRadius) =>
+            boardBoundingRadius * TableSurfacePadFactor;
+
+        /// <summary>
+        /// Local scale for a Unity cylinder primitive (mesh radius 0.5, height 2) sized to the hex cluster.
+        /// </summary>
+        public static Vector3 ComputeTableDiskScale(float boardBoundingRadius)
         {
-            float halfExtent = boardBoundingRadius * TableSurfaceRadiusFactor;
-            return new Vector3(2f * halfExtent, TableSurfaceThinY, 2f * halfExtent);
+            float worldRadius = ComputeTableDiskWorldRadius(boardBoundingRadius);
+            float xz = worldRadius / CylinderMeshRadius;
+            float y = TableSurfaceThinY / CylinderMeshHeight;
+            return new Vector3(xz, y, xz);
         }
     }
 }
