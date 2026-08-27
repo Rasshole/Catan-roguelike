@@ -108,7 +108,7 @@ Eksisterende EditMode-tests:
 - `MapPresetsTests` — 7/13/19 tile counts
 - `VictoryCalculatorTests` — Harbor Charter + FirstCityVp overlever `RefreshVictoryPoints`; LongRoadBonus +1 / mister longest / ingen double-count; `VictoryBreakdown` dele summer til total
 - `VertexGraphTests` — Canonicalize idempotent; VertexDistance terminerer med buildings
-- `RouteCalculatorTests` — længde N, enemy split, own settlement splitter ikke, tom=0, disjoint/ties, VertexDistance-regression med buildings, **disabled roads (Bandit Raid / `DisabledRoads`)**, **hex-loop vertex-DFS (6→5)**, **forgrening**, **`GetLongestRoadOwner` tie / threshold / disabled flip**
+- `RouteCalculatorTests` — længde N, enemy split, own settlement splitter ikke, tom=0, disjoint/ties, VertexDistance-regression med buildings, **disabled roads (Bandit Raid / `DisabledRoads`)**, **hex-loop counts all 6 edges**, **forgrening**, **`GetLongestRoadOwner` tie / threshold / disabled flip**
 - `GameControllerSetupTests` — AI setup places 2 settlements + 2 roads
 - `RobberStealTests` — day-move steal, knight steal, no victim, seeded RNG
 - `AiControllerShopTests` — AI shop køber ved rigtig afford-check; springer over når den ikke har råd
