@@ -160,3 +160,8 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **`BoardView`:** runtime `WaterSurface` cylinder behind `BoardSurface` (`BoardWaterMaterial`, dark sea albedo).
 - **Tests:** `BoardSurfaceSizingTests` water sizing/Y; `BoardWaterMaterialTests`. No v0.1 tag.
 
+## 2026-08-27 (UTC) — Game-view screenshot tool (`GameViewCapture`)
+
+- **`GameViewCapture`:** MenuItem + `CaptureAndQuit` (`-executeMethod`); Play Mode scripted setup via shared `GameScenePlayHarness`, `Camera.main` → 1920×1080 PNG (`/workspace/game-view.png` or `GAME_VIEW_SHOT`). Exits Play Mode without saving `Game.unity`.
+- **Tests:** `GameScenePlayHarnessTests` (EditMode). Documented in `docs/TOOLING.md`.
+

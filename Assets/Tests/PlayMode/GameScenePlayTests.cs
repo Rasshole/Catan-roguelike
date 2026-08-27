@@ -1,20 +1,13 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using CatanRoguelike.Core;
-using CatanRoguelike.Core.Data;
-using CatanRoguelike.Core.Map;
-using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Game;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
-using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
-using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
 namespace CatanRoguelike.Tests.PlayMode
 {
@@ -77,7 +70,7 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.AreEqual(GamePhase.RunSelectMap, gameManager.Controller.State.Phase,
                 "Fresh scene boot should begin at map select.");
 
-            CompleteRunSelect(gameManager.Controller, gameManager.Meta);
+            GameScenePlayHarness.CompleteRunSelect(gameManager.Controller, gameManager.Meta);
 
             var phase = gameManager.Controller.State.Phase;
             CollectionAssert.Contains(SetupPhases, phase,
@@ -112,8 +105,8 @@ namespace CatanRoguelike.Tests.PlayMode
             var game = gameManager.Controller;
             Assert.IsNotNull(game, "Controller should be initialized after Start().");
 
-            CompleteRunSelect(game, gameManager.Meta);
-            CompleteSetup(game);
+            GameScenePlayHarness.CompleteRunSelect(game, gameManager.Meta);
+            GameScenePlayHarness.CompleteSetup(game);
 
             Assert.AreEqual(GamePhase.NightPlayCard, game.State.Phase,
                 "setup should finish by entering the first night");
@@ -127,88 +120,6 @@ namespace CatanRoguelike.Tests.PlayMode
                 "short harness should not reach 10 VP");
             CollectionAssert.Contains(DayNightPhases, game.State.Phase,
                 $"expected a day/night phase after one cycle, got {game.State.Phase}");
-        }
-
-        private static void CompleteRunSelect(GameController controller, MetaProgression meta)
-        {
-            controller.SelectMap(MapSize.Small);
-            Assert.AreEqual(GamePhase.RunSelectLeader, controller.State.Phase,
-                "SelectMap should advance to leader select.");
-
-            var leader = meta.GetAvailableLeaders().First();
-            controller.SelectLeader(leader);
-            Assert.AreEqual(GamePhase.RunSelectDraft, controller.State.Phase,
-                "SelectLeader should advance to unique draft.");
-
-            int pickCount = meta.GetDraftPickCount();
-            var draftIds = meta.GetDraftPool().Take(pickCount).ToList();
-            Assert.GreaterOrEqual(draftIds.Count, pickCount,
-                "meta draft pool should expose enough uniques for a fresh run.");
-
-            foreach (var id in draftIds)
-                controller.ToggleDraftUnique(id);
-
-            controller.ConfirmRunSetup();
-            Assert.True(controller.State.RunSetupComplete,
-                "ConfirmRunSetup should mark run setup complete.");
-        }
-
-        private static void CompleteSetup(GameController game)
-        {
-            int safety = 0;
-            while (game.State.IsSetupPhase && safety++ < 24)
-                AdvanceSetupStep(game);
-
-            Assert.False(game.State.IsSetupPhase,
-                "setup loop should finish within bounded steps (stall guard).");
-        }
-
-        private static void AdvanceSetupStep(GameController game)
-        {
-            switch (game.State.Phase)
-            {
-                case GamePhase.SetupAiSettlement1:
-                case GamePhase.SetupAiSettlement2:
-                case GamePhase.SetupAiRoad1:
-                case GamePhase.SetupAiRoad2:
-                    game.RunAiSetupStep();
-                    break;
-
-                case GamePhase.SetupPlayerSettlement1:
-                case GamePhase.SetupPlayerSettlement2:
-                    if (!TryPlaceFirstValidSettlement(game, PlayerId.Human))
-                        throw new InvalidOperationException("no valid player settlement in " + game.State.Phase);
-                    break;
-
-                case GamePhase.SetupPlayerRoad1:
-                case GamePhase.SetupPlayerRoad2:
-                    if (!TryPlaceFirstValidRoad(game, PlayerId.Human))
-                        throw new InvalidOperationException("no valid player road in " + game.State.Phase);
-                    break;
-
-                default:
-                    throw new InvalidOperationException("unexpected setup phase " + game.State.Phase);
-            }
-        }
-
-        private static bool TryPlaceFirstValidSettlement(GameController game, PlayerId player)
-        {
-            foreach (var vertex in game.GetValidSettlements(player))
-            {
-                if (game.PlaceSettlement(vertex, player))
-                    return true;
-            }
-            return false;
-        }
-
-        private static bool TryPlaceFirstValidRoad(GameController game, PlayerId player)
-        {
-            foreach (var edge in game.GetValidRoads(player))
-            {
-                if (game.PlaceRoad(edge, player))
-                    return true;
-            }
-            return false;
         }
 
         private static void PrepareNightAdvance(GameController game)
