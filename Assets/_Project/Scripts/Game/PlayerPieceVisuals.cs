@@ -177,7 +177,7 @@ namespace CatanRoguelike.Game
             go.transform.localRotation = localRotation;
 
             var renderer = go.GetComponent<Renderer>();
-            renderer.material = material;
+            renderer.sharedMaterial = material;
 
             Object.Destroy(go.GetComponent<Collider>());
         }
