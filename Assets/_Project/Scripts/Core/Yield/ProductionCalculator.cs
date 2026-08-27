@@ -24,7 +24,6 @@ namespace CatanRoguelike.Core.Yield
                 if (owner != player || building == BuildingType.None) continue;
 
                 bool isCity = building == BuildingType.City;
-                int bestOnVertex = 0;
 
                 foreach (var hex in VertexGraph.GetHexesForVertex(kvp.Key))
                 {
@@ -49,16 +48,7 @@ namespace CatanRoguelike.Core.Yield
                         amount += 1;
 
                     if (amount > 0)
-                    {
                         production.Add(tile.Resource, amount);
-                        bestOnVertex = Math.Max(bestOnVertex, amount);
-                    }
-                }
-
-                if (player == PlayerId.Human && isCity && state.HasPerk(LevelUpPerkId.CityProductionBoost)
-                    && bestOnVertex > 0)
-                {
-                    production.Add(ResourceType.Wheat, 0);
                 }
             }
 

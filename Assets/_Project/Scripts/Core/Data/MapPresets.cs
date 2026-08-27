@@ -167,6 +167,12 @@ namespace CatanRoguelike.Core.Data
             foreach (var coord in allCoords)
                 board.Tiles[coord].IsCoastal = IsCoastalTile(coord, allCoords);
 
+            if (targetSize == MapSize.Large && board.TryGetTile(new HexCoord(0, 0), out var center))
+            {
+                center.IsDesert = true;
+                center.NumberToken = null;
+            }
+
             NumberTokenLibrary.AssignMissingTokens(board);
 
             return added;
