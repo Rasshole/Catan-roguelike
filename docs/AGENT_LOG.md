@@ -100,6 +100,11 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **Docs:** `BLOCKED.md` #3 Windows-Mono tarball 404 from Linux-VM; `ROADMAP_V3` PlayMode + Windows build rows updated.
 - **Core:** `dotnet test tools/core-tests` unchanged.
 
+## 2026-08-27 (UTC) — Number-token chip rim contrast polish
+
+- **`NumberTokenVisualStyle`:** darker standard rim + slightly darker cream face; stronger `ChipRimRedAccent` so 6/8 rims read on wheat/sheep hexes. **`HexTileView`:** chip rim/face diameters 0.44 / 0.36 (was 0.42 / 0.34).
+- **Tests:** `PaletteConstants_MatchExpectedRgbValues` in `NumberTokenVisualStyleTests`. **339/339** `dotnet test tools/core-tests`.
+
 ## 2026-08-27 (UTC) — Token/hex visual pass (placeholder chips)
 
 - Rebased onto `main` @ bb499db+; merged with Act 3 `PortBlockade` overlay/tint from #61.

@@ -25,8 +25,8 @@ namespace CatanRoguelike.Game
 
         private const float ChipElevationY = 0.48f;
         private const float LabelElevationY = 0.52f;
-        private const float ChipRimDiameter = 0.42f;
-        private const float ChipFaceDiameter = 0.34f;
+        private const float ChipRimDiameter = 0.44f;
+        private const float ChipFaceDiameter = 0.36f;
         private const float ChipRimHeight = 0.014f;
         private const float ChipFaceHeight = 0.012f;
 
