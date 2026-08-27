@@ -58,17 +58,28 @@ namespace CatanRoguelike.Editor
             so.FindProperty("mapSize").enumValueIndex = (int)MapSize.Small;
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            var lightGo = new GameObject("Directional Light");
-            var light = lightGo.AddComponent<Light>();
-            light.type = LightType.Directional;
-            light.intensity = 1.1f;
-            lightGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            ConfigureSceneLight();
 
             System.IO.Directory.CreateDirectory("Assets/_Project/Scenes");
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.Refresh();
 
             Debug.Log($"Game scene created at {ScenePath}. Press Play to test.");
+        }
+
+        private static void ConfigureSceneLight()
+        {
+            var light = Object.FindObjectOfType<Light>();
+            if (light == null)
+            {
+                var lightGo = new GameObject("Directional Light");
+                light = lightGo.AddComponent<Light>();
+            }
+
+            light.type = LightType.Directional;
+            light.intensity = 1f;
+            light.color = new Color(1f, 0.95686275f, 0.8392157f);
+            light.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
         }
     }
 }
