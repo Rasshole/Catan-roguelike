@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Game;
@@ -74,18 +75,21 @@ namespace CatanRoguelike.Tests.PlayMode
                 "GameController.State should be non-null after boot.");
 
             var phase = gameManager.Controller.State.Phase;
-            Assert.That(phase, Is.AnyOf(
-                    GamePhase.RunSelectMap,
-                    GamePhase.RunSelectLeader,
-                    GamePhase.RunSelectDraft,
-                    GamePhase.SetupAiSettlement1,
-                    GamePhase.SetupAiRoad1,
-                    GamePhase.SetupAiSettlement2,
-                    GamePhase.SetupAiRoad2,
-                    GamePhase.SetupPlayerSettlement1,
-                    GamePhase.SetupPlayerRoad1,
-                    GamePhase.SetupPlayerSettlement2,
-                    GamePhase.SetupPlayerRoad2),
+            var allowedPhases = new HashSet<GamePhase>
+            {
+                GamePhase.RunSelectMap,
+                GamePhase.RunSelectLeader,
+                GamePhase.RunSelectDraft,
+                GamePhase.SetupAiSettlement1,
+                GamePhase.SetupAiRoad1,
+                GamePhase.SetupAiSettlement2,
+                GamePhase.SetupAiRoad2,
+                GamePhase.SetupPlayerSettlement1,
+                GamePhase.SetupPlayerRoad1,
+                GamePhase.SetupPlayerSettlement2,
+                GamePhase.SetupPlayerRoad2,
+            };
+            CollectionAssert.Contains(allowedPhases, phase,
                 $"Expected run-select or setup phase after boot, got {phase}.");
         }
     }
