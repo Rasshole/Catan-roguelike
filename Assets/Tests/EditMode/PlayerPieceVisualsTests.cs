@@ -76,6 +76,24 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
+        public void CreateSettlement_RoofIsDarkerThanBody()
+        {
+            var piece = PlayerPieceVisuals.CreateSettlement(
+                _testRoot.transform,
+                Vector3.zero,
+                PlayerPieceVisuals.HumanColor,
+                HexTopY);
+
+            var bodyRenderer = piece.transform.Find(PlayerPieceVisuals.BodyPartName).GetComponent<Renderer>();
+            var roofRenderer = piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName).GetComponent<Renderer>();
+
+            float bodyMaxRgb = MaxRgb(bodyRenderer.sharedMaterial.color);
+            float roofMaxRgb = MaxRgb(roofRenderer.sharedMaterial.color);
+
+            Assert.Less(roofMaxRgb, bodyMaxRgb);
+        }
+
+        [Test]
         public void CreateSettlement_SitsAboveHexTop()
         {
             var piece = PlayerPieceVisuals.CreateSettlement(
@@ -150,5 +168,8 @@ namespace CatanRoguelike.Tests
 
             return maxY;
         }
+
+        private static float MaxRgb(Color color) =>
+            Mathf.Max(color.r, Mathf.Max(color.g, color.b));
     }
 }

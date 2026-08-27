@@ -22,26 +22,31 @@ namespace CatanRoguelike.Game
 
         private const float RoofPitchDegrees = 38f;
         private const float BaseGapAboveHex = 0.02f;
+        public const float RoofColorMultiply = 0.55f;
 
         public static Color ColorForPlayer(PlayerId owner) =>
             owner == PlayerId.Human ? HumanColor : AiColor;
 
+        public static Color DarkenForRoof(Color color) =>
+            new(color.r * RoofColorMultiply, color.g * RoofColorMultiply, color.b * RoofColorMultiply, color.a);
+
         public static GameObject CreateSettlement(Transform parent, Vector3 worldPosition, Color color, float hexTopY)
         {
             var root = CreateRoot(parent, SettlementName, worldPosition);
-            var material = BuiltInMaterials.Create(color);
+            var bodyMaterial = BuiltInMaterials.Create(color);
+            var roofMaterial = BuiltInMaterials.Create(DarkenForRoof(color));
 
             const float bodyWidth = 0.24f;
             const float bodyHeight = 0.19f;
             const float bodyDepth = 0.24f;
 
-            AddBody(root.transform, bodyWidth, bodyHeight, bodyDepth, hexTopY, material);
+            AddBody(root.transform, bodyWidth, bodyHeight, bodyDepth, hexTopY, bodyMaterial);
             AddPitchedRoof(
                 root.transform,
                 bodyWidth,
                 bodyDepth,
                 hexTopY + BaseGapAboveHex + bodyHeight,
-                material);
+                roofMaterial);
 
             return root;
         }
@@ -49,7 +54,8 @@ namespace CatanRoguelike.Game
         public static GameObject CreateCity(Transform parent, Vector3 worldPosition, Color color, float hexTopY)
         {
             var root = CreateRoot(parent, CityName, worldPosition);
-            var material = BuiltInMaterials.Create(color);
+            var bodyMaterial = BuiltInMaterials.Create(color);
+            var roofMaterial = BuiltInMaterials.Create(DarkenForRoof(color));
 
             const float bodyWidth = 0.30f;
             const float bodyHeight = 0.22f;
@@ -58,7 +64,7 @@ namespace CatanRoguelike.Game
             const float upperHeight = 0.19f;
             const float upperDepth = 0.22f;
 
-            AddBody(root.transform, bodyWidth, bodyHeight, bodyDepth, hexTopY, material);
+            AddBody(root.transform, bodyWidth, bodyHeight, bodyDepth, hexTopY, bodyMaterial);
 
             float buildingBaseY = hexTopY + BaseGapAboveHex;
             float upperCenterY = buildingBaseY + bodyHeight + upperHeight * 0.5f;
@@ -69,14 +75,14 @@ namespace CatanRoguelike.Game
                 new Vector3(0f, upperCenterY, 0f),
                 new Vector3(upperWidth, upperHeight, upperDepth),
                 Quaternion.identity,
-                material);
+                bodyMaterial);
 
             AddPitchedRoof(
                 root.transform,
                 upperWidth,
                 upperDepth,
                 buildingBaseY + bodyHeight + upperHeight,
-                material);
+                roofMaterial);
 
             return root;
         }
