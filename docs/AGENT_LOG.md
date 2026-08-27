@@ -210,3 +210,10 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 
 - **`BoardWaterMaterial`:** `SeaAlbedo` 0.12/0.22/0.32 → **0.06/0.12/0.20**; `Smoothness` 0.35 → **0.18** so directional light reads as dark navy water, not washed slate-blue. Felt/wood/camera/sizing unchanged.
 - **Tests:** `BoardWaterMaterialTests` (`Create_IsDistinctFromFelt`). No v0.1 tag.
+
+## 2026-08-27 (UTC) — PR #106 merged: edit-mode CaptureAndQuit (Linux PNG)
+
+- **`CaptureAndQuit`:** edit-mode path only — `GameManager.EditorBootstrapForCapture` + `GameSceneCapture.CaptureMainCameraToPng` (`Camera.Render` → `RenderTexture` → PNG). No Play Mode pump / `EditorApplication.update` (batchmode `-executeMethod` runs before the editor main loop).
+- **Output:** 1920×1080 PNG at `/workspace/game-view.png` (or `GAME_VIEW_SHOT`). **Verified on Linux** via `xvfb-run` + `-batchmode -executeMethod …CaptureAndQuit`.
+- **Deps:** `ImageConversionModule` in `CatanRoguelike.Game.asmdef`; `com.unity.modules.imageconversion` in `Packages/manifest.json`.
+- **Tests:** `GameSceneCaptureTests` hermetic around `GAME_VIEW_SHOT` (save/clear/restore). No v0.1 tag.
