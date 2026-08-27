@@ -37,6 +37,7 @@ namespace CatanRoguelike.Editor
 
         private static CapturePhase _phase = CapturePhase.None;
         private static int _targetFrameCount;
+        private static double _phaseDeadline;
         private static bool _exitEditorAfter;
         private static int _exitCode;
         private static string _outputPath;
@@ -72,10 +73,31 @@ namespace CatanRoguelike.Editor
             _exitEditorAfter = exitEditorAfter;
             _exitCode = 0;
             _outputPath = ResolveOutputPath();
-            _phase = CapturePhase.OpenScene;
+            BeginPhase(CapturePhase.OpenScene);
 
             EditorApplication.update -= OnEditorUpdate;
             EditorApplication.update += OnEditorUpdate;
+        }
+
+        private static void BeginPhase(CapturePhase phase)
+        {
+            _phase = phase;
+            _phaseDeadline = GameViewCaptureFrameWait.ComputeDeadline(EditorApplication.timeSinceStartup);
+        }
+
+        private static void EnsurePhaseNotTimedOut(string context)
+        {
+            if (!GameViewCaptureFrameWait.IsTimedOut(EditorApplication.timeSinceStartup, _phaseDeadline))
+                return;
+
+            throw new TimeoutException(
+                $"GameViewCapture: {context} timed out after {GameViewCaptureFrameWait.PhaseTimeoutSeconds}s " +
+                $"(isPlaying={EditorApplication.isPlaying}, frameCount={Time.frameCount}).");
+        }
+
+        private static void StepPlayerLoop()
+        {
+            EditorApplication.QueuePlayerLoopUpdate();
         }
 
         private static void OnEditorUpdate()
@@ -95,56 +117,66 @@ namespace CatanRoguelike.Editor
                         if (!EditorApplication.isPlaying)
                         {
                             EditorSceneManager.OpenScene(GameScenePath, OpenSceneMode.Single);
-                            _phase = CapturePhase.EnterPlay;
+                            BeginPhase(CapturePhase.EnterPlay);
                         }
                         break;
 
                     case CapturePhase.EnterPlay:
+                        EnsurePhaseNotTimedOut("EnterPlay");
                         if (!EditorApplication.isPlaying)
+                        {
                             EditorApplication.isPlaying = true;
+                            StepPlayerLoop();
+                        }
                         else
                         {
                             _targetFrameCount = Time.frameCount + BootFrameWait;
-                            _phase = CapturePhase.WaitBootFrames;
+                            BeginPhase(CapturePhase.WaitBootFrames);
                         }
                         break;
 
                     case CapturePhase.WaitBootFrames:
-                        if (!Application.isPlaying)
+                        EnsurePhaseNotTimedOut("WaitBootFrames");
+                        if (!Application.isPlaying
+                            || !GameViewCaptureFrameWait.HasReachedTarget(Time.frameCount, _targetFrameCount))
+                        {
+                            StepPlayerLoop();
                             return;
+                        }
 
-                        if (Time.frameCount < _targetFrameCount)
-                            return;
-
-                        _phase = CapturePhase.DriveSetup;
+                        BeginPhase(CapturePhase.DriveSetup);
                         break;
 
                     case CapturePhase.DriveSetup:
                         DriveScriptedSetup();
                         _targetFrameCount = Time.frameCount + PostSetupFrameWait;
-                        _phase = CapturePhase.WaitVisualFrames;
+                        BeginPhase(CapturePhase.WaitVisualFrames);
                         break;
 
                     case CapturePhase.WaitVisualFrames:
-                        if (!Application.isPlaying)
+                        EnsurePhaseNotTimedOut("WaitVisualFrames");
+                        if (!Application.isPlaying
+                            || !GameViewCaptureFrameWait.HasReachedTarget(Time.frameCount, _targetFrameCount))
+                        {
+                            StepPlayerLoop();
                             return;
+                        }
 
-                        if (Time.frameCount < _targetFrameCount)
-                            return;
-
-                        _phase = CapturePhase.CaptureFrame;
+                        BeginPhase(CapturePhase.CaptureFrame);
                         break;
 
                     case CapturePhase.CaptureFrame:
                         CaptureMainCameraToPng(_outputPath);
                         Debug.Log($"GameViewCapture: wrote {CaptureWidth}x{CaptureHeight} PNG to {_outputPath}");
-                        _phase = CapturePhase.ExitPlay;
+                        BeginPhase(CapturePhase.ExitPlay);
                         break;
 
                     case CapturePhase.ExitPlay:
+                        EnsurePhaseNotTimedOut("ExitPlay");
                         if (EditorApplication.isPlaying)
                         {
                             EditorApplication.isPlaying = false;
+                            StepPlayerLoop();
                             return;
                         }
 

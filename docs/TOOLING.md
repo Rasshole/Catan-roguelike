@@ -62,14 +62,20 @@ Unity Editor → **Catan Roguelike → Capture Game View Screenshot**.
 
 ### CLI (headless Linux + xvfb)
 
+Batchmode does not advance Play Mode frames on its own; `GameViewCapture` calls `EditorApplication.QueuePlayerLoopUpdate()` each editor tick while waiting for boot/visual frames and for Play Mode enter/exit. Each wait phase fails with `EditorApplication.Exit(1)` after 120s if frames stall.
+
 ```bash
 export UNITY_EDITOR="${UNITY_EDITOR:-/home/box/Unity/Hub/Editor/6000.3.15f1/Editor/Unity}"
 export GAME_VIEW_SHOT="/workspace/game-view.png"   # valgfri
 
-xvfb-run -a "$UNITY_EDITOR" -batchmode -nographics -projectPath . \
+xvfb-run -a "$UNITY_EDITOR" -batchmode -projectPath . \
   -executeMethod CatanRoguelike.Editor.GameViewCapture.CaptureAndQuit \
   -logFile -
 ```
+
+`-nographics` is optional: capture uses `Camera.main.Render()` to a `RenderTexture`, not Game view pixels. Prefer the command above (graphics via xvfb); add `-nographics` only if GPU init is problematic.
+
+Verify success: exit code `0`, log line `GameViewCapture: wrote 1920x1080 PNG to …`, and a non-empty PNG at `GAME_VIEW_SHOT` (default `/workspace/game-view.png`).
 
 Efter kørsel: Play Mode er sluttet; `Game.unity` er ikke gemt. Delt setup-logik: `GameScenePlayHarness` i Game-asmdef (bruges også af PlayMode-tests).
 
