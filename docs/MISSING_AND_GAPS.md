@@ -1,5 +1,7 @@
 # Mangler & ikke-wired endnu
 
+**Næste backlog:** [`docs/ROADMAP_V3.md`](ROADMAP_V3.md)
+
 Sidst opdateret efter Fase 2.6 meta progression på main med 2.5 hybrid tokens, 2.4 Act progression, save/load, setup-bonus og largest army.
 
 Dette er en ærlig statusliste over hvad der **ikke** er færdigt, halvt implementeret, eller kun findes i core uden ordentlig UI/feedback.
@@ -162,9 +164,11 @@ Eksisterende EditMode-tests:
 
 ## Anbefalet rækkefølge næste gang
 
-1. Longest road: bedre graf-algoritme (loops / forgreninger)
-2. Rig UI (uGUI) + art pass
-3. Integrationstests + playtest på 19-hex
+Se [`docs/ROADMAP_V3.md`](ROADMAP_V3.md) for fuld backlog. **Valgt næste:**
+
+1. **Sim-driven day-ceiling / win-rate balance** — runs skal nå 10 VP (eller tydeligt nederlag), ikke timeout; genmål efter Act 2/3 + hybrid tokens
+2. Sim-runner metrics + `--max-days` hævet til Act 3-spænd
+3. Derefter: meta pool-locks, onboarding, save 2.1-rest — se roadmap
 
 ---
 

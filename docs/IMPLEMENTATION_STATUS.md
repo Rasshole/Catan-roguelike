@@ -1,5 +1,7 @@
 # V1 Prototype — Implementation Status
 
+**Næste backlog:** [`docs/ROADMAP_V3.md`](ROADMAP_V3.md) — founder roadmap efter Fase 2 (impact×effort + valgt første item).
+
 Last updated: 2026-08-27 — Fase 2.6 meta progression on top of 2.5 hybrid tokens + 2.4 Act progression.
 
 ## Done (playable prototype scope)
