@@ -95,6 +95,9 @@ namespace CatanRoguelike.Tests
             game.State.AiVictoryPoints = 3;
             game.State.PlayerBonusVictoryPoints = 1;
             game.State.AiBonusVictoryPoints = 0;
+            game.State.PlayerKnightsPlayed = 3;
+            game.State.AiKnightsPlayed = 1;
+            game.State.LargestArmyOwner = PlayerId.Human;
             game.State.PendingCard = CardId.MasterBuilder;
             game.State.HarborCharterPending = true;
             game.State.PlayerShopEmbargo = ResourceType.Wheat;
@@ -180,6 +183,9 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(expected.AiVictoryPoints, actual.AiVictoryPoints);
             Assert.AreEqual(expected.PlayerBonusVictoryPoints, actual.PlayerBonusVictoryPoints);
             Assert.AreEqual(expected.AiBonusVictoryPoints, actual.AiBonusVictoryPoints);
+            Assert.AreEqual(expected.PlayerKnightsPlayed, actual.PlayerKnightsPlayed);
+            Assert.AreEqual(expected.AiKnightsPlayed, actual.AiKnightsPlayed);
+            Assert.AreEqual(expected.LargestArmyOwner, actual.LargestArmyOwner);
             Assert.AreEqual(expected.Winner, actual.Winner);
             Assert.AreEqual(expected.StatusMessage, actual.StatusMessage);
             Assert.AreEqual(expected.PendingCard, actual.PendingCard);

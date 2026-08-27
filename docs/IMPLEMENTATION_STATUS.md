@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-27 — P3 PlayMode scene smoke tests + Fase 2.1 save/load first slice (`SaveGame`, `SaveGameFile`, `SaveGameRoundTripTests`).
+Last updated: 2026-08-27 — Fase 2.3 Largest Army VP (`ArmyCalculator`, knight counts, AI chase heuristic).
 
 ## Done (playable prototype scope)
 
@@ -24,6 +24,7 @@ Last updated: 2026-08-27 — P3 PlayMode scene smoke tests + Fase 2.1 save/load 
 - [x] Robber (tile block + steal on day move and Knight; seeded victim/resource pick)
 - [x] Route sabotage (Bandit Raid card) + disabled road visuals
 - [x] Longest route VP (≥5 roads)
+- [x] Largest army VP (≥3 played Knight cards; classic tie = incumbent keeps until surpassed)
 - [x] 4 Leaders + level-ups every 5 days (max 3)
 - [x] Draft 2 of 5 unique buildings
 - [x] Random events (~22% per night)
@@ -32,14 +33,13 @@ Last updated: 2026-08-27 — P3 PlayMode scene smoke tests + Fase 2.1 save/load 
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, **setup-bonus (2nd settlement, desert skip)**, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**, **SaveGame round-trip JSON (format v1)**)
+- [x] EditMode tests (rolls, placement, production, **setup-bonus (2nd settlement, desert skip)**, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **Largest Army (grant/tie/overtake/breakdown/save)**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **AI Largest Army Knight priority**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**, **SaveGame round-trip JSON (format v1)**)
 - [x] PlayMode smoke tests (`GameSceneSmokeTests` — `Game.unity` boot, required MonoBehaviours, `GameManager.Controller` after Start)
 
 ## Explicitly out of scope
 
 - [ ] Meta progression between runs
-- [x] Save/load — **first slice:** JSON format v1, single slot, IMGUI Save/Load, round-trip test (autosave, slots, RNG roll counters deferred)
-- [ ] Largest army VP
+- [x] Save/load — **first slice:** JSON format v1, single slot, IMGUI Save/Load, round-trip test (autosave, slots, RNG roll counters deferred). Army fields are optional v1 properties with defaults.
 - [ ] Per-tile number tokens (classic Catan dice numbers)
 
 ## Known gaps (see `MISSING_AND_GAPS.md` for full list)
@@ -51,7 +51,7 @@ Last updated: 2026-08-27 — P3 PlayMode scene smoke tests + Fase 2.1 save/load 
 - [x] Harbor Charter pending + Embargo status in IMGUI (`PendingStatusDisplay`)
 - [x] Shop deal price reason in IMGUI (`ShopDealPricing`)
 - [x] Risky shop deal consequence text in IMGUI (`ShopDealDisplay`)
-- [x] VP breakdown in IMGUI (`VictoryBreakdown` — buildings / longest / long road / bonus)
+- [x] VP breakdown in IMGUI (`VictoryBreakdown` — buildings / longest / long road / largest army / bonus)
 - [x] Architect threshold discount — 10 % on threshold settlements only; Master Builder 0.65 vs 0.75 (no double discount)
 - [x] Level-up preview on day before interval + full HUD during LevelUpChoice (`RunProgression.WillOfferLevelUpAfterThisDay`, `PendingStatusDisplay`)
 - [x] AI Embargo — card in `AiPool`; human Embargo → `AiShopEmbargo`; AI Embargo → `PlayerShopEmbargo`; shop skip under embargo; Harbor Charter remains human-only (`aiCanUse: false`)

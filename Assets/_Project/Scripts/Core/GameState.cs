@@ -38,6 +38,13 @@ namespace CatanRoguelike.Core
         public int PlayerBonusVictoryPoints { get; set; }
         public int AiBonusVictoryPoints { get; set; }
 
+        /// <summary>Successful Knight card plays (not day-phase robber moves).</summary>
+        public int PlayerKnightsPlayed { get; set; }
+        public int AiKnightsPlayed { get; set; }
+
+        /// <summary>Classic Catan: incumbent keeps on ties until strictly surpassed.</summary>
+        public PlayerId? LargestArmyOwner { get; set; }
+
         public PlayerId? Winner { get; set; }
         public string StatusMessage { get; set; } = "Choose your leader.";
 
@@ -109,6 +116,9 @@ namespace CatanRoguelike.Core
             AiVictoryPoints = 0;
             PlayerBonusVictoryPoints = 0;
             AiBonusVictoryPoints = 0;
+            PlayerKnightsPlayed = 0;
+            AiKnightsPlayed = 0;
+            LargestArmyOwner = null;
             Winner = null;
             StatusMessage = "Choose your leader.";
             PendingCard = null;

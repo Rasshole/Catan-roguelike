@@ -24,6 +24,7 @@ namespace CatanRoguelike.Core.Save
     /// Saves restore <see cref="GameState.TodayRolls"/> / <see cref="GameState.TomorrowRolls"/> exactly, but future RNG
     /// (nightly rolls, cards, shop, events, AI, robber steal) re-seeds from RunSeed only — not bit-identical to
     /// uninterrupted play. Per-engine roll counters can be added in a later format version.
+    /// Army fields (<see cref="GameStateSaveData.PlayerKnightsPlayed"/>, etc.) are optional v1 properties defaulting to 0/null.
     /// </remarks>
     public static class SaveGame
     {
@@ -97,6 +98,9 @@ namespace CatanRoguelike.Core.Save
                 AiVictoryPoints = state.AiVictoryPoints,
                 PlayerBonusVictoryPoints = state.PlayerBonusVictoryPoints,
                 AiBonusVictoryPoints = state.AiBonusVictoryPoints,
+                PlayerKnightsPlayed = state.PlayerKnightsPlayed,
+                AiKnightsPlayed = state.AiKnightsPlayed,
+                LargestArmyOwner = state.LargestArmyOwner,
                 Winner = state.Winner,
                 StatusMessage = state.StatusMessage,
                 PendingCard = state.PendingCard,
@@ -152,6 +156,9 @@ namespace CatanRoguelike.Core.Save
             state.AiVictoryPoints = data.AiVictoryPoints;
             state.PlayerBonusVictoryPoints = data.PlayerBonusVictoryPoints;
             state.AiBonusVictoryPoints = data.AiBonusVictoryPoints;
+            state.PlayerKnightsPlayed = data.PlayerKnightsPlayed;
+            state.AiKnightsPlayed = data.AiKnightsPlayed;
+            state.LargestArmyOwner = data.LargestArmyOwner;
             state.Winner = data.Winner;
             state.StatusMessage = data.StatusMessage ?? "";
             state.PendingCard = data.PendingCard;

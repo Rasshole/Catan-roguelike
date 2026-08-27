@@ -53,7 +53,7 @@ namespace CatanRoguelike.Core
 
             if (game.State.AiHand.Count == 0) return;
 
-            var card = game.State.AiHand[0];
+            var card = PickNightCard(game.State);
             var def = CardLibrary.Get(card);
             if (!def.AiCanUse) return;
 
@@ -67,6 +67,64 @@ namespace CatanRoguelike.Core
                 _hiddenIntent = card == CardId.Embargo
                     ? $"Embargo {target}"
                     : $"Played {def.Name}";
+        }
+
+        /// <summary>
+        /// Prefer Knight when close to Largest Army threshold or when human holds it and AI can overtake.
+        /// Base card weight comes from <see cref="CardLibrary"/>; Knight gets a situational bonus.
+        /// </summary>
+        private static CardId PickNightCard(GameState state)
+        {
+            CardId? best = null;
+            float bestScore = float.MinValue;
+
+            foreach (var card in state.AiHand)
+            {
+                var def = CardLibrary.Get(card);
+                if (!def.AiCanUse)
+                    continue;
+
+                float score = def.AiWeight;
+                if (card == CardId.Knight)
+                    score += ScoreKnightForLargestArmy(state);
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    best = card;
+                }
+            }
+
+            return best ?? state.AiHand[0];
+        }
+
+        private static float ScoreKnightForLargestArmy(GameState state)
+        {
+            int ai = state.AiKnightsPlayed;
+            int human = state.PlayerKnightsPlayed;
+            float bonus = 0f;
+
+            if (ai == BalanceConfig.LargestArmyThreshold - 1)
+                bonus += 3f;
+
+            if (state.LargestArmyOwner == PlayerId.Human
+                && ai + 1 >= BalanceConfig.LargestArmyThreshold
+                && ai + 1 > human)
+            {
+                bonus += 4f;
+            }
+
+            if (state.LargestArmyOwner == null
+                && ai + 1 >= BalanceConfig.LargestArmyThreshold
+                && ai + 1 > human)
+            {
+                bonus += 3f;
+            }
+
+            if (state.LargestArmyOwner == PlayerId.Ai)
+                bonus += 1f;
+
+            return bonus;
         }
 
         public void ExecuteDayTurn(GameController game)

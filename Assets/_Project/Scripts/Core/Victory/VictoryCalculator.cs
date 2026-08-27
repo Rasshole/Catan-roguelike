@@ -9,11 +9,23 @@ namespace CatanRoguelike.Core.Victory
         public static VictoryBreakdown GetBreakdown(GameState state, PlayerId player)
         {
             bool longRoadPerk = player == PlayerId.Human && state.HasPerk(LevelUpPerkId.LongRoadBonus);
-            return GetBreakdown(
+            var boardBreakdown = GetBreakdown(
                 state.Board,
                 player,
                 state.GetBonusVictoryPoints(player),
                 longRoadPerk);
+
+            int largestArmy = state.LargestArmyOwner == player
+                ? BalanceConfig.LargestArmyVictoryPoints
+                : 0;
+
+            return new VictoryBreakdown(
+                boardBreakdown.Settlements,
+                boardBreakdown.Cities,
+                boardBreakdown.Longest,
+                boardBreakdown.LongRoadBonus,
+                largestArmy,
+                boardBreakdown.BonusVp);
         }
 
         public static VictoryBreakdown GetBreakdown(
@@ -35,7 +47,7 @@ namespace CatanRoguelike.Core.Victory
                     longRoadBonus = 1;
             }
 
-            return new VictoryBreakdown(settlements, cities, longest, longRoadBonus, bonusVp);
+            return new VictoryBreakdown(settlements, cities, longest, longRoadBonus, 0, bonusVp);
         }
 
         public static int CalculateVictoryPoints(BoardState board, PlayerId player, bool longRoadBonusPerk = false)

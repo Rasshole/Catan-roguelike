@@ -121,6 +121,9 @@ namespace CatanRoguelike.Core.Save
         public int AiVictoryPoints { get; set; }
         public int PlayerBonusVictoryPoints { get; set; }
         public int AiBonusVictoryPoints { get; set; }
+        public int PlayerKnightsPlayed { get; set; }
+        public int AiKnightsPlayed { get; set; }
+        public PlayerId? LargestArmyOwner { get; set; }
         public PlayerId? Winner { get; set; }
         public string StatusMessage { get; set; }
         public CardId? PendingCard { get; set; }

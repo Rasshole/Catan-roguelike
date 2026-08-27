@@ -11,16 +11,24 @@ namespace CatanRoguelike.Core.Victory
         public int Cities { get; }
         public int Longest { get; }
         public int LongRoadBonus { get; }
+        public int LargestArmy { get; }
         public int BonusVp { get; }
 
-        public int Total => Settlements + Cities + Longest + LongRoadBonus + BonusVp;
+        public int Total => Settlements + Cities + Longest + LongRoadBonus + LargestArmy + BonusVp;
 
-        public VictoryBreakdown(int settlements, int cities, int longest, int longRoadBonus, int bonusVp)
+        public VictoryBreakdown(
+            int settlements,
+            int cities,
+            int longest,
+            int longRoadBonus,
+            int largestArmy,
+            int bonusVp)
         {
             Settlements = settlements;
             Cities = cities;
             Longest = longest;
             LongRoadBonus = longRoadBonus;
+            LargestArmy = largestArmy;
             BonusVp = bonusVp;
         }
 
@@ -44,6 +52,7 @@ namespace CatanRoguelike.Core.Victory
             Add(Cities, "cities");
             Add(Longest, "longest");
             Add(LongRoadBonus, "long road");
+            Add(LargestArmy, "largest army");
             Add(BonusVp, "bonus");
 
             return any ? sb.ToString() : "0";
