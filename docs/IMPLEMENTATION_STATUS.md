@@ -1,6 +1,6 @@
 # V1 Prototype — Implementation Status
 
-Last updated: 2026-08-27 — P2 game-over run-summary (IMGUI VP breakdown + seed/day/map/leader).
+Last updated: 2026-08-27 — P2 game-over run-summary + event board overlays (`RunSummaryDisplay`, `EventBoardVisual`).
 
 ## Done (playable prototype scope)
 
@@ -26,11 +26,12 @@ Last updated: 2026-08-27 — P2 game-over run-summary (IMGUI VP breakdown + seed
 - [x] 4 Leaders + level-ups every 5 days (max 3)
 - [x] Draft 2 of 5 unique buildings
 - [x] Random events (~22% per night)
+- [x] Event board overlays (storm marker, famine/gold rush/good harvest tints via `EventBoardVisual`)
 - [x] AI heuristic + shop + limited card pool (Embargo in pool; skips embargoed shop Give; plays Embargo vs human inventory/shop)
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
-- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**)
+- [x] EditMode tests (rolls, placement, production, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**)
 
 ## Explicitly out of scope
 
