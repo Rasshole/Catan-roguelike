@@ -7,10 +7,10 @@ namespace CatanRoguelike.Tests
     public class ActProgressionTests
     {
         [TestCase(1, 1)]
-        [TestCase(5, 1)]
-        [TestCase(6, 2)]
-        [TestCase(10, 2)]
-        [TestCase(11, 3)]
+        [TestCase(4, 1)]
+        [TestCase(5, 2)]
+        [TestCase(8, 2)]
+        [TestCase(9, 3)]
         [TestCase(20, 3)]
         public void GetAct_MapsDayThresholds(int day, int expectedAct)
         {
@@ -18,7 +18,7 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void GetYieldConfig_Act1_SinglePassMaxTwo()
+        public void GetYieldConfig_Act1_DoublePassMaxThree()
         {
             var (passes, maxRoll) = ActProgression.GetYieldConfig(3);
             Assert.AreEqual(BalanceConfig.Act1NightlyRollPasses, passes);
@@ -26,17 +26,17 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void GetYieldConfig_Act2_DoublePassMaxTwo()
+        public void GetYieldConfig_Act2_TriplePassMaxThree()
         {
-            var (passes, maxRoll) = ActProgression.GetYieldConfig(6);
+            var (passes, maxRoll) = ActProgression.GetYieldConfig(5);
             Assert.AreEqual(BalanceConfig.Act2NightlyRollPasses, passes);
             Assert.AreEqual(BalanceConfig.Act2MaxRoll, maxRoll);
         }
 
         [Test]
-        public void GetYieldConfig_Act3_DoublePassMaxThree()
+        public void GetYieldConfig_Act3_TriplePassMaxThree()
         {
-            var (passes, maxRoll) = ActProgression.GetYieldConfig(11);
+            var (passes, maxRoll) = ActProgression.GetYieldConfig(9);
             Assert.AreEqual(BalanceConfig.Act3NightlyRollPasses, passes);
             Assert.AreEqual(BalanceConfig.Act3MaxRoll, maxRoll);
         }

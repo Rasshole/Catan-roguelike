@@ -59,3 +59,11 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 
 - `tools/sim-runner`: Newtonsoft.Json 13.0.3 (Fase 2.6 compile fix). `endAct` + summary `max_days` / `medianMaxDaysPlayerVp`. Balance knobs unchanged.
 
+## 2026-08-27 (UTC) — sim-driven day-ceiling / win-rate balance pass
+
+**Before** (main @ 33b9154, `--runs 200 --max-days 20 --map small`): ok 12.5%, max_days 87.5%, median win day 20, median human VP at max_days 4, human VP=2 stall 70/175.
+
+**After** (same flags): ok 89.5%, max_days 10.5%, median win day 13, median human VP at max_days 7, human VP=2 at max_days 1/21, 0 crash/timeout. VictoryPointGoal stays 10.
+
+**Knobs:** `BalanceConfig` (roll weights 5/45/50, act days 1–4/5–8/9+, 2/3/3 dice passes, max mult 3 Act 2+, city 1W+2S, settlement threshold 7, longest route min 3 / 3 VP, largest army threshold 2 / 3 VP, lower event %), hybrid production floor (dice match → min 1 yield), setup bonus ×2, Small-map robber on `(1,-1)`, `LevelUpIntervalDays` 3. **Sim-driver:** road→settlement→city build order, scored settlements, VP-aware level-up picks. **Tests:** 299/299 `dotnet test tools/core-tests`.
+

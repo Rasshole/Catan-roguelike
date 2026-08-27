@@ -69,16 +69,20 @@ Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færd
 
 ### Tests
 
-- [ ] Nye/ opdaterede EditMode-tests for ændrede konstanter eller AI VP-adfærd (hvis rørt).
-- [ ] Eksisterende 297 EditMode-tests stadig grønne.
-- [ ] Sim-runner JSON-output inkluderer: `status`, `winner`, `days`, `playerVp`, `aiVp`, `endAct` (nyt felt OK). *(compile + metrics landed; balance targets not met yet)*
-- [ ] `docs/IMPLEMENTATION_STATUS.md` + `MISSING_AND_GAPS.md` opdateret med balance-baseline tal efter merge.
+- [x] Nye/ opdaterede EditMode-tests for ændrede konstanter eller AI VP-adfærd (hvis rørt).
+- [x] Eksisterende EditMode-tests stadig grønne (299/299 via `dotnet test tools/core-tests`).
+- [x] Sim-runner JSON-output inkluderer: `status`, `winner`, `days`, `playerVp`, `aiVp`, `endAct`
+- [x] `docs/IMPLEMENTATION_STATUS.md` + `MISSING_AND_GAPS.md` opdateret med balance-baseline tal efter merge.
 
 ### Docs
 
-- [ ] Kort afsnit i `docs/TOOLING.md` om anbefalede sim-flag til balance (`--runs 1000 --max-days 20 --map small`). *(done)*
-- [ ] `docs/DESIGN_NUMBER_TOKENS.md` “Leftover risks” — markér balance som adresseret eller delvist.
+- [x] Kort afsnit i `docs/TOOLING.md` om anbefalede sim-flag til balance (`--runs 1000 --max-days 20 --map small`). *(done)*
+- [x] `docs/DESIGN_NUMBER_TOKENS.md` “Leftover risks” — balance delvist adresseret.
 
 ---
 
-*Næste Cursor-opgave efter denne PR: implementér balance-pass per acceptance ovenfor.*
+## Status: balance-pass **done** (2026-08-27)
+
+200-run sim (`--max-days 20 --map small`): `ok` 89.5%, `max_days` 10.5%, median win day 13, median human VP at `max_days` 7, 0 crash/timeout. See `IMPLEMENTATION_STATUS.md` for before/after table.
+
+*Næste Cursor-opgave: meta pool locks, autosave slice, eller onboarding beats per ROADMAP_V3 backlog.*

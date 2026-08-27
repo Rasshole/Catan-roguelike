@@ -5,7 +5,9 @@ using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Cards;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Hex;
+using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Yield;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 
@@ -62,6 +64,13 @@ namespace CatanRoguelike.SimRunner
 
         public static bool TryDayBuildOnce(GameController game)
         {
+            // Expand network before spending on cities — avoids 2-VP stall on small maps.
+            if (TryPlaceFirstValidRoad(game, PlayerId.Human))
+                return true;
+
+            if (TryPlaceFirstValidSettlement(game, PlayerId.Human))
+                return true;
+
             foreach (var kvp in game.State.Board.VertexBuildings)
             {
                 if (kvp.Value.owner == PlayerId.Human && kvp.Value.type == BuildingType.Settlement)
@@ -70,12 +79,6 @@ namespace CatanRoguelike.SimRunner
                         return true;
                 }
             }
-
-            if (TryPlaceFirstValidSettlement(game, PlayerId.Human))
-                return true;
-
-            if (TryPlaceFirstValidRoad(game, PlayerId.Human))
-                return true;
 
             return false;
         }
@@ -169,6 +172,28 @@ namespace CatanRoguelike.SimRunner
             return BuildPriority.First();
         }
 
+        public static LevelUpPerkId PickBestLevelUpPerk(GameController game)
+        {
+            return game.State.PendingLevelUpChoices
+                .OrderByDescending(p => ScoreLevelUpPerk(p))
+                .First();
+        }
+
+        private static int ScoreLevelUpPerk(LevelUpPerkId perk) => perk switch
+        {
+            LevelUpPerkId.FirstCityVp => 10,
+            LevelUpPerkId.CheapCities => 8,
+            LevelUpPerkId.CheapSettlements => 8,
+            LevelUpPerkId.CityProductionBoost => 7,
+            LevelUpPerkId.RollInsurance => 6,
+            LevelUpPerkId.ThresholdDelay => 6,
+            LevelUpPerkId.LongRoadBonus => 5,
+            LevelUpPerkId.ExtraCardDraw => 4,
+            LevelUpPerkId.ExtraShopDeal => 4,
+            LevelUpPerkId.RiskyDealsSafe => 3,
+            _ => 1
+        };
+
         public static ResourceType? PickAiRichResource(GameController game)
         {
             var best = game.State.AiInventory.EnumerateNonZero()
@@ -213,14 +238,31 @@ namespace CatanRoguelike.SimRunner
 
         private static bool TryPlaceFirstValidSettlement(GameController game, PlayerId player)
         {
-            foreach (var vertex in game.Placement.GetValidSettlementSpots(
-                         game.State.Board, player, game.State.IsSetupPhase))
+            var spots = game.Placement.GetValidSettlementSpots(
+                    game.State.Board, player, game.State.IsSetupPhase)
+                .Select(v => (vertex: v, score: ScoreSettlementSpot(game, v)))
+                .OrderByDescending(x => x.score)
+                .ToList();
+
+            if (spots.Count == 0)
+                return false;
+
+            return game.PlaceSettlement(spots[0].vertex, player);
+        }
+
+        private static float ScoreSettlementSpot(GameController game, Vertex vertex)
+        {
+            float score = 0;
+            foreach (var hex in VertexGraph.GetHexesForVertex(vertex))
             {
-                if (game.PlaceSettlement(vertex, player))
-                    return true;
+                if (!game.State.Board.TryGetTile(hex, out var tile)) continue;
+                if (tile.IsDesert || !tile.NumberToken.HasValue) continue;
+                score += NumberTokenLibrary.GetPipWeight(tile.NumberToken.Value);
+                if (game.State.TodayRolls.TryGetValue(tile.Resource, out int roll))
+                    score += roll;
             }
 
-            return false;
+            return score;
         }
 
         private static bool TryPlaceFirstValidRoad(GameController game, PlayerId player)

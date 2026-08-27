@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 
@@ -213,8 +214,8 @@ namespace CatanRoguelike.Core.Victory
             int human = LongestRoadLength(board, PlayerId.Human);
             int ai = LongestRoadLength(board, PlayerId.Ai);
 
-            if (human >= 5 && human > ai) return PlayerId.Human;
-            if (ai >= 5 && ai > human) return PlayerId.Ai;
+            if (human >= BalanceConfig.LongestRouteMinimum && human > ai) return PlayerId.Human;
+            if (ai >= BalanceConfig.LongestRouteMinimum && ai > human) return PlayerId.Ai;
             return null;
         }
     }

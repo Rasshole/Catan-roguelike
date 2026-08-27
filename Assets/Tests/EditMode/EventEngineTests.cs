@@ -207,9 +207,9 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void MaybeRollEvent_Seed22_ReturnsFamine()
+        public void MaybeRollEvent_Seed39_ReturnsFamine()
         {
-            Assert.AreEqual(EventId.Famine, new EventEngine(22).MaybeRollEvent());
+            Assert.AreEqual(EventId.Famine, new EventEngine(39).MaybeRollEvent());
         }
 
         [Test]
@@ -219,15 +219,15 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void MaybeRollEvent_Seed43_ReturnsGoldRush()
+        public void MaybeRollEvent_Seed60_ReturnsGoldRush()
         {
-            Assert.AreEqual(EventId.GoldRush, new EventEngine(43).MaybeRollEvent());
+            Assert.AreEqual(EventId.GoldRush, new EventEngine(60).MaybeRollEvent());
         }
 
         [Test]
-        public void MaybeRollEvent_Seed20_ReturnsGoodHarvest()
+        public void MaybeRollEvent_Seed37_ReturnsGoodHarvest()
         {
-            Assert.AreEqual(EventId.GoodHarvest, new EventEngine(20).MaybeRollEvent());
+            Assert.AreEqual(EventId.GoodHarvest, new EventEngine(37).MaybeRollEvent());
         }
 
         [Test]
@@ -245,10 +245,10 @@ namespace CatanRoguelike.Tests
         [Test]
         public void BeginNight_AppliesSeededEventAndModifiesTomorrowRolls()
         {
-            var baseline = new RollEngine(20).RollNightly(2);
+            var baseline = new RollEngine(37).RollNightly(2);
             var expected = baseline.ToDictionary(kv => kv.Key, kv => System.Math.Min(kv.Value + 1, 2));
 
-            var game = new GameController(20);
+            var game = new GameController(37);
             game.BeginNight();
 
             Assert.AreEqual(EventId.GoodHarvest, game.State.ActiveEvent);

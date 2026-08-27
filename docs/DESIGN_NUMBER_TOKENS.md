@@ -110,6 +110,6 @@ Classic Catan places number tokens 2–12 on resource hexes (no 7; desert has no
 
 ## Leftover risks
 
-- **Balance:** hybrid variance should be validated with sim-runner on long Act 3 runs; hot-double 6/8 with Act 2 double dice may spike.
+- **Balance:** partially addressed — sim-runner 200× `--max-days 20 --map small` meets ROADMAP_V3 targets (see `IMPLEMENTATION_STATUS.md`). Residual risk: bonus VP thresholds (longest route ≥3 roads, largest army ≥2 knights) are tuned for sim pace; revisit after uGUI playtests.
 - **UI literacy:** players must see both dice sums and resource multipliers until a proper UI pass.
 - **Legacy saves:** pre-2.5 saves without `numberToken` fields get tokens assigned on load from run seed (positions may differ from a fresh run).

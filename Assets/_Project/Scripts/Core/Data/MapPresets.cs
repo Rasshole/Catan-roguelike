@@ -201,7 +201,11 @@ namespace CatanRoguelike.Core.Data
                 board.Tiles[coord].IsCoastal = IsCoastalTile(coord, coords);
             }
 
-            board.PlaceRobber(new HexCoord(0, 0));
+            // Small: robber on outer wheat — center wood is too punishing for hybrid production.
+            var robberStart = size == MapSize.Small
+                ? new HexCoord(1, -1)
+                : new HexCoord(0, 0);
+            board.PlaceRobber(robberStart);
 
             if (size == MapSize.Large && board.TryGetTile(new HexCoord(0, 0), out var center))
                 center.IsDesert = true;

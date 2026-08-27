@@ -8,7 +8,7 @@ namespace CatanRoguelike.Core.Progression
 {
     public static class RunProgression
     {
-        public const int LevelUpIntervalDays = 5;
+        public const int LevelUpIntervalDays = 3;
         public const int MaxLevelUpsPerRun = 3;
         public const int DraftPickCount = 2;
         public const int LevelUpRngSalt = 17;

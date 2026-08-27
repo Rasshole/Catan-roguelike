@@ -2,7 +2,7 @@
 
 **Næste backlog:** [`docs/ROADMAP_V3.md`](ROADMAP_V3.md) — founder roadmap efter Fase 2 (impact×effort + valgt første item).
 
-Last updated: 2026-08-27 — Fase 2.6 meta progression on top of 2.5 hybrid tokens + 2.4 Act progression.
+Last updated: 2026-08-27 — balance pass (day-ceiling / win-rate) on top of Fase 2.6.
 
 ## Done (playable prototype scope)
 
@@ -13,10 +13,10 @@ Last updated: 2026-08-27 — Fase 2.6 meta progression on top of 2.5 hybrid toke
 - [x] 3D placeholder board (table + hex cylinders)
 - [x] Run start: leader select → draft 2 unique buildings
 - [x] Setup: AI 2 settlements + roads, then player 2 + roads
-- [x] **Setup-bonus** — 2. settlement (spiller + AI) giver 1 af hver tilstødende ressource; desert springes over (`SetupBonusCalculator`)
+- [x] **Setup-bonus** — 2. settlement (spiller + AI) giver **2** af hver tilstødende ressource; desert springes over (`SetupBonusCalculator`)
 - [x] Day/night turn loop
 - [x] **Hybrid production (Fase 2.5)** — per-tile number tokens (2–12) gate which hexes fire; per-resource nightly rolls remain weather multipliers; 2d6 sums per yield pass (Act 2+ = 2 dice). See `docs/DESIGN_NUMBER_TOKENS.md`.
-- [x] Yield rolls (15/55/25, max 1×0 and 1×2, 50/50 tie-break; Act 3 max 3)
+- [x] Yield rolls (5/45/50, max 1×0 and 1×2, 50/50 tie-break; Act 2+ max mult 3)
 - [x] Rolls + dice at night, production uses today's rolls + dice
 - [x] Multi-hex production per settlement/city
 - [x] Catan placement rules (distance, roads, connectivity)
@@ -26,12 +26,12 @@ Last updated: 2026-08-27 — Fase 2.6 meta progression on top of 2.5 hybrid toke
 - [x] Cards: draw 1, play 1, max hand 5 — all 12 cards in `CardEngine`
 - [x] Robber (tile block + steal on day move and Knight; seeded victim/resource pick)
 - [x] Route sabotage (Bandit Raid card) + disabled road visuals
-- [x] Longest route VP (≥5 roads)
-- [x] Largest army VP (≥3 played Knight cards; classic tie = incumbent keeps until surpassed)
-- [x] 4 Leaders + level-ups every 5 days (max 3)
+- [x] Longest route VP (≥3 roads, **3 VP**)
+- [x] Largest army VP (≥2 played Knight cards, **3 VP**; classic tie = incumbent keeps until surpassed)
+- [x] 4 Leaders + level-ups every **3** days (max 3)
 - [x] Draft 2 of 5 unique buildings
-- [x] Random events (~22% per night in Act 1; scales by act)
-- [x] **Act progression (Fase 2.4)** — `ActProgression`: days 1–5 Act 1, 6–10 Act 2, 11+ Act 3; double yield rolls Act 2+, max roll 3 Act 3, event chance/weights scale, AI extra night plays + Act 3 draw pool, Small→Medium→Large map growth
+- [x] Random events (~14% per night in Act 1; scales by act)
+- [x] **Act progression (Fase 2.4 + balance)** — `ActProgression`: days 1–4 Act 1, 5–8 Act 2, 9+ Act 3; 2/3/3 dice passes, max mult 3 from Act 2, event chance down, AI extra night plays + Act 3 draw pool, Small→Medium→Large map growth
 - [x] Event board overlays (storm marker, famine/gold rush/good harvest tints via `EventBoardVisual`)
 - [x] AI heuristic + shop + limited card pool (Embargo in pool; skips embargoed shop Give; plays Embargo vs human inventory/shop)
 - [x] VP win at 10
@@ -79,11 +79,11 @@ Last updated: 2026-08-27 — Fase 2.6 meta progression on top of 2.5 hybrid toke
 
 | Act | Days | Yield | Events | AI | Map |
 |-----|------|-------|--------|-----|-----|
-| 1 | 1–5 | 1 resource roll pass + 1× 2d6, max mult 2 | 22% uniform | 1 night card play | start size |
-| 2 | 6–10 | 2 resource passes summed + 2× 2d6, max mult 2 | 32%, hard events weighted | 2 night card plays, smarter pick | Small→Medium |
-| 3 | 11+ | 2 resource passes summed + 2× 2d6, max mult 3 | 42%, harder weights | +1 AI draw, wider pool | →Large if not already |
+| 1 | 1–4 | 2 resource passes summed + 2× 2d6, max mult 2 | 14% uniform | 1 night card play | start size |
+| 2 | 5–8 | 3 resource passes summed + 3× 2d6, max mult 3 | 22%, hard events weighted | 2 night card plays, smarter pick | Small→Medium |
+| 3 | 9+ | 3 resource passes summed + 3× 2d6, max mult 3 | 30%, harder weights | +1 AI draw, wider pool | →Large if not already |
 
-Production: hex yields only when a **dice sum matches its number token** and the **resource multiplier > 0** (hybrid). IMGUI shows tokens on hexes + dice line.
+Production: hex yields when a **dice sum matches its number token**; weather roll scales yield (0 → floor 1 on dice match). Small map robber starts on outer wheat hex, not center wood.
 
 Constants in `BalanceConfig`; logic in `ActProgression`. IMGUI shows current Act + unlock line.
 
@@ -102,8 +102,19 @@ Set on **GameManager → Map Size** in the inspector (or re-run Setup Game Scene
 
 ## Sim-runner (measurement)
 
-- [x] **Compile fix** — `tools/sim-runner` references Newtonsoft.Json 13.0.3 (Fase 2.6); was broken on `MetaSave`/`SaveGame`
-- [ ] **Balance baseline** — `endAct` + summary metrics landed; win-rate / day-ceiling targets not met yet (see `ROADMAP_V3.md`)
+- [x] **Compile fix** — `tools/sim-runner` references Newtonsoft.Json 13.0.3 (Fase 2.6)
+- [x] **Balance baseline** — `dotnet run --project tools/sim-runner -- --runs 200 --max-days 20 --map small` (main @ 33b9154 **before** vs this PR **after**):
+
+| Metric | Before (200 seeds) | After (200 seeds) | Target |
+|--------|-------------------|-------------------|--------|
+| crash / timeout | 0 / 0 | 0 / 0 | 0 / 0 |
+| `max_days` | 175 (87.5%) | 21 (10.5%) | ≤ 25% |
+| `ok` (human or AI win) | 25 (12.5%) | 179 (89.5%) | ≥ 50% |
+| median days at win | 20 | 13 | ≤ 14 |
+| median human VP at `max_days` | 4 | 7 | ≥ 7 |
+| human VP = 2 at `max_days` | 70 / 175 | 1 / 21 | — |
+
+VictoryPointGoal remains **10**.
 
 ## How to test when back at PC
 

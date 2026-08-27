@@ -220,6 +220,7 @@ namespace CatanRoguelike.Tests
             int need = BalanceConfig.VictoryPointGoal - game.State.PlayerVictoryPoints;
             Assert.Greater(need, 0, "test expects player below win threshold before bonus VP");
             game.State.AddVictoryPoints(PlayerId.Human, need);
+            game.State.LevelUpsTaken = RunProgression.MaxLevelUpsPerRun;
 
             game.EndPlayerDay();
 
@@ -230,25 +231,22 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void EndPlayerDay_OnDayFive_OffersLevelUpChoice()
+        public void EndPlayerDay_OnDayThree_OffersLevelUpChoice()
         {
             var game = CreateGamePastSetup(Seed);
 
-            for (int i = 0; i < 3; i++)
-            {
-                PrepareNightAdvance(game);
-                game.SkipNightCard();
-                game.EndPlayerDay();
-            }
+            PrepareNightAdvance(game);
+            game.SkipNightCard();
+            game.EndPlayerDay();
 
-            Assert.AreEqual(4, game.State.Board.DayNumber);
+            Assert.AreEqual(2, game.State.Board.DayNumber);
             Assert.AreEqual(GamePhase.NightPlayCard, game.State.Phase);
 
             PrepareNightAdvance(game);
             game.SkipNightCard();
             game.EndPlayerDay();
 
-            Assert.AreEqual(5, game.State.Board.DayNumber);
+            Assert.AreEqual(3, game.State.Board.DayNumber);
             Assert.AreEqual(GamePhase.LevelUpChoice, game.State.Phase);
             Assert.IsTrue(RunProgression.ShouldOfferLevelUp(game.State));
             Assert.Greater(game.State.PendingLevelUpChoices.Count, 0);

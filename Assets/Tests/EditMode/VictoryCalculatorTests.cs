@@ -80,11 +80,11 @@ namespace CatanRoguelike.Tests
 
             Assert.AreEqual(PlayerId.Human, RouteCalculator.GetLongestRoadOwner(board));
             Assert.AreEqual(0, state.PlayerBonusVictoryPoints, "LongRoadBonus is recomputed, not sticky bonus VP");
-            Assert.AreEqual(3, state.PlayerVictoryPoints, "2 VP longest route + 1 perk");
+            Assert.AreEqual(4, state.PlayerVictoryPoints, "3 VP longest route + 1 perk");
             Assert.AreEqual(0, state.AiVictoryPoints);
 
             VictoryCalculator.RefreshVictoryPoints(state);
-            Assert.AreEqual(3, state.PlayerVictoryPoints, "second refresh must not drop or double LongRoadBonus");
+            Assert.AreEqual(4, state.PlayerVictoryPoints, "second refresh must not drop or double LongRoadBonus");
         }
 
         [Test]
@@ -96,14 +96,14 @@ namespace CatanRoguelike.Tests
             PlaceRoadPath(board, PlayerId.Human, 5, new HexCoord(0, 0), 0);
 
             VictoryCalculator.RefreshVictoryPoints(state);
-            Assert.AreEqual(3, state.PlayerVictoryPoints);
+            Assert.AreEqual(4, state.PlayerVictoryPoints);
 
             PlaceRoadPath(board, PlayerId.Ai, 6, new HexCoord(2, -2), 0);
 
             VictoryCalculator.RefreshVictoryPoints(state);
             Assert.AreEqual(PlayerId.Ai, RouteCalculator.GetLongestRoadOwner(board));
             Assert.AreEqual(0, state.PlayerVictoryPoints, "perk +1 must vanish with longest route");
-            Assert.AreEqual(2, state.AiVictoryPoints, "AI gets regular 2 VP longest, no perk");
+            Assert.AreEqual(3, state.AiVictoryPoints, "AI gets regular 3 VP longest, no perk");
             Assert.AreEqual(0, state.PlayerBonusVictoryPoints);
         }
 
@@ -115,14 +115,14 @@ namespace CatanRoguelike.Tests
             PlaceRoadPath(board, PlayerId.Human, 5, new HexCoord(0, 0), 0);
 
             VictoryCalculator.RefreshVictoryPoints(state);
-            Assert.AreEqual(2, state.PlayerVictoryPoints, "regular longest route is 2 VP without the perk");
+            Assert.AreEqual(3, state.PlayerVictoryPoints, "regular longest route is 3 VP without the perk");
 
             state.AcquiredPerks.Add(LevelUpPerkId.LongRoadBonus);
             VictoryCalculator.RefreshVictoryPoints(state);
-            Assert.AreEqual(3, state.PlayerVictoryPoints, "perk adds +1, not another +2");
+            Assert.AreEqual(4, state.PlayerVictoryPoints, "perk adds +1, not another +3");
 
             VictoryCalculator.RefreshVictoryPoints(state);
-            Assert.AreEqual(3, state.PlayerVictoryPoints);
+            Assert.AreEqual(4, state.PlayerVictoryPoints);
             Assert.AreEqual(0, state.PlayerBonusVictoryPoints);
         }
 
@@ -160,11 +160,11 @@ namespace CatanRoguelike.Tests
 
             Assert.AreEqual(0, bd.Settlements);
             Assert.AreEqual(0, bd.Cities);
-            Assert.AreEqual(2, bd.Longest);
+            Assert.AreEqual(3, bd.Longest);
             Assert.AreEqual(1, bd.LongRoadBonus);
             Assert.AreEqual(0, bd.LargestArmy);
             Assert.AreEqual(0, bd.BonusVp);
-            Assert.AreEqual(3, bd.Total);
+            Assert.AreEqual(4, bd.Total);
             Assert.AreEqual(state.PlayerVictoryPoints, bd.Total);
         }
 

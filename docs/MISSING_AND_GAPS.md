@@ -166,8 +166,8 @@ Eksisterende EditMode-tests:
 
 Se [`docs/ROADMAP_V3.md`](ROADMAP_V3.md) for fuld backlog. **Valgt næste:**
 
-1. **Sim-driven day-ceiling / win-rate balance** — runs skal nå 10 VP (eller tydeligt nederlag), ikke timeout; genmål efter Act 2/3 + hybrid tokens. *Sim-runner compile + `endAct` metrics fixed (Newtonsoft); measurement/balance pass still pending.*
-2. ~~Sim-runner metrics~~ — done (`endAct`, summary `max_days`); use `--max-days 20` for measurement; balance pass next
+1. ~~**Sim-driven day-ceiling / win-rate balance**~~ — **addressed** (2026-08-27): `BalanceConfig` + hybrid production floor + act pacing + sim-driver heuristics; 200-run baseline in `IMPLEMENTATION_STATUS.md`.
+2. ~~Sim-runner metrics~~ — done (`endAct`, summary `max_days`); use `--max-days 20` for measurement
 3. Derefter: meta pool-locks, onboarding, save 2.1-rest — se roadmap
 
 ---

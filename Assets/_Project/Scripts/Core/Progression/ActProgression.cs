@@ -4,7 +4,7 @@ namespace CatanRoguelike.Core.Progression
 {
     /// <summary>
     /// Day→act mapping and scaling knobs for escalating runs (Fase 2.4).
-    /// Act 1: days 1–5, Act 2: days 6–10, Act 3: day 11+.
+    /// Act 1: days 1–4, Act 2: days 5–8, Act 3: day 9+.
     /// </summary>
     public static class ActProgression
     {

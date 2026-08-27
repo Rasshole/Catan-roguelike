@@ -31,13 +31,15 @@ namespace CatanRoguelike.Core.Yield
                     if (tile.IsDesert || !tile.NumberToken.HasValue) continue;
                     if (IsBlocked(state, hex, player)) continue;
                     if (state.EventStormTile.HasValue && state.EventStormTile.Value.Equals(hex)) continue;
-                    if (!resourceRolls.TryGetValue(tile.Resource, out int rollValue) || rollValue <= 0) continue;
+                    if (!resourceRolls.TryGetValue(tile.Resource, out int rollValue)) continue;
                     int hits = CountDiceHits(tile.NumberToken.Value, diceRolls);
                     if (hits <= 0) continue;
 
+                    // Dice match guarantees at least 1 yield; weather roll scales up from there.
+                    int effectiveRoll = Math.Max(1, rollValue);
                     int perHit = isCity
-                        ? (int)Math.Ceiling(rollValue * 1.5)
-                        : rollValue;
+                        ? (int)Math.Ceiling(effectiveRoll * 1.5)
+                        : effectiveRoll;
                     int amount = perHit * hits;
 
                     if (state.EventStoneDouble && tile.Resource == ResourceType.Stone)

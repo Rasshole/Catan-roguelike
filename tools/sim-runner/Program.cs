@@ -413,7 +413,7 @@ namespace CatanRoguelike.SimRunner
 
                 case GamePhase.LevelUpChoice:
                     if (game.State.PendingLevelUpChoices.Count > 0)
-                        game.ChooseLevelUpPerk(game.State.PendingLevelUpChoices[0]);
+                        game.ChooseLevelUpPerk(SimDriver.PickBestLevelUpPerk(game));
                     else
                         game.EndPlayerDay();
                     break;
