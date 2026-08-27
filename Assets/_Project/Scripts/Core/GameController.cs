@@ -98,7 +98,7 @@ namespace CatanRoguelike.Core
             return controller;
         }
 
-        internal bool GetMetaStartCardGrantedForSave() => _metaStartCardGranted;
+        public bool GetMetaStartCardGrantedForSave() => _metaStartCardGranted;
 
         private void RestoreRuntimeFlagsFromSave(GameSaveDocument doc)
         {
