@@ -21,16 +21,13 @@ namespace CatanRoguelike.Game
 
         public float GetBoardBoundingRadius()
         {
-            if (_controller == null)
-            {
-                return TableCameraFraming.ComputeBoardBoundingRadius(
-                    MapPresets.CreateBoard(MapSize.Small),
-                    hexScale);
-            }
+            if (_tiles.Count > 0)
+                return TableCameraFraming.ComputeBoardBoundingRadius(_tiles.Keys, hexScale);
 
-            return TableCameraFraming.ComputeBoardBoundingRadius(
-                _controller.State.Board,
-                hexScale);
+            if (_controller != null)
+                return TableCameraFraming.ComputeBoardBoundingRadius(_controller.State.Board, hexScale);
+
+            return 0f;
         }
 
         private readonly Dictionary<HexCoord, HexTileView> _tiles = new();
