@@ -61,10 +61,22 @@ namespace CatanRoguelike.Game
             if (boardRoot != null)
             {
                 for (int i = boardRoot.childCount - 1; i >= 0; i--)
-                    Destroy(boardRoot.GetChild(i).gameObject);
+                    DestroySceneObject(boardRoot.GetChild(i).gameObject);
             }
 
             _tiles.Clear();
+        }
+
+        private static void DestroySceneObject(GameObject target)
+        {
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                UnityEngine.Object.DestroyImmediate(target);
+                return;
+            }
+#endif
+            Destroy(target);
         }
 
         private void BuildBoard(BoardState board)
@@ -225,7 +237,7 @@ namespace CatanRoguelike.Game
             }
 
             for (int i = buildingsRoot.childCount - 1; i >= 0; i--)
-                Destroy(buildingsRoot.GetChild(i).gameObject);
+                DestroySceneObject(buildingsRoot.GetChild(i).gameObject);
 
             foreach (var kvp in state.Board.VertexBuildings)
             {

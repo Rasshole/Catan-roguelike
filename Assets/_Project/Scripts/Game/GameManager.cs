@@ -124,6 +124,29 @@ namespace CatanRoguelike.Game
             randomSeed = seed;
             SwapController(new GameController(randomSeed, mapSize, Meta));
         }
+
+        /// <summary>
+        /// Editor/batchmode bootstrap without Play Mode. Mirrors <see cref="Start"/> so
+        /// GameScenePlayHarness can drive setup while the scene stays in edit mode.
+        /// </summary>
+        public void EditorBootstrapForCapture()
+        {
+            if (Controller != null)
+                return;
+
+            Meta = MetaProgressionFile.LoadOrCreate();
+            Controller = new GameController(randomSeed, mapSize, Meta);
+            Controller.OnStateChanged += HandleStateChanged;
+            Controller.OnBoardRebuilt += HandleBoardRebuilt;
+            Controller.OnAutosavePoint += HandleAutosavePoint;
+
+            if (boardView != null)
+                boardView.Initialize(Controller);
+            if (ui != null)
+                ui.Initialize(Controller, Meta, boardInput);
+            if (boardInput != null)
+                boardInput.Initialize(Controller, boardView);
+        }
 #endif
     }
 }

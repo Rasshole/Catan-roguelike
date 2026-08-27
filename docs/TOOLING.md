@@ -47,22 +47,23 @@ Play harness: `GameScenePlayTests` driver run select → setup → første dag v
 
 ## Game-view screenshot (`GameViewCapture`)
 
-Editor-only (`Assets/_Project/Scripts/Editor/GameViewCapture.cs`). Åbner `Game.unity`, går i Play Mode, kører `GameScenePlayHarness` (samme scripted run-select + setup som `GameScenePlayTests`), venter på BoardView/camera, renderer `Camera.main` via `RenderTexture` (1920×1080 PNG) — **ikke** Editor Game-view pixels.
+Editor CLI + menu (`Assets/_Project/Scripts/Editor/GameViewCapture.cs`) and shared capture helper (`Assets/_Project/Scripts/Game/GameSceneCapture.cs`). Opens `Game.unity` in **edit mode** (no Play Mode), bootstraps `GameManager` via `EditorBootstrapForCapture`, kører `GameScenePlayHarness` (samme scripted run-select + setup som `GameScenePlayTests`), renderer `Camera.main` via `RenderTexture` (1920×1080 PNG).
+
+`-batchmode -executeMethod` runs during project load **before** the editor main loop exists, so Play Mode / `EditorApplication.update` cannot be used there. Edit-mode bootstrap avoids that entirely.
 
 | Kommando | Betydning |
 |----------|-----------|
 | **Catan Roguelike → Capture Game View Screenshot** | MenuItem; efterlader Editoren åben |
-| `CaptureAndQuit` | `-executeMethod` til batchmode/CI; `EditorApplication.Exit(0)` ved success, `1` ved fejl |
+| `CaptureAndQuit` | `-executeMethod` til batchmode/CI; edit-mode capture; `EditorApplication.Exit(0)` ved success |
+| PlayMode test `GameScene_CaptureGameView_WritesPng` | `unity test --mode PlayMode` — alternativ Linux screenshot path med rigtig player loop |
 
-Standard PNG-sti: `/workspace/game-view.png`. Override med miljøvariabel `GAME_VIEW_SHOT` eller public const `GameViewCapture.DefaultOutputPath`.
+Standard PNG-sti: `/workspace/game-view.png`. Override med miljøvariabel `GAME_VIEW_SHOT` eller `GameSceneCapture.DefaultOutputPath`.
 
 ### Editor-menu (interaktiv)
 
 Unity Editor → **Catan Roguelike → Capture Game View Screenshot**.
 
 ### CLI (headless Linux + xvfb)
-
-`CaptureAndQuit` calls `BeginCapture` **synchronously** (do not defer via `EditorApplication.delayCall` — that queue is not flushed in `-batchmode -executeMethod`). Batchmode does not advance Play Mode frames on its own; `GameViewCapture` calls `EditorApplication.QueuePlayerLoopUpdate()` each editor tick while waiting for boot/visual frames and for Play Mode enter/exit. Each wait phase fails with `EditorApplication.Exit(1)` after 120s if frames stall. A wall-clock watchdog (`System.Threading.Timer`, 180s) calls `Exit(1)` even if `EditorApplication.update` never ticks.
 
 ```bash
 export UNITY_EDITOR="${UNITY_EDITOR:-/home/box/Unity/Hub/Editor/6000.3.15f1/Editor/Unity}"
@@ -73,11 +74,20 @@ xvfb-run -a "$UNITY_EDITOR" -batchmode -projectPath . \
   -logFile -
 ```
 
-`-nographics` is optional: capture uses `Camera.main.Render()` to a `RenderTexture`, not Game view pixels. Prefer the command above (graphics via xvfb); add `-nographics` only if GPU init is problematic.
+`-nographics` is optional: capture uses `Camera.main.Render()` to a `RenderTexture`, not Game view pixels. Prefer the command above (graphics via xvfb).
 
-Verify success: exit code `0`, log line `GameViewCapture: wrote 1920x1080 PNG to …`, and a non-empty PNG at `GAME_VIEW_SHOT` (default `/workspace/game-view.png`).
+Verify success: exit code `0`, log line `GameViewCapture: wrote 1920x1080 PNG to …`, and a non-empty PNG at `GAME_VIEW_SHOT`.
 
-Efter kørsel: Play Mode er sluttet; `Game.unity` er ikke gemt. Delt setup-logik: `GameScenePlayHarness` i Game-asmdef (bruges også af PlayMode-tests).
+**Alternativ (PlayMode test runner, proven player loop):**
+
+```bash
+export GAME_VIEW_SHOT="/tmp/game-view-test.png"
+xvfb-run -a unity test . --mode PlayMode \
+  --filter GameScene_CaptureGameView_WritesPng \
+  --output /tmp/playmode-capture.xml --timeout 300
+```
+
+Efter kørsel: `Game.unity` er ikke gemt. Delt setup-logik: `GameScenePlayHarness` i Game-asmdef (bruges også af PlayMode-tests).
 
 ### EditMode-tests (Unity CLI)
 

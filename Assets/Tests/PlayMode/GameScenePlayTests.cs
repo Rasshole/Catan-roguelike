@@ -21,6 +21,46 @@ namespace CatanRoguelike.Tests.PlayMode
         private const string GameScenePath = "Assets/_Project/Scenes/Game.unity";
         private const string GameSceneName = "Game";
 
+        [Timeout(60000)]
+        [UnityTest]
+        public IEnumerator GameScene_CaptureGameView_WritesPng()
+        {
+            if (!File.Exists(GameScenePath))
+            {
+                Assert.Fail(
+                    $"Game scene not found at {GameScenePath}. " +
+                    "Run Catan Roguelike → Setup Game Scene or pull a commit that includes Game.unity.");
+            }
+
+            var outputPath = GameSceneCapture.ResolveOutputPath();
+            if (File.Exists(outputPath))
+                File.Delete(outputPath);
+
+            var loadOp = SceneManager.LoadSceneAsync(GameSceneName, LoadSceneMode.Single);
+            Assert.IsNotNull(loadOp, $"Failed to start loading scene '{GameSceneName}'. Is it in Build Settings?");
+            yield return loadOp;
+
+            for (int i = 0; i < 3; i++)
+                yield return null;
+
+            var gameManager = UnityEngine.Object.FindFirstObjectByType<GameManager>();
+            Assert.IsNotNull(gameManager, "GameManager should exist after scene load.");
+            Assert.IsNotNull(gameManager.Controller, "Controller should be initialized after Start().");
+            Assert.IsNotNull(gameManager.Meta, "Meta should be loaded after Start().");
+
+            GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
+
+            for (int i = 0; i < 8; i++)
+                yield return null;
+
+            GameSceneCapture.CaptureMainCameraToPng(outputPath);
+
+            Assert.True(File.Exists(outputPath), $"PNG should exist at {outputPath}");
+            var bytes = File.ReadAllBytes(outputPath);
+            Assert.Greater(bytes.Length, 0, "PNG should be non-empty.");
+            Assert.AreEqual(0x89, bytes[0], "Output should be a PNG file.");
+        }
+
         private static readonly HashSet<GamePhase> SetupPhases = new()
         {
             GamePhase.SetupAiSettlement1,
