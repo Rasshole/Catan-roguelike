@@ -37,7 +37,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 
 ## Bevidst uden for scope (v1)
 
-- **Save / load** — **første slice (Fase 2.1):** versioneret JSON (`SaveGame`, format v1), én slot `save.json`, IMGUI Save/Load på `PlaceholderUI`, EditMode round-trip test. Autosave ved nat, multi-slot menu og RNG roll-tællere venter. **Number tokens + dice** er valgfrie v1-felter.
+- **Save / load** — **Fase 2.1 (done):** versioneret JSON (`SaveGame`, format v1); slot 0 = `save.json`, slot 1 = `save_1.json`; autosave ved nat→dag (`DayPlayerActions`); IMGUI Save/Load per slot + Autosaved-label; EditMode round-trip + slot/autosave tests. RNG roll-tællere udskudt (roll-lister i save er nok til resume). **Number tokens + dice** er valgfrie v1-felter.
 - **Per-tile nummer-tokens** — **implementeret (Fase 2.5, hybrid b):** klassiske 2–12 per hex + 2d6 + resource rolls; se `docs/DESIGN_NUMBER_TOKENS.md`
 
 ---

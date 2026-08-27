@@ -32,6 +32,11 @@ namespace CatanRoguelike.Core
 
         public event Action<GameState> OnStateChanged;
         public event Action OnBoardRebuilt;
+        /// <summary>
+        /// Fired when night fully resolves into <see cref="GamePhase.DayPlayerActions"/> — stable autosave point
+        /// (production applied, shop generated; not mid-card picker).
+        /// </summary>
+        public event Action OnAutosavePoint;
 
         public int RunSeed { get; }
         public MetaProgression Meta { get; private set; }
@@ -88,7 +93,17 @@ namespace CatanRoguelike.Core
                 lastSettlement = VertexGraph.Canonicalize(new Vertex(
                     new HexCoord(doc.LastPlacedSettlement.HexQ, doc.LastPlacedSettlement.HexR),
                     doc.LastPlacedSettlement.CornerIndex));
-            return new GameController(doc.RunSeed, state, lastSettlement);
+            var controller = new GameController(doc.RunSeed, state, lastSettlement);
+            controller.RestoreRuntimeFlagsFromSave(doc);
+            return controller;
+        }
+
+        internal bool GetMetaStartCardGrantedForSave() => _metaStartCardGranted;
+
+        private void RestoreRuntimeFlagsFromSave(GameSaveDocument doc)
+        {
+            _metaStartCardGranted = doc.MetaStartCardGranted
+                ?? (State.RunSetupComplete && State.Phase >= GamePhase.NightPlayCard);
         }
 
         public void SelectMap(MapSize mapSize)
@@ -480,6 +495,7 @@ namespace CatanRoguelike.Core
             State.ShopDeals = Shop.GenerateDailyDeals(State);
             State.Phase = GamePhase.DayPlayerActions;
             State.StatusMessage = "Day: build, shop, or end turn.";
+            OnAutosavePoint?.Invoke();
             NotifyChanged();
         }
 

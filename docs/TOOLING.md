@@ -95,6 +95,15 @@ export DOTNET_ROOT=/home/box/.dotnet PATH=/home/box/.dotnet:$PATH
 dotnet test tools/core-tests/CatanRoguelike.Core.Tests.csproj
 ```
 
+**Save files** (Unity `Application.persistentDataPath`, separate from `meta.json`):
+
+| File | Slot | Notes |
+|------|------|-------|
+| `save.json` | 0 | Legacy + autosave target |
+| `save_1.json` | 1 | Manual second slot |
+
+Core slot IO without Unity: `CatanRoguelike.Core.Save.SaveGameSlotStore`.
+
 ## `tools/sim-runner` (headless Core-sim)
 
 net8.0 console-app der kompilerer Core via glob. Spiller N runs med seeds 1..N. **Hænger ikke:** hvert run har wall-clock timeout (default 5s) *og* max-steps/max-days. Exceptions fanges. Aldrig `Console.Read*`. Printer altid én JSON-linje plus en tabel, også hvis alle runs timer ud.

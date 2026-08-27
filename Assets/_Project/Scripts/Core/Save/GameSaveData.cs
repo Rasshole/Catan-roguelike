@@ -17,6 +17,12 @@ namespace CatanRoguelike.Core.Save
         public int RunSeed { get; set; }
         public GameStateSaveData State { get; set; }
         public VertexSaveData LastPlacedSettlement { get; set; }
+        /// <summary>Optional v1 — prevents re-granting meta start bonus card after load.</summary>
+        public bool? MetaStartCardGranted { get; set; }
+        /// <summary>Optional v1 — ISO-8601 UTC timestamp when the file was written.</summary>
+        public string SavedAtUtc { get; set; }
+        /// <summary>Optional v1 — true when written by autosave (slot 0).</summary>
+        public bool IsAutosave { get; set; }
     }
 
     public sealed class HexCoordSaveData

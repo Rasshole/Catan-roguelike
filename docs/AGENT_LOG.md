@@ -71,3 +71,11 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 
 **Fresh meta:** draft pool = Sawmill + Guild Hall (pick 2); night draw = 7 starter cards (Knight, Road Builder, Year of Plenty, Monopoly, Drought, Master Builder, Fertile Season). **Unlocks:** Monastery (3★), Caravan Post (4★), Fortress Outpost (5★); Sabotage pack — Bandit Raid + Embargo (3★); Market pack — Harbor Charter + Merchant's Ledger + Forecast (4★). Extra draft pick capped at available uniques. **AI:** full `AiPool` unchanged. **Tests:** 307/307 `dotnet test tools/core-tests`.
 
+## 2026-08-27 (UTC) — autosave + multi-slot save/load (Fase 2.1 rest)
+
+- **Autosave:** `GameController.OnAutosavePoint` fires when night resolves to `DayPlayerActions` (after production + shop). `GameManager.AutosaveRun()` writes slot 0 with `isAutosave` + UTC timestamp.
+- **Slots:** `SaveGameSlotStore` — slot 0 = `save.json` (legacy), slot 1 = `save_1.json`. `SaveGameFile` / IMGUI Save 1/2 + Load 1/2. Load re-binds `MetaProgression`; `meta.json` untouched.
+- **Format v1 extras:** optional `savedAtUtc`, `isAutosave`, `metaStartCardGranted` (inferred when absent).
+- **RNG roll counters:** not added — existing roll lists sufficient for resume; documented in `SaveGame` remarks.
+- **Tests:** `SaveGameSlotsTests` (autosave hook, slot isolation, legacy load, metadata). **312/312** `dotnet test tools/core-tests`.
+

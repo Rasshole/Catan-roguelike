@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Save;
@@ -7,25 +8,38 @@ namespace CatanRoguelike.Game
 {
     public static class SaveGameFile
     {
-        public const string DefaultFileName = "save.json";
+        public const string DefaultFileName = SaveGameSlotStore.LegacySlot0FileName;
 
-        public static string DefaultPath => Path.Combine(Application.persistentDataPath, DefaultFileName);
+        public static string DefaultPath => GetSlotPath(0);
 
-        public static void Save(GameController controller)
+        public static string GetSlotPath(int slotIndex) =>
+            SaveGameSlotStore.GetSlotPath(Application.persistentDataPath, slotIndex);
+
+        public static void Save(GameController controller, int slotIndex = 0)
         {
-            File.WriteAllText(DefaultPath, SaveGame.Serialize(controller));
+            var json = SaveGame.Serialize(controller, SaveWriteOptions.Manual);
+            SaveGameSlotStore.WriteSlot(Application.persistentDataPath, slotIndex, json);
         }
 
-        public static bool TryLoad(out GameController controller)
+        public static void Autosave(GameController controller)
         {
-            if (!File.Exists(DefaultPath))
+            var json = SaveGame.Serialize(controller, SaveWriteOptions.Autosave(DateTime.UtcNow));
+            SaveGameSlotStore.WriteSlot(Application.persistentDataPath, SaveGameSlotStore.AutosaveSlotIndex, json);
+        }
+
+        public static bool TryLoad(out GameController controller, int slotIndex = 0)
+        {
+            if (!SaveGameSlotStore.TryReadSlot(Application.persistentDataPath, slotIndex, out var json))
             {
                 controller = null;
                 return false;
             }
 
-            controller = SaveGame.LoadGame(File.ReadAllText(DefaultPath));
+            controller = SaveGame.LoadGame(json);
             return true;
         }
+
+        public static DateTime? LastAutosaveUtc =>
+            SaveGameSlotStore.GetLastAutosaveUtc(Application.persistentDataPath);
     }
 }

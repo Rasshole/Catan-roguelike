@@ -2,7 +2,7 @@
 
 **Næste backlog:** [`docs/ROADMAP_V3.md`](ROADMAP_V3.md) — founder roadmap efter Fase 2 (impact×effort + valgt første item).
 
-Last updated: 2026-08-27 — meta pool locks (unique + card draft/draw gating) on top of balance pass.
+Last updated: 2026-08-27 — autosave + multi-slot save/load (Fase 2.1 rest) on top of meta pool locks.
 
 ## Done (playable prototype scope)
 
@@ -44,7 +44,7 @@ Last updated: 2026-08-27 — meta pool locks (unique + card draft/draw gating) o
 ## Explicitly out of scope
 
 - [x] **Meta progression between runs (Fase 2.6)** — stars earned on game over; unlock tree (maps, leaders, extra draft, start wheat/card); `meta.json` separate from `save.json`; IMGUI unlock panel on map select + game over
-- [x] Save/load — **first slice:** JSON format v1, single slot, IMGUI Save/Load, round-trip test (autosave, slots, RNG roll counters deferred). Army fields are optional v1 properties with defaults. **Number tokens + dice rolls** are optional v1 tile/state fields.
+- [x] Save/load — **Fase 2.1:** JSON format v1; slot 0 = `save.json` (legacy compat), slot 1 = `save_1.json`; autosave overwrites slot 0 when night resolves to `DayPlayerActions` (`OnAutosavePoint`); IMGUI Save 1/2 + Load 1/2 + Autosaved timestamp; `meta.json` stays separate. RNG roll counters deferred — v1 restores roll lists; future RNG re-seeds from `RunSeed`. Army, number tokens, dice, and `MetaStartCardGranted` are optional v1 fields.
 - [x] Per-tile number tokens (classic Catan 2–12) — **hybrid model (b):** tokens + resource rolls + 2d6; see `docs/DESIGN_NUMBER_TOKENS.md`
 
 ## Known gaps (see `MISSING_AND_GAPS.md` for full list)
@@ -101,6 +101,16 @@ Set on **GameManager → Map Size** in the inspector (or re-run Setup Game Scene
 | Human draw | Filtered by `MetaProgression.GetCardPool()`; AI uses full `CardLibrary.AiPool` |
 | UI | `PlaceholderUI` — stars + Spend/Unlocks on map select and game over |
 | Tests | `MetaProgressionTests` — pool defaults, purchase expansion, draft/draw filter, serialize round-trip, isolation from run save |
+
+## Save / load (Fase 2.1)
+
+| Item | Detail |
+|------|--------|
+| Files | Slot 0: `save.json` (legacy). Slot 1: `save_1.json`. Both in `persistentDataPath`. `meta.json` never mixed in. |
+| Autosave | Fires at end of `AdvanceFromNightCard` → `DayPlayerActions` (production + shop ready; not mid-card picker). Overwrites slot 0 with `isAutosave` + UTC timestamp. |
+| Manual save | IMGUI Save 1 / Load 1 (slot 0), Save 2 / Load 2 (slot 1). `GameManager` re-binds `MetaProgression` on load. |
+| Core API | `SaveGame` (serialize), `SaveGameSlotStore` (path-agnostic slots), `SaveGameFile` (Unity IO). |
+| Tests | `SaveGameRoundTripTests`, `SaveGameSlotsTests` — autosave hook, two-slot isolation, legacy `save.json`, metadata round-trip. |
 
 ## Sim-runner (measurement)
 

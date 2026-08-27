@@ -24,7 +24,9 @@ namespace CatanRoguelike.Core.Save
     /// RNG note (v1): each subsystem owns a separate <see cref="Random"/> seeded with <see cref="GameController.RunSeed"/>.
     /// Saves restore <see cref="GameState.TodayRolls"/> / <see cref="GameState.TomorrowRolls"/> exactly, but future RNG
     /// (nightly rolls, cards, shop, events, AI, robber steal) re-seeds from RunSeed only — not bit-identical to
-    /// uninterrupted play. Per-engine roll counters can be added in a later format version.
+    /// uninterrupted play. Per-engine roll counters can be added in a later format version if needed.
+    /// Autosave point: end of night resolution when phase becomes <see cref="GamePhase.DayPlayerActions"/>
+    /// (<see cref="GameController.OnAutosavePoint"/>).
     /// Army fields (<see cref="GameStateSaveData.PlayerKnightsPlayed"/>, etc.) are optional v1 properties defaulting to 0/null.
     /// </remarks>
     public static class SaveGame
@@ -38,11 +40,14 @@ namespace CatanRoguelike.Core.Save
             ContractResolver = new CamelCasePropertyNamesContractResolver()
         };
 
-        public static string Serialize(GameController controller) =>
-            Serialize(controller.RunSeed, controller.State, controller.GetLastPlacedSettlement());
+        public static string Serialize(GameController controller, SaveWriteOptions options = null) =>
+            Serialize(controller.RunSeed, controller.State, controller.GetLastPlacedSettlement(),
+                controller.GetMetaStartCardGrantedForSave(), options);
 
-        public static string Serialize(int runSeed, GameState state, Vertex? lastPlacedSettlement)
+        public static string Serialize(int runSeed, GameState state, Vertex? lastPlacedSettlement,
+            bool metaStartCardGranted = false, SaveWriteOptions options = null)
         {
+            options ??= SaveWriteOptions.Manual;
             var doc = new GameSaveDocument
             {
                 FormatVersion = CurrentFormatVersion,
@@ -50,7 +55,10 @@ namespace CatanRoguelike.Core.Save
                 State = BuildStateSaveData(state),
                 LastPlacedSettlement = lastPlacedSettlement.HasValue
                     ? ToVertexSaveData(lastPlacedSettlement.Value)
-                    : null
+                    : null,
+                MetaStartCardGranted = metaStartCardGranted ? true : null,
+                SavedAtUtc = options.SavedAtUtc?.ToUniversalTime().ToString("o"),
+                IsAutosave = options.IsAutosave
             };
             return JsonConvert.SerializeObject(doc, JsonSettings);
         }
