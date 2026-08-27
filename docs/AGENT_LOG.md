@@ -100,7 +100,10 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **Docs:** `BLOCKED.md` #3 Windows-Mono tarball 404 from Linux-VM; `ROADMAP_V3` PlayMode + Windows build rows updated.
 - **Core:** `dotnet test tools/core-tests` unchanged.
 
-## 2026-08-27 (UTC) — Number-token chip rim contrast polish
+## 2026-08-27 (UTC) — Number-token chip visibility above hex cylinders
+
+- **`HexTileView`:** chip/label elevation raised to parent-local y≈1.08/1.18 (cylinder top = 1.0); disc `localScale` compensated for hex `lossyScale` so world rim ~0.62, face ~0.52, thickness ~0.04. Robber/storm markers unchanged. **`NumberTokenVisualStyle`** colors untouched.
+
 
 - **`NumberTokenVisualStyle`:** darker standard rim + slightly darker cream face; stronger `ChipRimRedAccent` so 6/8 rims read on wheat/sheep hexes. **`HexTileView`:** chip rim/face diameters 0.44 / 0.36 (was 0.42 / 0.34).
 - **Tests:** `PaletteConstants_MatchExpectedRgbValues` in `NumberTokenVisualStyleTests`. **339/339** `dotnet test tools/core-tests`.

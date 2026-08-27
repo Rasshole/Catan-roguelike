@@ -23,12 +23,14 @@ namespace CatanRoguelike.Game
         private static readonly Color PortBlockadeTint = new(0.55f, 0.12f, 0.12f);
         private static readonly Color StormMarkerColor = new(0.1f, 0.15f, 0.55f);
 
-        private const float ChipElevationY = 0.48f;
-        private const float LabelElevationY = 0.52f;
-        private const float ChipRimDiameter = 0.44f;
-        private const float ChipFaceDiameter = 0.36f;
-        private const float ChipRimHeight = 0.014f;
-        private const float ChipFaceHeight = 0.012f;
+        // Target world-space chip size (visible disc on the hex top).
+        private const float WorldRimDiameter = 0.62f;
+        private const float WorldFaceDiameter = 0.52f;
+        private const float WorldChipThickness = 0.04f;
+
+        // Hex cylinder mesh top is parent-local y=1; place chip/label above that surface.
+        private const float ChipElevationY = 1.08f;
+        private const float LabelElevationY = 1.18f;
 
         public void Initialize(HexTileData data, Renderer renderer)
         {
@@ -82,8 +84,21 @@ namespace CatanRoguelike.Game
             _tokenChip.transform.SetParent(transform, false);
             _tokenChip.transform.localPosition = new Vector3(0f, ChipElevationY, 0f);
 
-            _chipRimRenderer = CreateChipDisc("Rim", ChipRimDiameter, ChipRimHeight, 0f);
-            _chipFaceRenderer = CreateChipDisc("Face", ChipFaceDiameter, ChipFaceHeight, ChipFaceHeight * 0.5f);
+            // BoardView scales hex cylinders non-uniformly (wide XZ, short Y). Child localScale is
+            // multiplied by that lossyScale, so divide target world sizes to keep a visible cream disc.
+            var hexScale = transform.lossyScale;
+            float localRimDiameter = WorldRimDiameter / hexScale.x;
+            float localFaceDiameter = WorldFaceDiameter / hexScale.x;
+            // Unity cylinder primitive spans 2 units in Y (-1..+1).
+            float localRimHeight = WorldChipThickness / (2f * hexScale.y);
+            float localFaceHeight = WorldChipThickness * 0.85f / (2f * hexScale.y);
+
+            _chipRimRenderer = CreateChipDisc("Rim", localRimDiameter, localRimHeight, 0f);
+            _chipFaceRenderer = CreateChipDisc(
+                "Face",
+                localFaceDiameter,
+                localFaceHeight,
+                localRimHeight + localFaceHeight * 0.5f);
         }
 
         private Renderer CreateChipDisc(string name, float diameter, float height, float localYOffset)
