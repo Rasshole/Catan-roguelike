@@ -306,7 +306,7 @@ namespace CatanRoguelike.Core
 
         private HexCoord? PickRobberTarget(GameController game)
         {
-            var humanTiles = game.State.Board.VertexBuildings
+            var candidates = game.State.Board.VertexBuildings
                 .Where(kv => kv.Value.owner == PlayerId.Human)
                 .SelectMany(kv => VertexGraph.GetHexesForVertex(kv.Key))
                 .Where(h => game.State.Board.TryGetTile(h, out _))
@@ -320,11 +320,12 @@ namespace CatanRoguelike.Core
                     return (coord: g.Key, score: g.Count() * pip);
                 })
                 .OrderByDescending(x => x.score)
-                .Select(x => x.coord)
-                .FirstOrDefault();
+                .ToList();
 
-            if (humanTiles.Equals(default(HexCoord))) return null;
-            return humanTiles;
+            if (candidates.Count == 0)
+                return null;
+
+            return candidates[0].coord;
         }
 
         private Edge? PickRoadToDisable(GameController game)

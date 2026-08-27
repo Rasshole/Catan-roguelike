@@ -64,7 +64,11 @@ namespace CatanRoguelike.Tests
             {
                 { ResourceType.Wheat, 2 },
                 { ResourceType.Wood, 1 },
+                { ResourceType.Brick, 1 },
+                { ResourceType.Sheep, 1 },
+                { ResourceType.Stone, 1 },
             };
+            game.State.TomorrowRolls = new Dictionary<ResourceType, int>(game.State.TodayRolls);
         }
 
         private static void PlaceHumanSettlementForRobberTarget(GameController game)
@@ -72,6 +76,9 @@ namespace CatanRoguelike.Tests
             var board = game.State.Board;
             foreach (var hex in board.Tiles.Keys)
             {
+                if (!board.TryGetTile(hex, out var tile) || tile.HasRobber)
+                    continue;
+
                 for (int c = 0; c < 6; c++)
                 {
                     var vertex = VertexGraph.Canonicalize(new Vertex(hex, c));
@@ -83,7 +90,7 @@ namespace CatanRoguelike.Tests
                 }
             }
 
-            Assert.Fail("No free vertex for human settlement");
+            Assert.Fail("No free vertex for human settlement off robber hex");
         }
     }
 }
