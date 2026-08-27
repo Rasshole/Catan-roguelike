@@ -205,3 +205,8 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 
 - **`AiControllerDayTurnTests`:** city upgrade (Act 1 one vs Act 2+ all affordable), highest-scored settlement/road placement, robber target + steal, no-op when no human buildings / empty inventory.
 - Does not duplicate shop or night-card suites. No v0.1 tag.
+
+## 2026-08-27 (UTC) — Darker decorative sea ring
+
+- **`BoardWaterMaterial`:** `SeaAlbedo` 0.12/0.22/0.32 → **0.06/0.12/0.20**; `Smoothness` 0.35 → **0.18** so directional light reads as dark navy water, not washed slate-blue. Felt/wood/camera/sizing unchanged.
+- **Tests:** `BoardWaterMaterialTests` (`Create_IsDistinctFromFelt`). No v0.1 tag.

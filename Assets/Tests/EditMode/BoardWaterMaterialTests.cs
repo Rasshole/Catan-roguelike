@@ -27,6 +27,15 @@ namespace CatanRoguelike.Tests
                 BoardSurfaceMaterial.WoodAlbedo.b);
 
             Assert.Less(waterMax, woodMax);
+            Assert.Less(water.GetFloat("_Glossiness"), 0.25f);
+        }
+
+        [Test]
+        public void Create_IsDistinctFromFelt()
+        {
+            Assert.AreNotEqual(BoardWaterMaterial.SeaAlbedo, BoardFeltMaterial.FeltAlbedo);
+            Assert.Greater(BoardWaterMaterial.SeaAlbedo.b, BoardWaterMaterial.SeaAlbedo.g);
+            Assert.Greater(BoardFeltMaterial.FeltAlbedo.g, BoardFeltMaterial.FeltAlbedo.b);
         }
     }
 }

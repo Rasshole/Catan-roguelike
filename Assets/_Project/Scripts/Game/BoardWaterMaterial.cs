@@ -7,8 +7,8 @@ namespace CatanRoguelike.Game
     /// </summary>
     public static class BoardWaterMaterial
     {
-        public static readonly Color SeaAlbedo = new(0.12f, 0.22f, 0.32f);
-        public const float Smoothness = 0.35f;
+        public static readonly Color SeaAlbedo = new(0.06f, 0.12f, 0.20f);
+        public const float Smoothness = 0.18f;
         public const float Metallic = 0f;
 
         public static Material Create()
