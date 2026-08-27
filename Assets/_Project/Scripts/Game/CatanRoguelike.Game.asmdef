@@ -2,7 +2,8 @@
     "name": "CatanRoguelike.Game",
     "rootNamespace": "CatanRoguelike.Game",
     "references": [
-        "CatanRoguelike.Core"
+        "CatanRoguelike.Core",
+        "UnityEngine.ImageConversionModule"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
