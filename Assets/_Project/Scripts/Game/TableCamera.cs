@@ -25,6 +25,10 @@ namespace CatanRoguelike.Game
                 var target = new GameObject("BoardCenter");
                 lookTarget = target.transform;
             }
+
+            ApplyOrbitPose();
+            if (frameBoardRightOfHud && _camera != null)
+                ApplyBoardFramingOffset();
         }
 
         private void Update()
@@ -34,12 +38,16 @@ namespace CatanRoguelike.Game
             if (Input.GetKey(KeyCode.E))
                 _angle += orbitSpeed * Time.deltaTime;
 
+            ApplyOrbitPose();
+            if (frameBoardRightOfHud && _camera != null)
+                ApplyBoardFramingOffset();
+        }
+
+        private void ApplyOrbitPose()
+        {
             var offset = Quaternion.Euler(55f, _angle, 0f) * new Vector3(0f, 0f, -distance);
             transform.position = lookTarget.position + offset + Vector3.up * (height * 0.3f);
             transform.LookAt(lookTarget.position + Vector3.up * 0.5f);
-
-            if (frameBoardRightOfHud && _camera != null)
-                ApplyBoardFramingOffset();
         }
 
         private void ApplyBoardFramingOffset()
@@ -55,8 +63,9 @@ namespace CatanRoguelike.Game
                 new Vector3(boardScreen.x, boardScreen.y, boardScreen.z));
             Vector3 worldShifted = _camera.ScreenToWorldPoint(
                 new Vector3(boardScreen.x + deltaPx, boardScreen.y, boardScreen.z));
-            float worldOffsetX = worldShifted.x - worldAtBoard.x;
-            transform.LookAt(lookTarget.position + new Vector3(worldOffsetX, 0.5f, 0f));
+            // Move camera opposite to the desired on-screen board shift (LookAt(+delta) inverts).
+            transform.position -= worldShifted - worldAtBoard;
+            transform.LookAt(lookTarget.position + Vector3.up * 0.5f);
         }
     }
 }

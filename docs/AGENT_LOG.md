@@ -133,3 +133,8 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **`TableCamera`:** after orbit, shifts look-at so board center sits in the unobstructed region right of the HUD (BoardInputController still uses `Camera.main`).
 - **Tests:** `PlaceholderHudLayoutTests` (EditMode). No uGUI rewrite; no v0.1 tag.
 
+## 2026-08-27 (UTC) — TableCamera framing fix (PR #69)
+
+- **`ApplyBoardFramingOffset`:** LookAt(+worldOffsetX) pushed the board left on screen (inverted). Now translates camera by `-(worldShifted - worldAtBoard)` then re-LookAt board center — board slides right into the HUD-free region.
+- **`Start()`:** calls the same orbit + framing path so frame 0 matches Update (no default-transform flash).
+
