@@ -90,6 +90,7 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(1, state.TomorrowRolls[ResourceType.Sheep],
                 "Famine should only cap wheat rolls");
             Assert.That(state.EventMessage, Does.Contain("Famine"));
+            Assert.That(state.EventMessage, Does.Contain("tomorrow"));
         }
 
         [Test]

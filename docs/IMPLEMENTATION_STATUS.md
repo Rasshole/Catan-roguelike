@@ -2,7 +2,7 @@
 
 **Næste backlog:** [`docs/ROADMAP_V3.md`](ROADMAP_V3.md) — founder roadmap efter Fase 2 (impact×effort + valgt første item).
 
-Last updated: 2026-08-27 — autosave + multi-slot save/load (Fase 2.1 rest) on top of meta pool locks.
+Last updated: 2026-08-27 — first-run onboarding beats (IMGUI) + Forecast/Famine copy fixes on top of autosave + multi-slot.
 
 ## Done (playable prototype scope)
 
@@ -38,6 +38,7 @@ Last updated: 2026-08-27 — autosave + multi-slot save/load (Fase 2.1 rest) on 
 - [x] VP win at 10
 - [x] Click-to-place on vertices and edges
 - [x] Placeholder IMGUI
+- [x] **First-run onboarding beats (IMGUI)** — phase banners via `OnboardingCopy` (map, draft, setup, first night/day, game over); hybrid-yield hint on first night; dismissible Tips toggle (`PlayerPrefs`); EditMode tests
 - [x] EditMode tests (rolls, **number tokens (assignment, desert, hybrid production, expansion, save round-trip, AI/event robber targeting)**, placement, production, **setup-bonus (2nd settlement, desert skip)**, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **Largest Army (grant/tie/overtake/breakdown/save)**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **AI Largest Army Knight priority**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 6 events + timing**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**, **SaveGame round-trip JSON (format v1)**, **ActProgression thresholds + yield/events/AI/map expansion**, **MetaProgression (stars, unlock tree, meta.json isolation, award formula, purchase, start bonuses)**)
 - [x] PlayMode smoke tests (`GameSceneSmokeTests` — `Game.unity` boot, required MonoBehaviours, `GameManager.Controller` after Start)
 
@@ -65,8 +66,8 @@ Last updated: 2026-08-27 — autosave + multi-slot save/load (Fase 2.1 rest) on 
 - [ ] Real UI (uGUI) + art pass
 - [x] Game.unity committed to repo
 - [x] Integration / full-run tests (`GameControllerIntegrationTests` — day/night loop, 10 VP win, level-up on day 5)
-- [x] Game-over run-summary in IMGUI (`RunSummaryDisplay` — winner, day, map, leader, seed, VP breakdown + Restart) + stars earned / unlock shop
-- [x] P2 #23 — removed unused `GamePhase.DayEndCheck` and `DaySubPhase` enum
+- [x] Game-over run-summary in IMGUI (`RunSummaryDisplay` — winner, day, map, leader, seed, VP breakdown + Restart) + stars earned / unlock shop + onboarding meta line
+- [x] **Forecast / Famine UI copy** — Forecast card text mentions dice reroll; Famine/Good Harvest event text says "tomorrow" (matches `TomorrowRolls` timing)
 
 ## Map sizes
 

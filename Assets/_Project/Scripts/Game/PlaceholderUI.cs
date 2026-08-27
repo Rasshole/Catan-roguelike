@@ -52,6 +52,8 @@ namespace CatanRoguelike.Game
 
             if (state.Phase == GamePhase.RunSelectMap)
             {
+                DrawTipsToggle();
+                DrawOnboardingBanner(state);
                 DrawMapSelect(state);
                 DrawUnlockPanelIfOpen();
                 GUILayout.EndScrollView();
@@ -61,6 +63,8 @@ namespace CatanRoguelike.Game
 
             if (state.Phase == GamePhase.RunSelectLeader)
             {
+                DrawTipsToggle();
+                DrawOnboardingBanner(state);
                 DrawLeaderSelect();
                 GUILayout.EndScrollView();
                 GUILayout.EndArea();
@@ -69,12 +73,17 @@ namespace CatanRoguelike.Game
 
             if (state.Phase == GamePhase.RunSelectDraft)
             {
+                DrawTipsToggle();
+                DrawOnboardingBanner(state);
                 DrawDraftSelect();
                 GUILayout.EndScrollView();
                 GUILayout.EndArea();
                 return;
             }
 
+            DrawTipsToggle();
+            if (!state.Winner.HasValue)
+                DrawOnboardingBanner(state);
             GUILayout.Label($"<b>Day {state.Board.DayNumber}</b> — {MapPresets.GetDisplayName(state.MapSize)}");
             GUILayout.Label($"<b>{ActProgression.GetActLabel(ActProgression.GetAct(state.Board.DayNumber))}</b>");
             if (!string.IsNullOrEmpty(state.ActUnlockMessage))
@@ -127,9 +136,9 @@ namespace CatanRoguelike.Game
                 if (_meta != null)
                 {
                     GUILayout.Label($"<b>Stars:</b> {_meta.Stars}");
-                    if (_lastRunStarsEarned > 0)
-                        GUILayout.Label($"<color=yellow>+{_lastRunStarsEarned} stars earned this run</color>");
                 }
+
+                DrawOnboardingBanner(state, forceGameOver: true);
 
                 DrawUnlockPanelIfOpen();
                 if (GUILayout.Button(_showUnlockPanel ? "Hide Unlocks" : "Spend Stars / Unlocks"))
@@ -352,6 +361,9 @@ namespace CatanRoguelike.Game
                 string diceLabel = state.IsNightPhase ? "Tomorrow's Dice" : "Today's Dice";
                 GUILayout.Label($"<b>{diceLabel}</b> (2d6): {string.Join(", ", dice)}");
             }
+
+            if (OnboardingCopy.TryGetFirstNightHybridHint(BuildOnboardingContext(state), out var hybridHint))
+                GUILayout.Label($"<color=#88ccff><i>{hybridHint}</i></color>");
         }
 
         private void DrawNightCards(GameState state)
@@ -525,6 +537,32 @@ namespace CatanRoguelike.Game
             var sb = new StringBuilder($"{label}: ");
             sb.Append($"W{bundle.Wood} B{bundle.Brick} Wh{bundle.Wheat} S{bundle.Sheep} St{bundle.Stone}");
             return sb.ToString();
+        }
+
+        private static void DrawTipsToggle()
+        {
+            bool tips = OnboardingTipsStore.TipsEnabled;
+            bool newTips = GUILayout.Toggle(tips, "Tips");
+            if (newTips != tips)
+                OnboardingTipsStore.TipsEnabled = newTips;
+        }
+
+        private void DrawOnboardingBanner(GameState state, bool forceGameOver = false)
+        {
+            if (OnboardingCopy.TryGetPhaseBanner(BuildOnboardingContext(state, forceGameOver), out var line))
+                GUILayout.Label($"<color=#88ccff><i>{line}</i></color>");
+        }
+
+        private OnboardingCopy.Context BuildOnboardingContext(GameState state, bool forceGameOver = false)
+        {
+            return new OnboardingCopy.Context
+            {
+                Phase = state.Phase,
+                DayNumber = state.Board.DayNumber,
+                TipsEnabled = OnboardingTipsStore.TipsEnabled,
+                HasWinner = forceGameOver || state.Winner.HasValue,
+                StarsEarnedThisRun = _lastRunStarsEarned
+            };
         }
     }
 }

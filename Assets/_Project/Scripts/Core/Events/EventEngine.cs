@@ -30,13 +30,13 @@ namespace CatanRoguelike.Core.Events
             [EventId.Storm] = new(EventId.Storm, "Storm",
                 "A random tile produces nothing today (as if robber were there)."),
             [EventId.Famine] = new(EventId.Famine, "Famine",
-                "Wheat rolls are capped at 1 today."),
+                "Wheat rolls are capped at 1 tomorrow."),
             [EventId.GoldRush] = new(EventId.GoldRush, "Gold Rush",
                 "Stone production is doubled today."),
             [EventId.MarketDay] = new(EventId.MarketDay, "Market Day",
                 "All shop trades are 3:1 today."),
             [EventId.GoodHarvest] = new(EventId.GoodHarvest, "Good Harvest",
-                "All resource rolls are +1 today (respects cap)."),
+                "All resource rolls are +1 tomorrow (respects cap)."),
             [EventId.BanditRaid] = new(EventId.BanditRaid, "Bandit Raid",
                 "Robber moves to the tile where you produce the most.")
         };

@@ -17,25 +17,34 @@ Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færd
 | **Sim-driven day-ceiling / win-rate balance** | Runs skal ende ved 10 VP — ikke ved `--max-days`. Act 2/3 + hybrid tokens gør det værre end før sim-baseline (~790/1000 timeout *før* 2.4–2.6; ikke genmålt). | **H** | **M** | **yes** | `BalanceConfig`, `ActProgression`, evt. AI VP-jagt. Sim-runner + nye metrics. |
 | **Autosave + multi-slot + RNG roll-tællere (2.1 rest)** | Spilleren kan pause uden at miste determinisme; QA kan gemme lige før en bug. | **M** | **M** | partial | **Done:** autosave ved `DayPlayerActions`, slot 0/1, legacy `save.json`. RNG roll-tællere udskudt — roll-lister nok til resume. |
 | **Meta: lås kort- og unique-*pools* bag stjerner** | Roguelike-identitet: nye runs føles anderledes, ikke kun nye leaders. | **H** | **M** | **yes** | **Done:** 2 free uniques + 7 starter cards; 3 unique unlocks + 2 card packs i `MetaCatalog`. AI bruger fuld `AiPool`. |
-| **First-run / onboarding beats (IMGUI)** | Nye spillere forstår hybrid produktion, acts og meta uden wiki. | **H** | **M** | partial | Primært copy + fase-bannere i `PlaceholderUI`; fuld “feel” kræver Play Mode på Mac. |
+| **First-run / onboarding beats (IMGUI)** | Nye spillere forstår hybrid produktion, acts og meta uden wiki. | **H** | **M** | partial | **Done (copy):** `OnboardingCopy` + Tips toggle + hybrid hint; fuld “feel” kræver Play Mode på Mac. |
 | **uGUI-erstatning + art pass** | Føles som et spil, ikke et debug-værktøj. | **H** | **H** | **no** | P2 uafgjort. Kræver Mac/Windows til visuel QA; Linux-VM kan skrive prefabs, ikke validere look. |
 | **Act 3 indholdsvariation (events/kort)** | Sent game må ikke kun være talinflation (max roll 3, dobbelt dice). | **M** | **M** | **yes** | Nye `EventEngine`-entries eller Act 3-only kort; sim for at undgå spike/dead runs. |
 | **PlayMode ud over smoke (playtest harness)** | Scene-boot beviser ikke at man kan spille en run. Kun 2 PlayMode-tests i dag. | **M** | **M** | partial | `xvfb` + Unity-licens; auto-play via `DebugHooks` eller scripted input. |
 | **Windows standalone build** | Distribuerbar `.exe` til playtest uden Unity Editor. | **M** | **L** | **yes** | Modsat macOS: Linux-VM *kan* bygge Windows64 (`-buildWindows64Player`). macOS build blokeret (`BLOCKED.md`). |
 | **Token/hex visuel pass** | Spilleren ser *hvor* 6/8 sidder — ikke bare IMGUI-labels på cylindre. | **M** | **M** | partial | `HexTileView` har token-tekst; 3D stadig placeholder (`DESIGN_RENDERING`: Built-in). |
-| **Forecast / Famine UI-copy fixes** | Forecast ignorerer parameter i UI; Famine-tekst lyver om timing (`TomorrowRolls`). | **L** | **L** | **yes** | Hurtig polish; løfter tillid til hybrid-modellen. |
+| **Forecast / Famine UI-copy fixes** | Forecast ignorerer parameter i UI; Famine-tekst lyver om timing (`TomorrowRolls`). | **L** | **L** | **yes** | **Done:** Forecast card text + no picker; Famine/Good Harvest say "tomorrow". |
 | **Sim-runner rapport udvidelse** | Balance-arbejde uden gæt: VP-fordeling, win-rate, act ved afslutning, årsag (`ok`/`max_days`/win). | **M** | **L** | **yes** | Naturlig forløber til balance-pass; ren `tools/`-ændring. |
 | **PortDiscount-perk wired** | Perk lover rabat på alle handler ved port — core findes, effekt halv. | **L** | **L** | **yes** | Lille retfærdigheds-fix; ikke blokering for balance-pass. |
 
 ---
 
-## PICK: first-run / onboarding beats (IMGUI)
+## PICK: sim-driven day-ceiling / win-rate balance (follow-up)
 
-**Gør dette næste.** Autosave + multi-slot er landet.
+**Onboarding beats (IMGUI) landed.** Autosave + multi-slot already done.
 
 - **Pause/resume virker.** Autosave ved nat→dag i slot 0; manuel Save/Load i to slots; legacy `save.json` compat.
-- **Onboarding beats** er copy-only i IMGUI — lav risiko, høj læring for nye spillere (hybrid produktion, acts, meta).
+- **Onboarding beats** — copy-only fase-bannere + Tips toggle + hybrid hint på dag 1 nat.
 - **uGUI + art** forbliver P2 — kræver Mac til visuel QA.
+
+---
+
+## Done recently: first-run onboarding beats (IMGUI)
+
+- `OnboardingCopy` — pure string helper (`ForPhase`, `TryGetPhaseBanner`, `TryGetFirstNightHybridHint`, `ForGameOver`); EditMode tests.
+- `PlaceholderUI` — cyan one-liner per phase; Tips toggle (`PlayerPrefs`, default on); hybrid hint ved dice-linjen dag 1 nat.
+- **Forecast / Famine copy:** Forecast card mentions dice reroll; Famine + Good Harvest event text says "tomorrow".
+- Tests: **323/323** `dotnet test tools/core-tests`.
 
 ---
 
