@@ -138,3 +138,9 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **`ApplyBoardFramingOffset`:** LookAt(+worldOffsetX) pushed the board left on screen (inverted). Now translates camera by `-(worldShifted - worldAtBoard)` then re-LookAt board center — board slides right into the HUD-free region.
 - **`Start()`:** calls the same orbit + framing path so frame 0 matches Update (no default-transform flash).
 
+## 2026-08-27 (UTC) — TableCamera board-fit zoom (post #69)
+
+- **`TableCameraFraming`:** orbit distance/height derived from hex-cluster bounding radius (`HexMath` centers + outer radius × `hexScale`), not the decorative table surface. Small (~3.13 @ 1.2 scale) ≈ 2.6 orbit distance vs old fixed 8.
+- **`TableCamera`:** reads `BoardView.GetBoardBoundingRadius()` each frame; HUD horizontal framing unchanged.
+- **Tests:** `TableCameraFramingTests` (Small closer than Large/Medium). No uGUI; no v0.1 tag.
+

@@ -522,9 +522,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: CatanRoguelike.Game::CatanRoguelike.Game.TableCamera
   lookTarget: {fileID: 0}
-  distance: 8
-  height: 7
+  boardView: {fileID: 1042635517}
+  distanceMargin: 1.08
   orbitSpeed: 40
+  frameBoardRightOfHud: 1
 --- !u!81 &1311004112
 AudioListener:
   m_ObjectHideFlags: 0

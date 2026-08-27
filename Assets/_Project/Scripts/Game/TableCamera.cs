@@ -5,8 +5,8 @@ namespace CatanRoguelike.Game
     public sealed class TableCamera : MonoBehaviour
     {
         [SerializeField] private Transform lookTarget;
-        [SerializeField] private float distance = 8f;
-        [SerializeField] private float height = 7f;
+        [SerializeField] private BoardView boardView;
+        [SerializeField] private float distanceMargin = TableCameraFraming.DefaultMarginFactor;
         [SerializeField] private float orbitSpeed = 40f;
         [SerializeField] private bool frameBoardRightOfHud = true;
 
@@ -16,6 +16,8 @@ namespace CatanRoguelike.Game
         private void Awake()
         {
             _camera = GetComponent<Camera>();
+            if (boardView == null)
+                boardView = FindFirstObjectByType<BoardView>();
         }
 
         private void Start()
@@ -45,6 +47,10 @@ namespace CatanRoguelike.Game
 
         private void ApplyOrbitPose()
         {
+            float boardRadius = boardView != null ? boardView.GetBoardBoundingRadius() : 0f;
+            float distance = TableCameraFraming.ComputeOrbitDistance(boardRadius, distanceMargin);
+            float height = TableCameraFraming.ComputeOrbitHeight(distance);
+
             var offset = Quaternion.Euler(55f, _angle, 0f) * new Vector3(0f, 0f, -distance);
             transform.position = lookTarget.position + offset + Vector3.up * (height * 0.3f);
             transform.LookAt(lookTarget.position + Vector3.up * 0.5f);
