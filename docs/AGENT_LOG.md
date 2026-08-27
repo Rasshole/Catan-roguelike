@@ -154,16 +154,14 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **`TableCamera`:** enforce `nearClipPlane` ≥ 0.3 to reduce hex-top z-fighting at orbit pitch.
 - **Tests:** orbit distance > board radius for Small/Large; ordering only, no magic radius floats.
 
-<<<<<<< HEAD
 ## 2026-08-27 (UTC) — Sea ring around wood board disk
 
 - **`TableCameraFraming`:** `WaterSurfacePadFactor` (1.55× wood radius, clamped ≤1.75×) + `ComputeWaterDiskScale` / world-radius helpers; camera orbit still uses hex bounding radius only.
 - **`BoardView`:** runtime `WaterSurface` cylinder behind `BoardSurface` (`BoardWaterMaterial`, dark sea albedo).
 - **Tests:** `BoardSurfaceSizingTests` water sizing/Y; `BoardWaterMaterialTests`. No v0.1 tag.
-=======
+
 ## 2026-08-27 (UTC) — Game-view screenshot tool (`GameViewCapture`)
 
 - **`GameViewCapture`:** MenuItem + `CaptureAndQuit` (`-executeMethod`); Play Mode scripted setup via shared `GameScenePlayHarness`, `Camera.main` → 1920×1080 PNG (`/workspace/game-view.png` or `GAME_VIEW_SHOT`). Exits Play Mode without saving `Game.unity`.
 - **Tests:** `GameScenePlayHarnessTests` (EditMode). Documented in `docs/TOOLING.md`.
->>>>>>> 59970e9 (feat(editor): add GameViewCapture screenshot tool for scripted board renders)
 
