@@ -31,9 +31,9 @@ namespace CatanRoguelike.Game
             var root = CreateRoot(parent, SettlementName, worldPosition);
             var material = BuiltInMaterials.Create(color);
 
-            const float bodyWidth = 0.13f;
-            const float bodyHeight = 0.10f;
-            const float bodyDepth = 0.13f;
+            const float bodyWidth = 0.24f;
+            const float bodyHeight = 0.19f;
+            const float bodyDepth = 0.24f;
 
             AddBody(root.transform, bodyWidth, bodyHeight, bodyDepth, hexTopY, material);
             AddPitchedRoof(
@@ -51,12 +51,12 @@ namespace CatanRoguelike.Game
             var root = CreateRoot(parent, CityName, worldPosition);
             var material = BuiltInMaterials.Create(color);
 
-            const float bodyWidth = 0.16f;
-            const float bodyHeight = 0.12f;
-            const float bodyDepth = 0.16f;
-            const float upperWidth = 0.12f;
-            const float upperHeight = 0.10f;
-            const float upperDepth = 0.12f;
+            const float bodyWidth = 0.30f;
+            const float bodyHeight = 0.22f;
+            const float bodyDepth = 0.30f;
+            const float upperWidth = 0.22f;
+            const float upperHeight = 0.19f;
+            const float upperDepth = 0.22f;
 
             AddBody(root.transform, bodyWidth, bodyHeight, bodyDepth, hexTopY, material);
 
@@ -92,7 +92,7 @@ namespace CatanRoguelike.Game
             var root = CreateRoot(parent, RoadName, midpoint);
             root.transform.rotation = Quaternion.Euler(0f, angleY, 0f);
 
-            const float roadWidth = 0.12f;
+            const float roadWidth = 0.14f;
             const float roadThickness = 0.045f;
             float centerY = hexTopY + roadThickness * 0.5f + 0.008f;
 
@@ -143,7 +143,7 @@ namespace CatanRoguelike.Game
             float roofBaseY,
             Material material)
         {
-            const float panelThickness = 0.025f;
+            const float panelThickness = 0.046f;
             float panelWidth = bodyWidth * 1.18f;
             float panelDepth = bodyDepth * 0.58f;
             float panelLift = panelDepth * Mathf.Sin(RoofPitchDegrees * Mathf.Deg2Rad) * 0.5f;
