@@ -8,6 +8,7 @@ namespace CatanRoguelike.Tests
     {
         private const float HexTopY = 0.15f;
         private const float MinBaseAboveHex = 0.01f;
+        private const float MinRidgeGapAboveBodyTop = 0.03f;
         private const float MaxSettlementHeight = 0.50f;
         private const float MinCityHeight = 0.25f;
         private const float MaxCityHeight = 0.72f;
@@ -223,7 +224,7 @@ namespace CatanRoguelike.Tests
             Assert.GreaterOrEqual(ridgeBounds.max.x, bodyBounds.max.x);
             Assert.LessOrEqual(ridgeBounds.min.z, bodyBounds.min.z);
             Assert.GreaterOrEqual(ridgeBounds.max.z, bodyBounds.max.z);
-            Assert.GreaterOrEqual(ridgeBounds.min.y, bodyBounds.max.y);
+            Assert.Greater(ridgeBounds.min.y, bodyBounds.max.y + MinRidgeGapAboveBodyTop);
         }
     }
 }
