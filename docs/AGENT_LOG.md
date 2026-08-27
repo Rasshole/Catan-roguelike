@@ -217,3 +217,8 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **Output:** 1920×1080 PNG at `/workspace/game-view.png` (or `GAME_VIEW_SHOT`). **Verified on Linux** via `xvfb-run` + `-batchmode -executeMethod …CaptureAndQuit`.
 - **Deps:** `ImageConversionModule` in `CatanRoguelike.Game.asmdef`; `com.unity.modules.imageconversion` in `Packages/manifest.json`.
 - **Tests:** `GameSceneCaptureTests` hermetic around `GAME_VIEW_SHOT` (save/clear/restore). No v0.1 tag.
+
+## 2026-08-27 (UTC) — Edit-mode capture TableCamera orbit pose
+
+- **`TableCamera.ApplyPoseForCapture`:** edit-mode CLI/menu calls orbit + HUD framing (`ApplyOrbitPose` + `ApplyBoardFramingOffset` at 1920×1080) before `GameSceneCapture.CaptureMainCameraToPng`; Play Mode `Start`/`Update` path unchanged.
+- **Tests:** `GameSceneCaptureTests.ApplyPoseForCapture_MovesCameraOffSceneDefault_WhenBoardHasData`. No v0.1 tag.

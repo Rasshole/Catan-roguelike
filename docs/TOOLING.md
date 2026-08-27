@@ -47,7 +47,7 @@ Play harness: `GameScenePlayTests` driver run select → setup → første dag v
 
 ## Game-view screenshot (`GameViewCapture`)
 
-Editor CLI + menu (`Assets/_Project/Scripts/Editor/GameViewCapture.cs`) and shared capture helper (`Assets/_Project/Scripts/Game/GameSceneCapture.cs`). Opens `Game.unity` in **edit mode** (no Play Mode), bootstraps `GameManager` via `EditorBootstrapForCapture`, kører `GameScenePlayHarness` (samme scripted run-select + setup som `GameScenePlayTests`), renderer `Camera.main` via `RenderTexture` (1920×1080 PNG).
+Editor CLI + menu (`Assets/_Project/Scripts/Editor/GameViewCapture.cs`) and shared capture helper (`Assets/_Project/Scripts/Game/GameSceneCapture.cs`). Opens `Game.unity` in **edit mode** (no Play Mode), bootstraps `GameManager` via `EditorBootstrapForCapture`, kører `GameScenePlayHarness` (samme scripted run-select + setup som `GameScenePlayTests`), applies `TableCamera.ApplyPoseForCapture` (orbit + HUD framing — same pose as Play Mode `Start`), renderer `Camera.main` via `RenderTexture` (1920×1080 PNG).
 
 `-batchmode -executeMethod` runs during project load **before** the editor main loop exists, so Play Mode / `EditorApplication.update` cannot be used there. Edit-mode bootstrap avoids that entirely.
 

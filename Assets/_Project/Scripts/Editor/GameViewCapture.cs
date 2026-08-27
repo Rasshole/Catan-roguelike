@@ -91,6 +91,11 @@ namespace CatanRoguelike.Editor
 
             GameScenePlayHarness.CompleteRunSelectAndSetup(controller, meta);
 
+            var tableCamera = UnityEngine.Object.FindFirstObjectByType<TableCamera>();
+            if (tableCamera == null)
+                throw new InvalidOperationException("TableCamera is required for capture.");
+
+            tableCamera.ApplyPoseForCapture(GameSceneCapture.CaptureWidth, GameSceneCapture.CaptureHeight);
             GameSceneCapture.CaptureMainCameraToPng(outputPath);
             Debug.Log(
                 $"GameViewCapture: wrote {GameSceneCapture.CaptureWidth}x{GameSceneCapture.CaptureHeight} PNG to {outputPath}");

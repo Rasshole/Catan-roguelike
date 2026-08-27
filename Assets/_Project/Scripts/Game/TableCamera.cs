@@ -15,24 +15,52 @@ namespace CatanRoguelike.Game
 
         private void Awake()
         {
-            _camera = GetComponent<Camera>();
-            if (_camera.nearClipPlane < 0.3f)
-                _camera.nearClipPlane = 0.3f;
+            EnsureCameraAndBoardView();
+        }
+
+        private void Start()
+        {
+            EnsureLookTarget();
+            ApplyOrbitPose();
+            if (frameBoardRightOfHud && _camera != null)
+                ApplyBoardFramingOffset();
+        }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Edit-mode capture: apply the same orbit pose and HUD framing as <see cref="Start"/>
+        /// without relying on Play Mode lifecycle or <see cref="Update"/> input.
+        /// </summary>
+        public void ApplyPoseForCapture(int screenWidth, int screenHeight)
+        {
+            EnsureCameraAndBoardView();
+            EnsureLookTarget();
+            ApplyOrbitPose();
+            if (frameBoardRightOfHud && _camera != null)
+                ApplyBoardFramingOffset(screenWidth, screenHeight);
+        }
+#endif
+
+        private void EnsureCameraAndBoardView()
+        {
+            if (_camera == null)
+            {
+                _camera = GetComponent<Camera>();
+                if (_camera != null && _camera.nearClipPlane < 0.3f)
+                    _camera.nearClipPlane = 0.3f;
+            }
+
             if (boardView == null)
                 boardView = FindFirstObjectByType<BoardView>();
         }
 
-        private void Start()
+        private void EnsureLookTarget()
         {
             if (lookTarget == null)
             {
                 var target = new GameObject("BoardCenter");
                 lookTarget = target.transform;
             }
-
-            ApplyOrbitPose();
-            if (frameBoardRightOfHud && _camera != null)
-                ApplyBoardFramingOffset();
         }
 
         private void Update()
@@ -58,10 +86,15 @@ namespace CatanRoguelike.Game
             transform.LookAt(lookTarget.position + Vector3.up * 0.5f);
         }
 
-        private void ApplyBoardFramingOffset()
+        private void ApplyBoardFramingOffset(int screenWidth = 0, int screenHeight = 0)
         {
-            float desiredScreenX = Screen.width * 0.5f
-                + PlaceholderHudLayout.GetBoardScreenOffsetX(PlaceholderHudLayout.LastPanelWidth, Screen.width);
+            if (screenWidth <= 0)
+                screenWidth = Screen.width;
+            if (screenHeight <= 0)
+                screenHeight = Screen.height;
+
+            float desiredScreenX = screenWidth * 0.5f
+                + PlaceholderHudLayout.GetBoardScreenOffsetX(PlaceholderHudLayout.LastPanelWidth, screenWidth);
             Vector3 boardScreen = _camera.WorldToScreenPoint(lookTarget.position);
             float deltaPx = desiredScreenX - boardScreen.x;
             if (Mathf.Abs(deltaPx) <= 0.5f)
