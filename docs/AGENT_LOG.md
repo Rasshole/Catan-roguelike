@@ -48,3 +48,10 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - `AdvanceSetupAfterRoad` after `SetupAiRoad1` jumped to `SetupPlayerSettlement1`, so `SetupAiSettlement2` never ran (AI placed 1 settlement). Now advances to settlement 2 and continues the AI setup chain; after road 2 the player places settlement 1.
 - Test: `ConfirmRunSetup_AiPlacesTwoSettlementsAndTwoRoads`.
 
+## 2026-08-27 (UTC) — ROADMAP_V3 (docs only)
+
+- **`docs/ROADMAP_V3.md`:** post-Fase 2 founder backlog (12 kandidater, impact×effort, Linux-VM feasibility). **PICK:** sim-driven day-ceiling / win-rate balance pass (pre-2.4 sim ~790/1000 `max_days` — kendt risiko, ikke genmålt). Acceptance: sim metrics, win-rate/dage targets, 297 EditMode grøn.
+- Pointers i `IMPLEMENTATION_STATUS.md` + `MISSING_AND_GAPS.md` (erstatter stale longest-road-algoritme-rækkefølge). Ingen C# / gameplay-ændringer.
+
+**Næste:** implementér balance-pass per `ROADMAP_V3.md` acceptance.
+
