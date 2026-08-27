@@ -68,5 +68,13 @@ namespace CatanRoguelike.Core.Cards
             CardId.YearOfPlenty,
             CardId.Embargo
         };
+
+        /// <summary>Extra AI-draw candidates unlocked in Act 3.</summary>
+        public static IReadOnlyList<CardId> Act3AiPoolExtras => new List<CardId>
+        {
+            CardId.FertileSeason,
+            CardId.MerchantsLedger,
+            CardId.Forecast
+        };
     }
 }

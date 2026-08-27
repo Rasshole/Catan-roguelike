@@ -136,6 +136,39 @@ namespace CatanRoguelike.Core.Data
             return result;
         }
 
+        /// <summary>
+        /// Adds missing hexes from the target preset onto a live board.
+        /// Existing buildings, roads, and robber position are preserved.
+        /// </summary>
+        public static int ExpandBoard(BoardState board, MapSize targetSize)
+        {
+            var preset = targetSize switch
+            {
+                MapSize.Medium => MediumThirteenHex(),
+                MapSize.Large => LargeNineteenHex(),
+                _ => SmallSevenHex()
+            };
+
+            int added = 0;
+            foreach (var (coord, resource) in preset)
+            {
+                if (board.Tiles.ContainsKey(coord))
+                    continue;
+
+                board.Tiles[coord] = new HexTileData(coord, resource, isCoastal: false);
+                added++;
+            }
+
+            if (added == 0)
+                return 0;
+
+            var allCoords = new HashSet<HexCoord>(board.Tiles.Keys);
+            foreach (var coord in allCoords)
+                board.Tiles[coord].IsCoastal = IsCoastalTile(coord, allCoords);
+
+            return added;
+        }
+
         public static BoardState CreateBoard(MapSize size = MapSize.Small)
         {
             var preset = size switch

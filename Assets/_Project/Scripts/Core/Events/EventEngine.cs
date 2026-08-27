@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Progression;
 
 namespace CatanRoguelike.Core.Events
 {
@@ -41,25 +43,62 @@ namespace CatanRoguelike.Core.Events
 
     public sealed class EventEngine
     {
-        public const float EventChancePerNight = 0.22f;
+        public const float EventChancePerNight = BalanceConfig.Act1EventChance;
         private readonly Random _random;
+
+        private static readonly (EventId id, int act1Weight, int act2Weight, int act3Weight)[] WeightedPool = new[]
+        {
+            (EventId.Storm, 1, 2, 3),
+            (EventId.Famine, 1, 2, 3),
+            (EventId.GoldRush, 1, 1, 2),
+            (EventId.MarketDay, 1, 1, 1),
+            (EventId.GoodHarvest, 1, 1, 1),
+            (EventId.BanditRaid, 1, 2, 3)
+        };
 
         public EventEngine(int? seed = null)
         {
             _random = seed.HasValue ? new Random(seed.Value) : new Random();
         }
 
-        public EventId MaybeRollEvent()
+        public EventId MaybeRollEvent(int act = 1)
         {
-            if (_random.NextDouble() > EventChancePerNight)
+            float chance = ActProgression.GetEventChance(act);
+            if (_random.NextDouble() > chance)
                 return EventId.None;
 
-            var pool = new[]
+            return PickWeightedEvent(act);
+        }
+
+        private EventId PickWeightedEvent(int act)
+        {
+            int total = 0;
+            foreach (var entry in WeightedPool)
             {
-                EventId.Storm, EventId.Famine, EventId.GoldRush,
-                EventId.MarketDay, EventId.GoodHarvest, EventId.BanditRaid
-            };
-            return pool[_random.Next(pool.Length)];
+                total += act switch
+                {
+                    1 => entry.act1Weight,
+                    2 => entry.act2Weight,
+                    _ => entry.act3Weight
+                };
+            }
+
+            int roll = _random.Next(total);
+            int acc = 0;
+            foreach (var entry in WeightedPool)
+            {
+                int weight = act switch
+                {
+                    1 => entry.act1Weight,
+                    2 => entry.act2Weight,
+                    _ => entry.act3Weight
+                };
+                acc += weight;
+                if (roll < acc)
+                    return entry.id;
+            }
+
+            return WeightedPool[^1].id;
         }
 
         public void ApplyEvent(GameState state, EventId eventId)
@@ -68,6 +107,8 @@ namespace CatanRoguelike.Core.Events
             state.EventMessage = eventId == EventId.None
                 ? ""
                 : EventLibrary.All[eventId].Name + ": " + EventLibrary.All[eventId].Description;
+
+            int maxRoll = ActProgression.GetMaxRollForDay(state.Board.DayNumber);
 
             switch (eventId)
             {
@@ -87,7 +128,7 @@ namespace CatanRoguelike.Core.Events
                     break;
                 case EventId.GoodHarvest:
                     foreach (var key in state.TomorrowRolls.Keys.ToList())
-                        state.TomorrowRolls[key] = Math.Min(state.TomorrowRolls[key] + 1, 2);
+                        state.TomorrowRolls[key] = Math.Min(state.TomorrowRolls[key] + 1, maxRoll);
                     break;
                 case EventId.BanditRaid:
                     state.Board.PlaceRobber(PickPlayerBestTile(state));

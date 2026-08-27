@@ -5,6 +5,7 @@ using CatanRoguelike.Core.Cards;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Victory;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
@@ -51,51 +52,32 @@ namespace CatanRoguelike.Core
         {
             _hiddenIntent = "Hold position";
 
-            if (game.State.AiHand.Count == 0) return;
+            int act = ActProgression.GetAct(game.State.Board.DayNumber);
+            int maxPlays = ActProgression.GetAiNightCardPlays(act);
 
-            var card = PickNightCard(game.State);
-            var def = CardLibrary.Get(card);
-            if (!def.AiCanUse) return;
+            for (int play = 0; play < maxPlays; play++)
+            {
+                if (game.State.AiHand.Count == 0)
+                    break;
 
-            ResourceType? target = card == CardId.Embargo
-                ? EmbargoTargetSelector.PickTarget(game.State)
-                : PickBestResource(game);
-            HexCoord? robber = PickRobberTarget(game);
-            Edge? road = PickRoadToDisable(game);
+                var card = PickBestAiCard(game, act);
+                var def = CardLibrary.Get(card);
+                if (!def.AiCanUse)
+                    break;
 
-            if (game.CardEngine.PlayCard(game.State, PlayerId.Ai, card, target, robber, road))
+                ResourceType? target = card == CardId.Embargo
+                    ? EmbargoTargetSelector.PickTarget(game.State)
+                    : PickBestResource(game);
+                HexCoord? robber = PickRobberTarget(game);
+                Edge? road = PickRoadToDisable(game);
+
+                if (!game.CardEngine.PlayCard(game.State, PlayerId.Ai, card, target, robber, road))
+                    break;
+
                 _hiddenIntent = card == CardId.Embargo
                     ? $"Embargo {target}"
                     : $"Played {def.Name}";
-        }
-
-        /// <summary>
-        /// Prefer Knight when close to Largest Army threshold or when human holds it and AI can overtake.
-        /// Base card weight comes from <see cref="CardLibrary"/>; Knight gets a situational bonus.
-        /// </summary>
-        private static CardId PickNightCard(GameState state)
-        {
-            CardId? best = null;
-            float bestScore = float.MinValue;
-
-            foreach (var card in state.AiHand)
-            {
-                var def = CardLibrary.Get(card);
-                if (!def.AiCanUse)
-                    continue;
-
-                float score = def.AiWeight;
-                if (card == CardId.Knight)
-                    score += ScoreKnightForLargestArmy(state);
-
-                if (score > bestScore)
-                {
-                    bestScore = score;
-                    best = card;
-                }
             }
-
-            return best ?? state.AiHand[0];
         }
 
         private static float ScoreKnightForLargestArmy(GameState state)
@@ -131,43 +113,50 @@ namespace CatanRoguelike.Core
         {
             _hiddenIntent = "Expand economy";
 
+            int act = ActProgression.GetAct(game.State.Board.DayNumber);
             TryShopPurchases(game);
 
-            // Try city upgrade
-            foreach (var kvp in game.State.Board.VertexBuildings)
+            // Act 2+: prioritize all affordable city upgrades (VP pressure)
+            bool upgradedCity = false;
+            foreach (var kvp in game.State.Board.VertexBuildings.ToList())
             {
-                if (kvp.Value.owner == PlayerId.Ai && kvp.Value.type == BuildingType.Settlement)
-                {
-                    var cost = BalanceConfig.GetCityCost(game.State.Board, PlayerId.Ai);
-                    if (game.State.AiInventory.CanAfford(cost))
-                    {
-                        _hiddenIntent = "Upgrade to city";
-                        game.UpgradeCity(kvp.Key, PlayerId.Ai);
-                        break;
-                    }
-                }
+                if (kvp.Value.owner != PlayerId.Ai || kvp.Value.type != BuildingType.Settlement)
+                    continue;
+
+                var cost = BalanceConfig.GetCityCost(game.State.Board, PlayerId.Ai);
+                if (!game.State.AiInventory.CanAfford(cost))
+                    continue;
+
+                _hiddenIntent = "Upgrade to city";
+                game.UpgradeCity(kvp.Key, PlayerId.Ai);
+                upgradedCity = true;
+                if (act < 2)
+                    break;
             }
 
-            // Try settlement
-            var settlementSpots = game.Placement
-                .GetValidSettlementSpots(game.State.Board, PlayerId.Ai, setupPhase: false)
-                .Select(v => (v, ScoreSettlementSpot(game, v)))
-                .OrderByDescending(x => x.Item2)
-                .ToList();
-
-            if (settlementSpots.Count > 0)
+            if (!upgradedCity)
             {
-                var cost = BalanceConfig.GetSettlementCost(game.State.Board, PlayerId.Ai);
-                if (game.State.AiInventory.CanAfford(cost))
+                // Try settlement on best spot
+                var settlementSpots = game.Placement
+                    .GetValidSettlementSpots(game.State.Board, PlayerId.Ai, setupPhase: false)
+                    .Select(v => (v, ScoreSettlementSpot(game, v)))
+                    .OrderByDescending(x => x.Item2)
+                    .ToList();
+
+                if (settlementSpots.Count > 0)
                 {
-                    _hiddenIntent = "Build settlement";
-                    game.PlaceSettlement(settlementSpots[0].v, PlayerId.Ai);
+                    var cost = BalanceConfig.GetSettlementCost(game.State.Board, PlayerId.Ai);
+                    if (game.State.AiInventory.CanAfford(cost))
+                    {
+                        _hiddenIntent = "Build settlement";
+                        game.PlaceSettlement(settlementSpots[0].v, PlayerId.Ai);
+                    }
                 }
             }
 
             // Try road toward best expansion or block player
             var roads = game.Placement.GetValidRoadSpots(game.State.Board, PlayerId.Ai, setupPhase: false)
-                .Select(e => (e, ScoreRoad(game, e)))
+                .Select(e => (e, ScoreRoad(game, e, act)))
                 .OrderByDescending(x => x.Item2)
                 .ToList();
 
@@ -190,6 +179,49 @@ namespace CatanRoguelike.Core
             }
         }
 
+        private CardId PickBestAiCard(GameController game, int act)
+        {
+            var scored = game.State.AiHand
+                .Where(c => CardLibrary.Get(c).AiCanUse)
+                .Select(c => (card: c, score: ScoreAiCard(game, c, act)))
+                .OrderByDescending(x => x.score)
+                .ToList();
+
+            return scored.Count > 0 ? scored[0].card : game.State.AiHand[0];
+        }
+
+        private float ScoreAiCard(GameController game, CardId card, int act)
+        {
+            float score = CardLibrary.Get(card).AiWeight;
+
+            switch (card)
+            {
+                case CardId.Knight:
+                    score += PickRobberTarget(game).HasValue ? 3f : 0f;
+                    score += ScoreKnightForLargestArmy(game.State);
+                    break;
+                case CardId.Monopoly:
+                    var humanInv = game.State.PlayerInventory;
+                    score += humanInv.Wood + humanInv.Brick + humanInv.Wheat
+                        + humanInv.Sheep + humanInv.Stone;
+                    break;
+                case CardId.Embargo:
+                    score += 2f;
+                    break;
+                case CardId.BanditRaid:
+                    score += game.State.Board.Roads.Count(kv => kv.Value == PlayerId.Human) * 1.5f;
+                    break;
+                case CardId.Drought:
+                    score += game.State.TodayRolls.Values.DefaultIfEmpty(0).Max();
+                    break;
+                case CardId.FertileSeason:
+                    score += act >= 3 ? 1.5f : 0.5f;
+                    break;
+            }
+
+            return score;
+        }
+
         private void TryShopPurchases(GameController game)
         {
             foreach (var deal in game.State.ShopDeals.ToList())
@@ -207,7 +239,6 @@ namespace CatanRoguelike.Core
                 need.Set(deal.Give, cost);
                 if (!bundle.CanAfford(need)) continue;
 
-                // Buy if we need the receive resource for a build
                 if (deal.Receive == ResourceType.Wheat || deal.Receive == ResourceType.Stone
                     || deal.Receive == ResourceType.Sheep || deal.Receive == ResourceType.Wood
                     || deal.Receive == ResourceType.Brick)
@@ -234,16 +265,16 @@ namespace CatanRoguelike.Core
             return score;
         }
 
-        private float ScoreRoad(GameController game, Edge edge)
+        private float ScoreRoad(GameController game, Edge edge, int act)
         {
             float score = 1f;
-            // Prefer roads that block human expansion
+            float blockWeight = act >= 2 ? 3f : 2f;
             foreach (var v in new[] { edge.A, edge.B })
             {
                 var humanSpots = game.Placement
                     .GetValidSettlementSpots(game.State.Board, PlayerId.Human, false)
                     .Count(s => VertexGraph.VertexDistance(s, v) <= 2);
-                score += humanSpots * 2f;
+                score += humanSpots * blockWeight;
             }
             return score;
         }

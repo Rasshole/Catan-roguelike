@@ -19,6 +19,22 @@ namespace CatanRoguelike.Core.Data
         public const int RollOneWeight = 55;
         public const int RollTwoWeight = 25;
 
+        // Act progression (Fase 2.4) — day thresholds and scaling knobs
+        public const int Act2StartDay = 6;
+        public const int Act3StartDay = 11;
+
+        public const float Act1EventChance = 0.22f;
+        public const float Act2EventChance = 0.32f;
+        public const float Act3EventChance = 0.42f;
+
+        public const int Act1NightlyRollPasses = 1;
+        public const int Act2NightlyRollPasses = 2;
+        public const int Act3NightlyRollPasses = 2;
+
+        public const int Act1MaxRoll = 2;
+        public const int Act2MaxRoll = 2;
+        public const int Act3MaxRoll = 3;
+
         public static ResourceBundle RoadCost => new() { Wood = 1, Brick = 1 };
 
         public static ResourceBundle SettlementCost => new()

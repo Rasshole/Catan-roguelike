@@ -47,6 +47,7 @@ namespace CatanRoguelike.Core
 
         public PlayerId? Winner { get; set; }
         public string StatusMessage { get; set; } = "Choose your leader.";
+        public string ActUnlockMessage { get; set; } = "";
 
         public CardId? PendingCard { get; set; }
         public bool HarborCharterPending { get; set; }
@@ -121,6 +122,7 @@ namespace CatanRoguelike.Core
             LargestArmyOwner = null;
             Winner = null;
             StatusMessage = "Choose your leader.";
+            ActUnlockMessage = "";
             PendingCard = null;
             HarborCharterPending = false;
             AiShopEmbargo = null;

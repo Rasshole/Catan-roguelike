@@ -32,5 +32,16 @@ namespace CatanRoguelike.Tests
                 Assert.LessOrEqual(value, 2);
             }
         }
+
+        [Test]
+        public void RollNightlyCombined_MaxRollThree_HasAtMostOneThree()
+        {
+            var engine = new RollEngine(55);
+            for (int i = 0; i < 100; i++)
+            {
+                var rolls = engine.RollNightlyCombined(2, 3);
+                Assert.LessOrEqual(rolls.Values.Count(v => v == 3), 1);
+            }
+        }
     }
 }
