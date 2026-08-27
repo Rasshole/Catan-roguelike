@@ -69,7 +69,7 @@ namespace CatanRoguelike.Tests.PlayMode
             for (int i = 0; i < 3; i++)
                 yield return null;
 
-            var gameManager = Object.FindFirstObjectByType<GameManager>();
+            var gameManager = UnityEngine.Object.FindFirstObjectByType<GameManager>();
             Assert.IsNotNull(gameManager, "GameManager should exist after scene load.");
             Assert.IsNotNull(gameManager.Controller, "Controller should be initialized after Start().");
             Assert.IsNotNull(gameManager.Meta, "Meta should be loaded after Start().");
@@ -106,7 +106,7 @@ namespace CatanRoguelike.Tests.PlayMode
             for (int i = 0; i < 3; i++)
                 yield return null;
 
-            var gameManager = Object.FindFirstObjectByType<GameManager>();
+            var gameManager = UnityEngine.Object.FindFirstObjectByType<GameManager>();
             Assert.IsNotNull(gameManager, "GameManager should exist after scene load.");
 
             var game = gameManager.Controller;
