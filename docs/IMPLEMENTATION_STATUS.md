@@ -2,7 +2,7 @@
 
 **Næste backlog:** [`docs/ROADMAP_V3.md`](ROADMAP_V3.md) — founder roadmap efter Fase 2 (impact×effort + valgt første item).
 
-Last updated: 2026-08-27 — Act 3-only events (Port Blockade, Resource Levy) on top of onboarding + autosave.
+Last updated: 2026-08-27 — PlayMode harness (setup + one day cycle) on top of Act 3 events + onboarding + autosave.
 
 ## Done (playable prototype scope)
 
@@ -42,6 +42,7 @@ Last updated: 2026-08-27 — Act 3-only events (Port Blockade, Resource Levy) on
 - [x] **First-run onboarding beats (IMGUI)** — phase banners via `OnboardingCopy` (map, draft, setup, first night/day, game over); hybrid-yield hint on first night; dismissible Tips toggle (`PlayerPrefs`); EditMode tests
 - [x] EditMode tests (rolls, **number tokens (assignment, desert, hybrid production, expansion, save round-trip, AI/event robber targeting)**, placement, production, **setup-bonus (2nd settlement, desert skip)**, **ports (2:1 + 3:1 + priority)**, **map sizes**, **bonus VP**, **VertexDistance**, **LongRoadBonus**, **longest-road blocking**, **RouteCalculator disabled roads + loop/tie owner**, **Largest Army (grant/tie/overtake/breakdown/save)**, **robber steal**, **AI shop afford**, **AI Embargo pool + shop skip + play**, **AI Largest Army Knight priority**, **risky shop penalty**, **ShopGenerator embargo + MarketDay + deal generation**, **Monastery / RollInsurance night picks**, **Bandit Raid road target**, **pending status display**, **shop price reason**, **ShopDealDisplay risky shop button copy**, **VP breakdown**, **Architect threshold discount**, **level-up preview / RunProgression**, **RunProgression pre-game draft flow (map → leader → uniques → setup)**, **CardEngine all 12 cards**, **EventEngine all 8 events + timing**, **Act3EventTests (Act 3-only weights, apply/clear)**, **EventBoardVisual tile overlays**, **GameController integration (setup → day/night loop, win, level-up)**, **RunSummaryDisplay game-over summary**, **SaveGame round-trip JSON (format v1)**, **ActProgression thresholds + yield/events/AI/map expansion**, **MetaProgression (stars, unlock tree, meta.json isolation, award formula, purchase, start bonuses)**)
 - [x] PlayMode smoke tests (`GameSceneSmokeTests` — `Game.unity` boot, required MonoBehaviours, `GameManager.Controller` after Start)
+- [x] PlayMode play harness (`GameScenePlayTests` — scripted run select → setup → first day cycle via `GameController` public APIs in loaded scene; no `DebugHooks`)
 
 ## Explicitly out of scope
 

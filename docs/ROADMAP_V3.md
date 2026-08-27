@@ -20,8 +20,8 @@ Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færd
 | **First-run / onboarding beats (IMGUI)** | Nye spillere forstår hybrid produktion, acts og meta uden wiki. | **H** | **M** | partial | **Done (copy):** `OnboardingCopy` + Tips toggle + hybrid hint; fuld “feel” kræver Play Mode på Mac. |
 | **uGUI-erstatning + art pass** | Føles som et spil, ikke et debug-værktøj. | **H** | **H** | **no** | P2 uafgjort. Kræver Mac/Windows til visuel QA; Linux-VM kan skrive prefabs, ikke validere look. |
 | **Act 3 indholdsvariation (events/kort)** | Sent game må ikke kun være talinflation (max roll 3, dobbelt dice). | **M** | **M** | **yes** | **Done:** 2 Act 3-only nat-events (`PortBlockade`, `ResourceLevy`); weights act1/2=0. Ingen nyt kort. |
-| **PlayMode ud over smoke (playtest harness)** | Scene-boot beviser ikke at man kan spille en run. Kun 2 PlayMode-tests i dag. | **M** | **M** | partial | `xvfb` + Unity-licens; auto-play via `DebugHooks` eller scripted input. |
-| **Windows standalone build** | Distribuerbar `.exe` til playtest uden Unity Editor. | **M** | **L** | **yes** | Modsat macOS: Linux-VM *kan* bygge Windows64 (`-buildWindows64Player`). macOS build blokeret (`BLOCKED.md`). |
+| **PlayMode ud over smoke (playtest harness)** | Scene-boot beviser ikke at man kan spille en run. | **M** | **M** | partial | **Done (Linux smoke + one run):** `GameScenePlayTests` — scripted run select → setup → first day via `GameController` APIs under `xvfb`. Smoke tests bevares. |
+| **Windows standalone build** | Distribuerbar `.exe` til playtest uden Unity Editor. | **M** | **L** | **no** | **Blokeret fra Linux-VM** — Windows-Mono tarball 404 (samme klasse som macOS). Se `BLOCKED.md` #3. Byg på Windows-host. |
 | **Token/hex visuel pass** | Spilleren ser *hvor* 6/8 sidder — ikke bare IMGUI-labels på cylindre. | **M** | **M** | partial | `HexTileView` har token-tekst; 3D stadig placeholder (`DESIGN_RENDERING`: Built-in). |
 | **Forecast / Famine UI-copy fixes** | Forecast ignorerer parameter i UI; Famine-tekst lyver om timing (`TomorrowRolls`). | **L** | **L** | **yes** | **Done:** Forecast card text + no picker; Famine/Good Harvest say "tomorrow". |
 | **Sim-runner rapport udvidelse** | Balance-arbejde uden gæt: VP-fordeling, win-rate, act ved afslutning, årsag (`ok`/`max_days`/win). | **M** | **L** | **yes** | Naturlig forløber til balance-pass; ren `tools/`-ændring. |
@@ -36,6 +36,14 @@ Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færd
 - **Pause/resume virker.** Autosave ved nat→dag i slot 0; manuel Save/Load i to slots; legacy `save.json` compat.
 - **Onboarding beats** — copy-only fase-bannere + Tips toggle + hybrid hint på dag 1 nat.
 - **uGUI + art** forbliver P2 — kræver Mac til visuel QA.
+
+---
+
+## Done recently: PlayMode harness (beyond smoke)
+
+- `GameScenePlayTests` — 2 UnityTests: (1) run select → setup phase after `ConfirmRunSetup`; (2) full setup + skip first night + `EndPlayerDay` → `DayNumber >= 1`, `Winner` null, day/night phase. Drives `GameManager.Controller` public APIs (map/leader/draft, placement, night skip) — no `DebugHooks`, no GUI clicks.
+- `GameSceneSmokeTests` unchanged (scene boot + controller after Start).
+- Headless: `xvfb-run -a unity test . --mode PlayMode` (licens påkrævet).
 
 ---
 
@@ -69,7 +77,8 @@ Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færd
 ## Ikke nu
 
 - **v0.1-tag** — P2 (uGUI, art, macOS artifact) og balance er ikke grønne nok til milestone-tag.
-- **macOS standalone fra Linux-VM** — Mac-modul 404; se `docs/BLOCKED.md`.
+- **macOS standalone fra Linux-VM** — Mac-modul 404; se `docs/BLOCKED.md` #2.
+- **Windows standalone fra Linux-VM** — Windows-Mono tarball 404; se `docs/BLOCKED.md` #3.
 - **Cloud-sync af meta** — `meta.json` er lokal; ingen backend.
 - **URP-migration** — Built-in RP er bevidst valg (`docs/DESIGN_RENDERING.md`).
 

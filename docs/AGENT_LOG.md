@@ -93,3 +93,10 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **Copy fixes:** Forecast card text mentions 2d6 reroll; Famine + Good Harvest event descriptions say "tomorrow" (matches `TomorrowRolls`).
 - **Tests:** `OnboardingCopyTests`, Famine message assertion. **323/323** `dotnet test tools/core-tests`.
 
+## 2026-08-27 — PlayMode harness beyond smoke
+
+- **`GameScenePlayTests`** — 2 UnityTests in loaded `Game.unity`: pre-game → setup phase; full setup + skip night + `EndPlayerDay` → `DayNumber >= 1`, no winner. Uses `GameController` public APIs (`SelectMap`, draft, `PlaceSettlement`/`PlaceRoad`, `SkipNightCard`, `EndPlayerDay`). No `DebugHooks` (editor-only).
+- **`GameSceneSmokeTests`** unchanged (2 boot tests).
+- **Docs:** `BLOCKED.md` #3 Windows-Mono tarball 404 from Linux-VM; `ROADMAP_V3` PlayMode + Windows build rows updated.
+- **Core:** `dotnet test tools/core-tests` unchanged.
+
