@@ -25,8 +25,6 @@ namespace CatanRoguelike.Editor
                 camera.gameObject.AddComponent<TableCamera>();
             }
 
-            CreateTable();
-
             var gameGo = new GameObject("Game");
             var boardView = gameGo.AddComponent<BoardView>();
             var boardInput = gameGo.AddComponent<BoardInputController>();
@@ -71,18 +69,6 @@ namespace CatanRoguelike.Editor
             AssetDatabase.Refresh();
 
             Debug.Log($"Game scene created at {ScenePath}. Press Play to test.");
-        }
-
-        private static void CreateTable()
-        {
-            var table = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            table.name = "Table";
-            table.transform.position = new Vector3(0f, -0.25f, 0f);
-            table.transform.localScale = new Vector3(14f, 0.5f, 12f);
-
-            var renderer = table.GetComponent<Renderer>();
-            var mat = BuiltInMaterials.Create(new Color(0.35f, 0.22f, 0.12f));
-            renderer.sharedMaterial = mat;
         }
     }
 }
