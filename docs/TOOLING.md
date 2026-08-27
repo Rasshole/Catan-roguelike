@@ -121,6 +121,10 @@ dotnet run -- --runs 5
 | `--max-days N` | 12 | stop når `DayNumber` overstiger N → `max_days` |
 | `--map small\|medium\|large` | small | kortstørrelse |
 
+**Balance-arbejde:** brug `--runs 1000 --max-days 20 --map small` så Act 3 (dag 11+) får plads til at løbe færdig. Default `--max-days 12` er bevidst uændret for bagudkompatibilitet med eksisterende scripts.
+
+JSON-output per run: `status`, `winner`, `days`, `playerVp`, `aiVp`, `endAct` (1/2/3 fra `ActProgression`). Summary tæller `ok` / `max_days` / `crash` / `timeout`, `winsHuman`, `winsAi`, og `medianMaxDaysPlayerVp` når relevant.
+
 ### Driver: `full`
 
 `VertexGraph.Canonicalize` er idempotent, så `VertexDistance` / `PlaceSettlement` / AI `GetValidSettlementSpots` terminerer med buildings på brættet. Default-driveren spiller den rigtige Core-loop:

@@ -71,12 +71,12 @@ Spillet er et **spilbart prototype**, ikke et shippable produkt. Fase 2 er færd
 
 - [ ] Nye/ opdaterede EditMode-tests for ændrede konstanter eller AI VP-adfærd (hvis rørt).
 - [ ] Eksisterende 297 EditMode-tests stadig grønne.
-- [ ] Sim-runner JSON-output inkluderer: `status`, `winner`, `days`, `playerVp`, `aiVp`, `endAct` (nyt felt OK).
+- [ ] Sim-runner JSON-output inkluderer: `status`, `winner`, `days`, `playerVp`, `aiVp`, `endAct` (nyt felt OK). *(compile + metrics landed; balance targets not met yet)*
 - [ ] `docs/IMPLEMENTATION_STATUS.md` + `MISSING_AND_GAPS.md` opdateret med balance-baseline tal efter merge.
 
 ### Docs
 
-- [ ] Kort afsnit i `docs/TOOLING.md` om anbefalede sim-flag til balance (`--runs 1000 --max-days 20 --map small`).
+- [ ] Kort afsnit i `docs/TOOLING.md` om anbefalede sim-flag til balance (`--runs 1000 --max-days 20 --map small`). *(done)*
 - [ ] `docs/DESIGN_NUMBER_TOKENS.md` “Leftover risks” — markér balance som adresseret eller delvist.
 
 ---

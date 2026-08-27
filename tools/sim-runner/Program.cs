@@ -9,6 +9,7 @@ using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Turn;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
@@ -45,6 +46,7 @@ namespace CatanRoguelike.SimRunner
                         winner = "none",
                         playerVp = box.PlayerVp,
                         aiVp = box.AiVp,
+                        endAct = ActProgression.GetAct(box.Days),
                         phase = string.IsNullOrEmpty(box.Phase) ? "unknown" : box.Phase,
                         ms = box.ElapsedMs,
                         error = ex == null ? "unknown" : ex.GetType().Name + ": " + ex.Message
@@ -70,6 +72,7 @@ namespace CatanRoguelike.SimRunner
                 winner = "none",
                 playerVp = box.PlayerVp,
                 aiVp = box.AiVp,
+                endAct = ActProgression.GetAct(box.Days),
                 phase = string.IsNullOrEmpty(box.Phase) ? "unknown" : box.Phase,
                 ms = opts.TimeoutMs,
                 error = "wall-clock timeout"
@@ -78,10 +81,11 @@ namespace CatanRoguelike.SimRunner
 
         private static void PrintReport(List<RunResult> results, Options opts)
         {
-            int ok = 0, timeout = 0, crash = 0, capped = 0;
+            int ok = 0, timeout = 0, crash = 0, maxDays = 0;
             int human = 0, ai = 0, none = 0;
             long daysSum = 0;
             int daysN = 0;
+            var maxDaysPlayerVps = new List<int>();
 
             foreach (var r in results)
             {
@@ -90,8 +94,11 @@ namespace CatanRoguelike.SimRunner
                     case "ok": ok++; break;
                     case "timeout": timeout++; break;
                     case "crash": crash++; break;
-                    default: capped++; break;
+                    case "max_days": maxDays++; break;
                 }
+
+                if (r.status == "max_days")
+                    maxDaysPlayerVps.Add(r.playerVp);
 
                 switch (r.winner)
                 {
@@ -107,6 +114,16 @@ namespace CatanRoguelike.SimRunner
                 }
             }
 
+            double? medianMaxDaysPlayerVp = null;
+            if (maxDaysPlayerVps.Count > 0)
+            {
+                maxDaysPlayerVps.Sort();
+                int mid = maxDaysPlayerVps.Count / 2;
+                medianMaxDaysPlayerVp = maxDaysPlayerVps.Count % 2 == 0
+                    ? (maxDaysPlayerVps[mid - 1] + maxDaysPlayerVps[mid]) / 2.0
+                    : maxDaysPlayerVps[mid];
+            }
+
             var summary = new Summary
             {
                 runs = results.Count,
@@ -117,11 +134,12 @@ namespace CatanRoguelike.SimRunner
                 ok = ok,
                 timeout = timeout,
                 crash = crash,
-                capped = capped,
+                max_days = maxDays,
                 winsHuman = human,
                 winsAi = ai,
                 unfinished = none,
                 avgDays = daysN == 0 ? 0 : Math.Round(daysSum / (double)daysN, 2),
+                medianMaxDaysPlayerVp = medianMaxDaysPlayerVp,
                 results = results
             };
 
@@ -175,8 +193,10 @@ namespace CatanRoguelike.SimRunner
                         Console.WriteLine("  --seed-start N    first seed (default 1)");
                         Console.WriteLine("  --timeout-ms N    per-run wall clock (default 5000)");
                         Console.WriteLine("  --max-steps N     per-run action cap (default 300)");
-                        Console.WriteLine("  --max-days N      stop after this day (default 12)");
+                        Console.WriteLine("  --max-days N      stop after this day (default 12; use 20 for balance work)");
                         Console.WriteLine("  --map small|medium|large");
+                        Console.WriteLine();
+                        Console.WriteLine("Balance work: --runs 1000 --max-days 20 --map small");
                         Environment.Exit(0);
                         break;
                 }
@@ -204,6 +224,7 @@ namespace CatanRoguelike.SimRunner
         public string winner { get; set; }
         public int playerVp { get; set; }
         public int aiVp { get; set; }
+        public int endAct { get; set; }
         public int playerBonusVp { get; set; }
         public int aiBonusVp { get; set; }
         public string phase { get; set; }
@@ -221,11 +242,12 @@ namespace CatanRoguelike.SimRunner
         public int ok { get; set; }
         public int timeout { get; set; }
         public int crash { get; set; }
-        public int capped { get; set; }
+        public int max_days { get; set; }
         public int winsHuman { get; set; }
         public int winsAi { get; set; }
         public int unfinished { get; set; }
         public double avgDays { get; set; }
+        public double? medianMaxDaysPlayerVp { get; set; }
         public List<RunResult> results { get; set; }
     }
 
@@ -303,6 +325,7 @@ namespace CatanRoguelike.SimRunner
                 result.steps = box.Steps;
                 result.playerVp = box.PlayerVp;
                 result.aiVp = box.AiVp;
+                result.endAct = ActProgression.GetAct(box.Days);
                 result.ms = (int)sw.ElapsedMilliseconds;
             }
             catch (Exception ex)
@@ -314,6 +337,7 @@ namespace CatanRoguelike.SimRunner
                 result.steps = box.Steps;
                 result.playerVp = box.PlayerVp;
                 result.aiVp = box.AiVp;
+                result.endAct = ActProgression.GetAct(box.Days);
                 result.ms = (int)sw.ElapsedMilliseconds;
             }
 
@@ -352,6 +376,7 @@ namespace CatanRoguelike.SimRunner
             result.steps = box.Steps;
             result.playerVp = game.State.PlayerVictoryPoints;
             result.aiVp = game.State.AiVictoryPoints;
+            result.endAct = ActProgression.GetAct(game.State.Board.DayNumber);
             result.playerBonusVp = game.State.PlayerBonusVictoryPoints;
             result.aiBonusVp = game.State.AiBonusVictoryPoints;
             result.phase = game.State.Phase.ToString();
