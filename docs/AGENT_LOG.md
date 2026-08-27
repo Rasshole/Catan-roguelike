@@ -144,3 +144,7 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **`TableCamera`:** reads `BoardView.GetBoardBoundingRadius()` each frame; HUD horizontal framing unchanged.
 - **Tests:** `TableCameraFramingTests` (Small closer than Large/Medium). No uGUI; no v0.1 tag.
 
+## 2026-08-27 (UTC) — BoardView bounding-radius fallback fix
+
+- **`GetBoardBoundingRadius`:** use built `_tiles.Keys`, else live `BoardState` keys; return `0` before init so `MinOrbitDistance` applies. Removed per-frame `MapPresets.CreateBoard` fallback (CS0103 + allocation).
+
