@@ -126,3 +126,10 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **`BoardView.CreateHexTile`:** custom mesh + `MeshCollider` instead of `PrimitiveType.Cylinder`; chip/robber/storm elevations unchanged.
 - **Tests:** `HexPrismMeshTests` (EditMode). Core `dotnet test` unchanged.
 
+## 2026-08-27 (UTC) — IMGUI HUD layout + table camera framing
+
+- **`PlaceholderHudLayout`:** in-run/setup/day/night panel 260×580 max (was 400×full height); pre-game map/leader/draft stays 400px wide. Exposes board screen-offset helper for camera framing.
+- **`PlaceholderUI`:** uses phase-aware panel rect; reports active width for camera.
+- **`TableCamera`:** after orbit, shifts look-at so board center sits in the unobstructed region right of the HUD (BoardInputController still uses `Camera.main`).
+- **Tests:** `PlaceholderHudLayoutTests` (EditMode). No uGUI rewrite; no v0.1 tag.
+

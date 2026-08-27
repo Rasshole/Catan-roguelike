@@ -46,8 +46,10 @@ namespace CatanRoguelike.Game
         {
             if (_controller == null) return;
             var state = _controller.State;
+            var panelRect = PlaceholderHudLayout.GetPanelRect(state.Phase, Screen.width, Screen.height);
+            PlaceholderHudLayout.SetActivePanelWidth(panelRect.width);
 
-            GUILayout.BeginArea(new Rect(10, 10, 400, Screen.height - 20), GUI.skin.box);
+            GUILayout.BeginArea(panelRect, GUI.skin.box);
             _scroll = GUILayout.BeginScrollView(_scroll);
 
             if (state.Phase == GamePhase.RunSelectMap)
