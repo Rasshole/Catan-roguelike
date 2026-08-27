@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CatanRoguelike.Core;
+using CatanRoguelike.Core.Events;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Shop;
@@ -131,6 +132,7 @@ namespace CatanRoguelike.Game
 
             RefreshBuildings(state);
             RefreshRobber(state);
+            RefreshEventOverlays(state);
         }
 
         private void RefreshRobber(GameState state)
@@ -142,6 +144,17 @@ namespace CatanRoguelike.Game
             var coord = state.Board.RobberTile.Value;
             if (_tiles.TryGetValue(coord, out var robberView))
                 robberView.SetRobberVisible(true);
+        }
+
+        private void RefreshEventOverlays(GameState state)
+        {
+            foreach (var kvp in _tiles)
+            {
+                var overlay = EventBoardVisual.TryGetOverlay(state, kvp.Key, out var kind)
+                    ? kind
+                    : EventTileOverlayKind.None;
+                kvp.Value.SetEventOverlay(overlay);
+            }
         }
 
         private void RefreshBuildings(GameState state)

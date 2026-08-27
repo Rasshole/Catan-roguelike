@@ -47,7 +47,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 
 ### Events (~22 % per nat)
 - 6 events i `EventEngine` ✓
-- Kun **tekstlinje** i UI — ingen visuel storm/famine på brættet
+- **Board overlays** for storm/famine/gold rush/good harvest via `EventBoardVisual` + `HexTileView` (market day / bandit raid use text or robber only) ✓
 - **Famine** påvirker `TomorrowRolls`; UI-tekst kan være misvisende om timing
 - Nat-event **BanditRaid** ≠ kort **BanditRaid** (forskellige effekter)
 
@@ -123,6 +123,7 @@ Eksisterende EditMode-tests:
 - `CardEngineTests` — alle 12 kort via `PlayCard` / `DrawCard` / `DrawToHand`: roll-manipulation (Ledger, Drought, Fertile, Forecast seeded), Year of Plenty, Monopoly (half / MonopolyFull / zero stock), Road Builder + Master Builder pending, Harbor Charter, Embargo fail + EmbargoExtended; Knight invalid target + KnightMovesRobberTwice; Bandit Raid på egen vej fejler; hand/max-size / not-in-hand
 - `EventEngineTests` — alle 6 events (effekt + besked); nat apply / dag clear timing; seeded `MaybeRollEvent`; `BeginNight` Good Harvest rolls
 - `RunSummaryDisplayTests` — game-over summary lines (human vs AI win wording; seed/day/map/leader; VP breakdown; safe when no winner)
+- `EventBoardVisualTests` — tile overlays: none; storm on `EventStormTile`; famine wheat; gold rush stone; good harvest all tiles; market day / bandit raid none
 - `GameControllerIntegrationTests` — seeded setup → nat/dag-cyklus uden hang; `SkipNightCard` / `PlayPlayerCard` → `DayPlayerActions`; win ved 10 VP; level-up på dag 5 via `EndPlayerDay`; disabled roads + event-flags ryddes ved daggrænse
 
 **Mangler tests for:**
@@ -155,6 +156,7 @@ Core/PendingStatusDisplay.cs — rene statuslinjer for Harbor Charter / Embargo 
 Core/Cards/EmbargoTargetSelector.cs — AI Embargo-mål (spiller-lager + shop Give)
 Core/Progression/RunProgression.cs — level-up interval, `WillOfferLevelUpAfterThisDay`, seeded perk draft
 Core/Shop/ShopDealPricing.cs — klassificerer effektiv shop-pris (port / leader / event / base)
+Core/Events/EventBoardVisual.cs — tile overlay kind per hex for active night event
 Core/Map/OpponentRoadSelector.cs — stabil liste + index for modstander-veje
 docs/IMPLEMENTATION_STATUS.md — kortere checkliste
 ```
