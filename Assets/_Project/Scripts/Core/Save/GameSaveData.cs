@@ -157,6 +157,7 @@ namespace CatanRoguelike.Core.Save
         public EventId ActiveEvent { get; set; }
         public string EventMessage { get; set; }
         public HexCoordSaveData EventStormTile { get; set; }
+        public VertexSaveData EventBlockedPortVertex { get; set; }
         public bool EventStoneDouble { get; set; }
         public int EventShopBonus { get; set; }
         public BoardSaveData Board { get; set; }

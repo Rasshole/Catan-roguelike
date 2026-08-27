@@ -52,6 +52,22 @@ namespace CatanRoguelike.Core.Events
 
                 case EventId.MarketDay:
                 case EventId.BanditRaid:
+                case EventId.ResourceLevy:
+                    return false;
+
+                case EventId.PortBlockade:
+                    if (!state.EventBlockedPortVertex.HasValue)
+                        return false;
+
+                    foreach (var hex in VertexGraph.GetHexesForVertex(state.EventBlockedPortVertex.Value))
+                    {
+                        if (!hex.Equals(coord)) continue;
+                        if (!tile.IsCoastal) continue;
+                        overlay = EventTileOverlayKind.PortBlockade;
+                        return true;
+                    }
+                    return false;
+
                 default:
                     return false;
             }

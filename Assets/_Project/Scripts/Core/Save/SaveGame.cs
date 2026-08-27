@@ -140,6 +140,9 @@ namespace CatanRoguelike.Core.Save
                 EventStormTile = state.EventStormTile.HasValue
                     ? ToHexCoordSaveData(state.EventStormTile.Value)
                     : null,
+                EventBlockedPortVertex = state.EventBlockedPortVertex.HasValue
+                    ? ToVertexSaveData(state.EventBlockedPortVertex.Value)
+                    : null,
                 EventStoneDouble = state.EventStoneDouble,
                 EventShopBonus = state.EventShopBonus,
                 Board = BuildBoardSaveData(state.Board)
@@ -206,6 +209,9 @@ namespace CatanRoguelike.Core.Save
             state.EventMessage = data.EventMessage ?? "";
             state.EventStormTile = data.EventStormTile != null
                 ? ToHexCoord(data.EventStormTile)
+                : null;
+            state.EventBlockedPortVertex = data.EventBlockedPortVertex != null
+                ? ToVertex(data.EventBlockedPortVertex)
                 : null;
             state.EventStoneDouble = data.EventStoneDouble;
             state.EventShopBonus = data.EventShopBonus;

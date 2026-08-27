@@ -83,6 +83,7 @@ namespace CatanRoguelike.Core
         public EventId ActiveEvent { get; set; } = EventId.None;
         public string EventMessage { get; set; } = "";
         public HexCoord? EventStormTile { get; set; }
+        public HexMath.Vertex? EventBlockedPortVertex { get; set; }
         public bool EventStoneDouble { get; set; }
         public int EventShopBonus { get; set; }
 
@@ -153,6 +154,7 @@ namespace CatanRoguelike.Core
             ActiveEvent = EventId.None;
             EventMessage = "";
             EventStormTile = null;
+            EventBlockedPortVertex = null;
             EventStoneDouble = false;
             EventShopBonus = 0;
         }

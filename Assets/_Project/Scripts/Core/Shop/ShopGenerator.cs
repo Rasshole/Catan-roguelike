@@ -102,7 +102,8 @@ namespace CatanRoguelike.Core.Shop
                 return int.MaxValue;
 
             int give = ModifierService.GetShopGiveAmount(state, player, deal.GiveAmount, deal.Give);
-            int portGive = PortAccess.GetEffectiveGiveAmount(state.Board, player, deal, state.Ports);
+            int portGive = PortAccess.GetEffectiveGiveAmount(
+                state.Board, player, deal, state.Ports, state.EventBlockedPortVertex);
             return Math.Min(give, portGive);
         }
 

@@ -110,6 +110,8 @@ namespace CatanRoguelike.Tests
             game.State.ActiveEvent = EventId.Storm;
             game.State.EventMessage = "Storm incoming";
             game.State.EventStormTile = new HexCoord(0, 0);
+            game.State.EventBlockedPortVertex = VertexGraph.Canonicalize(
+                new Vertex(new HexCoord(1, 0), 2));
             game.State.EventStoneDouble = true;
             game.State.EventShopBonus = 1;
             game.State.Phase = GamePhase.DayPlayerActions;
@@ -212,6 +214,7 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(expected.ActiveEvent, actual.ActiveEvent);
             Assert.AreEqual(expected.EventMessage, actual.EventMessage);
             Assert.AreEqual(expected.EventStormTile, actual.EventStormTile);
+            Assert.AreEqual(expected.EventBlockedPortVertex, actual.EventBlockedPortVertex);
             Assert.AreEqual(expected.EventStoneDouble, actual.EventStoneDouble);
             Assert.AreEqual(expected.EventShopBonus, actual.EventShopBonus);
 

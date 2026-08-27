@@ -8,6 +8,8 @@ namespace CatanRoguelike.Core.Events
         GoldRush,
         MarketDay,
         GoodHarvest,
-        BanditRaid
+        BanditRaid,
+        PortBlockade,
+        ResourceLevy
     }
 }
