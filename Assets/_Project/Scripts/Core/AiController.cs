@@ -258,11 +258,16 @@ namespace CatanRoguelike.Core
             _ => 1
         };
 
-        private ResourceType PickBestResource(GameController game)
+        private static ResourceType PickBestResource(GameController game)
         {
-            return game.State.TodayRolls
-                .OrderByDescending(kv => kv.Value)
-                .First().Key;
+            if (game.State.TodayRolls.Count > 0)
+            {
+                return game.State.TodayRolls
+                    .OrderByDescending(kv => kv.Value)
+                    .First().Key;
+            }
+
+            return ResourceType.Wheat;
         }
 
         private HexCoord? PickRobberTarget(GameController game)

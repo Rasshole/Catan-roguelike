@@ -1,8 +1,12 @@
+using System.Collections.Generic;
+using System.Linq;
 using CatanRoguelike.Core;
+using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Cards;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Map;
 using NUnit.Framework;
+using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
 namespace CatanRoguelike.Tests
 {
@@ -46,6 +50,40 @@ namespace CatanRoguelike.Tests
             Assert.IsFalse(game.State.AiHand.Contains(CardId.Knight));
         }
 
-        private static GameController CreateGame() => new GameController(seed: 42, MapSize.Small);
+        private static GameController CreateGame()
+        {
+            var game = new GameController(seed: 42, MapSize.Small);
+            SeedTodayRolls(game);
+            PlaceHumanSettlementForRobberTarget(game);
+            return game;
+        }
+
+        private static void SeedTodayRolls(GameController game)
+        {
+            game.State.TodayRolls = new Dictionary<ResourceType, int>
+            {
+                { ResourceType.Wheat, 2 },
+                { ResourceType.Wood, 1 },
+            };
+        }
+
+        private static void PlaceHumanSettlementForRobberTarget(GameController game)
+        {
+            var board = game.State.Board;
+            foreach (var hex in board.Tiles.Keys)
+            {
+                for (int c = 0; c < 6; c++)
+                {
+                    var vertex = VertexGraph.Canonicalize(new Vertex(hex, c));
+                    if (board.VertexBuildings.ContainsKey(vertex))
+                        continue;
+
+                    board.VertexBuildings[vertex] = (BuildingType.Settlement, PlayerId.Human);
+                    return;
+                }
+            }
+
+            Assert.Fail("No free vertex for human settlement");
+        }
     }
 }
