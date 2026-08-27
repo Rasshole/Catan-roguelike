@@ -35,7 +35,7 @@ Der er **in-game map-menu** ved run-start (`RunSelectMap`). Inspector på `GameM
 - **Specifikke 2:1-porte** — wired i `ShopGenerator` + `PortAccess` ✓
 - **Generiske 3:1-porte** — `DiscoverPorts` opretter sparse mix (2:1 per ressource + 3:1 generic, skaleret til 7/13/19 hex) ✓
 - **PortDiscount-perk** — rabat på alle handler når du kontrollerer en port (ikke kun “unrelated trades”)
-- **Risky deal (3. handel)** — core wired; UI forklarer ikke konsekvensen tydeligt
+- **Risky deal (3. handel)** — core wired; IMGUI shop-knapper viser konsekvens via `ShopDealDisplay` (røver → bedste felt) ✓
 - **Effektiv shop-pris** — UI viser kort årsag ved siden af hver handel (`ShopDealPricing`: port 2:1 / port 3:1 / leader / event / perk / base) ✓
 
 ### Kort
@@ -119,6 +119,7 @@ Eksisterende EditMode-tests:
 - `BanditRaidTests` — `OpponentRoadSelector` stabil sortering/index; `ApplyBanditRaid` disabler valgt kant (ikke en anden); fejler rent uden modstander-veje
 - `PendingStatusDisplayTests` — Harbor Charter / Embargo / level-up preview statuslinjer (skjult når inaktiv)
 - `ShopDealPricingTests` — pris-årsag (base, port 2:1/3:1, leader, event, perk); matcher `ShopGenerator.GetEffectiveGiveAmount`
+- `ShopDealDisplayTests` — risky shop-knap label med robber-konsekvens; RiskyDealsSafe viser waived-tekst
 - `ArchitectCostModifierTests` — Architect 10 % kun threshold-settlement; road/city/non-threshold fuld pris; Master Builder 0,65 vs 0,75 uden dobbeltrabat
 - `RunProgressionTests` — `WillOfferLevelUpAfterThisDay` (dag 4); `ShouldOfferLevelUp` (dag 5); max 3; `LastLevelUpDay`; seeded preview = offer
 - `RunProgressionDraftFlowTests` — pre-game draft via `GameController`: `RunSelectMap` start; `SelectMap` (7/13/19 + ports); phase guards; `SelectLeader` → draft status; `ToggleDraftUnique` add/remove/cap at `DraftPickCount` (alle 5 uniques); invalid `ConfirmRunSetup` (0–1 picks / forkert fase); valid confirm → `RunSetupComplete` + AI setup → `SetupPlayerSettlement1`
@@ -135,10 +136,9 @@ Eksisterende EditMode-tests:
 
 ## Anbefalet rækkefølge næste gang
 
-1. **Risky deal** tydeligere konsekvens-tekst i shop-knapper
-2. Longest road: bedre graf-algoritme (loops / forgreninger)
-3. Rig UI (uGUI) + art pass
-4. Integrationstests + playtest på 19-hex
+1. Longest road: bedre graf-algoritme (loops / forgreninger)
+2. Rig UI (uGUI) + art pass
+3. Integrationstests + playtest på 19-hex
 
 ---
 
@@ -149,7 +149,8 @@ Core/Data/MapPresets.cs     — 7 / 13 / 19 hex presets
 Core/Data/MapSize.cs        — Small=7, Medium=13, Large=19
 Game/GameManager.cs         — mapSize inspector
 Game/BoardView.cs           — board scale efter tile count
-Game/PlaceholderUI.cs       — al UI (IMGUI); Bandit Raid road picker; Harbor Charter + Embargo + level-up preview; shop-pris årsag; VP-breakdown; LevelUpChoice med fuld HUD
+Game/PlaceholderUI.cs       — al UI (IMGUI); Bandit Raid road picker; Harbor Charter + Embargo + level-up preview; shop-pris årsag + risky konsekvens; VP-breakdown; LevelUpChoice med fuld HUD
+Core/Shop/ShopDealDisplay.cs — shop-knap labels + risky robber-konsekvens-tekst
 Core/Victory/VictoryBreakdown.cs — VP-dele per spiller (settlements, cities, longest, long road, bonus)
 Core/PendingStatusDisplay.cs — rene statuslinjer for Harbor Charter / Embargo / level-up preview
 Core/Cards/EmbargoTargetSelector.cs — AI Embargo-mål (spiller-lager + shop Give)

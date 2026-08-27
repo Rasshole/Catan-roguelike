@@ -243,13 +243,13 @@ namespace CatanRoguelike.Game
         private void DrawDayActions(GameState state)
         {
             GUILayout.Space(8);
-            GUILayout.Label("<b>Shop</b> (3 trades; 3rd is often RISKY 2:1)");
+            GUILayout.Label(
+                $"<b>Shop</b> (3 trades; 3rd is 2:1 — {ShopDealDisplay.RiskyRobberConsequence})");
             foreach (var deal in state.ShopDeals)
             {
                 var pricing = ShopDealPricing.Analyze(state, PlayerId.Human, deal);
-                string reason = ShopDealPricing.FormatShortReason(pricing.Reason);
-                string risk = deal.IsRisky ? $"\n{deal.RiskDescription}" : "";
-                if (GUILayout.Button($"Buy: {deal.Format(pricing.EffectiveGive)} ({reason}){risk}"))
+                string label = ShopDealDisplay.FormatShopButtonLabel(state, PlayerId.Human, deal, pricing);
+                if (GUILayout.Button(label))
                     _controller.BuyShopDeal(deal);
             }
 

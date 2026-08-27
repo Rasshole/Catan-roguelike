@@ -54,7 +54,7 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(ShopGenerator.BaseTradeRate, deals[0].GiveAmount);
             Assert.AreEqual(ShopGenerator.BaseTradeRate, deals[1].GiveAmount);
             Assert.AreEqual(ShopGenerator.RiskyTradeRate, deals[2].GiveAmount);
-            Assert.AreEqual("Robber moves to your best tile when you buy.", deals[2].RiskDescription);
+            Assert.AreEqual(ShopDealDisplay.RiskyRobberConsequence, deals[2].RiskDescription);
         }
 
         [Test]
