@@ -106,16 +106,23 @@ namespace CatanRoguelike.Game
 
         private HexTileView CreateHexTile(HexTileData data)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            go.name = $"Hex_{data.Coord.Q}_{data.Coord.R}";
+            var go = new GameObject($"Hex_{data.Coord.Q}_{data.Coord.R}");
             go.transform.SetParent(boardRoot, false);
 
             var (x, z) = HexMath.ToWorldPosition(data.Coord, hexScale);
             go.transform.localPosition = new Vector3(x, 0f, z);
-            go.transform.localScale = new Vector3(hexScale * 1.05f, tileHeight, hexScale * 1.05f);
+            float xzScale = hexScale * HexPrismMesh.BoardScaleMultiplier;
+            go.transform.localScale = new Vector3(xzScale, tileHeight, xzScale);
 
-            var renderer = go.GetComponent<Renderer>();
+            var mesh = HexPrismMesh.Create();
+            var meshFilter = go.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = mesh;
+
+            var renderer = go.AddComponent<MeshRenderer>();
             renderer.material = BuiltInMaterials.Create(GetResourceColor(data.Resource));
+
+            var collider = go.AddComponent<MeshCollider>();
+            collider.sharedMesh = mesh;
 
             var view = go.AddComponent<HexTileView>();
             view.Initialize(data, renderer);

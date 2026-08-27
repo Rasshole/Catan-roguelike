@@ -120,3 +120,9 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **Tests:** `NumberTokenVisualStyleTests` (5 cases). **338/338** `dotnet test tools/core-tests` (expected after merge).
 - **Docs:** `ROADMAP_V3` — token visual pass + PortDiscount marked done on top of existing Done rows (Act 3, PlayMode, Windows blocked).
 
+## 2026-08-27 (UTC) — Hex prism tiles
+
+- **`HexPrismMesh`:** pointy-top 6-sided prism (y=±1, radius 0.5) aligned with `HexMath` corner 0 at +Z; `BoardView` uses `hexScale * 2` XZ so circumradius matches settlement vertices.
+- **`BoardView.CreateHexTile`:** custom mesh + `MeshCollider` instead of `PrimitiveType.Cylinder`; chip/robber/storm elevations unchanged.
+- **Tests:** `HexPrismMeshTests` (EditMode). Core `dotnet test` unchanged.
+
