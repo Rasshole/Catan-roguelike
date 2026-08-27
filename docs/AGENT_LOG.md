@@ -154,6 +154,10 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **`TableCamera`:** enforce `nearClipPlane` ≥ 0.3 to reduce hex-top z-fighting at orbit pitch.
 - **Tests:** orbit distance > board radius for Small/Large; ordering only, no magic radius floats.
 
+## 2026-08-27 (UTC) — AiController.PlaceSetupSettlement EditMode tests
+
+- **`AiControllerSetupSettlementTests`:** valid setup spot + Catan distance; same seed → same vertex after seeding tokens (scoring is pure; `CreateBoard` tokens are otherwise unseeded); no-op when no valid spots; highest-score pick. Isolated count==1 uses a non-chaining setup phase because `PlaceSettlement` auto-runs AI road/settlement 2 from `SetupAiSettlement1`. No production bug found.
+
 ## 2026-08-27 (UTC) — AiController.PlaceSetupRoad EditMode tests
 
 - **`AiControllerSetupRoadTests`:** valid setup road touches AI settlement, same seed → same edge, no-op when no settlement or all adjacent edges blocked. No production bug found.
