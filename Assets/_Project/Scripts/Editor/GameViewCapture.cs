@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Threading;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Game;
 using UnityEditor;
@@ -10,44 +9,27 @@ using UnityEngine;
 namespace CatanRoguelike.Editor
 {
     /// <summary>
-    /// Boots Game.unity in Play Mode, drives scripted setup, captures Camera.main to PNG, exits Play Mode.
+    /// Opens Game.unity in edit mode, bootstraps GameManager without Play Mode, drives
+    /// GameScenePlayHarness, captures Camera.main to PNG.
     /// </summary>
     public static class GameViewCapture
     {
-        public const string DefaultOutputPath = "/workspace/game-view.png";
-        public const string OutputPathEnvVar = "GAME_VIEW_SHOT";
+        public const string DefaultOutputPath = GameSceneCapture.DefaultOutputPath;
+        public const string OutputPathEnvVar = GameSceneCapture.OutputPathEnvVar;
 
         private const string GameScenePath = "Assets/_Project/Scenes/Game.unity";
-        private const int CaptureWidth = 1920;
-        private const int CaptureHeight = 1080;
-        private const int BootFrameWait = 3;
-        private const int PostSetupFrameWait = 8;
-        private const int SyncPumpSleepMs = 1;
-
-        private enum CapturePhase
-        {
-            None,
-            OpenScene,
-            EnterPlay,
-            WaitBootFrames,
-            DriveSetup,
-            WaitVisualFrames,
-            CaptureFrame,
-            ExitPlay,
-            Done,
-        }
-
-        private static CapturePhase _phase = CapturePhase.None;
-        private static int _targetFrameCount;
-        private static double _phaseDeadline;
-        private static bool _exitEditorAfter;
-        private static int _exitCode;
-        private static string _outputPath;
 
         [MenuItem("Catan Roguelike/Capture Game View Screenshot")]
         public static void CaptureFromMenu()
         {
-            BeginCapture(exitEditorAfter: false, useSyncPump: false);
+            try
+            {
+                RunEditModeCaptureAndWritePng();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
         }
 
         /// <summary>
@@ -55,284 +37,63 @@ namespace CatanRoguelike.Editor
         /// </summary>
         public static void CaptureAndQuit()
         {
-            // -batchmode -executeMethod does not pump EditorApplication.update after this method would
-            // return, so drive the state machine synchronously here until capture finishes or times out.
-            Debug.Log("GameViewCapture: CaptureAndQuit entry — starting synchronous capture pump.");
+            // Runs during Application::ParseARGVCommands — before the editor main loop exists, so
+            // Play Mode and EditorApplication.update cannot be relied on here. Edit-mode bootstrap only.
+            Debug.Log("GameViewCapture: CaptureAndQuit entry — edit-mode capture (no Play Mode).");
 
-            _exitCode = 0;
+            var exitCode = 0;
             try
             {
-                BeginCapture(exitEditorAfter: true, useSyncPump: true);
+                RunEditModeCaptureAndWritePng();
             }
             catch (Exception ex)
             {
-                _exitCode = 1;
+                exitCode = 1;
                 Debug.LogException(ex);
-                if (EditorApplication.isPlaying)
-                    EditorApplication.isPlaying = false;
             }
 
-            ForceEditorShutdown(_exitCode);
+            ForceEditorShutdown(exitCode);
         }
 
-        public static string ResolveOutputPath()
-        {
-            var env = Environment.GetEnvironmentVariable(OutputPathEnvVar);
-            return string.IsNullOrWhiteSpace(env) ? DefaultOutputPath : env.Trim();
-        }
+        public static string ResolveOutputPath() => GameSceneCapture.ResolveOutputPath();
 
-        private static void BeginCapture(bool exitEditorAfter, bool useSyncPump)
+        private static void RunEditModeCaptureAndWritePng()
         {
-            if (_phase != CapturePhase.None)
+            var outputPath = GameSceneCapture.ResolveOutputPath();
+            Debug.Log($"GameViewCapture: capture started (output={outputPath}, editMode=true).");
+
+            if (!File.Exists(GameScenePath))
             {
-                Debug.LogWarning("GameViewCapture: capture already in progress.");
-                return;
+                throw new FileNotFoundException(
+                    $"Game scene not found at {GameScenePath}. Run Catan Roguelike → Setup Game Scene.");
             }
 
-            _exitEditorAfter = exitEditorAfter;
-            if (!exitEditorAfter)
-                _exitCode = 0;
+            EditorSceneManager.OpenScene(GameScenePath, OpenSceneMode.Single);
 
-            _outputPath = ResolveOutputPath();
-            BeginPhase(CapturePhase.OpenScene);
-            Debug.Log(
-                $"GameViewCapture: capture started (output={_outputPath}, syncPump={useSyncPump}).");
-
-            if (useSyncPump)
-            {
-                RunSynchronouslyUntilDone();
-                return;
-            }
-
-            EditorApplication.update -= AdvanceCapture;
-            EditorApplication.update += AdvanceCapture;
-        }
-
-        private static void RunSynchronouslyUntilDone()
-        {
-            var startedUtc = DateTime.UtcNow;
-            var overallDeadlineUtc = GameViewCaptureFrameWait.ComputeOverallDeadlineUtc(startedUtc);
-
-            while (_phase != CapturePhase.None)
-            {
-                if (GameViewCaptureFrameWait.IsOverallTimedOutUtc(DateTime.UtcNow, overallDeadlineUtc))
-                {
-                    Debug.LogError(
-                        $"GameViewCapture: overall timeout after " +
-                        $"{GameViewCaptureFrameWait.OverallTimeoutSeconds}s (phase={_phase}).");
-
-                    if (EditorApplication.isPlaying)
-                        EditorApplication.isPlaying = false;
-
-                    Environment.FailFast("GameViewCapture: overall timeout");
-                }
-
-                AdvanceCapture();
-                EditorApplication.QueuePlayerLoopUpdate();
-                Thread.Sleep(SyncPumpSleepMs);
-            }
-        }
-
-        private static void BeginPhase(CapturePhase phase)
-        {
-            _phase = phase;
-            _phaseDeadline = GameViewCaptureFrameWait.ComputeDeadline(EditorApplication.timeSinceStartup);
-        }
-
-        private static void EnsurePhaseNotTimedOut(string context)
-        {
-            if (!GameViewCaptureFrameWait.IsTimedOut(EditorApplication.timeSinceStartup, _phaseDeadline))
-                return;
-
-            throw new TimeoutException(
-                $"GameViewCapture: {context} timed out after {GameViewCaptureFrameWait.PhaseTimeoutSeconds}s " +
-                $"(isPlaying={EditorApplication.isPlaying}, frameCount={Time.frameCount}).");
-        }
-
-        private static void StepPlayerLoop()
-        {
-            EditorApplication.QueuePlayerLoopUpdate();
-        }
-
-        private static void AdvanceCapture()
-        {
-            if (_phase == CapturePhase.None || _phase == CapturePhase.Done)
-                return;
-
-            try
-            {
-                switch (_phase)
-                {
-                    case CapturePhase.OpenScene:
-                        if (!File.Exists(GameScenePath))
-                            throw new FileNotFoundException(
-                                $"Game scene not found at {GameScenePath}. Run Catan Roguelike → Setup Game Scene.");
-
-                        if (!EditorApplication.isPlaying)
-                        {
-                            EditorSceneManager.OpenScene(GameScenePath, OpenSceneMode.Single);
-                            BeginPhase(CapturePhase.EnterPlay);
-                        }
-                        break;
-
-                    case CapturePhase.EnterPlay:
-                        EnsurePhaseNotTimedOut("EnterPlay");
-                        if (!EditorApplication.isPlaying)
-                        {
-                            EditorApplication.isPlaying = true;
-                            StepPlayerLoop();
-                        }
-                        else
-                        {
-                            _targetFrameCount = Time.frameCount + BootFrameWait;
-                            BeginPhase(CapturePhase.WaitBootFrames);
-                        }
-                        break;
-
-                    case CapturePhase.WaitBootFrames:
-                        EnsurePhaseNotTimedOut("WaitBootFrames");
-                        if (!Application.isPlaying
-                            || !GameViewCaptureFrameWait.HasReachedTarget(Time.frameCount, _targetFrameCount))
-                        {
-                            StepPlayerLoop();
-                            return;
-                        }
-
-                        BeginPhase(CapturePhase.DriveSetup);
-                        break;
-
-                    case CapturePhase.DriveSetup:
-                        DriveScriptedSetup();
-                        _targetFrameCount = Time.frameCount + PostSetupFrameWait;
-                        BeginPhase(CapturePhase.WaitVisualFrames);
-                        break;
-
-                    case CapturePhase.WaitVisualFrames:
-                        EnsurePhaseNotTimedOut("WaitVisualFrames");
-                        if (!Application.isPlaying
-                            || !GameViewCaptureFrameWait.HasReachedTarget(Time.frameCount, _targetFrameCount))
-                        {
-                            StepPlayerLoop();
-                            return;
-                        }
-
-                        BeginPhase(CapturePhase.CaptureFrame);
-                        break;
-
-                    case CapturePhase.CaptureFrame:
-                        CaptureMainCameraToPng(_outputPath);
-                        Debug.Log($"GameViewCapture: wrote {CaptureWidth}x{CaptureHeight} PNG to {_outputPath}");
-                        BeginPhase(CapturePhase.ExitPlay);
-                        break;
-
-                    case CapturePhase.ExitPlay:
-                        EnsurePhaseNotTimedOut("ExitPlay");
-                        if (EditorApplication.isPlaying)
-                        {
-                            EditorApplication.isPlaying = false;
-                            StepPlayerLoop();
-                            return;
-                        }
-
-                        _phase = CapturePhase.Done;
-                        FinishCapture();
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                FailCapture(ex);
-            }
-        }
-
-        private static void DriveScriptedSetup()
-        {
             var gameManager = UnityEngine.Object.FindFirstObjectByType<GameManager>();
             if (gameManager == null)
-                throw new InvalidOperationException("GameManager should exist after scene load.");
+                throw new InvalidOperationException("GameManager should exist in Game.unity.");
+
+            gameManager.EditorBootstrapForCapture();
 
             var controller = gameManager.Controller;
+            var meta = gameManager.Meta;
             if (controller == null)
-                throw new InvalidOperationException("Controller should be initialized after Start().");
-
-            if (gameManager.Meta == null)
-                throw new InvalidOperationException("Meta should be loaded after Start().");
+                throw new InvalidOperationException("Controller should be initialized after editor bootstrap.");
+            if (meta == null)
+                throw new InvalidOperationException("Meta should be loaded after editor bootstrap.");
 
             if (controller.State.Phase != GamePhase.RunSelectMap)
+            {
                 throw new InvalidOperationException(
                     $"Fresh scene boot should begin at map select, got {controller.State.Phase}.");
-
-            GameScenePlayHarness.CompleteRunSelectAndSetup(controller, gameManager.Meta);
-        }
-
-        private static void CaptureMainCameraToPng(string path)
-        {
-            var camera = Camera.main;
-            if (camera == null)
-                throw new InvalidOperationException("Camera.main (TableCamera) is required for capture.");
-
-            var directory = Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(directory))
-                Directory.CreateDirectory(directory);
-
-            var previousActive = RenderTexture.active;
-            var previousTarget = camera.targetTexture;
-
-            var renderTexture = new RenderTexture(
-                CaptureWidth,
-                CaptureHeight,
-                24,
-                RenderTextureFormat.ARGB32);
-
-            try
-            {
-                camera.targetTexture = renderTexture;
-                RenderTexture.active = renderTexture;
-                camera.Render();
-
-                var texture = new Texture2D(CaptureWidth, CaptureHeight, TextureFormat.RGB24, false);
-                try
-                {
-                    texture.ReadPixels(new Rect(0, 0, CaptureWidth, CaptureHeight), 0, 0);
-                    texture.Apply();
-                    File.WriteAllBytes(path, texture.EncodeToPNG());
-                }
-                finally
-                {
-                    UnityEngine.Object.DestroyImmediate(texture);
-                }
             }
-            finally
-            {
-                camera.targetTexture = previousTarget;
-                RenderTexture.active = previousActive;
-                renderTexture.Release();
-                UnityEngine.Object.DestroyImmediate(renderTexture);
-            }
-        }
 
-        private static void FinishCapture()
-        {
-            EditorApplication.update -= AdvanceCapture;
-            _phase = CapturePhase.None;
+            GameScenePlayHarness.CompleteRunSelectAndSetup(controller, meta);
 
-            if (_exitEditorAfter)
-                return;
-        }
-
-        private static void FailCapture(Exception ex)
-        {
-            _exitCode = 1;
-            Debug.LogException(ex);
-
-            EditorApplication.update -= AdvanceCapture;
-            _phase = CapturePhase.None;
-
-            if (EditorApplication.isPlaying)
-                EditorApplication.isPlaying = false;
-
-            if (_exitEditorAfter)
-                throw new InvalidOperationException("GameViewCapture capture failed.", ex);
+            GameSceneCapture.CaptureMainCameraToPng(outputPath);
+            Debug.Log(
+                $"GameViewCapture: wrote {GameSceneCapture.CaptureWidth}x{GameSceneCapture.CaptureHeight} PNG to {outputPath}");
         }
 
         private static void ForceEditorShutdown(int code)

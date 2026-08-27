@@ -47,24 +47,23 @@ Play harness: `GameScenePlayTests` driver run select → setup → første dag v
 
 ## Game-view screenshot (`GameViewCapture`)
 
-Editor-only (`Assets/_Project/Scripts/Editor/GameViewCapture.cs`). Åbner `Game.unity`, går i Play Mode, kører `GameScenePlayHarness` (samme scripted run-select + setup som `GameScenePlayTests`), venter på BoardView/camera, renderer `Camera.main` via `RenderTexture` (1920×1080 PNG) — **ikke** Editor Game-view pixels.
+Editor CLI + menu (`Assets/_Project/Scripts/Editor/GameViewCapture.cs`) and shared capture helper (`Assets/_Project/Scripts/Game/GameSceneCapture.cs`). Opens `Game.unity` in **edit mode** (no Play Mode), bootstraps `GameManager` via `EditorBootstrapForCapture`, kører `GameScenePlayHarness` (samme scripted run-select + setup som `GameScenePlayTests`), renderer `Camera.main` via `RenderTexture` (1920×1080 PNG).
+
+`-batchmode -executeMethod` runs during project load **before** the editor main loop exists, so Play Mode / `EditorApplication.update` cannot be used there. Edit-mode bootstrap avoids that entirely.
 
 | Kommando | Betydning |
 |----------|-----------|
 | **Catan Roguelike → Capture Game View Screenshot** | MenuItem; efterlader Editoren åben |
-| `CaptureAndQuit` | `-executeMethod` til batchmode/CI; `EditorApplication.Exit(0)` ved success, `1` ved fejl |
+| `CaptureAndQuit` | `-executeMethod` til batchmode/CI; edit-mode capture; `EditorApplication.Exit(0)` ved success |
+| PlayMode test `GameScene_CaptureGameView_WritesPng` | `unity test --mode PlayMode` — alternativ Linux screenshot path med rigtig player loop |
 
-Standard PNG-sti: `/workspace/game-view.png`. Override med miljøvariabel `GAME_VIEW_SHOT` eller public const `GameViewCapture.DefaultOutputPath`.
+Standard PNG-sti: `/workspace/game-view.png`. Override med miljøvariabel `GAME_VIEW_SHOT` eller `GameSceneCapture.DefaultOutputPath`.
 
 ### Editor-menu (interaktiv)
 
 Unity Editor → **Catan Roguelike → Capture Game View Screenshot**.
 
 ### CLI (headless Linux + xvfb)
-
-`CaptureAndQuit` drives capture **synchronously inside the static entry** — it does not return until the PNG is written or a timeout/failure occurs. `-batchmode -executeMethod` does not pump `EditorApplication.update` after the entry returns, so the CLI path calls `AdvanceCapture()` directly in a loop with `EditorApplication.QueuePlayerLoopUpdate()` + a short sleep. Per-phase stalls fail after 120s; an overall 180s wall-clock deadline calls `Environment.FailFast`. Success/failure then calls `EditorApplication.Exit` with `Environment.Exit` as a fallback.
-
-Do **not** defer startup with `EditorApplication.delayCall` (that queue is not flushed in batchmode).
 
 ```bash
 export UNITY_EDITOR="${UNITY_EDITOR:-/home/box/Unity/Hub/Editor/6000.3.15f1/Editor/Unity}"
@@ -75,11 +74,20 @@ xvfb-run -a "$UNITY_EDITOR" -batchmode -projectPath . \
   -logFile -
 ```
 
-`-nographics` is optional: capture uses `Camera.main.Render()` to a `RenderTexture`, not Game view pixels. Prefer the command above (graphics via xvfb); add `-nographics` only if GPU init is problematic.
+`-nographics` is optional: capture uses `Camera.main.Render()` to a `RenderTexture`, not Game view pixels. Prefer the command above (graphics via xvfb).
 
-Verify success: exit code `0`, log line `GameViewCapture: wrote 1920x1080 PNG to …`, and a non-empty PNG at `GAME_VIEW_SHOT` (default `/workspace/game-view.png`).
+Verify success: exit code `0`, log line `GameViewCapture: wrote 1920x1080 PNG to …`, and a non-empty PNG at `GAME_VIEW_SHOT`.
 
-Efter kørsel: Play Mode er sluttet; `Game.unity` er ikke gemt. Delt setup-logik: `GameScenePlayHarness` i Game-asmdef (bruges også af PlayMode-tests).
+**Alternativ (PlayMode test runner, proven player loop):**
+
+```bash
+export GAME_VIEW_SHOT="/tmp/game-view-test.png"
+xvfb-run -a unity test . --mode PlayMode \
+  --filter GameScene_CaptureGameView_WritesPng \
+  --output /tmp/playmode-capture.xml --timeout 300
+```
+
+Efter kørsel: `Game.unity` er ikke gemt. Delt setup-logik: `GameScenePlayHarness` i Game-asmdef (bruges også af PlayMode-tests).
 
 ### EditMode-tests (Unity CLI)
 
