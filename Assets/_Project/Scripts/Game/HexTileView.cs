@@ -32,6 +32,14 @@ namespace CatanRoguelike.Game
         private const float ChipElevationY = 1.08f;
         private const float LabelElevationY = 1.18f;
 
+        // Robber/storm sit above chip+label; compensate scale like EnsureTokenChip.
+        private const float MarkerElevationY = 1.28f;
+        private const float WorldRobberDiameter = 0.30f;
+        private const float WorldStormExtent = 0.22f;
+        private const float WorldStormHeight = 0.06f;
+        private static readonly Vector3 RobberLocalOffset = new(0.20f, 0f, 0.18f);
+        private static readonly Vector3 StormLocalOffset = new(-0.18f, 0f, -0.16f);
+
         public void Initialize(HexTileData data, Renderer renderer)
         {
             Data = data;
@@ -142,16 +150,30 @@ namespace CatanRoguelike.Game
 
         public void SetRobberVisible(bool visible)
         {
-            if (_robberMarker == null)
-            {
-                _robberMarker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                _robberMarker.name = "Robber";
-                _robberMarker.transform.SetParent(transform, false);
-                _robberMarker.transform.localPosition = new Vector3(0f, 0.5f, 0f);
-                _robberMarker.transform.localScale = Vector3.one * 0.35f;
-                _robberMarker.GetComponent<Renderer>().material.color = Color.black;
-            }
-            _robberMarker.SetActive(visible);
+            if (visible)
+                EnsureRobberMarker();
+            if (_robberMarker != null)
+                _robberMarker.SetActive(visible);
+        }
+
+        private void EnsureRobberMarker()
+        {
+            if (_robberMarker != null)
+                return;
+
+            var hexScale = transform.lossyScale;
+
+            _robberMarker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            _robberMarker.name = "Robber";
+            _robberMarker.transform.SetParent(transform, false);
+            _robberMarker.transform.localPosition = new Vector3(
+                RobberLocalOffset.x, MarkerElevationY, RobberLocalOffset.z);
+            // Non-uniform hex lossyScale squashes uniform localScale on Y; compensate per axis.
+            _robberMarker.transform.localScale = new Vector3(
+                WorldRobberDiameter / hexScale.x,
+                WorldRobberDiameter / hexScale.y,
+                WorldRobberDiameter / hexScale.z);
+            _robberMarker.GetComponent<Renderer>().material.color = Color.black;
         }
 
         public void SetEventOverlay(EventTileOverlayKind kind)
@@ -198,11 +220,16 @@ namespace CatanRoguelike.Game
             if (_stormMarker != null)
                 return;
 
+            var hexScale = transform.lossyScale;
+            float localExtent = WorldStormExtent / hexScale.x;
+            float localHeight = WorldStormHeight / hexScale.y;
+
             _stormMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
             _stormMarker.name = "StormMarker";
             _stormMarker.transform.SetParent(transform, false);
-            _stormMarker.transform.localPosition = new Vector3(0f, 0.42f, 0f);
-            _stormMarker.transform.localScale = new Vector3(0.28f, 0.12f, 0.28f);
+            _stormMarker.transform.localPosition = new Vector3(
+                StormLocalOffset.x, MarkerElevationY, StormLocalOffset.z);
+            _stormMarker.transform.localScale = new Vector3(localExtent, localHeight, localExtent);
             _stormMarker.GetComponent<Renderer>().material.color = StormMarkerColor;
         }
     }
