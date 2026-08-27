@@ -6,7 +6,6 @@ using System.Linq;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Map;
-using CatanRoguelike.Core.Resources;
 using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Game;
