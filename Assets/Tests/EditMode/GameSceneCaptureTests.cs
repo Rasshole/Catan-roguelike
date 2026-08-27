@@ -1,3 +1,4 @@
+using System;
 using CatanRoguelike.Game;
 using NUnit.Framework;
 
@@ -8,7 +9,22 @@ namespace CatanRoguelike.Tests
         [Test]
         public void ResolveOutputPath_DefaultsWhenEnvMissingOrBlank()
         {
-            Assert.AreEqual(GameSceneCapture.DefaultOutputPath, GameSceneCapture.ResolveOutputPath());
+            var original = Environment.GetEnvironmentVariable(GameSceneCapture.OutputPathEnvVar);
+            try
+            {
+                Environment.SetEnvironmentVariable(GameSceneCapture.OutputPathEnvVar, null);
+                Assert.AreEqual(GameSceneCapture.DefaultOutputPath, GameSceneCapture.ResolveOutputPath());
+
+                Environment.SetEnvironmentVariable(GameSceneCapture.OutputPathEnvVar, string.Empty);
+                Assert.AreEqual(GameSceneCapture.DefaultOutputPath, GameSceneCapture.ResolveOutputPath());
+
+                Environment.SetEnvironmentVariable(GameSceneCapture.OutputPathEnvVar, "   ");
+                Assert.AreEqual(GameSceneCapture.DefaultOutputPath, GameSceneCapture.ResolveOutputPath());
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(GameSceneCapture.OutputPathEnvVar, original);
+            }
         }
 
         [Test]
