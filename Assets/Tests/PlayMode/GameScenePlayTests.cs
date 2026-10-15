@@ -193,6 +193,7 @@ namespace CatanRoguelike.Tests.PlayMode
                 "skipping the first night should reach day player actions");
 
             game.EndPlayerDay();
+            game.CompleteAiDayTurn();
 
             if (game.State.Phase == GamePhase.LevelUpChoice)
             {

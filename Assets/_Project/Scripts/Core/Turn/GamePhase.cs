@@ -17,6 +17,8 @@ namespace CatanRoguelike.Core.Turn
         NightPlayCard,
         NightAiPlan,
         DayProduction,
+        DayDiscardForSeven,
+        DayPlaceRobberSeven,
         DayPlayerActions,
         DayAiTurn,
         LevelUpChoice,

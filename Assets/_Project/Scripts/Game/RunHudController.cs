@@ -118,6 +118,7 @@ namespace CatanRoguelike.Game
             RebuildActionBar(state);
             RefreshPinnedControls(state);
             RefreshBuildButtons(state);
+            RefreshColonistChrome(state);
         }
 
         private void EnsureCanvasBuilt()
@@ -131,6 +132,7 @@ namespace CatanRoguelike.Game
             BuildHandRow(_canvas.transform);
             BuildActionBar(_canvas.transform);
             BuildPinnedControls(_canvas.transform);
+            BuildColonistChrome(_canvas.transform);
         }
 
         private void BuildSidePanel(Transform root)

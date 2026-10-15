@@ -122,7 +122,7 @@ namespace CatanRoguelike.Tests
             }
 
             if (game.State.Phase == GamePhase.DayPlayerActions)
-                game.EndPlayerDay();
+                GameControllerTestHelpers.EndDayWithAi(game);
         }
 
         private static void CompleteDayCycle(GameController game)
@@ -225,7 +225,7 @@ namespace CatanRoguelike.Tests
             game.State.AddVictoryPoints(PlayerId.Human, need);
             game.State.LevelUpsTaken = RunProgression.MaxLevelUpsPerRun;
 
-            game.EndPlayerDay();
+            GameControllerTestHelpers.EndDayWithAi(game);
 
             Assert.AreEqual(GamePhase.GameOver, game.State.Phase);
             Assert.AreEqual(PlayerId.Human, game.State.Winner);
@@ -240,14 +240,14 @@ namespace CatanRoguelike.Tests
 
             PrepareNightAdvance(game);
             GameControllerTestHelpers.SkipNightAndResolveMorning(game);
-            game.EndPlayerDay();
+            GameControllerTestHelpers.EndDayWithAi(game);
 
             Assert.AreEqual(2, game.State.Board.DayNumber);
             Assert.AreEqual(GamePhase.NightPlayCard, game.State.Phase);
 
             PrepareNightAdvance(game);
             GameControllerTestHelpers.SkipNightAndResolveMorning(game);
-            game.EndPlayerDay();
+            GameControllerTestHelpers.EndDayWithAi(game);
 
             Assert.AreEqual(3, game.State.Board.DayNumber);
             Assert.AreEqual(GamePhase.LevelUpChoice, game.State.Phase);
@@ -268,7 +268,7 @@ namespace CatanRoguelike.Tests
             Assert.IsTrue(game.State.EventStoneDouble);
             Assert.AreEqual(1, game.State.Board.DisabledRoads.Count);
 
-            game.EndPlayerDay();
+            GameControllerTestHelpers.EndDayWithAi(game);
 
             Assert.AreEqual(0, game.State.Board.DisabledRoads.Count);
             Assert.AreEqual(EventId.None, game.State.ActiveEvent);

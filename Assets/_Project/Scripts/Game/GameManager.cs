@@ -172,6 +172,8 @@ namespace CatanRoguelike.Game
                 boardView.Initialize(Controller);
             if (ui != null)
                 ui.Initialize(Controller, Meta, boardInput);
+            EnsureRunHud();
+            _runHud.Initialize(Controller, Meta, boardInput);
             if (boardInput != null)
                 boardInput.Initialize(Controller, boardView);
         }

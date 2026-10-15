@@ -18,6 +18,7 @@ namespace CatanRoguelike.Editor
         public const string OutputPathEnvVar = GameSceneCapture.OutputPathEnvVar;
 
         private const string GameScenePath = "Assets/_Project/Scenes/Game.unity";
+        private const string ColonistScenePath = "Assets/_Project/Scenes/ColonistStylePrototype.unity";
 
         [MenuItem("Catan Roguelike/Capture Game View Screenshot")]
         public static void CaptureFromMenu()
@@ -35,6 +36,39 @@ namespace CatanRoguelike.Editor
         /// <summary>
         /// Unity CLI entry: -batchmode -executeMethod CatanRoguelike.Editor.GameViewCapture.CaptureAndQuit
         /// </summary>
+        [MenuItem("Catan Roguelike/Capture Colonist Prototype Screenshot")]
+        public static void CaptureColonistFromMenu()
+        {
+            try
+            {
+                RunColonistCaptureAndWritePng();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+        }
+
+        /// <summary>
+        /// Unity CLI: -executeMethod CatanRoguelike.Editor.GameViewCapture.CaptureColonistAndQuit
+        /// </summary>
+        public static void CaptureColonistAndQuit()
+        {
+            Debug.Log("GameViewCapture: CaptureColonistAndQuit — colonist prototype + HUD.");
+            var exitCode = 0;
+            try
+            {
+                RunColonistCaptureAndWritePng();
+            }
+            catch (Exception ex)
+            {
+                exitCode = 1;
+                Debug.LogException(ex);
+            }
+
+            ForceEditorShutdown(exitCode);
+        }
+
         public static void CaptureAndQuit()
         {
             // Runs during Application::ParseARGVCommands — before the editor main loop exists, so
@@ -99,6 +133,35 @@ namespace CatanRoguelike.Editor
             GameSceneCapture.CaptureMainCameraToPng(outputPath);
             Debug.Log(
                 $"GameViewCapture: wrote {GameSceneCapture.CaptureWidth}x{GameSceneCapture.CaptureHeight} PNG to {outputPath}");
+        }
+
+        private static void RunColonistCaptureAndWritePng()
+        {
+            var outputPath = GameSceneCapture.ResolveOutputPath();
+            if (!File.Exists(ColonistScenePath))
+                throw new FileNotFoundException($"Colonist prototype not found at {ColonistScenePath}.");
+
+            EditorSceneManager.OpenScene(ColonistScenePath, OpenSceneMode.Single);
+            var gameManager = UnityEngine.Object.FindFirstObjectByType<GameManager>();
+            if (gameManager == null)
+                throw new InvalidOperationException("GameManager missing in colonist prototype.");
+
+            gameManager.EditorBootstrapForCapture();
+            var controller = gameManager.Controller;
+            var meta = gameManager.Meta;
+            if (controller == null || meta == null)
+                throw new InvalidOperationException("Controller/Meta not bootstrapped.");
+
+            if (controller.State.Phase == GamePhase.RunSelectMap)
+                GameScenePlayHarness.CompleteRunSelectAndSetup(controller, meta);
+
+            var hud = UnityEngine.Object.FindFirstObjectByType<RunHudController>();
+            var tableCamera = UnityEngine.Object.FindFirstObjectByType<TableCamera>();
+            if (tableCamera == null)
+                throw new InvalidOperationException("TableCamera required.");
+            tableCamera.ApplyPoseForCapture(GameSceneCapture.CaptureWidth, GameSceneCapture.CaptureHeight);
+            GameSceneCapture.CaptureMainCameraToPng(outputPath, hud);
+            Debug.Log($"GameViewCapture: colonist HUD capture → {outputPath}");
         }
 
         private static void ForceEditorShutdown(int code)

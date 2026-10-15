@@ -220,6 +220,15 @@ namespace CatanRoguelike.Game
             yield return SimpleTweens.PulseRendererColor(_renderer, flash, duration);
         }
 
+        public void SetDimmed(bool dimmed)
+        {
+            if (_renderer == null)
+                return;
+            _renderer.sharedMaterial.color = dimmed
+                ? Color.Lerp(_baseColor, Color.black, 0.45f)
+                : _baseColor;
+        }
+
         public void SetRobberVisible(bool visible)
         {
             if (visible)

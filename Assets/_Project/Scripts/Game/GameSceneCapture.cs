@@ -20,11 +20,16 @@ namespace CatanRoguelike.Game
             return string.IsNullOrWhiteSpace(env) ? DefaultOutputPath : env.Trim();
         }
 
-        public static void CaptureMainCameraToPng(string path)
+        public static void CaptureMainCameraToPng(string path) =>
+            CaptureMainCameraToPng(path, prepareHudForCapture: null);
+
+        public static void CaptureMainCameraToPng(string path, RunHudController prepareHudForCapture)
         {
             var camera = Camera.main;
             if (camera == null)
                 throw new InvalidOperationException("Camera.main (TableCamera) is required for capture.");
+
+            prepareHudForCapture?.PrepareCanvasForCameraCapture(camera);
 
             var directory = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(directory))
@@ -43,6 +48,7 @@ namespace CatanRoguelike.Game
             {
                 camera.targetTexture = renderTexture;
                 RenderTexture.active = renderTexture;
+                Canvas.ForceUpdateCanvases();
                 camera.Render();
 
                 var texture = new Texture2D(CaptureWidth, CaptureHeight, TextureFormat.RGB24, false);

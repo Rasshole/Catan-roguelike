@@ -64,6 +64,8 @@ Editor CLI + menu (`Assets/_Project/Scripts/Editor/GameViewCapture.cs`) and shar
 |----------|-----------|
 | **Catan Roguelike → Capture Game View Screenshot** | MenuItem; efterlader Editoren åben |
 | `CaptureAndQuit` | `-executeMethod` til batchmode/CI; edit-mode capture; `EditorApplication.Exit(0)` ved success |
+| `CaptureColonistAndQuit` | Samme som ovenstående, men åbner `ColonistStylePrototype.unity` og binder HUD-canvas til kamera (uGUI i PNG) |
+| **Catan Roguelike → Capture Colonist Prototype Screenshot** | MenuItem for colonist-prototype + HUD |
 | PlayMode test `GameScene_CaptureGameView_WritesPng` | `unity test --mode PlayMode` — alternativ Linux screenshot path med rigtig player loop |
 
 Standard PNG-sti: `/workspace/game-view.png`. Override med miljøvariabel `GAME_VIEW_SHOT` eller `GameSceneCapture.DefaultOutputPath`.

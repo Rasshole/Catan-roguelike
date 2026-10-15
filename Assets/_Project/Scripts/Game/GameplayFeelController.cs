@@ -1,7 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core;
+using CatanRoguelike.Core.Ai;
+using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Turn;
+using CatanRoguelike.Core.UI;
 using CatanRoguelike.Core.Yield;
 using UnityEngine;
 
@@ -19,8 +23,9 @@ namespace CatanRoguelike.Game
         private RunHudController _hud;
         private bool _sequenceRunning;
         private bool _rollQueued;
+        private bool _aiPacingRunning;
 
-        public bool IsBlockingInput => _sequenceRunning;
+        public bool IsBlockingInput => _sequenceRunning || _aiPacingRunning;
 
         public void Initialize(GameController controller, BoardView boardView, RunHudController hud)
         {
@@ -40,6 +45,9 @@ namespace CatanRoguelike.Game
                 _rollQueued = false;
                 StartCoroutine(MorningRollSequence());
             }
+
+            if (_controller.State.Phase == GamePhase.DayAiTurn && !_aiPacingRunning)
+                StartCoroutine(AiPacingSequence());
         }
 
         public void RequestMorningRoll()
@@ -56,49 +64,63 @@ namespace CatanRoguelike.Game
             _sequenceRunning = true;
             var state = _controller.State;
             var rolls = new Dictionary<ResourceType, int>(state.TodayRolls);
-            var preview = ProductionCalculator.CalculateForPlayer(state, PlayerId.Human, rolls);
-            var hexes = ProductionHexResolver.GetProducingHexesForPlayer(state, PlayerId.Human, rolls);
+            bool isSeven = SevenRollRules.RolledSeven(state.TodayDiceRolls);
+            var hexes = isSeven
+                ? new List<HexCoord>()
+                : ProductionHexResolver.GetProducingHexesForPlayer(state, PlayerId.Human, rolls);
 
             var before = state.PlayerInventory;
-            int targetWood = before.Wood + preview.Wood;
-            int targetBrick = before.Brick + preview.Brick;
-            int targetWheat = before.Wheat + preview.Wheat;
-            int targetSheep = before.Sheep + preview.Sheep;
-            int targetStone = before.Stone + preview.Stone;
 
-            yield return AnimateDice(state.TodayDiceRolls);
+            yield return AnimateDice(state.TodayDiceRolls, isSeven);
 
-            var pulseRoutines = new List<Coroutine>();
-            foreach (var hex in hexes)
+            if (_boardView != null)
             {
-                if (_boardView != null)
-                    pulseRoutines.Add(StartCoroutine(_boardView.PulseProductionHex(hex, HexPulseSeconds)));
+                if (isSeven)
+                    _boardView.SetHexDimAll(true);
+                else
+                    yield return _boardView.PlayProductionHighlight(hexes, HexPulseSeconds);
             }
-
-            foreach (var routine in pulseRoutines)
-                yield return routine;
 
             if (_hud != null)
                 _hud.BeginResourceAnimationLock();
 
             _controller.ResolveDayProduction();
 
-            if (_hud != null)
-            {
-                yield return _hud.AnimateResourceCounts(
-                    before,
-                    _controller.State.PlayerInventory,
-                    ResourceTickSeconds);
-            }
+            if (!isSeven && _hud != null)
+                yield return _hud.AnimateResourceCounts(before, _controller.State.PlayerInventory, ResourceTickSeconds);
+
+            if (_boardView != null)
+                _boardView.SetHexDimAll(false);
 
             _sequenceRunning = false;
         }
 
-        private IEnumerator AnimateDice(IReadOnlyList<int> finalRolls)
+        private IEnumerator AiPacingSequence()
         {
+            _aiPacingRunning = true;
+            var plan = AiPacingPlanner.PlanDayActions(_controller.State);
+            foreach (var step in plan)
+            {
+                GameLog.Append(_controller.State, $"AI: {step}");
+                if (_hud != null)
+                    _hud.Refresh(_controller.State);
+                yield return new WaitForSeconds(Random.Range(1f, 3f));
+            }
+
+            _controller.CompleteAiDayTurn();
+            _aiPacingRunning = false;
+        }
+
+        private IEnumerator AnimateDice(IReadOnlyList<int> finalRolls, bool glowSeven)
+        {
+            if (_hud != null)
+                _hud.SetRollPromptActive(true);
+
             if (_hud == null || finalRolls == null || finalRolls.Count == 0)
             {
                 yield return new WaitForSeconds(DiceAnimSeconds);
+                if (_hud != null)
+                    _hud.SetRollPromptActive(false);
                 yield break;
             }
 
@@ -117,12 +139,13 @@ namespace CatanRoguelike.Game
             }
 
             if (finalRolls.Count == 1)
-                _hud.SetDiceOverlay($"🎲 {finalRolls[0]}");
+                _hud.SetDiceOverlay(glowSeven ? $"🎲 7" : $"🎲 {finalRolls[0]}");
             else
                 _hud.SetDiceOverlay($"🎲 {string.Join(" · ", finalRolls)}");
 
             yield return new WaitForSeconds(0.12f);
             _hud.SetDiceOverlay(string.Empty);
+            _hud.SetRollPromptActive(false);
         }
     }
 }

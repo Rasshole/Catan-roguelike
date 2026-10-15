@@ -1,7 +1,7 @@
 using System.Collections.Generic;
+using CatanRoguelike.Core;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
-using CatanRoguelike.Core;
 
 namespace CatanRoguelike.Core.Yield
 {

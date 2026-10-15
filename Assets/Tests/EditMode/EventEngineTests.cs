@@ -284,7 +284,7 @@ namespace CatanRoguelike.Tests
             game.Events.ApplyEvent(game.State, EventId.MarketDay);
             Assert.AreEqual(1, game.State.EventShopBonus);
 
-            game.EndPlayerDay();
+            GameControllerTestHelpers.EndDayWithAi(game);
 
             Assert.AreEqual(EventId.None, game.State.ActiveEvent);
             Assert.AreEqual(0, game.State.EventShopBonus);

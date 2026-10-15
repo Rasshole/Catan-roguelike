@@ -10,6 +10,9 @@ using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Shop;
+using CatanRoguelike.Core.Trade;
+using CatanRoguelike.Core.UI;
+using CatanRoguelike.Core.Yield;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Core.Save;
 using CatanRoguelike.Core.Victory;
@@ -277,7 +280,17 @@ namespace CatanRoguelike.Core
             if (State.Phase != GamePhase.DayPlayerActions) return;
             State.Phase = GamePhase.DayAiTurn;
             State.StatusMessage = "AI is taking its turn...";
+            GameLog.Append(State, "You ended your turn.");
+            NotifyChanged();
+        }
+
+        /// <summary>Called after paced AI presentation (see GameplayFeelController).</summary>
+        public void CompleteAiDayTurn()
+        {
+            if (State.Phase != GamePhase.DayAiTurn)
+                return;
             Ai.ExecuteDayTurn(this);
+            GameLog.Append(State, "AI finished its turn.");
             EndDay();
             NotifyChanged();
         }
@@ -500,21 +513,182 @@ namespace CatanRoguelike.Core
             if (State.Phase != GamePhase.DayProduction)
                 return;
 
+            if (SevenRollRules.RolledSeven(State.TodayDiceRolls))
+            {
+                GameLog.Append(State, "Rolled 7 — no production.");
+                State.PendingSevenDiscard = SevenRollRules.GetDiscardCount(State.PlayerInventory.Total);
+                if (State.PendingSevenDiscard > 0)
+                {
+                    State.Phase = GamePhase.DayDiscardForSeven;
+                    State.StatusMessage = $"Discard {State.PendingSevenDiscard} resources (hand > 7).";
+                    NotifyChanged();
+                    return;
+                }
+
+                BeginRobberPlacementAfterSeven();
+                return;
+            }
+
             ApplyProduction();
+            LogProductionGains();
+            OpenPlayerDay();
+        }
+
+        public bool SubmitSevenDiscard(ResourceBundle discard)
+        {
+            if (State.Phase != GamePhase.DayDiscardForSeven)
+                return false;
+            if (!SevenRollRules.ValidateDiscardTotal(State.PendingSevenDiscard, discard))
+                return false;
+
+            var inv = State.PlayerInventory;
+            inv.Pay(discard);
+            State.PlayerInventory = inv;
+            State.PendingSevenDiscard = 0;
+            GameLog.Append(State, $"Discarded {discard.Total} cards for seven.");
+            BeginRobberPlacementAfterSeven();
+            return true;
+        }
+
+        public bool PlaceRobberForSeven(HexCoord tile)
+        {
+            if (State.Phase != GamePhase.DayPlaceRobberSeven)
+                return false;
+            if (!State.Board.TryGetTile(tile, out _))
+                return false;
+
+            State.Board.PlaceRobber(tile);
+            int stolen = RobberSteal.StealFromHex(State, tile, PlayerId.Human, _random);
+            GameLog.Append(State, stolen > 0
+                ? $"Robber placed — stole {stolen} resource(s)."
+                : "Robber placed — no steal.");
+            OpenPlayerDay();
+            return true;
+        }
+
+        private void BeginRobberPlacementAfterSeven()
+        {
+            State.Phase = GamePhase.DayPlaceRobberSeven;
+            State.StatusMessage = "Place the robber (click a hex).";
+            NotifyChanged();
+        }
+
+        private void OpenPlayerDay()
+        {
             State.ShopDeals = Shop.GenerateDailyDeals(State);
             State.Phase = GamePhase.DayPlayerActions;
-            State.StatusMessage = "Day: build, shop, or end turn.";
+            State.StatusMessage = "Day: build, trade, or end turn.";
+            if (AiTradeOfferGenerator.TryCreateOffer(State, _random, out var incoming))
+            {
+                State.IncomingAiTrade = incoming;
+                GameLog.Append(State, "AI sent a trade offer.");
+            }
             OnAutosavePoint?.Invoke();
             NotifyChanged();
+        }
+
+        private void LogProductionGains()
+        {
+            var rolls = State.TodayRolls;
+            var gained = ProductionCalculator.CalculateForPlayer(State, PlayerId.Human, rolls);
+            foreach (var pair in gained.EnumerateNonZero())
+                GameLog.Append(State, $"+{pair.amount} {pair.type} from production.");
         }
 
         public bool TryBankTrade(ResourceType give, ResourceType receive, int receiveAmount = 1)
         {
             if (State.Phase != GamePhase.DayPlayerActions || State.Winner.HasValue)
                 return false;
-            if (!Trade.BankTradeCalculator.TryExecute(State, PlayerId.Human, give, receive, receiveAmount))
+            if (!BankTradeCalculator.CanTrade(State, PlayerId.Human, give, receive, receiveAmount))
+            {
+                State.StatusMessage = "Invalid bank/port trade ratio or insufficient resources.";
+                NotifyChanged();
                 return false;
+            }
+
+            if (!State.Bank.TryWithdraw(receive, receiveAmount))
+            {
+                State.StatusMessage = "Bank is out of that resource.";
+                NotifyChanged();
+                return false;
+            }
+
+            if (!BankTradeCalculator.TryExecute(State, PlayerId.Human, give, receive, receiveAmount))
+            {
+                State.Bank.Deposit(receive, receiveAmount);
+                State.StatusMessage = "Trade failed.";
+                NotifyChanged();
+                return false;
+            }
+
+            int rate = BankTradeCalculator.GetGiveRateForResource(State, PlayerId.Human, give);
+            int pay = rate * receiveAmount;
+            State.Bank.Deposit(give, pay);
+
+            GameLog.Append(State, $"Bank trade: {pay} {give} → {receiveAmount} {receive}.");
             State.StatusMessage = "Trade completed.";
+            NotifyChanged();
+            return true;
+        }
+
+        public bool ProposePlayerTrade(PlayerTradeOffer offer)
+        {
+            if (State.Phase != GamePhase.DayPlayerActions)
+                return false;
+            if (!State.PlayerInventory.CanAfford(offer.Give))
+                return false;
+
+            State.PendingPlayerTrade = offer;
+            State.PendingAiTradeResponses = PlayerTradeResolver.EvaluateAiResponses(State, offer);
+            GameLog.Append(State, "Trade offer sent to AI.");
+            NotifyChanged();
+            return true;
+        }
+
+        public bool AcceptPlayerTradeWith(PlayerId acceptor)
+        {
+            if (!State.PendingPlayerTrade.HasValue)
+                return false;
+            var offer = State.PendingPlayerTrade.Value;
+            if (!PlayerTradeResolver.TryExecute(State, acceptor, offer))
+                return false;
+
+            State.PendingPlayerTrade = null;
+            State.PendingAiTradeResponses = Array.Empty<AiTradeResponse>();
+            GameLog.Append(State, "Player trade completed.");
+            NotifyChanged();
+            return true;
+        }
+
+        public bool RespondToIncomingAiTrade(bool accept)
+        {
+            if (!State.IncomingAiTrade.HasValue)
+                return false;
+            var offer = State.IncomingAiTrade.Value;
+            State.IncomingAiTrade = null;
+            if (!accept)
+            {
+                GameLog.Append(State, "Declined AI trade.");
+                NotifyChanged();
+                return true;
+            }
+
+            if (!State.PlayerInventory.CanAfford(offer.Receive))
+            {
+                State.StatusMessage = "Cannot afford AI trade.";
+                NotifyChanged();
+                return false;
+            }
+
+            var human = State.PlayerInventory;
+            human.Pay(offer.Receive);
+            human.Add(offer.Give);
+            State.PlayerInventory = human;
+            var ai = State.AiInventory;
+            ai.Pay(offer.Give);
+            ai.Add(offer.Receive);
+            State.AiInventory = ai;
+            GameLog.Append(State, "Accepted AI trade.");
             NotifyChanged();
             return true;
         }

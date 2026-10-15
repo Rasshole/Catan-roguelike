@@ -411,6 +411,7 @@ namespace CatanRoguelike.SimRunner
                     SimDriver.TryBuyAffordableDeals(game);
                     SimDriver.TryAllDayBuilds(game);
                     game.EndPlayerDay();
+                    game.CompleteAiDayTurn();
                     break;
 
                 case GamePhase.LevelUpChoice:
@@ -418,6 +419,7 @@ namespace CatanRoguelike.SimRunner
                         game.ChooseLevelUpPerk(SimDriver.PickBestLevelUpPerk(game));
                     else
                         game.EndPlayerDay();
+                    game.CompleteAiDayTurn();
                     break;
 
                 case GamePhase.SetupAiSettlement1:

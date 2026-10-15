@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Buildings;
@@ -8,6 +9,8 @@ using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Core.Hex;
+using CatanRoguelike.Core.Trade;
+using CatanRoguelike.Core.UI;
 
 namespace CatanRoguelike.Core
 {
@@ -87,6 +90,13 @@ namespace CatanRoguelike.Core
         public bool EventStoneDouble { get; set; }
         public int EventShopBonus { get; set; }
 
+        public List<GameLogEntry> Log { get; } = new();
+        public BankStock Bank { get; } = new BankStock();
+        public int PendingSevenDiscard { get; set; }
+        public PlayerTradeOffer? PendingPlayerTrade { get; set; }
+        public IReadOnlyList<AiTradeResponse> PendingAiTradeResponses { get; set; } = Array.Empty<AiTradeResponse>();
+        public AiIncomingTradeOffer? IncomingAiTrade { get; set; }
+
         public bool IsSetupPhase => Phase <= GamePhase.SetupPlayerRoad2;
 
         public bool IsNightPhase => Phase == GamePhase.NightPlayCard
@@ -157,6 +167,17 @@ namespace CatanRoguelike.Core
             EventBlockedPortVertex = null;
             EventStoneDouble = false;
             EventShopBonus = 0;
+
+            Log.Clear();
+            Bank.Wood = BankStock.DefaultPerResource;
+            Bank.Brick = BankStock.DefaultPerResource;
+            Bank.Wheat = BankStock.DefaultPerResource;
+            Bank.Sheep = BankStock.DefaultPerResource;
+            Bank.Stone = BankStock.DefaultPerResource;
+            PendingSevenDiscard = 0;
+            PendingPlayerTrade = null;
+            PendingAiTradeResponses = Array.Empty<AiTradeResponse>();
+            IncomingAiTrade = null;
         }
 
         public ResourceBundle GetInventory(PlayerId player) =>

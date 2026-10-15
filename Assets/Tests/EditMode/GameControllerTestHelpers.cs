@@ -16,5 +16,11 @@ namespace CatanRoguelike.Tests
             game.SkipNightCard();
             ResolveMorningRollIfNeeded(game);
         }
+
+        public static void EndDayWithAi(GameController game)
+        {
+            game.EndPlayerDay();
+            game.CompleteAiDayTurn();
+        }
     }
 }

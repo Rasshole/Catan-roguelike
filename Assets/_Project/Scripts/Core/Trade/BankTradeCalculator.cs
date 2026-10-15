@@ -1,5 +1,6 @@
-using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core;
+using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Shop;
 
 namespace CatanRoguelike.Core.Trade
 {

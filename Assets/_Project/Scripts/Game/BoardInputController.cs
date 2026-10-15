@@ -60,10 +60,63 @@ namespace CatanRoguelike.Game
                 }
             }
 
+            if (_controller.State.Phase == GamePhase.DayPlaceRobberSeven)
+            {
+                UpdateRobberPlacementHighlights();
+                HandleRobberPlacementClick();
+                return;
+            }
+
             if (!IsPlayerBuildPhase()) return;
 
             UpdateHighlights();
             HandleClick();
+        }
+
+        private HexCoord? _robberHoverHex;
+
+        private void UpdateRobberPlacementHighlights()
+        {
+            ClearHighlights();
+            _robberHoverHex = null;
+            var hit = RaycastBoardPoint();
+            if (!hit.HasValue || _controller == null)
+                return;
+
+            float scale = boardView.HexScale;
+            HexCoord? nearest = null;
+            float best = float.MaxValue;
+            foreach (var coord in _controller.State.Board.Tiles.Keys)
+            {
+                var (x, z) = HexMath.ToWorldPosition(coord, scale);
+                float d = (hit.Value.x - x) * (hit.Value.x - x) + (hit.Value.z - z) * (hit.Value.z - z);
+                if (d < best)
+                {
+                    best = d;
+                    nearest = coord;
+                }
+            }
+
+            if (!nearest.HasValue)
+                return;
+
+            _robberHoverHex = nearest;
+            var (hx, hz) = HexMath.ToWorldPosition(nearest.Value, scale);
+            var marker = PlacementMarkerVisuals.CreateSettlementGhost(
+                _highlightsRoot,
+                new Vector3(hx, 0f, hz),
+                new Color(0.2f, 0.85f, 1f, 0.65f),
+                boardView.TileHeight);
+            _highlights.Add(marker);
+        }
+
+        private void HandleRobberPlacementClick()
+        {
+            if (!Input.GetMouseButtonDown(0) || IsPointerOverUI())
+                return;
+            if (!_robberHoverHex.HasValue)
+                return;
+            _controller.PlaceRobberForSeven(_robberHoverHex.Value);
         }
 
         private bool IsPlayerBuildPhase()

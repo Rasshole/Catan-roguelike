@@ -233,6 +233,28 @@ namespace CatanRoguelike.Game
             yield return view.PulseProduction(duration);
         }
 
+        public IEnumerator PlayProductionHighlight(IReadOnlyList<HexCoord> producing, float duration)
+        {
+            var producingSet = new HashSet<HexCoord>(producing);
+            foreach (var kvp in _tiles)
+                kvp.Value.SetDimmed(!producingSet.Contains(kvp.Key));
+
+            foreach (var hex in producing)
+            {
+                if (_tiles.TryGetValue(hex, out var view))
+                    yield return view.PulseProduction(duration);
+            }
+
+            foreach (var view in _tiles.Values)
+                view.SetDimmed(false);
+        }
+
+        public void SetHexDimAll(bool dimmed)
+        {
+            foreach (var view in _tiles.Values)
+                view.SetDimmed(dimmed);
+        }
+
         private void RefreshBuildings(GameState state)
         {
             if (buildingsRoot == null)
