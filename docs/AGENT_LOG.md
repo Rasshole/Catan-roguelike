@@ -222,3 +222,10 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 
 - **`TableCamera.ApplyPoseForCapture`:** edit-mode CLI/menu calls orbit + HUD framing (`ApplyOrbitPose` + `ApplyBoardFramingOffset` at 1920×1080) before `GameSceneCapture.CaptureMainCameraToPng`; Play Mode `Start`/`Update` path unchanged.
 - **Tests:** `GameSceneCaptureTests.ApplyPoseForCapture_MovesCameraOffSceneDefault_WhenBoardHasData`. No v0.1 tag.
+
+## 2026-10-15 (UTC) — Colonist.io-inspired board + uGUI run HUD
+
+- **Board:** saturated `BoardResourcePalette`, dark edge strips + top bevel cap (`HexCartoonTileDecor`), cream number chips with pip dots (`NumberTokenPipLayout` / `HexTileView`).
+- **HUD:** `RunHudController` (uGUI) — left resource panel (`3 Korn`, swatches), VP/rolls/shop; bottom card hand row (roguelike frames via `CardVisualStyle`); action bar above hand. Pre-run flow stays IMGUI (`PlaceholderUI`).
+- **Prototype:** committed `Assets/_Project/Scenes/ColonistStylePrototype.unity` + menu **Catan Roguelike → Build Colonist Style Prototype Scene**.
+- **Tests:** `NumberTokenPipLayoutTests`, `HudResourceFormattingTests`, `CardVisualStyleTests`. Screenshot not captured in cloud VM (no Unity binary). No v0.1 tag.

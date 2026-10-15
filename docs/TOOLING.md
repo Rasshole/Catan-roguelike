@@ -43,6 +43,15 @@ xvfb-run -a "$UNITY_EDITOR" -runTests -batchmode -projectPath . -testPlatform Pl
 
 Smoke: `GameSceneSmokeTests` loader `Game.unity` og tjekker `GameManager` / `BoardView` / `PlaceholderUI` + controller efter Start.
 
+### Colonist-style prototype scene
+
+| Kommando | Betydning |
+|----------|-----------|
+| **Catan Roguelike → Build Colonist Style Prototype Scene** | Gemmer `Assets/_Project/Scenes/ColonistStylePrototype.unity` (samme wiring som `Setup Game Scene` + `RunHudController`). |
+| `Assets/_Project/Scenes/ColonistStylePrototype.unity` | Committed snapshot til visuel QA uden at overskrive `Game.unity` manuelt. |
+
+`GameManager` tilføjer `RunHudController` automatisk ved Play hvis komponenten mangler.
+
 Play harness: `GameScenePlayTests` driver run select → setup → første dag via `GameManager.Controller` (ingen GUI-klik).
 
 ## Game-view screenshot (`GameViewCapture`)

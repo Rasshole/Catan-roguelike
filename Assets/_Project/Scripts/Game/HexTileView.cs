@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CatanRoguelike.Core.Events;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Yield;
@@ -16,6 +17,8 @@ namespace CatanRoguelike.Game
         private Renderer _chipRimRenderer;
         private Renderer _chipFaceRenderer;
         private TextMesh _tokenLabel;
+        private GameObject _pipRoot;
+        private readonly List<Renderer> _pipRenderers = new();
 
         private static readonly Color FamineTint = new(0.55f, 0.35f, 0.15f);
         private static readonly Color GoldRushTint = new(0.95f, 0.75f, 0.1f);
@@ -59,6 +62,7 @@ namespace CatanRoguelike.Game
         {
             if (data.IsDesert || !data.NumberToken.HasValue)
             {
+                ClearPipDots();
                 SetTokenVisible(false);
                 return;
             }
@@ -73,6 +77,55 @@ namespace CatanRoguelike.Game
             var labelRgb = NumberTokenVisualStyle.GetLabel(token);
             _tokenLabel.color = new Color(labelRgb.R, labelRgb.G, labelRgb.B);
             _tokenLabel.characterSize = NumberTokenVisualStyle.GetLabelCharacterSize(token);
+            RefreshPipDots(token);
+        }
+
+        private void RefreshPipDots(int token)
+        {
+            ClearPipDots();
+            int pipCount = NumberTokenPipLayout.GetPipCount(token);
+            if (pipCount <= 0)
+                return;
+
+            EnsureTokenChip();
+            _pipRoot = new GameObject("TokenPips");
+            _pipRoot.transform.SetParent(_tokenChip.transform, false);
+
+            var hexScale = transform.lossyScale;
+            float localDiameter = 0.09f / hexScale.x;
+            float localHeight = 0.025f / hexScale.y;
+            float rowZ = -0.14f / hexScale.z;
+            float rowY = WorldChipThickness * 0.35f / hexScale.y;
+
+            var offsets = NumberTokenPipLayout.GetPipOffsetsX(pipCount);
+            var labelRgb = NumberTokenVisualStyle.GetLabel(token);
+            var pipColor = new Color(labelRgb.R, labelRgb.G, labelRgb.B);
+
+            for (int i = 0; i < offsets.Length; i++)
+            {
+                var pip = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                pip.name = $"Pip_{i}";
+                pip.transform.SetParent(_pipRoot.transform, false);
+                pip.transform.localPosition = new Vector3(
+                    offsets[i] / hexScale.x,
+                    rowY,
+                    rowZ);
+                pip.transform.localScale = new Vector3(localDiameter, localHeight, localDiameter);
+                Destroy(pip.GetComponent<Collider>());
+                var renderer = pip.GetComponent<Renderer>();
+                renderer.sharedMaterial = BuiltInMaterials.Create(pipColor);
+                _pipRenderers.Add(renderer);
+            }
+        }
+
+        private void ClearPipDots()
+        {
+            _pipRenderers.Clear();
+            if (_pipRoot == null)
+                return;
+
+            Destroy(_pipRoot);
+            _pipRoot = null;
         }
 
         private void SetTokenVisible(bool visible)
@@ -81,6 +134,8 @@ namespace CatanRoguelike.Game
                 _tokenChip.SetActive(visible);
             if (_tokenLabel != null)
                 _tokenLabel.gameObject.SetActive(visible);
+            if (_pipRoot != null)
+                _pipRoot.SetActive(visible);
         }
 
         private void EnsureTokenChip()
@@ -126,8 +181,8 @@ namespace CatanRoguelike.Game
         {
             var faceRgb = NumberTokenVisualStyle.GetChipFace(token);
             var rimRgb = NumberTokenVisualStyle.GetChipRim(token);
-            _chipFaceRenderer.material.color = new Color(faceRgb.R, faceRgb.G, faceRgb.B);
-            _chipRimRenderer.material.color = new Color(rimRgb.R, rimRgb.G, rimRgb.B);
+            _chipFaceRenderer.sharedMaterial.color = new Color(faceRgb.R, faceRgb.G, faceRgb.B);
+            _chipRimRenderer.sharedMaterial.color = new Color(rimRgb.R, rimRgb.G, rimRgb.B);
         }
 
         private void EnsureTokenLabel()

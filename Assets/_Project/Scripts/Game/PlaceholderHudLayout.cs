@@ -7,7 +7,7 @@ namespace CatanRoguelike.Game
     {
         public const float Margin = 10f;
         public const float PreGamePanelWidth = 400f;
-        public const float InRunPanelWidth = 260f;
+        public const float InRunPanelWidth = RunHudLayout.SidePanelWidth;
         public const float MaxInRunPanelHeight = 580f;
 
         public static float LastPanelWidth { get; private set; } = InRunPanelWidth;

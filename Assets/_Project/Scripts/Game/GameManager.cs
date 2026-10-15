@@ -11,6 +11,7 @@ namespace CatanRoguelike.Game
         [SerializeField] private BoardView boardView;
         [SerializeField] private PlaceholderUI ui;
         [SerializeField] private BoardInputController boardInput;
+        private RunHudController _runHud;
         [SerializeField] private int randomSeed = 42;
         [SerializeField] private MapSize mapSize = MapSize.Small;
 
@@ -59,11 +60,20 @@ namespace CatanRoguelike.Game
                 boardView.Initialize(Controller);
             if (ui != null)
                 ui.Initialize(Controller, Meta, boardInput);
+            EnsureRunHud();
+            _runHud.Initialize(Controller, Meta, boardInput);
             if (boardInput != null)
                 boardInput.Initialize(Controller, boardView);
 
             HandleBoardRebuilt();
             HandleStateChanged(Controller.State);
+        }
+
+        private void EnsureRunHud()
+        {
+            _runHud = GetComponent<RunHudController>();
+            if (_runHud == null)
+                _runHud = gameObject.AddComponent<RunHudController>();
         }
 
         private void Start()
@@ -76,6 +86,8 @@ namespace CatanRoguelike.Game
 
             boardView.Initialize(Controller);
             ui.Initialize(Controller, Meta, boardInput);
+            EnsureRunHud();
+            _runHud.Initialize(Controller, Meta, boardInput);
 
             if (boardInput != null)
                 boardInput.Initialize(Controller, boardView);
@@ -99,6 +111,8 @@ namespace CatanRoguelike.Game
         {
             boardView.Refresh(state);
             ui.Refresh(state);
+            if (_runHud != null)
+                _runHud.Refresh(state);
         }
 
         private void HandleBoardRebuilt()

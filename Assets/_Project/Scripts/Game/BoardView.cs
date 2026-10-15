@@ -35,11 +35,6 @@ namespace CatanRoguelike.Game
         private readonly Dictionary<HexCoord, HexTileView> _tiles = new();
         private GameController _controller;
 
-        private static readonly Color WoodColor = new(0.2f, 0.55f, 0.2f);
-        private static readonly Color BrickColor = new(0.7f, 0.35f, 0.2f);
-        private static readonly Color WheatColor = new(0.9f, 0.85f, 0.2f);
-        private static readonly Color SheepColor = new(0.5f, 0.85f, 0.5f);
-        private static readonly Color StoneColor = new(0.55f, 0.55f, 0.6f);
 
         public void Initialize(GameController controller)
         {
@@ -178,10 +173,12 @@ namespace CatanRoguelike.Game
             meshFilter.sharedMesh = mesh;
 
             var renderer = go.AddComponent<MeshRenderer>();
-            renderer.material = BuiltInMaterials.Create(GetResourceColor(data.Resource));
+            renderer.sharedMaterial = BuiltInMaterials.Create(BoardResourceColors.GetTileFace(data));
 
             var collider = go.AddComponent<MeshCollider>();
             collider.sharedMesh = mesh;
+
+            HexCartoonTileDecor.Apply(go, data.Coord, hexScale, data);
 
             var view = go.AddComponent<HexTileView>();
             view.Initialize(data, renderer);
@@ -272,14 +269,7 @@ namespace CatanRoguelike.Game
             }
         }
 
-        private static Color GetResourceColor(ResourceType resource) => resource switch
-        {
-            ResourceType.Wood => WoodColor,
-            ResourceType.Brick => BrickColor,
-            ResourceType.Wheat => WheatColor,
-            ResourceType.Sheep => SheepColor,
-            ResourceType.Stone => StoneColor,
-            _ => Color.gray
-        };
+        private static Color GetResourceColor(ResourceType resource) =>
+            BoardResourceColors.GetHudSwatch(resource);
     }
 }
