@@ -12,6 +12,7 @@ namespace CatanRoguelike.Game
         [SerializeField] private PlaceholderUI ui;
         [SerializeField] private BoardInputController boardInput;
         private RunHudController _runHud;
+        private GameplayFeelController _feel;
         [SerializeField] private int randomSeed = 42;
         [SerializeField] private MapSize mapSize = MapSize.Small;
 
@@ -61,7 +62,10 @@ namespace CatanRoguelike.Game
             if (ui != null)
                 ui.Initialize(Controller, Meta, boardInput);
             EnsureRunHud();
+            EnsureFeel();
             _runHud.Initialize(Controller, Meta, boardInput);
+            _feel.Initialize(Controller, boardView, _runHud);
+            _runHud.BindFeel(_feel);
             if (boardInput != null)
                 boardInput.Initialize(Controller, boardView);
 
@@ -76,6 +80,13 @@ namespace CatanRoguelike.Game
                 _runHud = gameObject.AddComponent<RunHudController>();
         }
 
+        private void EnsureFeel()
+        {
+            _feel = GetComponent<GameplayFeelController>();
+            if (_feel == null)
+                _feel = gameObject.AddComponent<GameplayFeelController>();
+        }
+
         private void Start()
         {
             Meta = MetaProgressionFile.LoadOrCreate();
@@ -87,7 +98,10 @@ namespace CatanRoguelike.Game
             boardView.Initialize(Controller);
             ui.Initialize(Controller, Meta, boardInput);
             EnsureRunHud();
+            EnsureFeel();
             _runHud.Initialize(Controller, Meta, boardInput);
+            _feel.Initialize(Controller, boardView, _runHud);
+            _runHud.BindFeel(_feel);
 
             if (boardInput != null)
                 boardInput.Initialize(Controller, boardView);

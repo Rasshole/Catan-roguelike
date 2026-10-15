@@ -162,6 +162,13 @@ namespace CatanRoguelike.Tests.PlayMode
                 $"expected a day/night phase after one cycle, got {game.State.Phase}");
         }
 
+        private static void SkipNightAndResolveMorning(GameController game)
+        {
+            game.SkipNightCard();
+            if (game.State.Phase == GamePhase.DayProduction)
+                game.ResolveDayProduction();
+        }
+
         private static void PrepareNightAdvance(GameController game)
         {
             if (game.State.TodayRolls.Count == 0 && game.State.TomorrowRolls.Count > 0)
@@ -173,7 +180,7 @@ namespace CatanRoguelike.Tests.PlayMode
         private static void CompleteOneDayCycle(GameController game)
         {
             PrepareNightAdvance(game);
-            game.SkipNightCard();
+            SkipNightAndResolveMorning(game);
 
             if (game.State.Phase == GamePhase.LevelUpChoice)
             {

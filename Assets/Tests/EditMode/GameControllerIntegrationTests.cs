@@ -111,7 +111,7 @@ namespace CatanRoguelike.Tests
             if (game.State.Phase == GamePhase.NightPlayCard)
             {
                 PrepareNightAdvance(game);
-                game.SkipNightCard();
+                GameControllerTestHelpers.SkipNightAndResolveMorning(game);
             }
 
             if (game.State.Phase == GamePhase.LevelUpChoice)
@@ -182,6 +182,8 @@ namespace CatanRoguelike.Tests
 
             PrepareNightAdvance(game);
             game.SkipNightCard();
+            Assert.AreEqual(GamePhase.DayProduction, game.State.Phase);
+            GameControllerTestHelpers.ResolveMorningRollIfNeeded(game);
 
             Assert.AreEqual(GamePhase.DayPlayerActions, game.State.Phase);
             Assert.Greater(game.State.TodayRolls.Count, 0);
@@ -201,6 +203,7 @@ namespace CatanRoguelike.Tests
 
             PrepareNightAdvance(game);
             Assert.IsTrue(game.PlayPlayerCard(CardId.YearOfPlenty, ResourceType.Wood));
+            GameControllerTestHelpers.ResolveMorningRollIfNeeded(game);
 
             Assert.AreEqual(GamePhase.DayPlayerActions, game.State.Phase);
             Assert.Greater(game.State.PlayerInventory.Wood, woodBefore);
@@ -236,14 +239,14 @@ namespace CatanRoguelike.Tests
             var game = CreateGamePastSetup(Seed);
 
             PrepareNightAdvance(game);
-            game.SkipNightCard();
+            GameControllerTestHelpers.SkipNightAndResolveMorning(game);
             game.EndPlayerDay();
 
             Assert.AreEqual(2, game.State.Board.DayNumber);
             Assert.AreEqual(GamePhase.NightPlayCard, game.State.Phase);
 
             PrepareNightAdvance(game);
-            game.SkipNightCard();
+            GameControllerTestHelpers.SkipNightAndResolveMorning(game);
             game.EndPlayerDay();
 
             Assert.AreEqual(3, game.State.Board.DayNumber);

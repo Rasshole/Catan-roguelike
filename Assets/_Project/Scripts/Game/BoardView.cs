@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Events;
@@ -34,6 +35,7 @@ namespace CatanRoguelike.Game
 
         private readonly Dictionary<HexCoord, HexTileView> _tiles = new();
         private GameController _controller;
+        private int _lastBuildingVisualCount;
 
 
         public void Initialize(GameController controller)
@@ -224,6 +226,13 @@ namespace CatanRoguelike.Game
             }
         }
 
+        public IEnumerator PulseProductionHex(HexCoord coord, float duration)
+        {
+            if (!_tiles.TryGetValue(coord, out var view))
+                yield break;
+            yield return view.PulseProduction(duration);
+        }
+
         private void RefreshBuildings(GameState state)
         {
             if (buildingsRoot == null)
@@ -233,6 +242,7 @@ namespace CatanRoguelike.Game
                 buildingsRoot = root.transform;
             }
 
+            int priorCount = buildingsRoot.childCount;
             for (int i = buildingsRoot.childCount - 1; i >= 0; i--)
                 DestroySceneObject(buildingsRoot.GetChild(i).gameObject);
 
@@ -267,6 +277,14 @@ namespace CatanRoguelike.Game
                     color,
                     tileHeight);
             }
+
+            if (buildingsRoot.childCount > priorCount && buildingsRoot.childCount > _lastBuildingVisualCount)
+            {
+                var placed = buildingsRoot.GetChild(buildingsRoot.childCount - 1);
+                StartCoroutine(SimpleTweens.ScalePop(placed, 0.26f, 1.14f));
+            }
+
+            _lastBuildingVisualCount = buildingsRoot.childCount;
         }
 
         private static Color GetResourceColor(ResourceType resource) =>

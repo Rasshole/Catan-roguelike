@@ -490,13 +490,33 @@ namespace CatanRoguelike.Core
             State.TodayRolls = new Dictionary<ResourceType, int>(State.TomorrowRolls);
             State.TodayDiceRolls = new List<int>(State.TomorrowDiceRolls);
             State.Phase = GamePhase.DayProduction;
-            ApplyProduction();
+            State.StatusMessage = "Tryk Rul (Space) for at slå terninger.";
+            NotifyChanged();
+        }
 
+        /// <summary>Applies morning production and opens the player day. Call after roll presentation.</summary>
+        public void ResolveDayProduction()
+        {
+            if (State.Phase != GamePhase.DayProduction)
+                return;
+
+            ApplyProduction();
             State.ShopDeals = Shop.GenerateDailyDeals(State);
             State.Phase = GamePhase.DayPlayerActions;
             State.StatusMessage = "Day: build, shop, or end turn.";
             OnAutosavePoint?.Invoke();
             NotifyChanged();
+        }
+
+        public bool TryBankTrade(ResourceType give, ResourceType receive, int receiveAmount = 1)
+        {
+            if (State.Phase != GamePhase.DayPlayerActions || State.Winner.HasValue)
+                return false;
+            if (!Trade.BankTradeCalculator.TryExecute(State, PlayerId.Human, give, receive, receiveAmount))
+                return false;
+            State.StatusMessage = "Trade completed.";
+            NotifyChanged();
+            return true;
         }
 
         private void ApplyProduction()

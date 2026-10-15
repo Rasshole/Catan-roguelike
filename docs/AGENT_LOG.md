@@ -229,3 +229,10 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **HUD:** `RunHudController` (uGUI) — left resource panel (`3 Korn`, swatches), VP/rolls/shop; bottom card hand row (roguelike frames via `CardVisualStyle`); action bar above hand. Pre-run flow stays IMGUI (`PlaceholderUI`).
 - **Prototype:** committed `Assets/_Project/Scenes/ColonistStylePrototype.unity` + menu **Catan Roguelike → Build Colonist Style Prototype Scene**.
 - **Tests:** `NumberTokenPipLayoutTests`, `HudResourceFormattingTests`, `CardVisualStyleTests`. Screenshot not captured in cloud VM (no Unity binary). No v0.1 tag.
+
+## 2026-10-15 (UTC) — Colonist-like interaction feel pass
+
+- **Morning roll:** `DayProduction` waits for Space / **Rul**; `GameplayFeelController` runs ~0.5s dice overlay, hex pulse (`ProductionHexResolver`), resource count tween (`SimpleTweens`).
+- **Placement:** day builds require HUD mode (not click-everywhere auto); Esc / RMB cancel; placement scale pop on new pieces (`BoardView`).
+- **HUD:** pinned **Afslut dag**; build buttons show costs + grey when unaffordable; side **Bytte** panel (`BankTradeCalculator` 4:1 / port rates).
+- **Tests:** `BankTradeCalculatorTests`, `BuildCostFormatterTests`, `GameControllerTestHelpers.ResolveMorningRollIfNeeded`. No v0.1 tag.

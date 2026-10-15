@@ -403,6 +403,8 @@ namespace CatanRoguelike.SimRunner
                         game.State.TodayDiceRolls = new List<int>(game.State.TomorrowDiceRolls);
                     if (!SimDriver.TryPlayUsefulNightCard(game))
                         game.SkipNightCard();
+                    if (game.State.Phase == GamePhase.DayProduction)
+                        game.ResolveDayProduction();
                     break;
 
                 case GamePhase.DayPlayerActions:

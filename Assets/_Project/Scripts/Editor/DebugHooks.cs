@@ -105,6 +105,8 @@ namespace CatanRoguelike.Editor
             EnsureTodayRolls(game);
             if (game.State.Phase == GamePhase.NightPlayCard)
                 game.SkipNightCard();
+                if (game.State.Phase == GamePhase.DayProduction)
+                    game.ResolveDayProduction();
         }
 
         [MenuItem(Menu + "Auto-Play One Day")]
@@ -279,6 +281,8 @@ namespace CatanRoguelike.Editor
             {
                 EnsureTodayRolls(game);
                 game.SkipNightCard();
+                if (game.State.Phase == GamePhase.DayProduction)
+                    game.ResolveDayProduction();
                 return;
             }
 

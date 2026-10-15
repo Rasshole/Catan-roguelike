@@ -8,7 +8,6 @@ using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Progression;
-using CatanRoguelike.Core.Resources;
 using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Core.UI;
@@ -20,8 +19,9 @@ using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 namespace CatanRoguelike.Game
 {
     /// <summary>Colonist.io-inspired uGUI HUD for in-run play (side resources, bottom card hand).</summary>
-    public sealed class RunHudController : MonoBehaviour
+    public sealed partial class RunHudController : MonoBehaviour
     {
+        public void BindFeel(GameplayFeelController feel) => _feel = feel;
         private GameController _controller;
         private MetaProgression _meta;
         private BoardInputController _boardInput;
@@ -108,7 +108,7 @@ namespace CatanRoguelike.Game
                 $"  {VictoryCalculator.GetBreakdown(state, PlayerId.Human).FormatLine()}\n" +
                 $"  {VictoryCalculator.GetBreakdown(state, PlayerId.Ai).FormatLine()}";
 
-            RefreshResources(state.PlayerInventory);
+            RefreshResourcesPartial(state.PlayerInventory);
             _aiText.text = FormatAiSummary(state);
 
             _rollsText.text = BuildRollsBlock(state);
@@ -116,6 +116,8 @@ namespace CatanRoguelike.Game
             RebuildShopList(state);
             RebuildHand(state);
             RebuildActionBar(state);
+            RefreshPinnedControls(state);
+            RefreshBuildButtons(state);
         }
 
         private void EnsureCanvasBuilt()
@@ -128,6 +130,7 @@ namespace CatanRoguelike.Game
             BuildSidePanel(_canvas.transform);
             BuildHandRow(_canvas.transform);
             BuildActionBar(_canvas.transform);
+            BuildPinnedControls(_canvas.transform);
         }
 
         private void BuildSidePanel(Transform root)
@@ -155,6 +158,7 @@ namespace CatanRoguelike.Game
 
             AddPanelLabel(panel, "Ressourcer", 17);
             BuildResourceRows(panel);
+            BuildTradePanel(panel);
 
             _aiText = AddPanelText(panel, 15, FontStyle.Normal);
             AddPanelLabel(panel, "Terninger", 17);
@@ -495,6 +499,9 @@ namespace CatanRoguelike.Game
             for (int i = _actionBar.childCount - 1; i >= 0; i--)
                 Destroy(_actionBar.GetChild(i).gameObject);
             _actionButtons.Clear();
+            _buildRoadButton = null;
+            _buildSettlementButton = null;
+            _buildCityButton = null;
 
             if (state.Winner.HasValue)
             {
@@ -540,19 +547,16 @@ namespace CatanRoguelike.Game
 
             if (state.Phase == GamePhase.DayPlayerActions)
             {
-                if (_boardInput != null)
-                {
-                    AddBuildModeButton("Auto", () => _boardInput.SetBuildModeAuto());
-                    AddBuildModeButton("By", () => _boardInput.SetBuildModeSettlement());
-                    AddBuildModeButton("Vej", () => _boardInput.SetBuildModeRoad());
-                    AddBuildModeButton("By expansion", () => _boardInput.SetBuildModeCity());
-                }
-
+                EnsureBuildButtons();
+                RefreshBuildButtons(state);
                 AddRobberButtons(state, steal: true);
 
-                var endDay = RunHudUiFactory.CreateButton(_actionBar, "Afslut dag", RunHudUiFactory.ButtonFill);
-                endDay.onClick.AddListener(() => _controller.EndPlayerDay());
-                _actionButtons.Add(endDay);
+                if (_boardInput != null && _boardInput.IsPlacementModeActive)
+                {
+                    var cancel = RunHudUiFactory.CreateButton(_actionBar, "Annuller (Esc)", RunHudUiFactory.ButtonSecondary);
+                    cancel.onClick.AddListener(() => _boardInput.CancelBuildMode());
+                    _actionButtons.Add(cancel);
+                }
             }
         }
 

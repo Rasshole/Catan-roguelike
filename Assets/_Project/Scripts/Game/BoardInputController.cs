@@ -21,13 +21,15 @@ namespace CatanRoguelike.Game
         private readonly List<GameObject> _highlights = new();
         private Vertex? _hoverVertex;
         private Edge? _hoverEdge;
-        private BuildMode _mode = BuildMode.Auto;
+        private BuildMode _mode = BuildMode.None;
+
+        public event System.Action PlacementCancelled;
 
         private static readonly Color ValidVertexColor = new(0.2f, 1f, 0.3f, 0.55f);
         private static readonly Color ValidEdgeColor = new(1f, 0.85f, 0.1f, 0.55f);
         private static readonly Color CityColor = new(1f, 0.5f, 0.9f, 0.6f);
 
-        private enum BuildMode { Auto, Settlement, Road, City }
+        private enum BuildMode { None, Auto, Settlement, Road, City }
 
         public void Initialize(GameController controller, BoardView view)
         {
@@ -45,16 +47,36 @@ namespace CatanRoguelike.Game
         {
             if (_controller == null || boardView == null) return;
             if (_controller.State.Winner.HasValue) return;
+
+            if (!_controller.State.IsSetupPhase
+                && _controller.State.Phase == GamePhase.DayPlayerActions
+                && (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1)))
+            {
+                if (_mode != BuildMode.None)
+                {
+                    _mode = BuildMode.None;
+                    ClearHighlights();
+                    PlacementCancelled?.Invoke();
+                }
+            }
+
             if (!IsPlayerBuildPhase()) return;
 
             UpdateHighlights();
             HandleClick();
         }
 
-        private bool IsPlayerBuildPhase() =>
-            _controller.State.RunSetupComplete
-            && (_controller.State.IsSetupPhase
-                || _controller.State.Phase == GamePhase.DayPlayerActions);
+        private bool IsPlayerBuildPhase()
+        {
+            if (!_controller.State.RunSetupComplete)
+                return false;
+            if (_controller.State.IsSetupPhase)
+                return true;
+            return _controller.State.Phase == GamePhase.DayPlayerActions && _mode != BuildMode.None;
+        }
+
+        private BuildMode ActiveMode =>
+            _controller.State.IsSetupPhase ? BuildMode.Auto : _mode;
 
         private void UpdateHighlights()
         {
@@ -68,7 +90,8 @@ namespace CatanRoguelike.Game
             float scale = boardView.HexScale;
             var player = PlayerId.Human;
 
-            if (_mode == BuildMode.City || (_mode == BuildMode.Auto && IsCityOnlyContext()))
+            var mode = ActiveMode;
+            if (mode == BuildMode.City || (mode == BuildMode.Auto && IsCityOnlyContext()))
             {
                 var cities = _controller.GetUpgradeableCities(player).ToList();
                 _hoverVertex = FindNearestVertex(hit.Value, cities, scale);
@@ -77,7 +100,7 @@ namespace CatanRoguelike.Game
                 return;
             }
 
-            if (_mode == BuildMode.Settlement || ShouldPickSettlement())
+            if (mode == BuildMode.Settlement || ShouldPickSettlement())
             {
                 var settlements = _controller.GetValidSettlements(player).ToList();
                 _hoverVertex = FindNearestVertex(hit.Value, settlements, scale);
@@ -85,7 +108,7 @@ namespace CatanRoguelike.Game
                     SpawnVertexMarker(_hoverVertex.Value, ValidVertexColor, scale, isCity: false);
             }
 
-            if (_mode == BuildMode.Road || ShouldPickRoad())
+            if (mode == BuildMode.Road || ShouldPickRoad())
             {
                 var roads = _controller.GetValidRoads(player).ToList();
                 _hoverEdge = FindNearestEdge(hit.Value, roads, scale);
@@ -93,7 +116,7 @@ namespace CatanRoguelike.Game
                     SpawnEdgeMarker(_hoverEdge.Value, ValidEdgeColor, scale);
             }
 
-            if (_mode == BuildMode.Auto && _controller.State.Phase == GamePhase.DayPlayerActions)
+            if (mode == BuildMode.Auto && _controller.State.Phase == GamePhase.DayPlayerActions)
             {
                 var settlements = _controller.GetValidSettlements(player).ToList();
                 var roads = _controller.GetValidRoads(player).ToList();
@@ -123,18 +146,20 @@ namespace CatanRoguelike.Game
 
         private bool ShouldPickSettlement()
         {
-            if (_mode == BuildMode.Road) return false;
+            var mode = ActiveMode;
+            if (mode == BuildMode.Road) return false;
             if (_controller.State.IsSetupPhase)
                 return IsSettlementSetupPhase();
-            return _mode == BuildMode.Settlement;
+            return mode == BuildMode.Settlement;
         }
 
         private bool ShouldPickRoad()
         {
-            if (_mode == BuildMode.Settlement) return false;
+            var mode = ActiveMode;
+            if (mode == BuildMode.Settlement) return false;
             if (_controller.State.IsSetupPhase)
                 return IsRoadSetupPhase();
-            return _mode == BuildMode.Road;
+            return mode == BuildMode.Road;
         }
 
         private bool IsSettlementSetupPhase()
@@ -158,7 +183,7 @@ namespace CatanRoguelike.Game
 
             if (_hoverVertex.HasValue)
             {
-                if (_mode == BuildMode.City)
+                if (ActiveMode == BuildMode.City)
                     _controller.UpgradeCity(_hoverVertex.Value, player);
                 else if (ShouldPickSettlement())
                     _controller.PlaceSettlement(_hoverVertex.Value, player);
@@ -273,5 +298,8 @@ namespace CatanRoguelike.Game
         public void SetBuildModeRoad() => _mode = BuildMode.Road;
         public void SetBuildModeCity() => _mode = BuildMode.City;
         public void SetBuildModeAuto() => _mode = BuildMode.Auto;
+        public void CancelBuildMode() => _mode = BuildMode.None;
+
+        public bool IsPlacementModeActive => _mode != BuildMode.None;
     }
 }

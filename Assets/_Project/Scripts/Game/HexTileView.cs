@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using CatanRoguelike.Core.Events;
 using CatanRoguelike.Core.Map;
@@ -208,6 +209,15 @@ namespace CatanRoguelike.Game
             _tokenLabel.alignment = TextAlignment.Center;
             _tokenLabel.fontSize = 48;
             _tokenLabel.characterSize = 0.5f;
+        }
+
+        public IEnumerator PulseProduction(float duration)
+        {
+            if (_renderer == null)
+                yield break;
+
+            var flash = Color.Lerp(_baseColor, Color.white, 0.45f);
+            yield return SimpleTweens.PulseRendererColor(_renderer, flash, duration);
         }
 
         public void SetRobberVisible(bool visible)
