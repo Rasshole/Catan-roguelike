@@ -22,6 +22,9 @@ namespace CatanRoguelike.Core.UI
             return $"{action} · {FormatShort(cost)}{suffix}";
         }
 
+        public static string FormatTooltip(ResourceBundle cost) =>
+            $"Koster: {FormatShort(cost)}";
+
         private static void AppendPart(StringBuilder sb, int amount, ResourceType type)
         {
             if (amount <= 0)

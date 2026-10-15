@@ -2,7 +2,6 @@ using System.Collections;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Map;
-using CatanRoguelike.Core.Trade;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Core.UI;
 using UnityEngine;
@@ -20,9 +19,6 @@ namespace CatanRoguelike.Game
         private Button _endTurnPinned;
         private Button _rollPinned;
         private Text _diceOverlay;
-        private Text _tradeInfo;
-        private ResourceType _tradeGive = ResourceType.Wood;
-        private ResourceType _tradeReceive = ResourceType.Brick;
         private bool _resourceAnimLock;
         private ResourceBundle _resourceAnimDisplay;
 
@@ -116,71 +112,6 @@ namespace CatanRoguelike.Game
                 FontStyle.Bold);
         }
 
-        private void BuildTradePanel(RectTransform sidePanel)
-        {
-            AddPanelLabel(sidePanel, "Bytte", 17);
-            _tradeInfo = AddPanelText(sidePanel, 14, FontStyle.Normal);
-
-            var row = new GameObject("TradeGiveRow");
-            row.transform.SetParent(sidePanel, false);
-            var rowLayout = row.AddComponent<HorizontalLayoutGroup>();
-            rowLayout.spacing = 4f;
-            RunHudUiFactory.AddLayoutElement(row, 32f);
-
-            foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
-            {
-                var captured = resource;
-                var btn = RunHudUiFactory.CreateButton(row.transform, ResourceDisplayNames.GetDanish(captured), RunHudUiFactory.ButtonSecondary);
-                btn.onClick.AddListener(() =>
-                {
-                    _tradeGive = captured;
-                    UpdateTradeInfo();
-                });
-            }
-
-            var row2 = new GameObject("TradeReceiveRow");
-            row2.transform.SetParent(sidePanel, false);
-            var row2Layout = row2.AddComponent<HorizontalLayoutGroup>();
-            row2Layout.spacing = 4f;
-            RunHudUiFactory.AddLayoutElement(row2, 32f);
-
-            foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
-            {
-                var captured = resource;
-                var btn = RunHudUiFactory.CreateButton(row2.transform, "→ " + ResourceDisplayNames.GetDanish(captured), RunHudUiFactory.ButtonSecondary);
-                btn.onClick.AddListener(() =>
-                {
-                    _tradeReceive = captured;
-                    UpdateTradeInfo();
-                });
-            }
-
-            var tradeBtn = RunHudUiFactory.CreateButton(sidePanel, "Byt 1 (bank/havn)", RunHudUiFactory.ButtonFill);
-            tradeBtn.onClick.AddListener(ExecuteTrade);
-            RunHudUiFactory.AddLayoutElement(tradeBtn.gameObject, 36f);
-            UpdateTradeInfo();
-        }
-
-        private void UpdateTradeInfo()
-        {
-            if (_tradeInfo == null || _controller == null)
-                return;
-
-            int rate = BankTradeCalculator.GetGiveRateForResource(_controller.State, PlayerId.Human, _tradeGive);
-            string rateLabel = rate == BankTradeCalculator.SpecificPortRate ? "2:1 havn"
-                : rate == BankTradeCalculator.GenericPortRate ? "3:1 havn" : "4:1 bank";
-            _tradeInfo.text =
-                $"Giv {_tradeGive} → modtag {_tradeReceive}\n{rateLabel} (betaler {rate} {ResourceDisplayNames.GetDanish(_tradeGive)})";
-        }
-
-        private void ExecuteTrade()
-        {
-            if (_controller == null)
-                return;
-            if (_controller.TryBankTrade(_tradeGive, _tradeReceive, 1))
-                UpdateTradeInfo();
-        }
-
         private void RefreshPinnedControls(GameState state)
         {
             if (_endTurnPinned != null)
@@ -197,20 +128,52 @@ namespace CatanRoguelike.Game
                 _rollPinned.interactable = showRoll && (_feel == null || !_feel.IsBlockingInput);
             }
 
-            UpdateTradeInfo();
+            RefreshTradePanel(state);
         }
+
+        private Text _buildRoadChip;
+        private Text _buildSettlementChip;
+        private Text _buildCityChip;
 
         private void EnsureBuildButtons()
         {
             if (_buildRoadButton != null)
                 return;
 
-            _buildRoadButton = RunHudUiFactory.CreateButton(_actionBar, "Vej", RunHudUiFactory.ButtonSecondary);
-            _buildSettlementButton = RunHudUiFactory.CreateButton(_actionBar, "By", RunHudUiFactory.ButtonSecondary);
-            _buildCityButton = RunHudUiFactory.CreateButton(_actionBar, "Byudvid", RunHudUiFactory.ButtonSecondary);
+            RunHudCostTooltip.EnsureShared(_canvas.transform);
+            _buildRoadButton = CreateBuildButton("Vej", out _buildRoadChip);
+            _buildSettlementButton = CreateBuildButton("By", out _buildSettlementChip);
+            _buildCityButton = CreateBuildButton("Byudvid", out _buildCityChip);
             _actionButtons.Add(_buildRoadButton);
             _actionButtons.Add(_buildSettlementButton);
             _actionButtons.Add(_buildCityButton);
+        }
+
+        private Button CreateBuildButton(string title, out Text chipText)
+        {
+            var button = RunHudUiFactory.CreateButton(_actionBar, title, RunHudUiFactory.ButtonSecondary);
+            button.gameObject.AddComponent<RunHudCostTooltip>();
+
+            var chipGo = new GameObject("Chip");
+            chipGo.transform.SetParent(button.transform, false);
+            var chipRect = chipGo.AddComponent<RectTransform>();
+            chipRect.anchorMin = new Vector2(1f, 1f);
+            chipRect.anchorMax = new Vector2(1f, 1f);
+            chipRect.pivot = new Vector2(1f, 1f);
+            chipRect.anchoredPosition = new Vector2(-4f, -4f);
+            chipRect.sizeDelta = new Vector2(26f, 20f);
+            var chipBg = chipGo.AddComponent<Image>();
+            chipBg.color = new Color(0.1f, 0.12f, 0.16f, 0.9f);
+            chipText = RunHudUiFactory.CreateText(
+                chipGo.transform,
+                "Count",
+                "0",
+                13,
+                TextAnchor.MiddleCenter,
+                RunHudUiFactory.TextPrimary,
+                FontStyle.Bold);
+            chipText.raycastTarget = false;
+            return button;
         }
 
         private void RefreshBuildButtons(GameState state)
@@ -225,34 +188,61 @@ namespace CatanRoguelike.Game
             ResourceBundle settlementCost = BalanceConfig.GetSettlementCost(board, PlayerId.Human);
             ResourceBundle cityCost = BalanceConfig.GetCityCost(board, PlayerId.Human);
 
+            bool roadOk = inv.CanAfford(roadCost) && BuildingPieceLimits.CanPlaceRoad(board, PlayerId.Human);
+            bool settlementOk = inv.CanAfford(settlementCost)
+                && BuildingPieceLimits.CanPlaceSettlement(board, PlayerId.Human);
+            bool cityOk = inv.CanAfford(cityCost) && BuildingPieceLimits.CanPlaceCity(board, PlayerId.Human);
+
+            if (_buildRoadChip != null)
+                _buildRoadChip.text = BuildingPieceLimits.GetRoadsRemaining(board, PlayerId.Human).ToString();
+            if (_buildSettlementChip != null)
+                _buildSettlementChip.text = BuildingPieceLimits.GetSettlementsRemaining(board, PlayerId.Human).ToString();
+            if (_buildCityChip != null)
+                _buildCityChip.text = BuildingPieceLimits.GetCitiesRemaining(board, PlayerId.Human).ToString();
+
             ConfigureBuildButton(
                 _buildRoadButton,
-                BuildCostFormatter.FormatButtonLabel("Vej", roadCost, inv.CanAfford(roadCost)),
-                inv.CanAfford(roadCost),
+                BuildCostFormatter.FormatButtonLabel("Vej", roadCost, roadOk),
+                BuildCostFormatter.FormatTooltip(roadCost),
+                roadOk,
                 () => _boardInput.SetBuildModeRoad());
 
             ConfigureBuildButton(
                 _buildSettlementButton,
-                BuildCostFormatter.FormatButtonLabel("By", settlementCost, inv.CanAfford(settlementCost)),
-                inv.CanAfford(settlementCost),
+                BuildCostFormatter.FormatButtonLabel("By", settlementCost, settlementOk),
+                BuildCostFormatter.FormatTooltip(settlementCost),
+                settlementOk,
                 () => _boardInput.SetBuildModeSettlement());
 
             ConfigureBuildButton(
                 _buildCityButton,
-                BuildCostFormatter.FormatButtonLabel("Byudvid", cityCost, inv.CanAfford(cityCost)),
-                inv.CanAfford(cityCost),
+                BuildCostFormatter.FormatButtonLabel("Byudvid", cityCost, cityOk),
+                BuildCostFormatter.FormatTooltip(cityCost),
+                cityOk,
                 () => _boardInput.SetBuildModeCity());
         }
 
-        private static void ConfigureBuildButton(Button button, string label, bool canAfford, UnityEngine.Events.UnityAction onClick)
+        private static void ConfigureBuildButton(
+            Button button,
+            string label,
+            string tooltip,
+            bool interactable,
+            UnityEngine.Events.UnityAction onClick)
         {
             if (button == null)
                 return;
 
-            var text = button.GetComponentInChildren<Text>();
-            if (text != null)
-                text.text = label;
-            button.interactable = canAfford;
+            foreach (var text in button.GetComponentsInChildren<Text>())
+            {
+                if (text.gameObject.name == "Label")
+                    text.text = label;
+            }
+
+            var tip = button.GetComponent<RunHudCostTooltip>();
+            if (tip != null)
+                tip.SetTooltip(tooltip);
+
+            button.interactable = interactable;
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(onClick);
         }

@@ -24,14 +24,34 @@ namespace CatanRoguelike.Game
         private bool _sequenceRunning;
         private bool _rollQueued;
         private bool _aiPacingRunning;
+        private const float ResourceFlySeconds = 0.42f;
 
         public bool IsBlockingInput => _sequenceRunning || _aiPacingRunning;
 
         public void Initialize(GameController controller, BoardView boardView, RunHudController hud)
         {
+            if (_controller != null)
+                _controller.HumanBuildCostPaid -= HandleHumanBuildCostPaid;
+
             _controller = controller;
             _boardView = boardView;
             _hud = hud;
+
+            if (_controller != null)
+                _controller.HumanBuildCostPaid += HandleHumanBuildCostPaid;
+        }
+
+        private void OnDestroy()
+        {
+            if (_controller != null)
+                _controller.HumanBuildCostPaid -= HandleHumanBuildCostPaid;
+        }
+
+        private void HandleHumanBuildCostPaid(ResourceBundle paid)
+        {
+            if (_hud == null || paid.Total <= 0)
+                return;
+            StartCoroutine(_hud.PlaySpendToBankFlies(paid, ResourceFlySeconds));
         }
 
         private void Update()
@@ -87,7 +107,17 @@ namespace CatanRoguelike.Game
             _controller.ResolveDayProduction();
 
             if (!isSeven && _hud != null)
+            {
+                var gained = SubtractBundles(_controller.State.PlayerInventory, before);
+                var flySources = ProductionFlySources.MapGainedResourcesToHexes(
+                    _controller.State,
+                    PlayerId.Human,
+                    rolls,
+                    gained);
+                if (flySources.Count > 0)
+                    yield return _hud.PlayProductionFlies(_boardView, flySources, ResourceFlySeconds);
                 yield return _hud.AnimateResourceCounts(before, _controller.State.PlayerInventory, ResourceTickSeconds);
+            }
 
             if (_boardView != null)
                 _boardView.SetHexDimAll(false);
@@ -146,6 +176,17 @@ namespace CatanRoguelike.Game
             yield return new WaitForSeconds(0.12f);
             _hud.SetDiceOverlay(string.Empty);
             _hud.SetRollPromptActive(false);
+        }
+
+        private static ResourceBundle SubtractBundles(ResourceBundle after, ResourceBundle before)
+        {
+            var result = ResourceBundle.Zero;
+            result.Wood = Mathf.Max(0, after.Wood - before.Wood);
+            result.Brick = Mathf.Max(0, after.Brick - before.Brick);
+            result.Wheat = Mathf.Max(0, after.Wheat - before.Wheat);
+            result.Sheep = Mathf.Max(0, after.Sheep - before.Sheep);
+            result.Stone = Mathf.Max(0, after.Stone - before.Stone);
+            return result;
         }
     }
 }

@@ -255,6 +255,26 @@ namespace CatanRoguelike.Game
                 view.SetDimmed(dimmed);
         }
 
+        public bool TryGetHexWorldCenter(HexCoord coord, out Vector3 worldCenter)
+        {
+            if (_tiles.TryGetValue(coord, out var view))
+            {
+                worldCenter = view.transform.position + Vector3.up * (tileHeight * 0.5f);
+                return true;
+            }
+
+            var (x, z) = HexMath.ToWorldPosition(coord, hexScale);
+            var local = new Vector3(x, tileHeight, z);
+            if (boardRoot != null)
+            {
+                worldCenter = boardRoot.TransformPoint(local);
+                return true;
+            }
+
+            worldCenter = transform.TransformPoint(local);
+            return true;
+        }
+
         private void RefreshBuildings(GameState state)
         {
             if (buildingsRoot == null)

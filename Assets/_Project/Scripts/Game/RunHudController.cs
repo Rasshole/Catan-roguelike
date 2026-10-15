@@ -119,6 +119,8 @@ namespace CatanRoguelike.Game
             RefreshPinnedControls(state);
             RefreshBuildButtons(state);
             RefreshColonistChrome(state);
+            RefreshToastWidget(state);
+            RefreshIncomingTradePanel(state);
         }
 
         private void EnsureCanvasBuilt()
@@ -133,6 +135,10 @@ namespace CatanRoguelike.Game
             BuildActionBar(_canvas.transform);
             BuildPinnedControls(_canvas.transform);
             BuildColonistChrome(_canvas.transform);
+            BuildToastWidget(_canvas.transform);
+            BuildIncomingTradePanel(_canvas.transform);
+            EnsureFlyLayer();
+            RunHudCostTooltip.EnsureShared(_canvas.transform);
         }
 
         private void BuildSidePanel(Transform root)

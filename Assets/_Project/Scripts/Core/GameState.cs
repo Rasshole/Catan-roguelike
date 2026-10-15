@@ -96,6 +96,7 @@ namespace CatanRoguelike.Core
         public PlayerTradeOffer? PendingPlayerTrade { get; set; }
         public IReadOnlyList<AiTradeResponse> PendingAiTradeResponses { get; set; } = Array.Empty<AiTradeResponse>();
         public AiIncomingTradeOffer? IncomingAiTrade { get; set; }
+        public string ToastMessage { get; set; }
 
         public bool IsSetupPhase => Phase <= GamePhase.SetupPlayerRoad2;
 
@@ -178,6 +179,7 @@ namespace CatanRoguelike.Core
             PendingPlayerTrade = null;
             PendingAiTradeResponses = Array.Empty<AiTradeResponse>();
             IncomingAiTrade = null;
+            ToastMessage = null;
         }
 
         public ResourceBundle GetInventory(PlayerId player) =>

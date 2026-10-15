@@ -12,7 +12,6 @@ using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Trade;
 using CatanRoguelike.Core.UI;
-using CatanRoguelike.Core.Yield;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Core.Save;
 using CatanRoguelike.Core.Victory;
@@ -40,6 +39,7 @@ namespace CatanRoguelike.Core
         /// (production applied, shop generated; not mid-card picker).
         /// </summary>
         public event Action OnAutosavePoint;
+        public event Action<ResourceBundle> HumanBuildCostPaid;
 
         public int RunSeed { get; }
         public MetaProgression Meta { get; private set; }
@@ -139,6 +139,7 @@ namespace CatanRoguelike.Core
             if (!Placement.CanPlaceSettlement(State.Board, vertex, player, setup))
                 return false;
 
+            ResourceBundle paidCost = ResourceBundle.Zero;
             if (!setup)
             {
                 var baseCost = BalanceConfig.GetSettlementCost(State.Board, player,
@@ -147,6 +148,7 @@ namespace CatanRoguelike.Core
                     isSettlement: true, isCity: false, isRoad: false);
                 var cost = GetEffectiveCost(player, baseCost);
                 if (!TryPay(player, cost)) return false;
+                paidCost = cost;
             }
 
             bool grantSetupBonus = setup && (
@@ -168,6 +170,8 @@ namespace CatanRoguelike.Core
 
             AdvanceSetupAfterSettlement(player);
             VictoryCalculator.RefreshVictoryPoints(State);
+            if (!setup && player == PlayerId.Human && paidCost.Total > 0)
+                HumanBuildCostPaid?.Invoke(paidCost);
             NotifyChanged();
             return true;
         }
@@ -184,12 +188,14 @@ namespace CatanRoguelike.Core
                 State.PendingCard == CardId.RoadBuilder && State.FreeRoadCharges > 0
                 || State.Leader == LeaderId.Pioneer && State.PioneerFreeRoadAvailable);
 
+            ResourceBundle paidCost = ResourceBundle.Zero;
             if (!setup && !freeRoad)
             {
                 var baseCost = ModifierService.ApplyLeaderCostModifiers(State, player,
                     BalanceConfig.GetRoadCost(State.Board, player), false, false, true);
                 var cost = GetEffectiveCost(player, baseCost);
                 if (!TryPay(player, cost)) return false;
+                paidCost = cost;
             }
 
             State.Board.Roads[edge] = player;
@@ -207,6 +213,8 @@ namespace CatanRoguelike.Core
 
             AdvanceSetupAfterRoad(player);
             VictoryCalculator.RefreshVictoryPoints(State);
+            if (!setup && player == PlayerId.Human && paidCost.Total > 0)
+                HumanBuildCostPaid?.Invoke(paidCost);
             NotifyChanged();
             return true;
         }
@@ -222,6 +230,8 @@ namespace CatanRoguelike.Core
             if (!TryPay(player, cost)) return false;
 
             State.Board.VertexBuildings[vertex] = (BuildingType.City, player);
+            if (player == PlayerId.Human && cost.Total > 0)
+                HumanBuildCostPaid?.Invoke(cost);
 
             if (player == PlayerId.Human && !State.FirstCityBuiltThisRun)
             {
@@ -601,14 +611,14 @@ namespace CatanRoguelike.Core
                 return false;
             if (!BankTradeCalculator.CanTrade(State, PlayerId.Human, give, receive, receiveAmount))
             {
-                State.StatusMessage = "Invalid bank/port trade ratio or insufficient resources.";
+                HudToastBuffer.Push(State, "Ugyldigt bytte — tjek havn/bank-forhold.");
                 NotifyChanged();
                 return false;
             }
 
             if (!State.Bank.TryWithdraw(receive, receiveAmount))
             {
-                State.StatusMessage = "Bank is out of that resource.";
+                HudToastBuffer.Push(State, "Banken har ikke nok af den ressource.");
                 NotifyChanged();
                 return false;
             }
@@ -626,7 +636,7 @@ namespace CatanRoguelike.Core
             State.Bank.Deposit(give, pay);
 
             GameLog.Append(State, $"Bank trade: {pay} {give} → {receiveAmount} {receive}.");
-            State.StatusMessage = "Trade completed.";
+            HudToastBuffer.Push(State, "Bankbytte gennemført.");
             NotifyChanged();
             return true;
         }
@@ -665,9 +675,9 @@ namespace CatanRoguelike.Core
             if (!State.IncomingAiTrade.HasValue)
                 return false;
             var offer = State.IncomingAiTrade.Value;
-            State.IncomingAiTrade = null;
             if (!accept)
             {
+                State.IncomingAiTrade = null;
                 GameLog.Append(State, "Declined AI trade.");
                 NotifyChanged();
                 return true;
@@ -675,11 +685,12 @@ namespace CatanRoguelike.Core
 
             if (!State.PlayerInventory.CanAfford(offer.Receive))
             {
-                State.StatusMessage = "Cannot afford AI trade.";
+                HudToastBuffer.Push(State, "Du har ikke råd til AI-buddet.");
                 NotifyChanged();
                 return false;
             }
 
+            State.IncomingAiTrade = null;
             var human = State.PlayerInventory;
             human.Pay(offer.Receive);
             human.Add(offer.Give);

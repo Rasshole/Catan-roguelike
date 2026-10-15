@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace CatanRoguelike.Game
 {
@@ -75,6 +76,65 @@ namespace CatanRoguelike.Game
             }
 
             onStep?.Invoke(to);
+        }
+
+        public static IEnumerator FlyAnchoredPosition(
+            RectTransform target,
+            Vector2 from,
+            Vector2 to,
+            float duration,
+            float arcHeight = 48f)
+        {
+            if (target == null)
+                yield break;
+
+            if (duration <= 0f)
+            {
+                target.anchoredPosition = to;
+                yield break;
+            }
+
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = EaseOutQuad(Mathf.Clamp01(elapsed / duration));
+                Vector2 pos = Vector2.Lerp(from, to, t);
+                pos.y += Mathf.Sin(t * Mathf.PI) * arcHeight;
+                target.anchoredPosition = pos;
+                yield return null;
+            }
+
+            target.anchoredPosition = to;
+        }
+
+        public static IEnumerator FadeGraphic(Graphic graphic, float fromAlpha, float toAlpha, float duration)
+        {
+            if (graphic == null)
+                yield break;
+
+            if (duration <= 0f)
+            {
+                var c = graphic.color;
+                c.a = toAlpha;
+                graphic.color = c;
+                yield break;
+            }
+
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = EaseOutQuad(Mathf.Clamp01(elapsed / duration));
+                var c = graphic.color;
+                c.a = Mathf.Lerp(fromAlpha, toAlpha, t);
+                graphic.color = c;
+                yield return null;
+            }
+
+            var end = graphic.color;
+            end.a = toAlpha;
+            graphic.color = end;
         }
     }
 }

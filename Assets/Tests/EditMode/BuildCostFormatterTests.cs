@@ -22,5 +22,13 @@ namespace CatanRoguelike.Tests
             string label = BuildCostFormatter.FormatButtonLabel("Byudvid", cost, canAfford: false);
             Assert.That(label, Does.Contain("mangler"));
         }
+
+        [Test]
+        public void FormatTooltip_PrefixesCost()
+        {
+            var cost = new ResourceBundle { Wheat = 2 };
+            Assert.That(BuildCostFormatter.FormatTooltip(cost), Does.Contain("Koster:"));
+            Assert.That(BuildCostFormatter.FormatTooltip(cost), Does.Contain("Korn"));
+        }
     }
 }

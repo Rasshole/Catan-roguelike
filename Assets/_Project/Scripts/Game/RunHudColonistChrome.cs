@@ -11,6 +11,7 @@ namespace CatanRoguelike.Game
     public sealed partial class RunHudController
     {
         private Text _gameLogText;
+        private RectTransform _bankStripPanel;
         private Text _bankStripText;
         private Text _opponentPanelText;
         private Text _rollPromptText;
@@ -33,15 +34,16 @@ namespace CatanRoguelike.Game
                 TextAnchor.UpperLeft,
                 RunHudUiFactory.TextMuted);
 
-            var bankPanel = RunHudUiFactory.CreatePanel(
+            _bankStripPanel = RunHudUiFactory.CreatePanel(
                 canvasRoot,
                 "BankStrip",
                 new Vector2(1f, 1f),
                 new Vector2(1f, 1f),
                 new Vector2(-320f, -250f),
                 new Vector2(-12f, -222f));
+            SetBankFlyTarget(_bankStripPanel);
             _bankStripText = RunHudUiFactory.CreateText(
-                bankPanel,
+                _bankStripPanel,
                 "Bank",
                 string.Empty,
                 12,
