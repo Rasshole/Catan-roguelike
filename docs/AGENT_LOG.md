@@ -236,3 +236,11 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 - **Placement:** day builds require HUD mode (not click-everywhere auto); Esc / RMB cancel; placement scale pop on new pieces (`BoardView`).
 - **HUD:** pinned **Afslut dag**; build buttons show costs + grey when unaffordable; side **Bytte** panel (`BankTradeCalculator` 4:1 / port rates).
 - **Tests:** `BankTradeCalculatorTests`, `BuildCostFormatterTests`, `GameControllerTestHelpers.ResolveMorningRollIfNeeded`. No v0.1 tag.
+
+## 2026-10-15 (UTC) — PR #109 review: compile + colonist mechanics scaffold
+
+- Fixed `BankTradeCalculator` / Core usings (`PlayerId` in `Core.Map`).
+- `CaptureColonistAndQuit` + HUD Screen Space Camera capture (`GAME_VIEW_SHOT`).
+- Seven flow (`DayDiscardForSeven`, `DayPlaceRobberSeven`), player/AI trade offers, bank stock, game log, AI paced turn (`CompleteAiDayTurn`).
+- HUD chrome: log top-right, bank strip, opponent row, roll prompt glow.
+- EditMode: `SevenRollRulesTests`, `PlayerTradeResolverTests`, `AiPacingPlannerTests`.
