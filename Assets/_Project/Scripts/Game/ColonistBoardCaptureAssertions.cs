@@ -622,7 +622,7 @@ namespace CatanRoguelike.Game
                 $"faceWorld={faceWorld} rimWorld={rimWorld} faceTex=({facePxX},{facePxY}) rimTex=({rimPxX},{rimPxY}) " +
                 $"pixelSep={pixelSeparation:F1} rimRadiusPx~{rimRadiusPixels:F1})).");
             float expectedProbeRatio = rimProbeRadiusPixels / Mathf.Max(0.01f, faceRadiusPixels);
-            float expectedBandRatio = 1f + TokenRimBandWidthFractionOfFaceRadius * 0.5f;
+            float expectedBandRatio = 1f + HexTileView.TokenRimBandWidthFractionOfFaceRadius * 0.5f;
             float rimSampleToFaceRatio = centerToRimSamplePx / Mathf.Max(0.01f, faceRadiusPixels);
             Assert.IsTrue(
                 Mathf.Abs(rimSampleToFaceRatio - expectedBandRatio) < 0.08f,
