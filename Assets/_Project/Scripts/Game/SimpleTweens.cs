@@ -25,6 +25,9 @@ namespace CatanRoguelike.Game
             float elapsed = 0f;
             while (elapsed < duration)
             {
+                if (target == null)
+                    yield break;
+
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / duration);
                 float eased = EaseOutBack(t);
@@ -35,7 +38,8 @@ namespace CatanRoguelike.Game
                 yield return null;
             }
 
-            target.localScale = baseScale;
+            if (target != null)
+                target.localScale = baseScale;
         }
 
         public static IEnumerator PulseRendererColor(Renderer renderer, Color flash, float duration)
@@ -47,6 +51,9 @@ namespace CatanRoguelike.Game
             float elapsed = 0f;
             while (elapsed < duration)
             {
+                if (renderer == null)
+                    yield break;
+
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / duration);
                 float wave = Mathf.Sin(t * Mathf.PI);
@@ -54,7 +61,8 @@ namespace CatanRoguelike.Game
                 yield return null;
             }
 
-            renderer.sharedMaterial.color = start;
+            if (renderer != null)
+                renderer.sharedMaterial.color = start;
         }
 
         public static IEnumerator AnimateInt(int from, int to, float duration, System.Action<int> onStep)
@@ -97,6 +105,9 @@ namespace CatanRoguelike.Game
             float elapsed = 0f;
             while (elapsed < duration)
             {
+                if (target == null)
+                    yield break;
+
                 elapsed += Time.deltaTime;
                 float t = EaseOutQuad(Mathf.Clamp01(elapsed / duration));
                 Vector2 pos = Vector2.Lerp(from, to, t);
@@ -105,7 +116,8 @@ namespace CatanRoguelike.Game
                 yield return null;
             }
 
-            target.anchoredPosition = to;
+            if (target != null)
+                target.anchoredPosition = to;
         }
 
         public static IEnumerator FadeGraphic(Graphic graphic, float fromAlpha, float toAlpha, float duration)
@@ -124,6 +136,9 @@ namespace CatanRoguelike.Game
             float elapsed = 0f;
             while (elapsed < duration)
             {
+                if (graphic == null)
+                    yield break;
+
                 elapsed += Time.deltaTime;
                 float t = EaseOutQuad(Mathf.Clamp01(elapsed / duration));
                 var c = graphic.color;
@@ -131,6 +146,9 @@ namespace CatanRoguelike.Game
                 graphic.color = c;
                 yield return null;
             }
+
+            if (graphic == null)
+                yield break;
 
             var end = graphic.color;
             end.a = toAlpha;

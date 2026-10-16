@@ -24,18 +24,28 @@ namespace CatanRoguelike.Core.Yield
                 if (result.ContainsKey(pair.type))
                     continue;
 
+                HexCoord? best = null;
                 foreach (var hex in producing)
                 {
                     if (!state.Board.TryGetTile(hex, out var tile))
                         continue;
                     if (tile.Resource != pair.type)
                         continue;
-                    result[pair.type] = hex;
-                    break;
+                    if (!best.HasValue || CompareHexCoords(hex, best.Value) < 0)
+                        best = hex;
                 }
+
+                if (best.HasValue)
+                    result[pair.type] = best.Value;
             }
 
             return result;
+        }
+
+        private static int CompareHexCoords(HexCoord a, HexCoord b)
+        {
+            int cmp = a.Q.CompareTo(b.Q);
+            return cmp != 0 ? cmp : a.R.CompareTo(b.R);
         }
     }
 }

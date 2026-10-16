@@ -1,10 +1,16 @@
 using System;
 using System.Reflection;
 using CatanRoguelike.Core;
+using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Leaders;
+using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Progression;
+using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Game;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace CatanRoguelike.Tests
 {
@@ -38,6 +44,43 @@ namespace CatanRoguelike.Tests
         {
             Assert.AreEqual(1920, GameSceneCapture.CaptureWidth);
             Assert.AreEqual(1080, GameSceneCapture.CaptureHeight);
+        }
+
+        [Test]
+        public void PrepareCanvasForCameraCapture_AssignsWorldCamera()
+        {
+            var root = new GameObject("ColonistCaptureHudTests_Root");
+            try
+            {
+                var camGo = new GameObject("Camera");
+                camGo.transform.SetParent(root.transform);
+                var camera = camGo.AddComponent<Camera>();
+
+                var hudGo = new GameObject("RunHud");
+                hudGo.transform.SetParent(root.transform);
+                var hud = hudGo.AddComponent<RunHudController>();
+
+                var game = new GameController(11, MapSize.Small);
+                game.SelectMap(MapSize.Small);
+                game.SelectLeader(LeaderId.Merchant);
+                game.ToggleDraftUnique(UniqueBuildingId.Sawmill);
+                game.ToggleDraftUnique(UniqueBuildingId.GuildHall);
+                game.ConfirmRunSetup();
+                game.State.Phase = GamePhase.DayPlayerActions;
+
+                hud.Initialize(game, new MetaProgression(), null);
+                hud.PrepareCanvasForCameraCapture(camera);
+
+                var canvas = hudGo.GetComponentInChildren<Canvas>();
+                Assert.IsNotNull(canvas, "RunHud should build a canvas during Initialize.");
+                Assert.AreEqual(RenderMode.ScreenSpaceCamera, canvas.renderMode);
+                Assert.AreEqual(camera, canvas.worldCamera);
+                Assert.AreEqual(1.2f, canvas.planeDistance, 0.001f);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+            }
         }
 
         [Test]

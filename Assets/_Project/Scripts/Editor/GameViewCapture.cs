@@ -155,11 +155,23 @@ namespace CatanRoguelike.Editor
             if (controller.State.Phase == GamePhase.RunSelectMap)
                 GameScenePlayHarness.CompleteRunSelectAndSetup(controller, meta);
 
-            var hud = UnityEngine.Object.FindFirstObjectByType<RunHudController>();
+            gameManager.EditorRefreshRunHud();
+            var hud = gameManager.EditorRunHud
+                ?? UnityEngine.Object.FindFirstObjectByType<RunHudController>();
+            if (hud == null)
+                throw new InvalidOperationException("RunHudController required for colonist capture.");
+
             var tableCamera = UnityEngine.Object.FindFirstObjectByType<TableCamera>();
             if (tableCamera == null)
                 throw new InvalidOperationException("TableCamera required.");
-            tableCamera.ApplyPoseForCapture(GameSceneCapture.CaptureWidth, GameSceneCapture.CaptureHeight);
+
+            var camera = Camera.main;
+            if (camera == null)
+                throw new InvalidOperationException("Camera.main required for colonist capture.");
+
+            tableCamera.ApplyColonistCapturePose(GameSceneCapture.CaptureWidth, GameSceneCapture.CaptureHeight);
+            hud.PrepareCanvasForCameraCapture(camera);
+            Canvas.ForceUpdateCanvases();
             GameSceneCapture.CaptureMainCameraToPng(outputPath, hud);
             Debug.Log($"GameViewCapture: colonist HUD capture → {outputPath}");
         }

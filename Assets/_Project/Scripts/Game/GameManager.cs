@@ -177,6 +177,15 @@ namespace CatanRoguelike.Game
             if (boardInput != null)
                 boardInput.Initialize(Controller, boardView);
         }
+
+        public RunHudController EditorRunHud => _runHud;
+
+        public void EditorRefreshRunHud()
+        {
+            EnsureRunHud();
+            if (_runHud != null && Controller != null)
+                _runHud.Refresh(Controller.State);
+        }
 #endif
     }
 }

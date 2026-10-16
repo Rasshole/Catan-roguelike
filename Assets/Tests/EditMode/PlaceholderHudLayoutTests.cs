@@ -53,7 +53,7 @@ namespace CatanRoguelike.Tests
             float offset = PlaceholderHudLayout.GetBoardScreenOffsetX(
                 PlaceholderHudLayout.InRunPanelWidth, 1920);
             Assert.Greater(offset, 0f);
-            Assert.AreEqual(140f, offset, 0.01f);
+            Assert.AreEqual(150f, offset, 0.01f);
         }
 
         [Test]

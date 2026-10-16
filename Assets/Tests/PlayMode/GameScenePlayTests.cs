@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Turn;
+using CatanRoguelike.Tests;
 using CatanRoguelike.Game;
 using NUnit.Framework;
 using UnityEngine;
@@ -162,12 +163,8 @@ namespace CatanRoguelike.Tests.PlayMode
                 $"expected a day/night phase after one cycle, got {game.State.Phase}");
         }
 
-        private static void SkipNightAndResolveMorning(GameController game)
-        {
-            game.SkipNightCard();
-            if (game.State.Phase == GamePhase.DayProduction)
-                game.ResolveDayProduction();
-        }
+        private static void SkipNightAndResolveMorning(GameController game) =>
+            GameControllerTestHelpers.SkipNightAndResolveMorning(game);
 
         private static void PrepareNightAdvance(GameController game)
         {

@@ -34,7 +34,7 @@ namespace CatanRoguelike.Game
 
             var renderer = cap.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = BuiltInMaterials.Create(BoardResourceColors.GetTileTopBevel(data));
-            UnityEngine.Object.Destroy(cap.GetComponent<Collider>());
+            DestroyCollider(cap);
         }
 
         private static void CreateEdgeOutlines(Transform parent, HexCoord hex, float hexScale, Vector3 hexLossyScale)
@@ -72,8 +72,22 @@ namespace CatanRoguelike.Game
                     OutlineThickness / hexLossyScale.y,
                     OutlineThickness / hexLossyScale.z);
                 strip.GetComponent<Renderer>().sharedMaterial = BuiltInMaterials.Create(outlineColor);
-                UnityEngine.Object.Destroy(strip.GetComponent<Collider>());
+                DestroyCollider(strip);
             }
+        }
+
+        private static void DestroyCollider(GameObject target)
+        {
+            var collider = target.GetComponent<Collider>();
+            if (collider == null)
+                return;
+
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+                UnityEngine.Object.DestroyImmediate(collider);
+            else
+#endif
+                UnityEngine.Object.Destroy(collider);
         }
     }
 }
