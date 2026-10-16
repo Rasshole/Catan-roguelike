@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Text;
 using CatanRoguelike.Core.UI;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -9,40 +11,57 @@ namespace CatanRoguelike.Game
     {
         public static readonly Color OceanReference = new(0.05f, 0.28f, 0.48f, 1f);
         public static readonly Color SandReference = new(0.82f, 0.74f, 0.52f, 1f);
+        public static readonly Color CameraSkyReference = new(0.08f, 0.22f, 0.38f, 1f);
+
+        public static void AssertCenterRegionShowsHexTiles(Texture2D boardCapture) =>
+            AssertCenterRegionShowsHexTiles(
+                boardCapture,
+                boardCapture.width / 2,
+                boardCapture.height / 2);
 
         public static void AssertCenterRegionShowsHexTiles(
             Texture2D boardCapture,
+            int sampleCenterX,
+            int sampleCenterY,
             float minHexFraction = 0.35f,
             float maxOceanFraction = 0.20f,
             float maxSandFraction = 0.25f)
         {
             int w = boardCapture.width;
             int h = boardCapture.height;
-            int cx = w / 2;
-            int cy = h / 2;
             int rx = Mathf.Max(8, (int)(w * 0.18f));
             int ry = Mathf.Max(8, (int)(h * 0.18f));
 
             int hexLike = 0;
             int oceanLike = 0;
             int sandLike = 0;
+            int skyLike = 0;
+            int other = 0;
             int samples = 0;
+            var sampleColors = new List<Color>(32);
 
-            for (int x = cx - rx; x <= cx + rx; x += 10)
+            for (int x = sampleCenterX - rx; x <= sampleCenterX + rx; x += 10)
             {
-                for (int y = cy - ry; y <= cy + ry; y += 10)
+                for (int y = sampleCenterY - ry; y <= sampleCenterY + ry; y += 10)
                 {
                     if (x < 0 || x >= w || y < 0 || y >= h)
                         continue;
 
                     var pixel = boardCapture.GetPixel(x, y);
                     samples++;
+                    if (sampleColors.Count < 12)
+                        sampleColors.Add(pixel);
+
                     if (IsOceanLike(pixel))
                         oceanLike++;
+                    else if (IsSkyLike(pixel))
+                        skyLike++;
                     else if (IsSandCoastLike(pixel))
                         sandLike++;
                     else if (IsHexTileLike(pixel))
                         hexLike++;
+                    else
+                        other++;
                 }
             }
 
@@ -50,6 +69,18 @@ namespace CatanRoguelike.Game
             float hexFrac = hexLike / (float)samples;
             float oceanFrac = oceanLike / (float)samples;
             float sandFrac = sandLike / (float)samples;
+
+            if (hexFrac < minHexFraction || oceanFrac > maxOceanFraction || sandFrac > maxSandFraction)
+                LogSampleFailure(
+                    sampleCenterX,
+                    sampleCenterY,
+                    samples,
+                    hexLike,
+                    oceanLike,
+                    sandLike,
+                    skyLike,
+                    other,
+                    sampleColors);
 
             Assert.IsTrue(
                 hexFrac >= minHexFraction,
@@ -81,14 +112,41 @@ namespace CatanRoguelike.Game
                 $"Expected most token labels upright vs camera.up (upright={upright}/{facings.Length}).");
         }
 
+        private static void LogSampleFailure(
+            int centerX,
+            int centerY,
+            int samples,
+            int hexLike,
+            int oceanLike,
+            int sandLike,
+            int skyLike,
+            int other,
+            List<Color> sampleColors)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine(
+                $"ColonistBoardCaptureAssertions sample @ ({centerX},{centerY}): " +
+                $"hex={hexLike} ocean={oceanLike} sand={sandLike} sky={skyLike} other={other} / {samples}");
+            for (int i = 0; i < sampleColors.Count; i++)
+            {
+                var c = sampleColors[i];
+                sb.AppendLine(
+                    $"  sample[{i}] rgb=({c.r:F3},{c.g:F3},{c.b:F3})");
+            }
+
+            Debug.LogError(sb.ToString());
+        }
+
         private static bool IsOceanLike(Color c) => ColorDistance(c, OceanReference) < 0.12f;
+
+        private static bool IsSkyLike(Color c) => ColorDistance(c, CameraSkyReference) < 0.10f;
 
         private static bool IsSandCoastLike(Color c) =>
             ColorDistance(c, SandReference) < 0.10f && !MatchesPalette(c, BoardResourcePalette.Desert, 0.08f);
 
         private static bool IsHexTileLike(Color c)
         {
-            if (IsOceanLike(c))
+            if (IsOceanLike(c) || IsSkyLike(c))
                 return false;
 
             return MatchesPalette(c, BoardResourcePalette.Desert, 0.14f)

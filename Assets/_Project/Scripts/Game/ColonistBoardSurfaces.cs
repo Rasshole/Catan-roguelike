@@ -7,19 +7,33 @@ namespace CatanRoguelike.Game
         private static readonly Color SandAlbedo = new(0.82f, 0.74f, 0.52f, 1f);
         private static readonly Color OceanAlbedo = new(0.05f, 0.28f, 0.48f, 1f);
 
-        public static void CreateOceanAndCoast(Transform boardRoot, float boardBoundingRadius)
+        public static void CreateOceanAndCoast(
+            Transform boardRoot,
+            float boardBoundingRadius,
+            float hexPrismHeightScale)
         {
+            var layout = TableCameraFraming.ComputeColonistSurfaceLayout(
+                boardBoundingRadius,
+                hexPrismHeightScale);
+
+            Debug.Log(
+                "ColonistBoardSurfaces: " +
+                $"hexBottomY={layout.HexBottomY:F4} " +
+                $"sandY={layout.SandCenterY:F4} sandTopY={layout.SandTopY:F4} " +
+                $"oceanY={layout.OceanCenterY:F4} oceanTopY={layout.OceanTopY:F4} " +
+                $"hexPrismHeightScale={hexPrismHeightScale:F4}");
+
             CreateFlatDisk(
                 boardRoot,
                 "ColonistOcean",
-                TableCameraFraming.ColonistOceanLocalY,
-                TableCameraFraming.ComputeColonistOceanDiskScale(boardBoundingRadius),
+                layout.OceanCenterY,
+                layout.OceanScale,
                 OceanAlbedo);
             CreateFlatDisk(
                 boardRoot,
                 "ColonistSandCoast",
-                TableCameraFraming.ColonistSandLocalY,
-                TableCameraFraming.ComputeColonistSandDiskScale(boardBoundingRadius),
+                layout.SandCenterY,
+                layout.SandScale,
                 SandAlbedo);
         }
 
