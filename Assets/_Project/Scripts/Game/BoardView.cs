@@ -174,7 +174,8 @@ namespace CatanRoguelike.Game
 
             var (x, z) = HexMath.ToWorldPosition(data.Coord, hexScale);
             go.transform.localPosition = new Vector3(x, 0f, z);
-            go.transform.localScale = new Vector3(1f, tileHeight, 1f);
+            float height = ColonistPresentation.IsActive ? tileHeight * 0.25f : tileHeight;
+            go.transform.localScale = new Vector3(1f, height, 1f);
 
             var mesh = HexPrismMesh.Create(data.Coord, hexScale);
             var meshFilter = go.AddComponent<MeshFilter>();
