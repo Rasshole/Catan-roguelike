@@ -256,7 +256,8 @@ namespace CatanRoguelike.Game
                 compact ? ColonistHudCopy.Settlement : BuildCostFormatter.FormatButtonLabel(ColonistHudCopy.Settlement, settlementCost, settlementOk),
                 BuildCostFormatter.FormatTooltip(settlementCost),
                 settlementOk,
-                () => _boardInput.SetBuildModeSettlement());
+                () => _boardInput.SetBuildModeSettlement(),
+                updateSettlementActionBarLabel: true);
 
             ConfigureBuildButton(
                 _buildCityButton,
@@ -278,7 +279,8 @@ namespace CatanRoguelike.Game
             string label,
             string tooltip,
             bool interactable,
-            UnityEngine.Events.UnityAction onClick)
+            UnityEngine.Events.UnityAction onClick,
+            bool updateSettlementActionBarLabel = false)
         {
             if (button == null)
                 return;
@@ -295,7 +297,7 @@ namespace CatanRoguelike.Game
                 }
             }
 
-            if (button == _buildSettlementButton)
+            if (updateSettlementActionBarLabel)
                 ColonistActionBarLabels.SetSettlementTitle(label);
 
             var tip = button.GetComponent<RunHudCostTooltip>();
