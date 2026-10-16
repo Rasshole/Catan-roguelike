@@ -9,22 +9,27 @@ namespace CatanRoguelike.Game
     /// <summary>PlayMode helpers for colonist board-only capture sanity checks.</summary>
     public static class ColonistBoardCaptureAssertions
     {
-        public static readonly Color OceanReference = new(0.05f, 0.28f, 0.48f, 1f);
+        public static readonly Color OceanReference = ColonistBoardSurfaces.OceanClearColor;
         public static readonly Color SandReference = new(0.82f, 0.74f, 0.52f, 1f);
         public static readonly Color CameraSkyReference = new(0.08f, 0.22f, 0.38f, 1f);
 
         public static void AssertCenterRegionShowsHexTilesAtBoard(
             Texture2D boardCapture,
             Camera camera,
+            TableCamera tableCamera,
             BoardView boardView)
         {
             Assert.IsNotNull(boardCapture);
             Assert.IsNotNull(camera);
+            Assert.IsNotNull(tableCamera);
             Assert.IsNotNull(boardView);
 
             var boardPixel = GameSceneCapture.WorldPointToCaptureTexturePixel(
                 boardView.transform.position,
-                camera);
+                camera,
+                tableCamera,
+                boardCapture.width,
+                boardCapture.height);
             AssertCenterRegionShowsHexTiles(boardCapture, boardPixel.x, boardPixel.y);
         }
 

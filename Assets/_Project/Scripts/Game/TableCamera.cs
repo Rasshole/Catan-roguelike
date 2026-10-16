@@ -80,7 +80,7 @@ namespace CatanRoguelike.Game
                     if (_camera.nearClipPlane < 0.3f)
                         _camera.nearClipPlane = 0.3f;
                     if (ColonistPresentation.IsActive)
-                        _camera.backgroundColor = new Color(0.08f, 0.22f, 0.38f, 1f);
+                        _camera.backgroundColor = ColonistBoardSurfaces.OceanClearColor;
                 }
             }
 
@@ -130,7 +130,15 @@ namespace CatanRoguelike.Game
                 boardRadius = 4f;
 
             _camera.orthographic = true;
-            _camera.aspect = screenWidth / (float)screenHeight;
+            float pixelWidth = screenWidth;
+            float pixelHeight = screenHeight;
+            if (_camera.pixelRect.width > 0f && _camera.pixelRect.height > 0f)
+            {
+                pixelWidth = _camera.pixelRect.width;
+                pixelHeight = _camera.pixelRect.height;
+            }
+
+            _camera.aspect = pixelWidth / pixelHeight;
             transform.rotation = Quaternion.Euler(90f, ColonistBoardViewConstants.CameraYawDegrees, 0f);
 
             float left = RunHudLayout.GetContentLeftInset();
@@ -145,16 +153,17 @@ namespace CatanRoguelike.Game
                 64f,
                 screenHeight - bottom - top - ColonistBoardViewConstants.BoardBottomBreathingRoomPixels);
             float boardFill = ColonistBoardViewConstants.BoardPlayAreaFill;
-            float orthoFromHeight = boardRadius * screenHeight / (boardFill * playHeight);
-            float orthoFromWidth = boardRadius * screenWidth / (boardFill * playWidth * _camera.aspect);
-            _camera.orthographicSize = Mathf.Max(orthoFromHeight, orthoFromWidth);
+            float orthoFromHeight = boardRadius * pixelHeight / (boardFill * playHeight);
+            float orthoFromWidth = boardRadius * pixelWidth / (boardFill * playWidth * _camera.aspect);
+            _camera.orthographicSize = Mathf.Max(orthoFromHeight, orthoFromWidth)
+                / ColonistBoardViewConstants.BoardZoomMultiplier;
 
-            float worldPerPixel = (2f * _camera.orthographicSize) / screenHeight;
+            float worldPerPixel = (2f * _camera.orthographicSize) / pixelHeight;
             float desiredScreenX = left + playWidth * 0.5f;
             float desiredScreenY = bottom + playHeight * 0.5f
                 + ColonistBoardViewConstants.BoardBottomBreathingRoomPixels * 0.5f;
-            float deltaScreenX = desiredScreenX - screenWidth * 0.5f;
-            float deltaScreenY = desiredScreenY - screenHeight * 0.5f;
+            float deltaScreenX = desiredScreenX - pixelWidth * 0.5f;
+            float deltaScreenY = desiredScreenY - pixelHeight * 0.5f;
 
             Vector3 center = boardView != null ? boardView.transform.position : lookTarget.position;
             var panRight = transform.right;

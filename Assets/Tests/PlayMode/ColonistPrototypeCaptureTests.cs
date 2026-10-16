@@ -99,12 +99,17 @@ namespace CatanRoguelike.Tests.PlayMode
                 Assert.AreNotSame(boardOnly, withHud, "Captures should be distinct texture instances.");
 
                 var boardView = UnityEngine.Object.FindFirstObjectByType<BoardView>();
+                var tableCamera = UnityEngine.Object.FindFirstObjectByType<TableCamera>();
                 var mainCamera = Camera.main;
                 Assert.IsNotNull(mainCamera, "Main camera should exist for board capture assertions.");
+                Assert.IsNotNull(tableCamera, "TableCamera should exist for colonist capture assertions.");
                 Assert.IsNotNull(boardView, "BoardView should exist for colonist capture assertions.");
                 var boardPixel = GameSceneCapture.WorldPointToCaptureTexturePixel(
                     boardView.transform.position,
-                    mainCamera);
+                    mainCamera,
+                    tableCamera,
+                    boardOnly.width,
+                    boardOnly.height);
                 var playCenter = RunHudLayout.GetColonistPlayAreaCenterScreenPixels(
                     GameSceneCapture.CaptureWidth,
                     GameSceneCapture.CaptureHeight);
@@ -116,6 +121,7 @@ namespace CatanRoguelike.Tests.PlayMode
                 ColonistBoardCaptureAssertions.AssertCenterRegionShowsHexTilesAtBoard(
                     boardOnly,
                     mainCamera,
+                    tableCamera,
                     boardView);
                 ColonistBoardCaptureAssertions.AssertNumberTokenLabelsUprightForCamera(mainCamera);
 

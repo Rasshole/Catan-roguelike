@@ -99,10 +99,11 @@ namespace CatanRoguelike.Game
             float localHeight = ColonistPresentation.IsActive
                 ? 0.04f / hexScale.y
                 : 0.025f / hexScale.y;
-            float rowZ = ColonistPresentation.IsActive
-                ? 0.24f / hexScale.z
-                : -0.14f / hexScale.z;
             float rowY = WorldChipThickness * 0.35f / hexScale.y;
+            bool colonist = ColonistPresentation.IsActive;
+            float rowZ = colonist
+                ? -0.22f / hexScale.z
+                : -0.14f / hexScale.z;
 
             var offsets = NumberTokenPipLayout.GetPipOffsetsX(pipCount);
             var labelRgb = NumberTokenVisualStyle.GetLabel(token);
@@ -113,10 +114,10 @@ namespace CatanRoguelike.Game
                 var pip = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 pip.name = $"Pip_{i}";
                 pip.transform.SetParent(_pipRoot.transform, false);
-                pip.transform.localPosition = new Vector3(
-                    offsets[i] / hexScale.x,
-                    rowY,
-                    rowZ);
+                float offset = offsets[i];
+                pip.transform.localPosition = colonist
+                    ? new Vector3(0f, rowY, offset / hexScale.z)
+                    : new Vector3(offset / hexScale.x, rowY, rowZ);
                 pip.transform.localScale = new Vector3(localDiameter, localHeight, localDiameter);
                 Destroy(pip.GetComponent<Collider>());
                 var renderer = pip.GetComponent<Renderer>();

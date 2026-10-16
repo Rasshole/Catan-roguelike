@@ -195,13 +195,38 @@ namespace CatanRoguelike.Game
         }
 
         /// <summary>
-        /// Maps a world point to <see cref="Texture2D.GetPixel"/> coordinates after a full-viewport capture.
-        /// Unity screen space and ReadPixels both use origin bottom-left.
+        /// Maps a world point to capture texture pixels using viewport coordinates and the capture pose.
         /// </summary>
-        public static Vector2Int WorldPointToCaptureTexturePixel(Vector3 worldPoint, Camera camera)
+        public static Vector2Int WorldPointToCaptureTexturePixel(
+            Vector3 worldPoint,
+            Camera camera,
+            TableCamera tableCamera,
+            int textureWidth,
+            int textureHeight)
         {
-            Vector3 screen = camera.WorldToScreenPoint(worldPoint);
-            return new Vector2Int(Mathf.RoundToInt(screen.x), Mathf.RoundToInt(screen.y));
+            if (camera == null || tableCamera == null)
+                return new Vector2Int(textureWidth / 2, textureHeight / 2);
+
+            var previousRect = camera.pixelRect;
+            var previousTarget = camera.targetTexture;
+            try
+            {
+                camera.pixelRect = new Rect(0f, 0f, textureWidth, textureHeight);
+                tableCamera.ApplyCapturePose(textureWidth, textureHeight);
+
+                Vector3 viewport = camera.WorldToViewportPoint(worldPoint);
+                if (viewport.z < 0f)
+                    return new Vector2Int(-1, -1);
+
+                int x = Mathf.Clamp(Mathf.RoundToInt(viewport.x * textureWidth), 0, textureWidth - 1);
+                int y = Mathf.Clamp(Mathf.RoundToInt(viewport.y * textureHeight), 0, textureHeight - 1);
+                return new Vector2Int(x, y);
+            }
+            finally
+            {
+                camera.pixelRect = previousRect;
+                camera.targetTexture = previousTarget;
+            }
         }
 
         /// <summary>Screen-space pixel (origin bottom-left) to texture pixel (same convention).</summary>

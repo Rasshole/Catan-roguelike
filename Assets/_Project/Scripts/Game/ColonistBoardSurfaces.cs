@@ -4,8 +4,8 @@ namespace CatanRoguelike.Game
 {
     internal static class ColonistBoardSurfaces
     {
+        public static readonly Color OceanClearColor = new(0.05f, 0.28f, 0.48f, 1f);
         private static readonly Color SandAlbedo = new(0.82f, 0.74f, 0.52f, 1f);
-        private static readonly Color OceanAlbedo = new(0.05f, 0.28f, 0.48f, 1f);
 
         public static void CreateOceanAndCoast(
             Transform boardRoot,
@@ -20,41 +20,36 @@ namespace CatanRoguelike.Game
                 "ColonistBoardSurfaces: " +
                 $"hexBottomY={layout.HexBottomY:F4} " +
                 $"sandY={layout.SandCenterY:F4} sandTopY={layout.SandTopY:F4} " +
-                $"oceanY={layout.OceanCenterY:F4} oceanTopY={layout.OceanTopY:F4} " +
+                $"sandInnerR={layout.SandInnerRadius:F3} sandOuterR={layout.SandOuterRadius:F3} " +
                 $"hexPrismHeightScale={hexPrismHeightScale:F4}");
 
-            CreateFlatDisk(
+            CreateSandCoastRing(
                 boardRoot,
-                "ColonistOcean",
-                layout.OceanCenterY,
-                layout.OceanScale,
-                OceanAlbedo);
-            CreateFlatDisk(
-                boardRoot,
-                "ColonistSandCoast",
                 layout.SandCenterY,
-                layout.SandScale,
-                SandAlbedo);
+                layout.SandInnerRadius,
+                layout.SandOuterRadius,
+                layout.SandThicknessY);
         }
 
-        private static void CreateFlatDisk(
+        private static void CreateSandCoastRing(
             Transform parent,
-            string name,
             float localY,
-            Vector3 localScale,
-            Color color)
+            float innerRadius,
+            float outerRadius,
+            float thinY)
         {
-            var go = new GameObject(name);
+            var go = new GameObject("ColonistSandCoast");
             go.transform.SetParent(parent, false);
             go.transform.SetAsFirstSibling();
             go.transform.localPosition = new Vector3(0f, localY, 0f);
             go.transform.localRotation = Quaternion.identity;
-            go.transform.localScale = localScale;
+            float yScale = thinY / ThinDiskMesh.MeshHeight;
+            go.transform.localScale = new Vector3(1f, yScale, 1f);
 
             var meshFilter = go.AddComponent<MeshFilter>();
-            meshFilter.sharedMesh = ThinDiskMesh.Shared;
+            meshFilter.sharedMesh = ColonistAnnulusMesh.Create(innerRadius, outerRadius);
             var renderer = go.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = BuiltInMaterials.Create(color);
+            renderer.sharedMaterial = BuiltInMaterials.Create(SandAlbedo);
         }
     }
 }

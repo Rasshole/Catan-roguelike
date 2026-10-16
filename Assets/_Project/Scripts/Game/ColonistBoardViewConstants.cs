@@ -7,6 +7,9 @@ namespace CatanRoguelike.Game
 
         public const float BoardPlayAreaFill = 0.86f;
 
+        /// <summary>Extra zoom so the hex cluster fills the play area (~1.5× vs fill-only sizing).</summary>
+        public const float BoardZoomMultiplier = 1.5f;
+
         /// <summary>Extra play-area height reserved so the hex cluster clears the action bar.</summary>
         public const float BoardBottomBreathingRoomPixels = 40f;
     }

@@ -133,33 +133,20 @@ namespace CatanRoguelike.Game
         public static Vector3 ComputeDiskScaleForWorldRadius(float worldRadius, float thinY) =>
             ComputeCylinderDiskScale(worldRadius, thinY);
 
-        public static float ComputeColonistSandWorldRadius(float boardBoundingRadius) =>
-            ComputeTableDiskWorldRadius(boardBoundingRadius) * 1.05f;
+        public static float ComputeColonistSandInnerRadius(float boardBoundingRadius) =>
+            boardBoundingRadius * 0.98f;
 
-        public static float ComputeColonistOceanWorldRadius(float boardBoundingRadius) =>
-            Mathf.Min(
-                ComputeWaterDiskWorldRadius(boardBoundingRadius) * 1.12f,
-                ComputeColonistSandWorldRadius(boardBoundingRadius) * 1.35f);
-
-        public static Vector3 ComputeColonistOceanDiskScale(float boardBoundingRadius) =>
-            ComputeCylinderDiskScale(
-                ComputeColonistOceanWorldRadius(boardBoundingRadius),
-                WaterSurfaceThinY);
-
-        public static Vector3 ComputeColonistSandDiskScale(float boardBoundingRadius) =>
-            ComputeCylinderDiskScale(
-                ComputeColonistSandWorldRadius(boardBoundingRadius),
-                WaterSurfaceThinY * 0.9f);
+        public static float ComputeColonistSandOuterRadius(float boardBoundingRadius) =>
+            boardBoundingRadius * 1.10f;
 
         public struct ColonistSurfaceLayout
         {
             public float HexBottomY;
             public float SandCenterY;
             public float SandTopY;
-            public float OceanCenterY;
-            public float OceanTopY;
-            public Vector3 OceanScale;
-            public Vector3 SandScale;
+            public float SandInnerRadius;
+            public float SandOuterRadius;
+            public float SandThicknessY;
         }
 
         /// <summary>Ocean below sand below hex prism base (top-down camera sees hex tops first).</summary>
@@ -168,23 +155,19 @@ namespace CatanRoguelike.Game
             float hexPrismHeightScale)
         {
             float sandThin = WaterSurfaceThinY * 0.9f;
-            float oceanThin = WaterSurfaceThinY;
             const float gap = 0.01f;
             float hexBottom = -hexPrismHeightScale;
             float sandHalf = sandThin / 2f;
-            float oceanHalf = oceanThin / 2f;
             float sandCenterY = hexBottom - gap - sandHalf;
-            float oceanCenterY = sandCenterY - sandHalf - gap - oceanHalf;
 
             return new ColonistSurfaceLayout
             {
                 HexBottomY = hexBottom,
                 SandCenterY = sandCenterY,
                 SandTopY = sandCenterY + sandHalf,
-                OceanCenterY = oceanCenterY,
-                OceanTopY = oceanCenterY + oceanHalf,
-                OceanScale = ComputeColonistOceanDiskScale(boardBoundingRadius),
-                SandScale = ComputeColonistSandDiskScale(boardBoundingRadius)
+                SandInnerRadius = ComputeColonistSandInnerRadius(boardBoundingRadius),
+                SandOuterRadius = ComputeColonistSandOuterRadius(boardBoundingRadius),
+                SandThicknessY = sandThin
             };
         }
 
