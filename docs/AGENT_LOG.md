@@ -1,5 +1,14 @@
 # Agent log
 
+## 2026-10-16 (UTC) — PR #109 v67 board fixes (`9280c66` on `edfda26`)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Black land hexes — `CreateTerrainSurface` uses Unlit/Texture + `_MainTex`; unlit flat fallback; procedural try/catch | Done |
+| 2 | Token numbers — `font.material` on TextMesh `MeshRenderer`; label character sizes restored | Done |
+| 3 | Nine harbors — `PortFrameLayout` even frame spacing; `AssertRenderedPortBadgeDiscCount(9)` PlayMode | Done |
+| 4 | Fishermen visible — harness `FishermenMapOption=true`; fish icons on lake/grounds; `AssertFishermenHarnessBoardAndHud` | Done |
+
 ## 2026-10-16 (UTC) — PR #109 Rasmus feedback (post af67f29)
 
 Checklist (branch `cursor/colonist-style-ui-e52d`):
