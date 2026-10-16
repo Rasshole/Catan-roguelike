@@ -6,7 +6,7 @@ using UnityEngine;
 namespace CatanRoguelike.Game
 {
     /// <summary>Beach band hugging the outer edges of a hex tile cluster (top-down visible cap).</summary>
-    internal static class ColonistCoastSandMesh
+    public static class ColonistCoastSandMesh
     {
         public const float BeachWidthFactor = 0.25f;
 

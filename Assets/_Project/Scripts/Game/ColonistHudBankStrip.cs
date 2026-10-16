@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace CatanRoguelike.Game
 {
-    internal static class ColonistHudBankStrip
+    public static class ColonistHudBankStrip
     {
         public const int ExpectedCardCount = 5;
 
