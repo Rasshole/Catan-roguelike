@@ -1,6 +1,7 @@
 using System.Linq;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Shop;
 using NUnit.Framework;
 
@@ -14,11 +15,13 @@ namespace CatanRoguelike.Tests.EditMode
             var preset = MapPresets.LargeNineteenHex();
             Assert.AreEqual(19, preset.Count);
 
-            int wood = preset.Count(p => p.resource == ResourceType.Wood);
-            int sheep = preset.Count(p => p.resource == ResourceType.Sheep);
-            int wheat = preset.Count(p => p.resource == ResourceType.Wheat);
-            int brick = preset.Count(p => p.resource == ResourceType.Brick);
-            int stone = preset.Count(p => p.resource == ResourceType.Stone);
+            var center = new HexCoord(0, 0);
+            var productive = preset.Where(p => p.coord != center);
+            int wood = productive.Count(p => p.resource == ResourceType.Wood);
+            int sheep = productive.Count(p => p.resource == ResourceType.Sheep);
+            int wheat = productive.Count(p => p.resource == ResourceType.Wheat);
+            int brick = productive.Count(p => p.resource == ResourceType.Brick);
+            int stone = productive.Count(p => p.resource == ResourceType.Stone);
 
             Assert.AreEqual(4, wood);
             Assert.AreEqual(4, sheep);

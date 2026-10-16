@@ -17,9 +17,12 @@ namespace CatanRoguelike.Game
     /// </summary>
     public static class GameScenePlayHarness
     {
+        /// <summary>Colonist capture / play harness uses standard base Catan (19 hex, desert center).</summary>
+        public const MapSize DefaultHarnessMapSize = MapSize.Large;
+
         public static void CompleteRunSelect(GameController controller, MetaProgression meta)
         {
-            controller.SelectMap(MapSize.Small);
+            controller.SelectMap(DefaultHarnessMapSize);
             if (controller.State.Phase != GamePhase.RunSelectLeader)
                 throw new InvalidOperationException(
                     $"SelectMap should advance to leader select, got {controller.State.Phase}.");

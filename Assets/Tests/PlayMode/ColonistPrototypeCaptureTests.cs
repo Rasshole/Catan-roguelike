@@ -129,6 +129,7 @@ namespace CatanRoguelike.Tests.PlayMode
                     GameSceneCapture.CaptureWidth,
                     GameSceneCapture.CaptureHeight);
                 ColonistBoardCaptureAssertions.AssertNumberTokenLabelsUprightForCamera(mainCamera);
+                ColonistBoardCaptureAssertions.AssertNumberTokenLabelsMatchBoardDiceValues(mainCamera);
 
                 var tokenTile = UnityEngine.Object.FindFirstObjectByType<HexTileView>();
                 foreach (var tile in UnityEngine.Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))

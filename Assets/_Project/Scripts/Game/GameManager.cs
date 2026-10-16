@@ -15,7 +15,7 @@ namespace CatanRoguelike.Game
         private RunHudController _runHud;
         private GameplayFeelController _feel;
         [SerializeField] private int randomSeed = 42;
-        [SerializeField] private MapSize mapSize = MapSize.Small;
+        [SerializeField] private MapSize mapSize = MapSize.Large;
 
         public GameController Controller { get; private set; }
         public MetaProgression Meta { get; private set; }
@@ -101,7 +101,8 @@ namespace CatanRoguelike.Game
         private void Start()
         {
             Meta = MetaProgressionFile.LoadOrCreate();
-            Controller = new GameController(randomSeed, mapSize, Meta);
+            var bootMapSize = ColonistPresentation.IsActive ? MapSize.Large : mapSize;
+            Controller = new GameController(randomSeed, bootMapSize, Meta);
             Controller.OnStateChanged += HandleStateChanged;
             Controller.OnBoardRebuilt += HandleBoardRebuilt;
             Controller.OnAutosavePoint += HandleAutosavePoint;

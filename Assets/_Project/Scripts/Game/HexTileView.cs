@@ -76,6 +76,8 @@ namespace CatanRoguelike.Game
 
         public string TokenLabelText => _tokenLabel != null ? _tokenLabel.text : string.Empty;
 
+        public Color TokenLabelColor => _tokenLabel != null ? _tokenLabel.color : Color.black;
+
         public float TokenFaceWorldRadius => WorldFaceDiameter * 0.5f;
 
         public float TokenRimOuterWorldRadius => TokenFaceWorldRadius * RimOuterRadiusFactor;

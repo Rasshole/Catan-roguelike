@@ -177,6 +177,47 @@ namespace CatanRoguelike.Game
                 $"Expected most token labels upright vs camera.up (upright={upright}/{facings.Length}).");
         }
 
+        /// <summary>Labels must show classic dice values 2–12 (not pip weights); 6/8 use red ink.</summary>
+        public static void AssertNumberTokenLabelsMatchBoardDiceValues(Camera camera)
+        {
+            Assert.IsNotNull(camera, "Camera required for token label checks.");
+            NumberTokenLabelOrientation.RefreshAllLabelsForCamera(camera);
+
+            var tiles = Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None);
+            int checkedTiles = 0;
+            bool sawRedSixOrEight = false;
+
+            foreach (var tile in tiles)
+            {
+                if (tile.Data.IsDesert || !tile.Data.NumberToken.HasValue)
+                    continue;
+
+                int token = tile.Data.NumberToken.Value;
+                Assert.IsTrue(token >= 2 && token <= 12 && token != 7,
+                    $"Token on {tile.Data.Coord} should be a classic dice value 2–12 (not 7), got {token}.");
+                Assert.AreEqual(token.ToString(), tile.TokenLabelText,
+                    $"Label on {tile.Data.Coord} should display dice number {token}.");
+                Assert.AreEqual(0, tile.PipChildCount,
+                    $"Token {token} on {tile.Data.Coord} should not use pip dots.");
+
+                if (NumberTokenLibrary.IsRedNumber(token))
+                {
+                    var expected = NumberTokenVisualStyle.GetLabel(token);
+                    var c = tile.TokenLabelColor;
+                    Assert.IsTrue(Mathf.Abs(c.r - expected.R) < 0.08f,
+                        $"Token {token} label should use red dice ink.");
+                    sawRedSixOrEight = true;
+                }
+
+                checkedTiles++;
+            }
+
+            Assert.IsTrue(checkedTiles > 12,
+                "Base board capture should show many numbered tokens (19-hex / classic pool).");
+            Assert.IsTrue(sawRedSixOrEight,
+                "Classic board should render at least one red 6 or 8 token label.");
+        }
+
         private static Vector2Int FindBestHexClusterCenter(Texture2D capture, int screenWidth, int screenHeight)
         {
             var area = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);

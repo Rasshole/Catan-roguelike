@@ -50,7 +50,7 @@ namespace CatanRoguelike.Core.Data
         {
             var resources = new[]
             {
-                ResourceType.Wheat,  // center — desert (no production); robber starts here
+                ResourceType.Stone,  // center — desert (no production); robber starts here
                 ResourceType.Wood, ResourceType.Wheat, ResourceType.Sheep,
                 ResourceType.Brick, ResourceType.Wood, ResourceType.Wheat,
                 ResourceType.Sheep, ResourceType.Brick, ResourceType.Wood,
@@ -62,10 +62,38 @@ namespace CatanRoguelike.Core.Data
             return BuildFromSpiral(2, resources);
         }
 
-        /// <summary>30-hex extended board (radius 3 minus outer corners) — 5–6 player shape.</summary>
+        /// <summary>30-hex extended board (radius 3 minus 7 outer tips) — 5–6 player shape.</summary>
         public static IEnumerable<HexCoord> ExtendedThirtyHexCoords()
         {
-            return OuterRingTrimmedCoords(3, minOuterNeighbors: 4);
+            var center = new HexCoord(0, 0);
+            var full = HexMath.Spiral(center, 3).ToList();
+            var set = full.ToHashSet();
+            var drop = new HashSet<HexCoord>();
+
+            foreach (var coord in full)
+            {
+                if (HexMath.Distance(center, coord) != 3)
+                    continue;
+                if (CountBoardNeighbors(set, coord) <= 2)
+                    drop.Add(coord);
+            }
+
+            if (full.Count - drop.Count > 30)
+            {
+                var extra = full
+                    .Where(c => HexMath.Distance(center, c) == 3 && !drop.Contains(c))
+                    .Where(c => CountBoardNeighbors(set, c) == 3)
+                    .OrderByDescending(c => c.Q + c.R)
+                    .ThenByDescending(c => c.Q)
+                    .First();
+                drop.Add(extra);
+            }
+
+            foreach (var coord in full)
+            {
+                if (!drop.Contains(coord))
+                    yield return coord;
+            }
         }
 
         /// <summary>37-hex full radius-3 hexagon.</summary>
@@ -74,64 +102,67 @@ namespace CatanRoguelike.Core.Data
 
         public static IReadOnlyList<(HexCoord coord, ResourceType resource)> ExtendedThirtyHex()
         {
-            var resources = BuildScaledResourceMultiset(30, 1);
-            return BuildFromCoords(ExtendedThirtyHexCoords(), resources);
+            var coords = ExtendedThirtyHexCoords().ToList();
+            return BuildFromCoords(coords, BuildResourcesForLandCoords(coords, new HexCoord(0, 0)));
         }
 
         public static IReadOnlyList<(HexCoord coord, ResourceType resource)> HugeThirtySevenHex()
         {
-            var resources = BuildScaledResourceMultiset(37, 1);
-            return BuildFromCoords(HugeThirtySevenHexCoords(), resources);
+            var coords = HugeThirtySevenHexCoords().ToList();
+            return BuildFromCoords(coords, BuildResourcesForLandCoords(coords, new HexCoord(0, 0)));
         }
 
-        private static IEnumerable<HexCoord> OuterRingTrimmedCoords(int radius, int minOuterNeighbors)
+        private static int CountBoardNeighbors(HashSet<HexCoord> set, HexCoord coord)
         {
-            var center = new HexCoord(0, 0);
-            var full = HexMath.Spiral(center, radius).ToList();
-            var set = full.ToHashSet();
-
-            foreach (var coord in full)
+            int neighbors = 0;
+            foreach (var dir in HexCoord.Directions)
             {
-                if (HexMath.Distance(center, coord) < radius)
-                {
-                    yield return coord;
-                    continue;
-                }
-
-                int neighbors = 0;
-                foreach (var dir in HexCoord.Directions)
-                {
-                    if (set.Contains(coord + dir))
-                        neighbors++;
-                }
-
-                if (neighbors >= minOuterNeighbors)
-                    yield return coord;
+                if (set.Contains(coord + dir))
+                    neighbors++;
             }
+
+            return neighbors;
         }
 
-        /// <summary>Classic ratios scaled to land count with one desert at center.</summary>
-        private static ResourceType[] BuildScaledResourceMultiset(int landCount, int desertCount)
+        private static ResourceType[] BuildResourcesForLandCoords(
+            IReadOnlyList<HexCoord> coords, HexCoord desertCoord)
         {
-            int productive = landCount - desertCount;
-            int wood = RoundRatio(productive, 4, 18);
-            int sheep = RoundRatio(productive, 4, 18);
-            int wheat = RoundRatio(productive, 4, 18);
-            int brick = RoundRatio(productive, 3, 18);
-            int stone = productive - wood - sheep - wheat - brick;
+            int productive = coords.Count - 1;
+            var multiset = BuildProductiveResourceMultiset(productive);
+            var resources = new ResourceType[coords.Count];
+            int pi = 0;
+            for (int i = 0; i < coords.Count; i++)
+            {
+                if (coords[i].Equals(desertCoord))
+                    resources[i] = ResourceType.Stone;
+                else
+                    resources[i] = multiset[pi++];
+            }
+
+            return resources;
+        }
+
+        /// <summary>Classic ratios for productive land hexes (excludes desert).</summary>
+        private static ResourceType[] BuildProductiveResourceMultiset(int productiveCount)
+        {
+            int wood = RoundRatio(productiveCount, 4, 18);
+            int sheep = RoundRatio(productiveCount, 4, 18);
+            int wheat = RoundRatio(productiveCount, 4, 18);
+            int brick = RoundRatio(productiveCount, 3, 18);
+            int stone = productiveCount - wood - sheep - wheat - brick;
             if (stone < 0)
                 stone = 0;
 
-            var list = new List<ResourceType>(productive);
+            var list = new List<ResourceType>(productiveCount);
             AddMany(list, ResourceType.Wood, wood);
             AddMany(list, ResourceType.Sheep, sheep);
             AddMany(list, ResourceType.Wheat, wheat);
             AddMany(list, ResourceType.Brick, brick);
             AddMany(list, ResourceType.Stone, stone);
 
-            while (list.Count < productive)
+            while (list.Count < productiveCount)
                 list.Add(ResourceType.Wheat);
-            while (list.Count > productive)
+            while (list.Count > productiveCount)
                 list.RemoveAt(list.Count - 1);
 
             return list.ToArray();

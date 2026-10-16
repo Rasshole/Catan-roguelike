@@ -1,6 +1,5 @@
 using System.Collections;
 using System.IO;
-using CatanRoguelike.Core.Yield;
 using CatanRoguelike.Game;
 using NUnit.Framework;
 using UnityEngine;
@@ -63,10 +62,10 @@ namespace CatanRoguelike.Tests.PlayMode
                     $"Label should sit above chip top for token {token}.");
                 Assert.IsFalse(string.IsNullOrEmpty(tile.TokenLabelText),
                     $"Token {token} should show a number label.");
-                Assert.AreEqual(
-                    NumberTokenPipVisuals.GetExpectedPipCount(token),
-                    tile.PipChildCount,
-                    $"Token {token} should show the correct pip count.");
+                Assert.AreEqual(token.ToString(), tile.TokenLabelText,
+                    $"Token label should show dice value {token}, not pip weight.");
+                Assert.AreEqual(0, tile.PipChildCount,
+                    $"Token {token} should not spawn pip dots under the number.");
                 checkedTiles++;
             }
 
