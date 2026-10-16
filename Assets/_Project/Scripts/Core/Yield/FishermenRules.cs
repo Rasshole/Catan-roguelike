@@ -1,3 +1,5 @@
+using CatanRoguelike.Core;
+
 namespace CatanRoguelike.Core.Yield
 {
     public enum FishermenSpendAction

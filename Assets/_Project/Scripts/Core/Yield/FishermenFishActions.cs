@@ -1,4 +1,6 @@
+using CatanRoguelike.Core;
 using CatanRoguelike.Core.Cards;
+using CatanRoguelike.Core.Map;
 
 namespace CatanRoguelike.Core.Yield
 {

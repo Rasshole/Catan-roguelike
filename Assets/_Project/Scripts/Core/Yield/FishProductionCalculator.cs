@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CatanRoguelike.Core;
 using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
