@@ -10,11 +10,13 @@ namespace CatanRoguelike.Game
         public static void CreateOceanAndCoast(
             Transform boardRoot,
             float boardBoundingRadius,
-            float hexPrismHeightScale)
+            float hexPrismHeightScale,
+            float hexScale)
         {
             var layout = TableCameraFraming.ComputeColonistSurfaceLayout(
                 boardBoundingRadius,
-                hexPrismHeightScale);
+                hexPrismHeightScale,
+                hexScale);
 
             Debug.Log(
                 "ColonistBoardSurfaces: " +

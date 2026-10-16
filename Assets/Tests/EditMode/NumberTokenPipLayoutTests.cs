@@ -13,6 +13,10 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(5, NumberTokenPipLayout.GetPipCount(6));
             Assert.AreEqual(5, NumberTokenPipLayout.GetPipCount(8));
             Assert.AreEqual(3, NumberTokenPipLayout.GetPipCount(4));
+            Assert.AreEqual(2, NumberTokenPipLayout.GetPipCount(3));
+            Assert.AreEqual(2, NumberTokenPipLayout.GetPipCount(11));
+            Assert.AreEqual(4, NumberTokenPipLayout.GetPipCount(5));
+            Assert.AreEqual(4, NumberTokenPipLayout.GetPipCount(9));
         }
 
         [Test]

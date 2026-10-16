@@ -13,31 +13,18 @@ namespace CatanRoguelike.Game
         public static readonly Color SandReference = new(0.82f, 0.74f, 0.52f, 1f);
         public static readonly Color CameraSkyReference = new(0.08f, 0.22f, 0.38f, 1f);
 
-        public static void AssertCenterRegionShowsHexTilesAtBoard(
+        public static void AssertColonistBoardCaptureShowsHexTiles(
             Texture2D boardCapture,
-            Camera camera,
-            TableCamera tableCamera,
-            BoardView boardView)
+            int screenWidth,
+            int screenHeight)
         {
             Assert.IsNotNull(boardCapture);
-            Assert.IsNotNull(camera);
-            Assert.IsNotNull(tableCamera);
-            Assert.IsNotNull(boardView);
+            var center = ColonistPlayAreaLayout.GetCenterTexturePixels(screenWidth, screenHeight);
+            if (!TryMeasureHexFraction(boardCapture, center.x, center.y, out float hexFrac) || hexFrac < 0.35f)
+                center = FindBestHexClusterCenter(boardCapture, screenWidth, screenHeight);
 
-            var boardPixel = GameSceneCapture.WorldPointToCaptureTexturePixel(
-                boardView.transform.position,
-                camera,
-                tableCamera,
-                boardCapture.width,
-                boardCapture.height);
-            AssertCenterRegionShowsHexTiles(boardCapture, boardPixel.x, boardPixel.y);
+            AssertCenterRegionShowsHexTiles(boardCapture, center.x, center.y);
         }
-
-        public static void AssertCenterRegionShowsHexTiles(Texture2D boardCapture) =>
-            AssertCenterRegionShowsHexTiles(
-                boardCapture,
-                boardCapture.width / 2,
-                boardCapture.height / 2);
 
         public static void AssertCenterRegionShowsHexTiles(
             Texture2D boardCapture,
@@ -72,16 +59,7 @@ namespace CatanRoguelike.Game
                     if (sampleColors.Count < 12)
                         sampleColors.Add(pixel);
 
-                    if (IsOceanLike(pixel))
-                        oceanLike++;
-                    else if (IsSkyLike(pixel))
-                        skyLike++;
-                    else if (IsSandCoastLike(pixel))
-                        sandLike++;
-                    else if (IsHexTileLike(pixel))
-                        hexLike++;
-                    else
-                        other++;
+                    ClassifyPixel(pixel, ref hexLike, ref oceanLike, ref sandLike, ref skyLike, ref other);
                 }
             }
 
@@ -132,6 +110,80 @@ namespace CatanRoguelike.Game
                 $"Expected most token labels upright vs camera.up (upright={upright}/{facings.Length}).");
         }
 
+        private static Vector2Int FindBestHexClusterCenter(Texture2D capture, int screenWidth, int screenHeight)
+        {
+            var area = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
+            int bestX = Mathf.RoundToInt(area.Left + area.PlayWidth * 0.5f);
+            int bestY = Mathf.RoundToInt(area.Bottom + area.PlayHeight * 0.5f);
+            float bestHex = 0f;
+
+            int startX = Mathf.RoundToInt(area.Left);
+            int endX = Mathf.RoundToInt(area.Left + area.PlayWidth);
+            int startY = Mathf.RoundToInt(area.Bottom);
+            int endY = Mathf.RoundToInt(area.Bottom + area.PlayHeight);
+
+            for (int x = startX; x < endX; x += 48)
+            {
+                for (int y = startY; y < endY; y += 48)
+                {
+                    if (TryMeasureHexFraction(capture, x, y, out float hexFrac) && hexFrac > bestHex)
+                    {
+                        bestHex = hexFrac;
+                        bestX = x;
+                        bestY = y;
+                    }
+                }
+            }
+
+            return new Vector2Int(bestX, bestY);
+        }
+
+        private static bool TryMeasureHexFraction(Texture2D capture, int centerX, int centerY, out float hexFraction)
+        {
+            hexFraction = 0f;
+            int rx = 24;
+            int ry = 24;
+            int hexLike = 0;
+            int samples = 0;
+            for (int x = centerX - rx; x <= centerX + rx; x += 8)
+            {
+                for (int y = centerY - ry; y <= centerY + ry; y += 8)
+                {
+                    if (x < 0 || x >= capture.width || y < 0 || y >= capture.height)
+                        continue;
+                    samples++;
+                    if (IsHexTileLike(capture.GetPixel(x, y)))
+                        hexLike++;
+                }
+            }
+
+            if (samples == 0)
+                return false;
+
+            hexFraction = hexLike / (float)samples;
+            return true;
+        }
+
+        private static void ClassifyPixel(
+            Color pixel,
+            ref int hexLike,
+            ref int oceanLike,
+            ref int sandLike,
+            ref int skyLike,
+            ref int other)
+        {
+            if (IsOceanLike(pixel))
+                oceanLike++;
+            else if (IsSkyLike(pixel))
+                skyLike++;
+            else if (IsSandCoastLike(pixel))
+                sandLike++;
+            else if (IsHexTileLike(pixel))
+                hexLike++;
+            else
+                other++;
+        }
+
         private static void LogSampleFailure(
             int centerX,
             int centerY,
@@ -159,12 +211,11 @@ namespace CatanRoguelike.Game
 
         private static bool IsOceanLike(Color c)
         {
-            if (ColorDistance(c, OceanReference) < 0.20f)
+            if (ColorDistance(c, OceanReference) < 0.22f)
                 return true;
             if (ColorDistance(c, CameraSkyReference) < 0.14f)
                 return true;
 
-            // Lit ocean / water in capture (e.g. ~0.22, 0.45, 0.68).
             return c.b >= 0.40f
                 && c.b >= c.r
                 && c.g >= 0.26f

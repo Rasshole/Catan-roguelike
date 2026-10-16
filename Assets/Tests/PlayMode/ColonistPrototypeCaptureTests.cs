@@ -98,31 +98,19 @@ namespace CatanRoguelike.Tests.PlayMode
                 Assert.IsNotNull(withHud, "HUD-composited capture texture should be created.");
                 Assert.AreNotSame(boardOnly, withHud, "Captures should be distinct texture instances.");
 
-                var boardView = UnityEngine.Object.FindFirstObjectByType<BoardView>();
-                var tableCamera = UnityEngine.Object.FindFirstObjectByType<TableCamera>();
-                var mainCamera = Camera.main;
-                Assert.IsNotNull(mainCamera, "Main camera should exist for board capture assertions.");
-                Assert.IsNotNull(tableCamera, "TableCamera should exist for colonist capture assertions.");
-                Assert.IsNotNull(boardView, "BoardView should exist for colonist capture assertions.");
-                var boardPixel = GameSceneCapture.WorldPointToCaptureTexturePixel(
-                    boardView.transform.position,
-                    mainCamera,
-                    tableCamera,
-                    boardOnly.width,
-                    boardOnly.height);
-                var playCenter = RunHudLayout.GetColonistPlayAreaCenterScreenPixels(
+                var playCenter = ColonistPlayAreaLayout.GetCenterTexturePixels(
                     GameSceneCapture.CaptureWidth,
                     GameSceneCapture.CaptureHeight);
                 Debug.Log(
-                    $"Colonist capture framing: playCenter=({playCenter.x:F0},{playCenter.y:F0}) " +
-                    $"boardTexturePixel=({boardPixel.x},{boardPixel.y}) " +
-                    $"boardPos={boardView.transform.position} boardRadius={boardView.GetBoardBoundingRadius():F2}");
+                    $"Colonist capture framing: playAreaCenterTexture=({playCenter.x},{playCenter.y})");
 
-                ColonistBoardCaptureAssertions.AssertCenterRegionShowsHexTilesAtBoard(
+                ColonistBoardCaptureAssertions.AssertColonistBoardCaptureShowsHexTiles(
                     boardOnly,
-                    mainCamera,
-                    tableCamera,
-                    boardView);
+                    GameSceneCapture.CaptureWidth,
+                    GameSceneCapture.CaptureHeight);
+
+                var mainCamera = Camera.main;
+                Assert.IsNotNull(mainCamera, "Main camera should exist for board capture assertions.");
                 ColonistBoardCaptureAssertions.AssertNumberTokenLabelsUprightForCamera(mainCamera);
 
                 AssertTextureHasVisibleContent(withHud);

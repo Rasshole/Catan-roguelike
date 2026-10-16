@@ -30,6 +30,17 @@ namespace CatanRoguelike.Game
             return mat;
         }
 
+        public static Material CreateUnlit(Color color)
+        {
+            var shader = Shader.Find("Unlit/Color");
+            if (shader == null)
+                return Create(color);
+
+            var mat = new Material(shader) { color = color };
+            mat.renderQueue = 3500;
+            return mat;
+        }
+
         /// <summary>Translucent Standard material for placement hover silhouettes.</summary>
         public static Material CreateGhost(Color color)
         {

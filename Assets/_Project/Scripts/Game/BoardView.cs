@@ -108,7 +108,7 @@ namespace CatanRoguelike.Game
             if (ColonistPresentation.IsActive)
             {
                 float colonistHexHeight = tileHeight * 0.25f;
-                ColonistBoardSurfaces.CreateOceanAndCoast(boardRoot, boundingRadius, colonistHexHeight);
+                ColonistBoardSurfaces.CreateOceanAndCoast(boardRoot, boundingRadius, colonistHexHeight, hexScale);
             }
             else
             {

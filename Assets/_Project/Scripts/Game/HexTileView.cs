@@ -99,10 +99,12 @@ namespace CatanRoguelike.Game
             float localHeight = ColonistPresentation.IsActive
                 ? 0.04f / hexScale.y
                 : 0.025f / hexScale.y;
-            float rowY = WorldChipThickness * 0.35f / hexScale.y;
             bool colonist = ColonistPresentation.IsActive;
+            float rowY = colonist
+                ? WorldChipThickness * 0.12f / hexScale.y
+                : WorldChipThickness * 0.35f / hexScale.y;
             float rowZ = colonist
-                ? -0.22f / hexScale.z
+                ? -0.26f / hexScale.z
                 : -0.14f / hexScale.z;
 
             var offsets = NumberTokenPipLayout.GetPipOffsetsX(pipCount);
@@ -116,7 +118,7 @@ namespace CatanRoguelike.Game
                 pip.transform.SetParent(_pipRoot.transform, false);
                 float offset = offsets[i];
                 pip.transform.localPosition = colonist
-                    ? new Vector3(0f, rowY, offset / hexScale.z)
+                    ? new Vector3(0f, rowY, rowZ + offset / hexScale.z)
                     : new Vector3(offset / hexScale.x, rowY, rowZ);
                 pip.transform.localScale = new Vector3(localDiameter, localHeight, localDiameter);
                 Destroy(pip.GetComponent<Collider>());

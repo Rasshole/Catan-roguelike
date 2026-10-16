@@ -132,36 +132,19 @@ namespace CatanRoguelike.Game
             _camera.orthographic = true;
             float pixelWidth = screenWidth;
             float pixelHeight = screenHeight;
-            if (_camera.pixelRect.width > 0f && _camera.pixelRect.height > 0f)
-            {
-                pixelWidth = _camera.pixelRect.width;
-                pixelHeight = _camera.pixelRect.height;
-            }
-
             _camera.aspect = pixelWidth / pixelHeight;
             transform.rotation = Quaternion.Euler(90f, ColonistBoardViewConstants.CameraYawDegrees, 0f);
 
-            float left = RunHudLayout.GetContentLeftInset();
-            float right = RunHudLayout.GetContentRightInset();
-            float bottom = RunHudLayout.GetBottomHandHeight()
-                + RunHudLayout.GetBottomActionBarHeight()
-                + RunHudLayout.Margin * 2f;
-            float top = RunHudLayout.Margin;
-
-            float playWidth = Mathf.Max(64f, screenWidth - left - right);
-            float playHeight = Mathf.Max(
-                64f,
-                screenHeight - bottom - top - ColonistBoardViewConstants.BoardBottomBreathingRoomPixels);
+            var playArea = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
             float boardFill = ColonistBoardViewConstants.BoardPlayAreaFill;
-            float orthoFromHeight = boardRadius * pixelHeight / (boardFill * playHeight);
-            float orthoFromWidth = boardRadius * pixelWidth / (boardFill * playWidth * _camera.aspect);
+            float orthoFromHeight = boardRadius * pixelHeight / (boardFill * playArea.PlayHeight);
+            float orthoFromWidth = boardRadius * pixelWidth / (boardFill * playArea.PlayWidth * _camera.aspect);
             _camera.orthographicSize = Mathf.Max(orthoFromHeight, orthoFromWidth)
                 / ColonistBoardViewConstants.BoardZoomMultiplier;
 
             float worldPerPixel = (2f * _camera.orthographicSize) / pixelHeight;
-            float desiredScreenX = left + playWidth * 0.5f;
-            float desiredScreenY = bottom + playHeight * 0.5f
-                + ColonistBoardViewConstants.BoardBottomBreathingRoomPixels * 0.5f;
+            float desiredScreenX = playArea.Left + playArea.PlayWidth * 0.5f;
+            float desiredScreenY = playArea.Bottom + playArea.PlayHeight * 0.5f;
             float deltaScreenX = desiredScreenX - pixelWidth * 0.5f;
             float deltaScreenY = desiredScreenY - pixelHeight * 0.5f;
 
