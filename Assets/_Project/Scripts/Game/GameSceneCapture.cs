@@ -183,12 +183,12 @@ namespace CatanRoguelike.Game
             {
                 var boardPath = outputPath + ".board.png";
                 LogCaptureTextureFingerprint(boardOnly, "encode-board");
+                string boardHash = ComputeTexturePixelHashHex(boardOnly);
                 var boardPng = boardOnly.EncodeToPNG();
-                string boardMd5 = Convert.ToHexString(System.Security.Cryptography.MD5.HashData(boardPng)).ToLowerInvariant();
                 File.WriteAllBytes(boardPath, boardPng);
                 Debug.Log(
                     $"{HudCompositePipelineMarker} wrote board-only PNG to {boardPath} " +
-                    $"textureId={boardOnly.GetInstanceID()} md5={boardMd5}");
+                    $"textureId={boardOnly.GetInstanceID()} hash={boardHash} bytes={boardPng.Length}");
             }
 
             if (hudComposite != null)
