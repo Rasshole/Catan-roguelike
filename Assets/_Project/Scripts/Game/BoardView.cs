@@ -226,10 +226,11 @@ namespace CatanRoguelike.Game
             var collider = go.AddComponent<MeshCollider>();
             collider.sharedMesh = mesh;
 
+            HexCartoonTileDecor.ApplyOutline(go, data.Coord, hexScale);
             if (ColonistPresentation.IsActive)
-                ColonistHexTileIcon.Apply(go, data);
+                ColonistHexTileIcon.Apply(go, data, hexScale);
             else
-                HexCartoonTileDecor.Apply(go, data.Coord, hexScale, data);
+                HexCartoonTileDecor.ApplyTopCap(go, data, hexScale, go.transform.lossyScale);
 
             var view = go.AddComponent<HexTileView>();
             view.Initialize(data, renderer);

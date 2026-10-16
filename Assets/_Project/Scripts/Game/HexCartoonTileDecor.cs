@@ -1,7 +1,6 @@
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using UnityEngine;
-using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
 namespace CatanRoguelike.Game
 {
@@ -15,15 +14,23 @@ namespace CatanRoguelike.Game
 
         public static void Apply(GameObject tileRoot, HexCoord hex, float hexScale, HexTileData data)
         {
+            ApplyOutline(tileRoot, hex, hexScale);
+            ApplyTopCap(tileRoot, data, hexScale, tileRoot.transform.lossyScale);
+        }
+
+        public static void ApplyOutline(GameObject tileRoot, HexCoord hex, float hexScale)
+        {
             var outlineRoot = new GameObject("TileOutline");
             outlineRoot.transform.SetParent(tileRoot.transform, false);
             CreateEdgeOutlines(outlineRoot.transform, hex, hexScale, tileRoot.transform.lossyScale);
+        }
 
+        public static void ApplyTopCap(GameObject tileRoot, HexTileData data, float hexScale, Vector3 hexLossy)
+        {
             var cap = new GameObject("TopBevelCap");
             cap.transform.SetParent(tileRoot.transform, false);
             cap.transform.localPosition = new Vector3(0f, TopCapLiftY, 0f);
-            float capDiameter = TopCapScale;
-            var hexLossy = tileRoot.transform.lossyScale;
+            float capDiameter = TopCapScale * HexMath.OuterRadius * hexScale * 1.7320508f;
             cap.transform.localScale = new Vector3(
                 capDiameter / hexLossy.x,
                 0.08f / hexLossy.y,
@@ -45,10 +52,8 @@ namespace CatanRoguelike.Game
             for (int i = 0; i < HexPrismMesh.SideCount; i++)
             {
                 int next = (i + 1) % HexPrismMesh.SideCount;
-                var a = VertexGraph.Canonicalize(new Vertex(hex, i));
-                var b = VertexGraph.Canonicalize(new Vertex(hex, next));
-                var (ax, az) = HexMath.VertexToWorldPosition(a, hexScale);
-                var (bx, bz) = HexMath.VertexToWorldPosition(b, hexScale);
+                var (ax, az) = HexMath.VertexToWorldPosition(hex, i, hexScale);
+                var (bx, bz) = HexMath.VertexToWorldPosition(hex, next, hexScale);
 
                 float localAx = ax - centerX;
                 float localAz = az - centerZ;

@@ -72,8 +72,17 @@ namespace CatanRoguelike.Game
         public static bool IsReadableFromCamera(
             Quaternion rotation,
             Vector3 labelWorldPosition,
-            Vector3 cameraWorldPosition) =>
-            GetReadableAlignmentScore(rotation, labelWorldPosition, cameraWorldPosition) >= MinReadableAlignment;
+            Vector3 cameraWorldPosition,
+            Camera camera = null)
+        {
+            if (ColonistPresentation.IsActive && camera != null)
+            {
+                var labelUp = (rotation * Vector3.up).normalized;
+                return Vector3.Dot(labelUp, -camera.transform.forward.normalized) >= 0.92f;
+            }
+
+            return GetReadableAlignmentScore(rotation, labelWorldPosition, cameraWorldPosition) >= MinReadableAlignment;
+        }
 
         public static void RefreshAllLabelsForCamera(Camera camera)
         {

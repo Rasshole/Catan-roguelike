@@ -48,7 +48,8 @@ namespace CatanRoguelike.Tests.PlayMode
                 if (NumberTokenLabelOrientation.IsReadableFromCamera(
                         label.transform.rotation,
                         label.transform.position,
-                        camera.transform.position))
+                        camera.transform.position,
+                        camera))
                     readable++;
             }
 
