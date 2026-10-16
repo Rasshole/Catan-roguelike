@@ -124,7 +124,7 @@ namespace CatanRoguelike.Game
         private const float WorldFaceDiameter = TokenWorldFaceDiameter;
         /// <summary>Visible rim annulus width as a fraction of face radius (world + screen probe).</summary>
         public const float TokenRimBandWidthFractionOfFaceRadius = 0.15f;
-        public static float RimOuterRadiusFactor => 1f + TokenRimBandWidthFractionOfFaceRadius;
+        public const float RimOuterRadiusFactor = 1f + TokenRimBandWidthFractionOfFaceRadius;
         private const float WorldChipThickness = 0.04f;
 
         // Tile-local Y offsets from hex prism top (TopY = 1).

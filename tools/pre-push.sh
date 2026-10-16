@@ -11,3 +11,5 @@ chmod +x "$root/tools/check-span-without-system.sh" 2>/dev/null || true
 "$root/tools/check-span-without-system.sh" "$root"
 chmod +x "$root/tools/check-bare-destroy.sh" 2>/dev/null || true
 "$root/tools/check-bare-destroy.sh" "$root"
+chmod +x "$root/tools/check-const-initializers.sh" 2>/dev/null || true
+"$root/tools/check-const-initializers.sh" "$root"
