@@ -104,7 +104,7 @@ namespace CatanRoguelike.Game
                 ? WorldChipThickness * 0.12f / hexScale.y
                 : WorldChipThickness * 0.35f / hexScale.y;
             float rowZ = colonist
-                ? -0.26f / hexScale.z
+                ? -0.22f / hexScale.z
                 : -0.14f / hexScale.z;
 
             var offsets = NumberTokenPipLayout.GetPipOffsetsX(pipCount);
@@ -118,7 +118,7 @@ namespace CatanRoguelike.Game
                 pip.transform.SetParent(_pipRoot.transform, false);
                 float offset = offsets[i];
                 pip.transform.localPosition = colonist
-                    ? new Vector3(0f, rowY, rowZ + offset / hexScale.z)
+                    ? new Vector3(offset / hexScale.x, rowY, rowZ)
                     : new Vector3(offset / hexScale.x, rowY, rowZ);
                 pip.transform.localScale = new Vector3(localDiameter, localHeight, localDiameter);
                 Destroy(pip.GetComponent<Collider>());
@@ -166,15 +166,27 @@ namespace CatanRoguelike.Game
             float localRimHeight = WorldChipThickness / (2f * hexScale.y);
             float localFaceHeight = WorldChipThickness * 0.85f / (2f * hexScale.y);
 
-            _chipRimRenderer = CreateChipDisc("Rim", localRimDiameter, localRimHeight, 0f);
-            _chipFaceRenderer = CreateChipDisc(
-                "Face",
-                localFaceDiameter,
-                localFaceHeight,
-                localRimHeight + localFaceHeight * 0.5f);
+            if (ColonistPresentation.IsActive)
+            {
+                _chipRimRenderer = CreateColonistChipDisk("Rim", localRimDiameter, localRimHeight, 0f);
+                _chipFaceRenderer = CreateColonistChipDisk(
+                    "Face",
+                    localFaceDiameter,
+                    localFaceHeight,
+                    localRimHeight * 2f + localFaceHeight * 0.5f);
+            }
+            else
+            {
+                _chipRimRenderer = CreateCylinderChipDisc("Rim", localRimDiameter, localRimHeight, 0f);
+                _chipFaceRenderer = CreateCylinderChipDisc(
+                    "Face",
+                    localFaceDiameter,
+                    localFaceHeight,
+                    localRimHeight + localFaceHeight * 0.5f);
+            }
         }
 
-        private Renderer CreateChipDisc(string name, float diameter, float height, float localYOffset)
+        private Renderer CreateCylinderChipDisc(string name, float diameter, float height, float localYOffset)
         {
             var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             disc.name = name;
@@ -184,6 +196,21 @@ namespace CatanRoguelike.Game
             Destroy(disc.GetComponent<Collider>());
             var renderer = disc.GetComponent<Renderer>();
             renderer.material = BuiltInMaterials.Create(Color.white);
+            return renderer;
+        }
+
+        private Renderer CreateColonistChipDisk(string name, float diameter, float height, float localYOffset)
+        {
+            var disc = new GameObject(name);
+            disc.transform.SetParent(_tokenChip.transform, false);
+            disc.transform.localPosition = new Vector3(0f, localYOffset, 0f);
+            disc.transform.localScale = new Vector3(diameter, height, diameter);
+
+            var meshFilter = disc.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = ThinDiskMesh.Shared;
+            var renderer = disc.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = BuiltInMaterials.Create(Color.white);
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             return renderer;
         }
 

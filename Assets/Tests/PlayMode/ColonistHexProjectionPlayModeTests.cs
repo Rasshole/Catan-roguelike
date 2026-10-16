@@ -41,10 +41,13 @@ namespace CatanRoguelike.Tests.PlayMode
             var tile = UnityEngine.Object.FindFirstObjectByType<HexTileView>();
             Assert.IsNotNull(tile, "Colonist board should include at least one hex tile.");
 
+            float worldXz = ColonistCaptureProjection.MeasureHexTopWorldXzAspectRatio(tile.transform);
+            Debug.Log($"Colonist hex world XZ width/height={worldXz:F3}");
+            Assert.Greater(worldXz, 0.80f, "Hex footprint should not be stretched wide in world XZ.");
+            Assert.Less(worldXz, 0.92f, "Hex footprint should not be stretched tall in world XZ.");
+
             float ratio = ColonistCaptureProjection.MeasureHexTopScreenAspectRatio(
                 tile.transform,
-                tile.Data.Coord,
-                boardView.HexScale,
                 camera,
                 tableCamera,
                 GameSceneCapture.CaptureWidth,

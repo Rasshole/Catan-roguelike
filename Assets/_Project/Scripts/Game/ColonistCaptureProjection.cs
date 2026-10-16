@@ -1,5 +1,3 @@
-using CatanRoguelike.Core.Hex;
-using CatanRoguelike.Core.Map;
 using UnityEngine;
 
 namespace CatanRoguelike.Game
@@ -23,32 +21,74 @@ namespace CatanRoguelike.Game
             return new Vector2Int(x, y);
         }
 
-        /// <summary>Axis-aligned screen width/height of hex top corners (pointy-top ≈ 1.1–1.2).</summary>
-        public static float MeasureHexTopScreenAspectRatio(
-            Transform hexTileRoot,
-            HexCoord coord,
-            float hexScale,
+        public static Vector3 WorldToViewportPoint(
+            Vector3 worldPoint,
             Camera camera,
             TableCamera tableCamera,
             int textureWidth,
             int textureHeight)
         {
-            float minX = float.PositiveInfinity;
-            float maxX = float.NegativeInfinity;
-            float minY = float.PositiveInfinity;
-            float maxY = float.NegativeInfinity;
-            int hits = 0;
-            float topY = hexTileRoot.position.y + hexTileRoot.lossyScale.y * HexPrismMesh.TopY;
+            if (camera == null || tableCamera == null)
+                return new Vector3(0.5f, 0.5f, 1f);
 
             var previousRect = camera.pixelRect;
             var previousTarget = camera.targetTexture;
             try
             {
                 ApplyCaptureCameraState(camera, tableCamera, textureWidth, textureHeight);
+                return camera.WorldToViewportPoint(worldPoint);
+            }
+            finally
+            {
+                camera.pixelRect = previousRect;
+                camera.targetTexture = previousTarget;
+            }
+        }
+
+        public static Vector2Int WorldToTexturePixel(
+            Vector3 worldPoint,
+            Camera camera,
+            TableCamera tableCamera,
+            int textureWidth,
+            int textureHeight)
+        {
+            var viewport = WorldToViewportPoint(worldPoint, camera, tableCamera, textureWidth, textureHeight);
+            return ViewportToTexturePixel(viewport, textureWidth, textureHeight);
+        }
+
+        /// <summary>Axis-aligned screen width/height of the rendered hex top ring (pointy-top ≈ 1.1–1.2).</summary>
+        public static float MeasureHexTopScreenAspectRatio(
+            Transform hexTileRoot,
+            Camera camera,
+            TableCamera tableCamera,
+            int textureWidth,
+            int textureHeight)
+        {
+            var meshFilter = hexTileRoot != null ? hexTileRoot.GetComponent<MeshFilter>() : null;
+            if (meshFilter == null || meshFilter.sharedMesh == null)
+                return 0f;
+
+            float minX = float.PositiveInfinity;
+            float maxX = float.NegativeInfinity;
+            float minY = float.PositiveInfinity;
+            float maxY = float.NegativeInfinity;
+            int hits = 0;
+
+            var previousRect = camera.pixelRect;
+            var previousTarget = camera.targetTexture;
+            var localToWorld = hexTileRoot.localToWorldMatrix;
+            var vertices = meshFilter.sharedMesh.vertices;
+
+            try
+            {
+                ApplyCaptureCameraState(camera, tableCamera, textureWidth, textureHeight);
                 for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
                 {
-                    var (vx, vz) = HexMath.VertexToWorldPosition(coord, corner, hexScale);
-                    Vector3 world = new Vector3(vx, topY, vz);
+                    Vector3 local = vertices[corner];
+                    if (!Mathf.Approximately(local.y, HexPrismMesh.TopY))
+                        continue;
+
+                    Vector3 world = localToWorld.MultiplyPoint3x4(local);
                     Vector3 viewport = camera.WorldToViewportPoint(world);
                     if (viewport.z < 0f || float.IsNaN(viewport.x) || float.IsNaN(viewport.y))
                         continue;
@@ -72,6 +112,41 @@ namespace CatanRoguelike.Game
                 return 0f;
 
             return (maxX - minX) / (maxY - minY);
+        }
+
+        /// <summary>World-space XZ width/height of the hex top ring after tile transform (≈ 0.85–0.90).</summary>
+        public static float MeasureHexTopWorldXzAspectRatio(Transform hexTileRoot)
+        {
+            var meshFilter = hexTileRoot != null ? hexTileRoot.GetComponent<MeshFilter>() : null;
+            if (meshFilter == null || meshFilter.sharedMesh == null)
+                return 0f;
+
+            float minX = float.PositiveInfinity;
+            float maxX = float.NegativeInfinity;
+            float minZ = float.PositiveInfinity;
+            float maxZ = float.NegativeInfinity;
+            int hits = 0;
+
+            var localToWorld = hexTileRoot.localToWorldMatrix;
+            var vertices = meshFilter.sharedMesh.vertices;
+            for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
+            {
+                Vector3 local = vertices[corner];
+                if (!Mathf.Approximately(local.y, HexPrismMesh.TopY))
+                    continue;
+
+                Vector3 world = localToWorld.MultiplyPoint3x4(local);
+                minX = Mathf.Min(minX, world.x);
+                maxX = Mathf.Max(maxX, world.x);
+                minZ = Mathf.Min(minZ, world.z);
+                maxZ = Mathf.Max(maxZ, world.z);
+                hits++;
+            }
+
+            if (hits < 4 || maxX <= minX || maxZ <= minZ)
+                return 0f;
+
+            return (maxX - minX) / (maxZ - minZ);
         }
     }
 }

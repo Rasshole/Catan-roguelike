@@ -33,6 +33,25 @@ namespace CatanRoguelike.Game
             return 0f;
         }
 
+        /// <summary>World point on the top of the reference hex for capture colour sampling.</summary>
+        public Vector3 GetCaptureReferenceWorldPoint()
+        {
+            var origin = new HexCoord(0, 0);
+            if (_tiles.TryGetValue(origin, out var centerTile))
+                return GetHexTopWorldPoint(centerTile.transform);
+
+            foreach (var tile in _tiles.Values)
+                return GetHexTopWorldPoint(tile.transform);
+
+            return transform.position;
+        }
+
+        private static Vector3 GetHexTopWorldPoint(Transform tileRoot)
+        {
+            float topY = tileRoot.position.y + tileRoot.lossyScale.y * HexPrismMesh.TopY;
+            return new Vector3(tileRoot.position.x, topY, tileRoot.position.z);
+        }
+
         private readonly Dictionary<HexCoord, HexTileView> _tiles = new();
         private GameController _controller;
         private int _lastBuildingVisualCount;
@@ -183,6 +202,7 @@ namespace CatanRoguelike.Game
             var (x, z) = HexMath.ToWorldPosition(data.Coord, hexScale);
             go.transform.localPosition = new Vector3(x, 0f, z);
             float height = ColonistPresentation.IsActive ? tileHeight * 0.25f : tileHeight;
+            // Colonist flattens prism height on Y only (never Z — Z scale would squash the hex footprint).
             go.transform.localScale = new Vector3(1f, height, 1f);
 
             var mesh = HexPrismMesh.Create(data.Coord, hexScale);

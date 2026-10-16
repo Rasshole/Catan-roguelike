@@ -98,19 +98,33 @@ namespace CatanRoguelike.Tests.PlayMode
                 Assert.IsNotNull(withHud, "HUD-composited capture texture should be created.");
                 Assert.AreNotSame(boardOnly, withHud, "Captures should be distinct texture instances.");
 
+                var mainCamera = Camera.main;
+                var tableCamera = UnityEngine.Object.FindFirstObjectByType<TableCamera>();
+                var boardView = UnityEngine.Object.FindFirstObjectByType<BoardView>();
+                Assert.IsNotNull(mainCamera, "Main camera should exist for board capture assertions.");
+                Assert.IsNotNull(tableCamera, "TableCamera should exist for colonist capture assertions.");
+                Assert.IsNotNull(boardView, "BoardView should exist for colonist capture assertions.");
+
                 var playCenter = ColonistPlayAreaLayout.GetCenterTexturePixels(
                     GameSceneCapture.CaptureWidth,
                     GameSceneCapture.CaptureHeight);
+                var boardPixel = ColonistCaptureProjection.WorldToTexturePixel(
+                    boardView.GetCaptureReferenceWorldPoint(),
+                    mainCamera,
+                    tableCamera,
+                    boardOnly.width,
+                    boardOnly.height);
                 Debug.Log(
-                    $"Colonist capture framing: playAreaCenterTexture=({playCenter.x},{playCenter.y})");
+                    $"Colonist capture framing: playAreaCenterTexture=({playCenter.x},{playCenter.y}) " +
+                    $"boardReferenceTexture=({boardPixel.x},{boardPixel.y})");
 
                 ColonistBoardCaptureAssertions.AssertColonistBoardCaptureShowsHexTiles(
                     boardOnly,
+                    mainCamera,
+                    tableCamera,
+                    boardView,
                     GameSceneCapture.CaptureWidth,
                     GameSceneCapture.CaptureHeight);
-
-                var mainCamera = Camera.main;
-                Assert.IsNotNull(mainCamera, "Main camera should exist for board capture assertions.");
                 ColonistBoardCaptureAssertions.AssertNumberTokenLabelsUprightForCamera(mainCamera);
 
                 AssertTextureHasVisibleContent(withHud);

@@ -60,14 +60,15 @@ namespace CatanRoguelike.Game
 
         public static float ComputeBoardBoundingRadius(IEnumerable<HexCoord> coords, float hexScale)
         {
-            float hexOuter = hexScale * HexMath.OuterRadius;
             float maxRadius = 0f;
 
             foreach (var coord in coords)
             {
-                var (x, z) = HexMath.ToWorldPosition(coord, hexScale);
-                float centerDistance = Mathf.Sqrt(x * x + z * z);
-                maxRadius = Mathf.Max(maxRadius, centerDistance + hexOuter);
+                for (int corner = 0; corner < 6; corner++)
+                {
+                    var (vx, vz) = HexMath.VertexToWorldPosition(coord, corner, hexScale);
+                    maxRadius = Mathf.Max(maxRadius, Mathf.Sqrt(vx * vx + vz * vz));
+                }
             }
 
             return maxRadius;

@@ -18,12 +18,55 @@ namespace CatanRoguelike.Game
             int screenWidth,
             int screenHeight)
         {
+            AssertColonistBoardCaptureShowsHexTiles(boardCapture, null, null, null, screenWidth, screenHeight);
+        }
+
+        public static void AssertColonistBoardCaptureShowsHexTiles(
+            Texture2D boardCapture,
+            Camera camera,
+            TableCamera tableCamera,
+            BoardView boardView,
+            int screenWidth,
+            int screenHeight)
+        {
             Assert.IsNotNull(boardCapture);
+            var center = ResolveCaptureSampleCenter(
+                boardCapture,
+                camera,
+                tableCamera,
+                boardView,
+                screenWidth,
+                screenHeight);
+
+            AssertCenterRegionShowsHexTiles(boardCapture, center.x, center.y);
+        }
+
+        private static Vector2Int ResolveCaptureSampleCenter(
+            Texture2D boardCapture,
+            Camera camera,
+            TableCamera tableCamera,
+            BoardView boardView,
+            int screenWidth,
+            int screenHeight)
+        {
+            if (camera != null && tableCamera != null && boardView != null)
+            {
+                var projected = ColonistCaptureProjection.WorldToTexturePixel(
+                    boardView.GetCaptureReferenceWorldPoint(),
+                    camera,
+                    tableCamera,
+                    screenWidth,
+                    screenHeight);
+                if (TryMeasureHexFraction(boardCapture, projected.x, projected.y, out float projectedHex)
+                    && projectedHex >= 0.35f)
+                    return projected;
+            }
+
             var center = ColonistPlayAreaLayout.GetCenterTexturePixels(screenWidth, screenHeight);
             if (!TryMeasureHexFraction(boardCapture, center.x, center.y, out float hexFrac) || hexFrac < 0.35f)
                 center = FindBestHexClusterCenter(boardCapture, screenWidth, screenHeight);
 
-            AssertCenterRegionShowsHexTiles(boardCapture, center.x, center.y);
+            return center;
         }
 
         public static void AssertCenterRegionShowsHexTiles(
