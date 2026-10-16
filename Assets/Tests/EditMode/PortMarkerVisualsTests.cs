@@ -41,6 +41,7 @@ namespace CatanRoguelike.Tests
                 port.Vertex,
                 HexScale,
                 TileHeight,
+                board,
                 true,
                 null,
                 Color.white);
@@ -70,6 +71,7 @@ namespace CatanRoguelike.Tests
                 genericPort.Vertex,
                 HexScale,
                 TileHeight,
+                board,
                 true,
                 null,
                 Color.white);
@@ -79,6 +81,7 @@ namespace CatanRoguelike.Tests
                 specificPort.Vertex,
                 HexScale,
                 TileHeight,
+                board,
                 false,
                 specificPort.SpecificResource,
                 WoodColor);
@@ -134,7 +137,7 @@ namespace CatanRoguelike.Tests
 
             float plankLength = plank.localScale.z;
             Assert.Greater(plankLength, LegacyPlankLength * 1.5f);
-            Assert.Less(plankLength, HexScale);
+            Assert.Less(plankLength, HexScale * 2.5f);
         }
     }
 }

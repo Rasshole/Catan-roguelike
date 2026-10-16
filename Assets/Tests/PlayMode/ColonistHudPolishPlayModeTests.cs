@@ -248,5 +248,48 @@ namespace CatanRoguelike.Tests.PlayMode
                     "2:1 port icon should stay inside the badge stack in screen space.");
             }
         }
+
+        [Timeout(90000)]
+        [UnityTest]
+        public IEnumerator PortBadges_DiscClearOfLandHexes()
+        {
+            if (!File.Exists(ColonistScenePath))
+            {
+                Assert.Inconclusive($"Colonist prototype not found at {ColonistScenePath}.");
+                yield break;
+            }
+
+            var loadOp = SceneManager.LoadSceneAsync(ColonistSceneName, LoadSceneMode.Single);
+            yield return loadOp;
+            for (int i = 0; i < 6; i++)
+                yield return null;
+
+            var gameManager = Object.FindFirstObjectByType<GameManager>();
+            GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
+            for (int i = 0; i < 4; i++)
+                yield return null;
+
+            var boardView = Object.FindFirstObjectByType<BoardView>();
+            Assert.IsNotNull(boardView, "Colonist scene should include BoardView.");
+            var board = gameManager.Controller.State.Board;
+            float hexScale = boardView.HexScale;
+
+            int checkedDiscs = 0;
+            foreach (var renderer in Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+            {
+                if (renderer == null || renderer.gameObject.name != "BadgeDisc")
+                    continue;
+
+                Vector3 worldCenter = renderer.bounds.center;
+                var center = new Vector2(worldCenter.x, worldCenter.z);
+                float radius = renderer.transform.lossyScale.x * 0.5f;
+                Assert.IsFalse(
+                    PortBadgePlacement.DiscIntersectsAnyLandHex(center, radius, board, hexScale),
+                    $"Port badge disc at {center} should not overlap land hexes (r={radius:F3}).");
+                checkedDiscs++;
+            }
+
+            Assert.Greater(checkedDiscs, 0, "Colonist board should show port badge discs.");
+        }
     }
 }

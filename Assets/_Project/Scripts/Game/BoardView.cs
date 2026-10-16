@@ -217,6 +217,7 @@ namespace CatanRoguelike.Game
                     port.Vertex,
                     hexScale,
                     tileHeight,
+                    board,
                     port.IsGeneric,
                     port.SpecificResource,
                     port.IsGeneric

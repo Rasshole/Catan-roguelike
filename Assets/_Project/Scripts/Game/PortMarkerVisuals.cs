@@ -1,6 +1,7 @@
 using System.Text;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Hex;
+using CatanRoguelike.Core.Map;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
@@ -25,11 +26,8 @@ namespace CatanRoguelike.Game
         private const float FlagHeight = 0.1f;
         private const float FlagWidth = 0.06f;
         public const float BadgeDiscSizeScale = 1.4f;
-        private const float BadgeDiscRadius = 0.22f * BadgeDiscSizeScale;
+        public static float BadgeDiscWorldRadius => 0.22f * BadgeDiscSizeScale;
         private const float BadgeDiscHeight = 0.012f * BadgeDiscSizeScale;
-        private const float CoastOffsetHexScale = 0.50f;
-        /// <summary>Extra seaward push so enlarged badge discs stay off hex tiles.</summary>
-        private const float CoastOffsetPerDiscDiameter = 0.32f;
         public const float BadgeLabelWidthFractionGeneric = 0.65f;
         public const float BadgeLabelWidthFractionSpecific = 0.45f;
         /// <summary>World quad edge length; reads ~40% of disc diameter on screen under the colonist camera.</summary>
@@ -73,31 +71,59 @@ namespace CatanRoguelike.Game
             Vertex vertex,
             float hexScale,
             float hexTopY,
+            BoardState board,
             bool isGeneric,
             ResourceType? specificResource,
             Color resourceColor)
         {
             var (vertexX, vertexZ) = HexMath.VertexToWorldPosition(vertex, hexScale);
             var (hexX, hexZ) = HexMath.ToWorldPosition(vertex.Hex, hexScale);
-            var outward = new Vector3(vertexX - hexX, 0f, vertexZ - hexZ);
-            if (outward.sqrMagnitude < 1e-6f)
-                outward = new Vector3(vertexX, 0f, vertexZ);
-            outward.Normalize();
+            Vector3 vertexPos = new Vector3(vertexX, hexTopY + BaseGapAboveHex, vertexZ);
+
+            Vector3 seaDir3;
+            float badgeLocalZ;
+            if (board != null
+                && PortBadgePlacement.TryComputeBadgeCenter(
+                    board,
+                    vertex,
+                    hexScale,
+                    BadgeDiscWorldRadius,
+                    out Vector2 badgeCenter,
+                    out Vector2 seaOut))
+            {
+                seaDir3 = new Vector3(seaOut.x, 0f, seaOut.y);
+                if (seaDir3.sqrMagnitude < 1e-6f)
+                    seaDir3 = new Vector3(vertexX - hexX, 0f, vertexZ - hexZ).normalized;
+            }
+            else
+            {
+                seaDir3 = new Vector3(vertexX - hexX, 0f, vertexZ - hexZ);
+                if (seaDir3.sqrMagnitude < 1e-6f)
+                    seaDir3 = new Vector3(vertexX, 0f, vertexZ);
+                seaDir3.Normalize();
+                badgeCenter = new Vector2(
+                    vertexX + seaDir3.x * (BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc),
+                    vertexZ + seaDir3.z * (BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc));
+            }
 
             var root = new GameObject(isGeneric ? "Port_Generic" : $"Port_{specificResource}");
             root.transform.SetParent(parent, false);
-            root.transform.position = new Vector3(vertexX, hexTopY + BaseGapAboveHex, vertexZ);
-            root.transform.rotation = Quaternion.LookRotation(outward, Vector3.up);
+            root.transform.SetPositionAndRotation(vertexPos, Quaternion.LookRotation(seaDir3, Vector3.up));
 
-            float discDiameter = BadgeDiscRadius * 2f;
-            float coastOffset = hexScale * CoastOffsetHexScale + discDiameter * CoastOffsetPerDiscDiameter;
-            float badgeLocalZ = PierLength + PostWidth * 0.35f + coastOffset;
-            float pierLen = Mathf.Max(PierLength, badgeLocalZ * 0.9f);
+            Vector3 badgeWorld = new Vector3(badgeCenter.x, vertexPos.y, badgeCenter.y);
+            Vector3 badgeLocal = root.transform.InverseTransformPoint(badgeWorld);
+            badgeLocalZ = Mathf.Max(
+                badgeLocal.z,
+                BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc);
+
+            float pierLen = Mathf.Max(PierLength, badgeLocalZ * 0.92f);
 
             CreatePart("PierPlank", root.transform,
                 new Vector3(0f, PierHeight * 0.5f, pierLen * 0.5f),
                 new Vector3(PierWidth, PierHeight, pierLen),
                 PierWoodColor);
+
+            TryCreateCoastPierArm(root.transform, vertex, board, hexScale, vertexPos.y, pierLen);
 
             CreatePart("PierPost", root.transform,
                 new Vector3(0f, PostHeight * 0.5f, badgeLocalZ - PostWidth * 0.25f),
@@ -115,6 +141,48 @@ namespace CatanRoguelike.Game
             return root;
         }
 
+        private static void TryCreateCoastPierArm(
+            Transform root,
+            Vertex portVertex,
+            BoardState board,
+            float hexScale,
+            float worldY,
+            float pierLen)
+        {
+            if (board == null)
+                return;
+
+            portVertex = VertexGraph.Canonicalize(portVertex);
+            foreach (var adjacent in VertexGraph.GetAdjacentVertices(portVertex))
+            {
+                var edge = VertexGraph.GetEdgeBetween(portVertex, adjacent);
+                if (PortBadgePlacement.GetHexesForEdgeCount(board, edge) != 1)
+                    continue;
+
+                var (nx, nz) = HexMath.VertexToWorldPosition(adjacent, hexScale);
+                Vector3 neighborLocal = root.InverseTransformPoint(new Vector3(nx, worldY, nz));
+                if (neighborLocal.sqrMagnitude < 1e-4f)
+                    continue;
+
+                Vector3 along = new Vector3(neighborLocal.x, 0f, neighborLocal.z);
+                float armLength = along.magnitude;
+                if (armLength < PierWidth * 0.5f)
+                    continue;
+
+                Vector3 armCenter = along * 0.5f;
+                armCenter.y = PierHeight * 0.5f;
+                var armRotation = Quaternion.LookRotation(along / armLength, Vector3.up);
+                CreatePart(
+                    "PierCoastArm",
+                    root,
+                    armCenter,
+                    new Vector3(PierWidth * 0.85f, PierHeight, armLength),
+                    PierWoodColor,
+                    armRotation);
+                return;
+            }
+        }
+
         private static void CreatePortRateBadge(
             Transform parent,
             bool isGeneric,
@@ -130,7 +198,7 @@ namespace CatanRoguelike.Game
             disc.name = "BadgeDisc";
             disc.transform.SetParent(badgeRoot.transform, false);
             disc.transform.localPosition = Vector3.zero;
-            float discDiameter = BadgeDiscRadius * 2f;
+            float discDiameter = BadgeDiscWorldRadius * 2f;
             disc.transform.localScale = new Vector3(discDiameter, BadgeDiscHeight, discDiameter);
             var discRenderer = disc.GetComponent<Renderer>();
             discRenderer.sharedMaterial = BuiltInMaterials.CreateUnlit(new Color(0.95f, 0.95f, 0.93f, 1f));
@@ -208,12 +276,14 @@ namespace CatanRoguelike.Game
             Transform parent,
             Vector3 localPosition,
             Vector3 localScale,
-            Color color)
+            Color color,
+            Quaternion localRotation = default)
         {
             var part = GameObject.CreatePrimitive(PrimitiveType.Cube);
             part.name = name;
             part.transform.SetParent(parent, false);
             part.transform.localPosition = localPosition;
+            part.transform.localRotation = localRotation;
             part.transform.localScale = localScale;
 
             var renderer = part.GetComponent<Renderer>();
