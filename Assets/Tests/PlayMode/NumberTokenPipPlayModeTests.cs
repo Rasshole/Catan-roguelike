@@ -15,7 +15,7 @@ namespace CatanRoguelike.Tests.PlayMode
 
         [Timeout(90000)]
         [UnityTest]
-        public IEnumerator NumberTokenPips_MatchClassicCounts_OnColonistBoard()
+        public IEnumerator NumberTokenChips_HaveNoPipChildren_OnColonistBoard()
         {
             if (!File.Exists(ColonistScenePath))
             {
@@ -37,10 +37,8 @@ namespace CatanRoguelike.Tests.PlayMode
                 if (tile.Data.IsDesert || !tile.Data.NumberToken.HasValue)
                     continue;
 
-                int token = tile.Data.NumberToken.Value;
-                int expected = NumberTokenPipVisuals.GetExpectedPipCount(token);
-                Assert.AreEqual(expected, tile.PipChildCount,
-                    $"Token {token} on {tile.Data.Coord} should spawn {expected} pip children.");
+                Assert.AreEqual(0, tile.PipChildCount,
+                    $"Token on {tile.Data.Coord} should not spawn pip dots under the number.");
                 checkedTiles++;
             }
 

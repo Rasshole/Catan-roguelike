@@ -170,39 +170,7 @@ namespace CatanRoguelike.Game
             var labelRgb = NumberTokenVisualStyle.GetLabel(token);
             _tokenLabel.color = new Color(labelRgb.R, labelRgb.G, labelRgb.B);
             _tokenLabel.characterSize = NumberTokenVisualStyle.GetLabelCharacterSize(token);
-            RefreshPipDots(token);
-        }
-
-        private void RefreshPipDots(int token)
-        {
             ClearPipDots();
-            int pipCount = NumberTokenPipLayout.GetPipCount(token);
-            if (pipCount <= 0)
-                return;
-
-            EnsureTokenChip();
-            EnsureTokenLabel();
-
-            _pipRoot = new GameObject("TokenPips");
-            _pipRoot.transform.SetParent(_tokenLabel.transform, false);
-            _pipRoot.transform.localRotation = Quaternion.identity;
-
-            float labelScale = Mathf.Max(_tokenLabel.transform.lossyScale.x, 0.001f);
-            NumberTokenPipVisuals.ComputeRowLayout(
-                pipCount, WorldFaceDiameter, labelScale, out float pipScale, out float step);
-            var offsets = NumberTokenPipLayout.GetPipOffsetsX(pipCount, step);
-            var labelRgb = NumberTokenVisualStyle.GetLabel(token);
-            var pipColor = new Color(labelRgb.R, labelRgb.G, labelRgb.B);
-
-            for (int i = 0; i < offsets.Length; i++)
-            {
-                var pip = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                pip.name = $"Pip_{i}";
-                pip.transform.SetParent(_pipRoot.transform, false);
-                NumberTokenPipVisuals.PlacePipOnLabelRow(pip.transform, offsets[i], pipColor, pipScale);
-                ColonistSceneDestroy.SafeDestroy(pip.GetComponent<Collider>());
-                _pipRenderers.Add(pip.GetComponent<Renderer>());
-            }
         }
 
         private void ClearPipDots()
