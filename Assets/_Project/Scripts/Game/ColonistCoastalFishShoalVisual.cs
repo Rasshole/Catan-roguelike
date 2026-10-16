@@ -68,12 +68,20 @@ namespace CatanRoguelike.Game
             if (texture == null)
                 return;
 
-            float iconWidth = HexTileView.TokenWorldFaceDiameter * 0.38f;
-            float iconHeight = iconWidth * 0.55f;
-            float y = CoastalFishShoalMesh.TopLocalY + 0.015f;
+            // Fish art fills ~70% x 30% of the PNG; size the quad so the visible fish body is ~0.3 hex long.
+            float iconWidth = HexTileView.TokenWorldFaceDiameter * 0.72f;
+            float iconHeight = iconWidth;
+            // The shoal root is Y-scaled by hex height; quads parented to it got skewed (thin slivers).
+            // Use an un-scaled container so the fish keep their aspect.
+            float rootYScale = Mathf.Max(1e-4f, root.localScale.y);
+            var iconRoot = new GameObject("FishIcons").transform;
+            iconRoot.SetParent(root, false);
+            iconRoot.localScale = new Vector3(1f, 1f / rootYScale, 1f);
+            float y = CoastalFishShoalMesh.TopLocalY * rootYScale + 0.01f;
 
-            var armMidLeft = (placement.CoastArmLeft + placement.SeaFlatLeft) / 2f;
-            var armMidRight = (placement.CoastArmRight + placement.SeaFlatRight) / 2f;
+            // Fish sit in the seaward band either side of the token (outside the token disc).
+            var armMidLeft = placement.CoastArmLeft + (placement.SeaFlatLeft - placement.CoastArmLeft) * 0.62f;
+            var armMidRight = placement.CoastArmRight + (placement.SeaFlatRight - placement.CoastArmRight) * 0.62f;
             var centers = new[] { armMidLeft, armMidRight };
 
             for (int i = 0; i < centers.Length; i++)
@@ -84,7 +92,7 @@ namespace CatanRoguelike.Game
                     y,
                     xz.Z - placement.TokenCenter.Z);
                 ColonistFlatBoardQuad.Create(
-                    root,
+                    iconRoot,
                     $"FishIcon_{i}",
                     local,
                     iconWidth,

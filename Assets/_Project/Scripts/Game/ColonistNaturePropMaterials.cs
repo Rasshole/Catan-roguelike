@@ -27,8 +27,24 @@ namespace CatanRoguelike.Game
                 _ => null
             };
 
-            if (mat != null)
-                renderer.sharedMaterial = mat;
+            if (mat == null)
+                return;
+
+            // Quaternius FBX trees are one mesh with several sub-meshes (bark + leaves). Assigning
+            // sharedMaterial only replaced slot 0, leaving the 0.8-grey "NormalTree_Leaves" slot that
+            // rendered as white blobs. Style every slot by its source material name.
+            var mats = renderer.sharedMaterials;
+            for (int i = 0; i < mats.Length; i++)
+            {
+                string src = mats[i] != null ? mats[i].name.ToLowerInvariant() : string.Empty;
+                mats[i] = resource == ResourceType.Wood
+                    ? (src.Contains("leaf") || src.Contains("leaves") ? TreeLeaves()
+                        : src.Contains("bark") || src.Contains("trunk") || src.Contains("wood") ? TreeBark()
+                        : mat)
+                    : mat;
+            }
+
+            renderer.sharedMaterials = mats;
         }
 
         private static Material TreeBark() =>

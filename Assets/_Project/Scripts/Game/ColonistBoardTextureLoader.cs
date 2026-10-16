@@ -65,6 +65,14 @@ namespace CatanRoguelike.Game
                 mat.SetFloat("_Glossiness", 0.1f);
             if (mat.HasProperty("_Metallic"))
                 mat.SetFloat("_Metallic", 0f);
+            // Skybox reflections + specular washed every terrain ~+0.17 toward grey-blue
+            // (brick rendered 0.92/0.55/0.41 vs texture 0.82/0.38/0.22). Matte board tops.
+            if (mat.HasProperty("_SpecularHighlights"))
+                mat.SetFloat("_SpecularHighlights", 0f);
+            if (mat.HasProperty("_GlossyReflections"))
+                mat.SetFloat("_GlossyReflections", 0f);
+            mat.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
+            mat.EnableKeyword("_GLOSSYREFLECTIONS_OFF");
         }
 
         public static Color GetFallbackColorForSlot(BoardTerrainSlot slot) => GetFallbackColor(slot);
