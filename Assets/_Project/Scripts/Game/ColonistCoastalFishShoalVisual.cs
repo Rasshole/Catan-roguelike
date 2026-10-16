@@ -41,14 +41,6 @@ namespace CatanRoguelike.Game
 
         private static Material CreateShoalMaterial()
         {
-            var tex = ColonistBoardTextureLoader.LoadBoardTexture(BoardTerrainSlot.FishShoal);
-            if (tex != null)
-            {
-                var mat = BuiltInMaterials.Create(tex, Color.white);
-                mat.renderQueue = 2002;
-                return mat;
-            }
-
             var fallback = BuiltInMaterials.CreateUnlit(new Color(0.48f, 0.72f, 0.78f, 1f), zWrite: true);
             fallback.renderQueue = 2002;
             return fallback;

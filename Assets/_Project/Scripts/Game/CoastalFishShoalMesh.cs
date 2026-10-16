@@ -16,10 +16,8 @@ namespace CatanRoguelike.Game
             var v0 = new Vector3(placement.CoastVertexA.X - ox, TopLocalY, placement.CoastVertexA.Z - oz);
             var v1 = new Vector3(placement.CoastVertexB.X - ox, TopLocalY, placement.CoastVertexB.Z - oz);
             var v2 = new Vector3(placement.SeaTip.X - ox, TopLocalY, placement.SeaTip.Z - oz);
-            if (Vector3.Cross(v1 - v0, v2 - v0).y > 0f)
-                (v1, v2) = (v2, v1);
             mesh.vertices = new[] { v0, v1, v2 };
-            mesh.triangles = new[] { 0, 1, 2 };
+            mesh.triangles = new[] { 0, 1, 2, 0, 2, 1 }; // two-sided: always visible from the top-down camera
             mesh.uv = new[] { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 1f) };
             mesh.normals = new[] { Vector3.up, Vector3.up, Vector3.up };
             mesh.RecalculateBounds();
