@@ -24,6 +24,7 @@ namespace CatanRoguelike.Tests
         public void GetCategoryColor_KnownCategories_AreStable()
         {
             Assert.AreEqual(CardVisualStyle.Synergy, CardVisualStyle.GetCategoryColor(CardCategory.Synergy));
+            Assert.AreEqual("Sab.", CardVisualStyle.GetCategoryLabel(CardCategory.Sabotage));
             Assert.AreEqual(CardVisualStyle.RollManipulation,
                 CardVisualStyle.GetCategoryColor(CardCategory.RollManipulation));
         }
