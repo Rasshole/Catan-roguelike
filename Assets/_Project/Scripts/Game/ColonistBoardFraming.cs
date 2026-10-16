@@ -7,8 +7,10 @@ namespace CatanRoguelike.Game
     {
         public const float PlayAreaMarginPixels = 24f;
 
-        /// <summary>Multiply ortho size (&lt;1 fills more of the play area).</summary>
+        /// <summary>Board occupies this fraction of the margined play rect (&lt;1 zooms out for margin).</summary>
         public const float TargetBoardFillScale = 0.9f;
+
+        public const float FramingFitSafetyMultiplier = 1.04f;
 
         public static float ComputeOrthographicSize(
             float boardExtentRadiusWorld,
@@ -24,7 +26,8 @@ namespace CatanRoguelike.Game
 
             float fromHeight = diameter * screenHeight / (2f * usableHeight);
             float fromWidth = diameter * screenWidth / (2f * usableWidth * Mathf.Max(0.01f, cameraAspect));
-            return Mathf.Max(fromHeight, fromWidth) * TargetBoardFillScale;
+            float fitOrtho = Mathf.Max(fromHeight, fromWidth) / Mathf.Max(0.5f, TargetBoardFillScale);
+            return fitOrtho * FramingFitSafetyMultiplier;
         }
 
         public static void LogPlayAreaFitDiagnostics(

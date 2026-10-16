@@ -25,7 +25,7 @@ namespace CatanRoguelike.Game
             float worldDiameter = hexScale * HexMath.OuterRadius * IconDiameterFactor;
             float localDiameter = worldDiameter / Mathf.Max(lossy.x, 0.001f);
             iconGo.transform.localPosition = new Vector3(0f, HexPrismMesh.TopY + IconLiftAboveHexTop, 0f);
-            iconGo.transform.localRotation = Quaternion.Euler(-90f, ColonistBoardViewConstants.CameraYawDegrees, 0f);
+            iconGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             iconGo.transform.localScale = new Vector3(localDiameter, localDiameter, 1f);
 
             var color = BoardResourceColors.GetHudSwatch(data.Resource);
@@ -49,7 +49,7 @@ namespace CatanRoguelike.Game
             float hexTopY = hexTileRoot != null
                 ? hexTileRoot.position.y + hexTileRoot.lossyScale.y * HexPrismMesh.TopY
                 : 0f;
-            Vector3 normal = iconTransform.up;
+            Vector3 normal = -iconTransform.forward;
             float facesCamera = Vector3.Dot(normal, -camera.transform.forward);
             int layer = iconTransform.gameObject.layer;
             bool inMask = (camera.cullingMask & (1 << layer)) != 0;

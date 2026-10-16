@@ -60,7 +60,8 @@ namespace CatanRoguelike.Tests.PlayMode
                     (camera.cullingMask & (1 << layer)) != 0,
                     $"Camera cullingMask should include ResourceIcon layer {layer}.");
 
-                float facesCamera = Vector3.Dot(iconTransform.up, -camera.transform.forward);
+                Vector3 iconNormal = -iconTransform.forward;
+                float facesCamera = Vector3.Dot(iconNormal, -camera.transform.forward);
                 Assert.Greater(
                     facesCamera,
                     0.85f,

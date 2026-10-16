@@ -38,6 +38,8 @@ namespace CatanRoguelike.Core.Yield
                 G = g;
                 B = b;
             }
+
+            public override string ToString() => $"({R:F3},{G:F3},{B:F3})";
         }
     }
 }

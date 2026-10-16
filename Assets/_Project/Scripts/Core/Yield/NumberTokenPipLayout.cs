@@ -13,7 +13,8 @@ namespace CatanRoguelike.Core.Yield
             if (pipCount <= 0)
                 return Array.Empty<float>();
 
-            const float step = 0.18f;
+            // Keep center spacing ≥ 1.6× pip diameter once mapped through label row scale in Game layer.
+            const float step = 0.56f;
             float span = (pipCount - 1) * step;
             var offsets = new float[pipCount];
             for (int i = 0; i < pipCount; i++)

@@ -11,6 +11,19 @@ namespace CatanRoguelike.Game
     /// <summary>PlayMode helpers for colonist board-only capture sanity checks.</summary>
     public static class ColonistBoardCaptureAssertions
     {
+        public enum CapturePixelKind
+        {
+            TokenChip,
+            HexTile,
+            Ocean,
+            Sky,
+            SandCoast,
+            Other
+        }
+
+        public static CapturePixelKind ClassifyCapturePixel(Color pixel) =>
+            ClassifyPixelKind(pixel);
+
         public static readonly Color OceanReference = ColonistBoardSurfaces.OceanClearColor;
         public static readonly Color SandReference = new(0.82f, 0.74f, 0.52f, 1f);
         public static readonly Color CameraSkyReference = new(0.08f, 0.22f, 0.38f, 1f);
@@ -218,6 +231,21 @@ namespace CatanRoguelike.Game
             return true;
         }
 
+        private static CapturePixelKind ClassifyPixelKind(Color pixel)
+        {
+            if (MatchesTokenChipColor(pixel))
+                return CapturePixelKind.TokenChip;
+            if (MatchesHexPaletteColor(pixel))
+                return CapturePixelKind.HexTile;
+            if (MatchesOceanColor(pixel))
+                return CapturePixelKind.Ocean;
+            if (MatchesSkyColor(pixel))
+                return CapturePixelKind.Sky;
+            if (MatchesSandCoastColor(pixel))
+                return CapturePixelKind.SandCoast;
+            return CapturePixelKind.Other;
+        }
+
         private static void ClassifyPixel(
             Color pixel,
             ref int hexLike,
@@ -226,18 +254,25 @@ namespace CatanRoguelike.Game
             ref int skyLike,
             ref int other)
         {
-            if (IsTokenChipLike(pixel))
-                hexLike++;
-            else if (IsHexTileLike(pixel))
-                hexLike++;
-            else if (IsOceanLike(pixel))
-                oceanLike++;
-            else if (IsSkyLike(pixel))
-                skyLike++;
-            else if (IsSandCoastLike(pixel))
-                sandLike++;
-            else
-                other++;
+            switch (ClassifyPixelKind(pixel))
+            {
+                case CapturePixelKind.TokenChip:
+                case CapturePixelKind.HexTile:
+                    hexLike++;
+                    break;
+                case CapturePixelKind.Ocean:
+                    oceanLike++;
+                    break;
+                case CapturePixelKind.Sky:
+                    skyLike++;
+                    break;
+                case CapturePixelKind.SandCoast:
+                    sandLike++;
+                    break;
+                default:
+                    other++;
+                    break;
+            }
         }
 
         public static void WriteSamplePatchDebugPng(Texture2D boardCapture, int centerX, int centerY, int radius = 24)
@@ -297,14 +332,9 @@ namespace CatanRoguelike.Game
             Debug.LogWarning(sb.ToString());
         }
 
-        private static bool IsOceanLike(Color c)
+        private static bool MatchesOceanColor(Color c)
         {
-            if (IsHexTileLike(c) || IsTokenChipLike(c))
-                return false;
-
             if (ColorDistance(c, OceanReference) < 0.22f)
-                return true;
-            if (ColorDistance(c, CameraSkyReference) < 0.14f)
                 return true;
 
             return c.b >= 0.48f
@@ -313,13 +343,13 @@ namespace CatanRoguelike.Game
                 && c.g >= 0.26f;
         }
 
-        private static bool IsSkyLike(Color c) =>
-            !IsOceanLike(c) && ColorDistance(c, CameraSkyReference) < 0.10f;
+        private static bool MatchesSkyColor(Color c) =>
+            ColorDistance(c, CameraSkyReference) < 0.10f;
 
-        private static bool IsSandCoastLike(Color c) =>
+        private static bool MatchesSandCoastColor(Color c) =>
             ColorDistance(c, SandReference) < 0.12f && !MatchesPalette(c, BoardResourcePalette.Desert, 0.10f);
 
-        private static bool IsTokenChipLike(Color c)
+        private static bool MatchesTokenChipColor(Color c)
         {
             if (c.a < 0.5f)
                 return false;
@@ -335,18 +365,21 @@ namespace CatanRoguelike.Game
             && Mathf.Abs(c.g - rgb.G) <= tolerance
             && Mathf.Abs(c.b - rgb.B) <= tolerance;
 
-        private static bool IsHexTileLike(Color c)
-        {
-            if (IsSkyLike(c) || IsTokenChipLike(c))
-                return false;
+        private static bool MatchesHexPaletteColor(Color c) =>
+            MatchesPalette(c, BoardResourcePalette.Desert, 0.16f)
+            || MatchesPalette(c, BoardResourcePalette.Wood, 0.18f)
+            || MatchesPalette(c, BoardResourcePalette.Brick, 0.18f)
+            || MatchesPalette(c, BoardResourcePalette.Wheat, 0.18f)
+            || MatchesPalette(c, BoardResourcePalette.Sheep, 0.18f)
+            || MatchesPalette(c, BoardResourcePalette.Stone, 0.18f)
+            || MatchesLitResourceHex(c);
 
-            return MatchesPalette(c, BoardResourcePalette.Desert, 0.16f)
-                || MatchesPalette(c, BoardResourcePalette.Wood, 0.18f)
-                || MatchesPalette(c, BoardResourcePalette.Brick, 0.18f)
-                || MatchesPalette(c, BoardResourcePalette.Wheat, 0.18f)
-                || MatchesPalette(c, BoardResourcePalette.Sheep, 0.18f)
-                || MatchesPalette(c, BoardResourcePalette.Stone, 0.18f);
-        }
+        private static bool MatchesLitResourceHex(Color c) =>
+            c.g >= 0.55f && c.g > c.r + 0.12f && c.g >= c.b + 0.05f;
+
+        private static bool IsHexTileLike(Color c) => MatchesHexPaletteColor(c);
+
+        private static bool IsTokenChipLike(Color c) => MatchesTokenChipColor(c);
 
         private static bool MatchesPalette(Color c, BoardResourcePalette.Rgb rgb, float tolerance) =>
             Mathf.Abs(c.r - rgb.R) <= tolerance
