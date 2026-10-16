@@ -46,7 +46,10 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsNotNull(gameManager.Meta, "Meta should be loaded after Start().");
 
             if (gameManager.Controller.State.Phase == GamePhase.RunSelectMap)
-                GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
+                GameScenePlayHarness.CompleteRunSelectAndSetup(
+                    gameManager.Controller,
+                    gameManager.Meta,
+                    fishermenOfCatan: true);
 
             GameScenePlayHarness.AdvanceToDayPlayerActions(gameManager.Controller);
             Assert.AreEqual(GamePhase.DayPlayerActions, gameManager.Controller.State.Phase);

@@ -32,7 +32,7 @@ namespace CatanRoguelike.Tests
         {
             var board = MapPresets.CreateBoard(size);
             var ports = PortAccess.DiscoverPorts(board);
-            int land = board.Tiles.Values.Count(t => !t.IsFishTile);
+            int land = board.Tiles.Values.Count(t => !t.IsFishTile || t.IsDesert);
             int expectedSpecific = land switch { 7 => 3, 13 => 4, 19 => 5, 30 => 7, 37 => 7, _ => System.Math.Min(5, land / 2) };
             int expectedGeneric = land switch { 7 => 2, 13 => 3, 19 => 4, 30 => 4, 37 => 5, _ => System.Math.Max(1, land / 6) };
 

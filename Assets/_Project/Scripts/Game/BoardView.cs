@@ -25,10 +25,10 @@ namespace CatanRoguelike.Game
         public float GetBoardBoundingRadius()
         {
             if (_tiles.Count > 0)
-                return TableCameraFraming.ComputeBoardBoundingRadius(_tiles.Keys, hexScale);
+                return TableCameraFraming.ComputeBoardBoundingRadius(GetLandTileCoords(), hexScale);
 
             if (_controller != null)
-                return TableCameraFraming.ComputeBoardBoundingRadius(_controller.State.Board, hexScale);
+                return TableCameraFraming.ComputeBoardBoundingRadius(GetLandCoords(_controller.State.Board), hexScale);
 
             return 0f;
         }
@@ -108,9 +108,16 @@ namespace CatanRoguelike.Game
                 return transform.position;
 
             Vector3 sum = Vector3.zero;
+            int count = 0;
             foreach (var tile in _tiles.Values)
+            {
+                if (IsSeaFishTile(tile.Data))
+                    continue;
                 sum += tile.transform.position;
-            return sum / _tiles.Count;
+                count++;
+            }
+
+            return count > 0 ? sum / count : transform.position;
         }
 
         /// <summary>World samples for colonist camera fit (land corners, sand ring, port badges).</summary>
@@ -276,7 +283,9 @@ namespace CatanRoguelike.Game
 
         private void CreateTableSurface(BoardState board)
         {
-            float boundingRadius = TableCameraFraming.ComputeBoardBoundingRadius(board, hexScale);
+            float boundingRadius = ColonistPresentation.IsActive
+                ? TableCameraFraming.ComputeBoardBoundingRadius(GetLandCoords(board), hexScale)
+                : TableCameraFraming.ComputeBoardBoundingRadius(board, hexScale);
 
             if (!ColonistPresentation.IsActive)
             {
@@ -358,8 +367,29 @@ namespace CatanRoguelike.Game
             }
         }
 
+        private static bool IsSeaFishTile(HexTileData data) =>
+            data.IsFishTile && !data.IsDesert;
+
         private static bool IsLandHexCoord(HexTileData data) =>
-            !data.IsFishTile || data.IsDesert;
+            !IsSeaFishTile(data);
+
+        private IEnumerable<HexCoord> GetLandTileCoords()
+        {
+            foreach (var kvp in _tiles)
+            {
+                if (!IsSeaFishTile(kvp.Value.Data))
+                    yield return kvp.Key;
+            }
+        }
+
+        private static IEnumerable<HexCoord> GetLandCoords(BoardState board)
+        {
+            foreach (var kvp in board.Tiles)
+            {
+                if (!IsSeaFishTile(kvp.Value))
+                    yield return kvp.Key;
+            }
+        }
 
         private HexTileView CreateHexTile(HexTileData data)
         {
@@ -372,7 +402,7 @@ namespace CatanRoguelike.Game
             go.transform.localScale = new Vector3(1f, height, 1f);
 
             Renderer renderer;
-            if (ColonistPresentation.IsActive && data.IsFishTile && !data.IsDesert)
+            if (ColonistPresentation.IsActive && IsSeaFishTile(data))
             {
                 renderer = ColonistSeaFishHexVisual.Apply(go, data, hexScale, height);
             }
@@ -394,11 +424,11 @@ namespace CatanRoguelike.Game
             HexCartoonTileDecor.ApplyOutline(go, data.Coord, hexScale, _boardTileCoords);
             if (ColonistPresentation.IsActive)
             {
-                if (!data.IsFishTile || data.IsDesert)
+                if (!data.IsDesert && !IsSeaFishTile(data))
                     ColonistHexTileIcon.Apply(go, data, hexScale);
                 if (data.IsDesert && !data.IsFishTile)
                     ColonistDesertDuneDecor.Apply(go, hexScale);
-                if (data.IsFishTile && data.IsDesert)
+                if (data.IsFishTile)
                     ColonistFishTileVisual.Apply(go, data, hexScale);
             }
             else

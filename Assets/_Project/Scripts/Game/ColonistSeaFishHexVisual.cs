@@ -24,7 +24,7 @@ namespace CatanRoguelike.Game
             meshFilter.sharedMesh = ThinDiskMesh.Shared;
 
             var renderer = disc.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = ColonistBoardTextureLoader.GetTerrainMaterial(BoardTerrainSlot.SeaLake);
+            renderer.sharedMaterial = ColonistBoardTextureLoader.CreateSeaFishGroundMaterial();
             renderer.sharedMaterial.renderQueue = 1985;
 
             ColonistFishTileVisual.Apply(root, data, hexScale);

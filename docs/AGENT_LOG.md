@@ -1,5 +1,14 @@
 # Agent log
 
+## 2026-10-16 (UTC) — PR #109 v70 terrain bisect (`HEAD` after `ed700da`)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Black hexes — revert v66 `CreateOpaque` / `Create(texture)` Standard path; drop Unlit/Texture | Done |
+| 2 | Fishermen only in colonist capture harness; Game scene icons fixed | Done |
+| 3 | Ports — v66 `PortAccess` + land-only frame vertices (fish excluded) | Done |
+| 4 | Sea fish — per-instance light-blue Standard; framing uses land coords only | Done |
+
 ## 2026-10-16 (UTC) — PR #109 v69 board shape/terrain/ports (`HEAD` after `ae9069e`)
 
 | # | Item | Status |

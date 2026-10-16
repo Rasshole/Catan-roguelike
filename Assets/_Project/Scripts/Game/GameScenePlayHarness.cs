@@ -20,10 +20,13 @@ namespace CatanRoguelike.Game
         /// <summary>Colonist capture / play harness uses standard base Catan (19 hex, desert center).</summary>
         public const MapSize DefaultHarnessMapSize = MapSize.Large;
 
-        public static void CompleteRunSelect(GameController controller, MetaProgression meta)
+        public static void CompleteRunSelect(
+            GameController controller,
+            MetaProgression meta,
+            bool fishermenOfCatan = false)
         {
             EnsureHarnessMapUnlocked(meta);
-            controller.FishermenMapOption = true;
+            controller.FishermenMapOption = fishermenOfCatan;
             controller.SelectMap(DefaultHarnessMapSize);
             if (controller.State.Phase != GamePhase.RunSelectLeader)
                 throw new InvalidOperationException(
@@ -60,9 +63,12 @@ namespace CatanRoguelike.Game
                     "setup loop should finish within bounded steps (stall guard).");
         }
 
-        public static void CompleteRunSelectAndSetup(GameController controller, MetaProgression meta)
+        public static void CompleteRunSelectAndSetup(
+            GameController controller,
+            MetaProgression meta,
+            bool fishermenOfCatan = false)
         {
-            CompleteRunSelect(controller, meta);
+            CompleteRunSelect(controller, meta, fishermenOfCatan);
             CompleteSetup(controller);
         }
 

@@ -31,7 +31,7 @@ namespace CatanRoguelike.Game
             var land = new System.Collections.Generic.HashSet<HexCoord>();
             foreach (var kvp in board.Tiles)
             {
-                if (!kvp.Value.IsFishTile)
+                if (!kvp.Value.IsFishTile || kvp.Value.IsDesert)
                     land.Add(kvp.Key);
             }
 

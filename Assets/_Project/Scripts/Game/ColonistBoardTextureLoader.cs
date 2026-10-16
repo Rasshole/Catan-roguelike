@@ -6,6 +6,7 @@ namespace CatanRoguelike.Game
 {
     /// <summary>
     /// Loads painted terrain textures from Resources/Art when present; falls back to flat palette colors.
+    /// Uses the same Standard opaque path as v66 (batchmode-safe); optional procedural albedo on Standard only.
     /// </summary>
     public static class ColonistBoardTextureLoader
     {
@@ -18,7 +19,7 @@ namespace CatanRoguelike.Game
             if (_cache.TryGetValue(slot, out var cached))
                 return cached;
 
-            var fallback = ColonistBoardTerrainDiagnostics.EnsureVisibleTerrainFallback(GetFallbackColor(slot));
+            var fallback = GetFallbackColor(slot);
             Texture2D texture = Resources.Load<Texture2D>($"{ArtRoot}/{slot}");
             if (texture == null)
             {
@@ -33,12 +34,21 @@ namespace CatanRoguelike.Game
                 }
             }
 
-            Material mat = BuiltInMaterials.CreateTerrainSurface(texture, fallback);
+            Material mat = texture != null
+                ? BuiltInMaterials.Create(texture, Color.white)
+                : BuiltInMaterials.CreateOpaque(fallback);
+
             mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry;
             ColonistBoardTerrainDiagnostics.LogTerrainMaterialCreation(slot, mat, texture, fallback);
 
             _cache[slot] = mat;
             return mat;
+        }
+
+        public static Material CreateSeaFishGroundMaterial()
+        {
+            var color = GetFallbackColor(BoardTerrainSlot.SeaLake);
+            return BuiltInMaterials.CreateOpaque(color);
         }
 
         public static void ClearCache() => _cache.Clear();
@@ -53,7 +63,7 @@ namespace CatanRoguelike.Game
             BoardTerrainSlot.Sheep => BoardResourceColors.GetTileFace(new HexTileData(default, Core.ResourceType.Sheep)),
             BoardTerrainSlot.Ore => BoardResourceColors.GetTileFace(new HexTileData(default, Core.ResourceType.Stone)),
             BoardTerrainSlot.Desert => BoardResourceColors.GetTileFace(new HexTileData(default, Core.ResourceType.Wood) { IsDesert = true }),
-            BoardTerrainSlot.SeaLake => new Color(0.22f, 0.48f, 0.72f),
+            BoardTerrainSlot.SeaLake => new Color(0.55f, 0.78f, 0.92f),
             BoardTerrainSlot.CoastSand => new Color(0.94f, 0.88f, 0.72f),
             _ => Color.gray
         };

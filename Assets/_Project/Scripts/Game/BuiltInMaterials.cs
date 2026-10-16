@@ -41,23 +41,6 @@ namespace CatanRoguelike.Game
             return mat;
         }
 
-        /// <summary>Unlit textured terrain (readable without scene lights); flat color if texture missing.</summary>
-        public static Material CreateTerrainSurface(Texture2D albedo, Color flatFallback)
-        {
-            if (albedo == null || albedo.width < 2)
-                return CreateUnlit(flatFallback);
-
-            var shader = Shader.Find("Unlit/Texture");
-            if (shader == null)
-                return CreateUnlit(flatFallback);
-
-            var mat = new Material(shader) { color = Color.white };
-            mat.mainTexture = albedo;
-            if (mat.HasProperty("_MainTex"))
-                mat.SetTexture("_MainTex", albedo);
-            return mat;
-        }
-
         /// <summary>Opaque Standard surface (token chips, board props).</summary>
         public static Material CreateOpaque(Color color)
         {

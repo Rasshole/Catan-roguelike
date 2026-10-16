@@ -61,19 +61,5 @@ namespace CatanRoguelike.Game
             return $"{texture.name} {texture.width}x{texture.height} center=({center.r:F3},{center.g:F3},{center.b:F3})";
         }
 
-        public static Color EnsureVisibleTerrainFallback(Color fallback)
-        {
-            float lum = fallback.r + fallback.g + fallback.b;
-            if (lum < 0.35f)
-            {
-                var lifted = Color.Lerp(fallback, Color.white, 0.35f);
-                Debug.LogWarning(
-                    $"ColonistTerrainDiag lifted dark fallback ({fallback.r:F3},{fallback.g:F3},{fallback.b:F3}) " +
-                    $"→ ({lifted.r:F3},{lifted.g:F3},{lifted.b:F3})");
-                return lifted;
-            }
-
-            return fallback;
-        }
     }
 }
