@@ -1,4 +1,3 @@
-using CatanRoguelike.Core.Map;
 using UnityEngine;
 
 namespace CatanRoguelike.Game
@@ -10,21 +9,33 @@ namespace CatanRoguelike.Game
 
         public static void CreateOceanAndCoast(Transform boardRoot, float boardBoundingRadius)
         {
-            float oceanRadius = boardBoundingRadius * 2.1f;
-            float sandRadius = boardBoundingRadius * 1.18f;
-
-            CreateFlatDisk(boardRoot, "ColonistOcean", -0.02f, oceanRadius, OceanAlbedo);
-            CreateFlatDisk(boardRoot, "ColonistSandCoast", -0.01f, sandRadius, SandAlbedo);
+            CreateFlatDisk(
+                boardRoot,
+                "ColonistOcean",
+                TableCameraFraming.ColonistOceanLocalY,
+                TableCameraFraming.ComputeColonistOceanDiskScale(boardBoundingRadius),
+                OceanAlbedo);
+            CreateFlatDisk(
+                boardRoot,
+                "ColonistSandCoast",
+                TableCameraFraming.ColonistSandLocalY,
+                TableCameraFraming.ComputeColonistSandDiskScale(boardBoundingRadius),
+                SandAlbedo);
         }
 
-        private static void CreateFlatDisk(Transform parent, string name, float y, float worldRadius, Color color)
+        private static void CreateFlatDisk(
+            Transform parent,
+            string name,
+            float localY,
+            Vector3 localScale,
+            Color color)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
-            go.transform.localPosition = new Vector3(0f, y, 0f);
-            go.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            float diameter = worldRadius * 2f;
-            go.transform.localScale = new Vector3(diameter, diameter, 1f);
+            go.transform.SetAsFirstSibling();
+            go.transform.localPosition = new Vector3(0f, localY, 0f);
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = localScale;
 
             var meshFilter = go.AddComponent<MeshFilter>();
             meshFilter.sharedMesh = ThinDiskMesh.Shared;

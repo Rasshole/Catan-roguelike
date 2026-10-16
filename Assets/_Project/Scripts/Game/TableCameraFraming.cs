@@ -130,6 +130,18 @@ namespace CatanRoguelike.Game
                 ComputeFeltDiskWorldRadius(boardBoundingRadius),
                 FeltSurfaceThinY);
 
+        public static Vector3 ComputeDiskScaleForWorldRadius(float worldRadius, float thinY) =>
+            ComputeCylinderDiskScale(worldRadius, thinY);
+
+        public static Vector3 ComputeColonistOceanDiskScale(float boardBoundingRadius) =>
+            ComputeCylinderDiskScale(boardBoundingRadius * 2.1f, WaterSurfaceThinY);
+
+        public static Vector3 ComputeColonistSandDiskScale(float boardBoundingRadius) =>
+            ComputeCylinderDiskScale(boardBoundingRadius * 1.18f, WaterSurfaceThinY * 0.9f);
+
+        public const float ColonistOceanLocalY = -0.10f;
+        public const float ColonistSandLocalY = -0.085f;
+
         private static Vector3 ComputeCylinderDiskScale(float worldRadius, float thinY)
         {
             float xz = worldRadius / CylinderMeshRadius;

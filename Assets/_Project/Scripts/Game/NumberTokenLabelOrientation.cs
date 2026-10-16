@@ -12,14 +12,30 @@ namespace CatanRoguelike.Game
         private const float MinPlanarDistanceSq = 1e-6f;
         private const float MinReadableAlignment = 0.99f;
 
-        /// <summary>Upright digits on a flat colonist.io top-down board (chip lies in XZ).</summary>
-        public static Quaternion ComputeColonistTopDownRotation() =>
-            Quaternion.Euler(FlatPitchDegrees, ColonistBoardViewConstants.CameraYawDegrees + 180f, 0f);
+        /// <summary>Upright digits on a flat colonist top-down board (chip lies in XZ).</summary>
+        public static Quaternion ComputeColonistTopDownRotation(Camera camera = null)
+        {
+            float yaw = ColonistBoardViewConstants.CameraYawDegrees;
+            if (camera != null)
+                yaw = camera.transform.eulerAngles.y;
+            return Quaternion.Euler(FlatPitchDegrees, yaw, 0f);
+        }
 
-        public static Quaternion ComputeWorldRotation(Vector3 labelWorldPosition, Vector3 cameraWorldPosition)
+        public static bool IsLabelUprightForCamera(Transform labelTransform, Camera camera, float minDot = 0.92f)
+        {
+            if (labelTransform == null || camera == null)
+                return false;
+
+            return Vector3.Dot(labelTransform.up.normalized, camera.transform.up.normalized) >= minDot;
+        }
+
+        public static Quaternion ComputeWorldRotation(
+            Vector3 labelWorldPosition,
+            Vector3 cameraWorldPosition,
+            Camera camera = null)
         {
             if (ColonistPresentation.IsActive)
-                return ComputeColonistTopDownRotation();
+                return ComputeColonistTopDownRotation(camera);
 
             var toCamera = cameraWorldPosition - labelWorldPosition;
             toCamera.y = 0f;
@@ -95,7 +111,8 @@ namespace CatanRoguelike.Game
 
             transform.rotation = NumberTokenLabelOrientation.ComputeWorldRotation(
                 transform.position,
-                camera.transform.position);
+                camera.transform.position,
+                camera);
         }
     }
 }

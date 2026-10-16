@@ -87,6 +87,14 @@ namespace CatanRoguelike.Tests.PlayMode
             Texture2D boardOnly = GameSceneCapture.CaptureBoardOnlyTexture(
                 GameSceneCapture.CaptureWidth,
                 GameSceneCapture.CaptureHeight);
+
+            var tableCamera = UnityEngine.Object.FindFirstObjectByType<TableCamera>();
+            Assert.IsNotNull(tableCamera, "Colonist scene should include TableCamera.");
+            var mainCamera = Camera.main;
+            Assert.IsNotNull(mainCamera, "Main camera should exist for board capture assertions.");
+            ColonistBoardCaptureAssertions.AssertCenterRegionShowsHexTiles(boardOnly);
+            ColonistBoardCaptureAssertions.AssertNumberTokenLabelsUprightForCamera(mainCamera);
+
             Texture2D withHud = GameSceneCapture.CaptureMainCameraWithHudComposite(hud);
             GameSceneCapture.LogCaptureTextureFingerprint(boardOnly, "test-board-before-write");
             GameSceneCapture.LogCaptureTextureFingerprint(withHud, "test-hud-before-write");

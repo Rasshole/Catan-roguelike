@@ -2,8 +2,8 @@ namespace CatanRoguelike.Game
 {
     internal static class ColonistBoardViewConstants
     {
-        /// <summary>Yaw for pointy-top hex framing (colonist.io-style board orientation).</summary>
-        public const float CameraYawDegrees = 30f;
+        /// <summary>Colonist top-down camera yaw (matches stable a1d67f8 capture pose).</summary>
+        public const float CameraYawDegrees = 90f;
 
         public const float BoardPlayAreaFill = 0.70f;
     }

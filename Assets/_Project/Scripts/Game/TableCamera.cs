@@ -154,14 +154,10 @@ namespace CatanRoguelike.Game
             float deltaScreenY = desiredScreenY - screenHeight * 0.5f;
 
             Vector3 center = boardView != null ? boardView.transform.position : lookTarget.position;
-            var rightAxis = transform.right;
-            rightAxis.y = 0f;
-            rightAxis.Normalize();
-            var upAxis = transform.up;
-            upAxis.y = 0f;
-            upAxis.Normalize();
-            Vector3 pan = rightAxis * (deltaScreenX * worldPerPixel) + upAxis * (deltaScreenY * worldPerPixel);
-            transform.position = new Vector3(center.x, center.y + 28f, center.z) - pan;
+            transform.position = new Vector3(
+                center.x - deltaScreenX * worldPerPixel,
+                center.y + 28f,
+                center.z - deltaScreenY * worldPerPixel);
         }
 
         private void ApplyOrbitPose()
