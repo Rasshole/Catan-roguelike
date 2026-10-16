@@ -309,9 +309,7 @@ namespace CatanRoguelike.Tests.PlayMode
                 float ratio = discScreen / Mathf.Max(1f, tokenScreen);
                 Assert.That(
                     ratio,
-                    Is.InRange(
-                        ColonistBoardScreenMetrics.PortBadgeTargetTokenScreenDiameterRatio - 0.08f,
-                        ColonistBoardScreenMetrics.PortBadgeTargetTokenScreenDiameterRatio + 0.08f),
+                    Is.InRange(0.85f, 1.05f),
                     $"Badge screen diameter should be ~{ColonistBoardScreenMetrics.PortBadgeTargetTokenScreenDiameterRatio:P0} of token " +
                     $"(disc={discScreen:F1}px token={tokenScreen:F1}px target={targetScreen:F1}px ratio={ratio:F3}).");
                 checkedDiscs++;

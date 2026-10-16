@@ -5,66 +5,45 @@ using UnityEngine;
 
 namespace CatanRoguelike.Game
 {
-    /// <summary>Beach band hugging the outer edges of a hex tile cluster (top-down visible cap).</summary>
+    /// <summary>Beach from slightly enlarged land hex caps (union forms a continuous sand skirt).</summary>
     public static class ColonistCoastSandMesh
     {
         public const float BeachWidthFactor = 0.25f;
-        private const float MiterLimitFactor = 2.5f;
+        public const float DefaultLandHexSandScale = 1.18f;
 
         public static int LastBuiltQuadCount { get; private set; }
 
-        public static int LastOutlineVertexCount { get; private set; }
+        public static int LastLandHexCount { get; private set; }
 
         public static float LastTargetBeachWidth { get; private set; }
 
-        private readonly struct QuantizedVertex : System.IEquatable<QuantizedVertex>
-        {
-            public readonly int X;
-            public readonly int Z;
-
-            public QuantizedVertex(int x, int z)
-            {
-                X = x;
-                Z = z;
-            }
-
-            public bool Equals(QuantizedVertex other) => X == other.X && Z == other.Z;
-
-            public override bool Equals(object obj) => obj is QuantizedVertex other && Equals(other);
-
-            public override int GetHashCode() => (X * 397) ^ Z;
-        }
+        public static float LastSandHexScale { get; private set; }
 
         public static Mesh Create(BoardState board, float hexScale, float beachWidth, float meshLocalY = 0f)
         {
             LastTargetBeachWidth = beachWidth;
-            if (!TryBuildLandOutlinePolygon(board, hexScale, meshLocalY, out var inner))
+            float sandScale = ComputeSandHexScale(hexScale, beachWidth);
+            LastSandHexScale = sandScale;
+
+            var tileSet = CollectLandCoords(board);
+            LastLandHexCount = tileSet.Count;
+            if (tileSet.Count == 0)
             {
                 LastBuiltQuadCount = 0;
-                LastOutlineVertexCount = 0;
                 return new Mesh { name = "ColonistCoastSand_Empty" };
             }
 
-            LastOutlineVertexCount = inner.Count;
+            var vertices = new List<Vector3>(tileSet.Count * 7);
+            var triangles = new List<int>(tileSet.Count * 18);
+            int quadCount = 0;
 
-            var outer = OffsetOutlinePolygonMiter(inner, beachWidth);
-            var vertices = new List<Vector3>(inner.Count + outer.Count);
-            var triangles = new List<int>(inner.Count * 6);
-            vertices.AddRange(inner);
-            int outerBase = vertices.Count;
-            vertices.AddRange(outer);
-
-            int n = inner.Count;
-            for (int i = 0; i < n; i++)
+            foreach (var coord in tileSet)
             {
-                int i0 = i;
-                int i1 = (i + 1) % n;
-                int o0 = outerBase + i0;
-                int o1 = outerBase + i1;
-                AddQuadUp(triangles, i0, i1, o1, o0);
+                AppendScaledHexCap(coord, hexScale, sandScale, meshLocalY, vertices, triangles);
+                quadCount += HexPrismMesh.SideCount;
             }
 
-            LastBuiltQuadCount = n;
+            LastBuiltQuadCount = quadCount;
             var mesh = new Mesh { name = "ColonistCoastSand" };
             mesh.SetVertices(vertices);
             mesh.SetTriangles(triangles, 0);
@@ -73,107 +52,63 @@ namespace CatanRoguelike.Game
             return mesh;
         }
 
-        public static bool TryBuildLandOutlinePolygon(
-            BoardState board,
-            float hexScale,
-            float y,
-            out List<Vector3> innerPolygon)
+        public static float ComputeSandHexScale(float hexScale, float beachWidth)
         {
-            innerPolygon = null;
-            var tileSet = CollectLandCoords(board);
-            if (tileSet.Count == 0)
-                return false;
+            float outer = hexScale * HexMath.OuterRadius;
+            if (outer <= 0.001f)
+                return DefaultLandHexSandScale;
 
-            var adjacency = new Dictionary<QuantizedVertex, List<QuantizedVertex>>();
-            var positions = new Dictionary<QuantizedVertex, Vector2>();
-
-            foreach (var coord in tileSet)
-            {
-                for (int direction = 0; direction < 6; direction++)
-                {
-                    if (tileSet.Contains(HexMath.GetNeighbor(coord, direction)))
-                        continue;
-
-                    int corner0 = direction;
-                    int corner1 = (direction + 1) % 6;
-                    var inner0 = CornerVertex(coord, corner0, hexScale, y);
-                    var inner1 = CornerVertex(coord, corner1, hexScale, y);
-                    var k0 = QuantizeKey(inner0);
-                    var k1 = QuantizeKey(inner1);
-                    positions[k0] = new Vector2(inner0.x, inner0.z);
-                    positions[k1] = new Vector2(inner1.x, inner1.z);
-                    AddAdjacency(adjacency, k0, k1);
-                    AddAdjacency(adjacency, k1, k0);
-                }
-            }
-
-            if (adjacency.Count == 0)
-                return false;
-
-            var startKey = default(QuantizedVertex);
-            float minX = float.PositiveInfinity;
-            foreach (var kvp in positions)
-            {
-                if (kvp.Value.x < minX)
-                {
-                    minX = kvp.Value.x;
-                    startKey = kvp.Key;
-                }
-            }
-
-            var landCentroid = ComputeBoardCenterXZ(board, hexScale);
-            List<QuantizedVertex> loopKeys = null;
-            if (!TryWalkBoundaryLoop(adjacency, positions, startKey, landCentroid, out loopKeys) || loopKeys.Count < 3)
-            {
-                loopKeys = null;
-                foreach (var candidate in positions.Keys)
-                {
-                    if (TryWalkBoundaryLoop(adjacency, positions, candidate, landCentroid, out loopKeys)
-                        && loopKeys.Count >= 3)
-                        break;
-                }
-
-                if (loopKeys == null || loopKeys.Count < 3)
-                    return false;
-            }
-
-            innerPolygon = new List<Vector3>(loopKeys.Count);
-            for (int i = 0; i < loopKeys.Count; i++)
-            {
-                var p = positions[loopKeys[i]];
-                innerPolygon.Add(new Vector3(p.x, y, p.y));
-            }
-
-            return innerPolygon.Count >= 3;
+            float fromWidth = 1f + beachWidth / outer;
+            return Mathf.Clamp(fromWidth, 1.05f, 1.35f);
         }
 
-        public static List<Vector3> OffsetOutlinePolygonMiter(IReadOnlyList<Vector3> inner, float beachWidth)
+        public static bool IsPointCoveredBySand(
+            BoardState board,
+            float hexScale,
+            float beachWidth,
+            Vector2 xz)
         {
-            int n = inner.Count;
-            var outer = new List<Vector3>(n);
-            for (int i = 0; i < n; i++)
+            float sandScale = ComputeSandHexScale(hexScale, beachWidth);
+            float coverRadius = hexScale * HexMath.OuterRadius * sandScale * 1.01f;
+            var tileSet = CollectLandCoords(board);
+            foreach (var coord in tileSet)
             {
-                Vector2 prev = ToXZ(inner[(i - 1 + n) % n]);
-                Vector2 curr = ToXZ(inner[i]);
-                Vector2 next = ToXZ(inner[(i + 1) % n]);
-                Vector2 edgeIn = (curr - prev).normalized;
-                Vector2 edgeOut = (next - curr).normalized;
-                Vector2 nIn = OutwardNormal(edgeIn);
-                Vector2 nOut = OutwardNormal(edgeOut);
-                Vector2 tangent = nIn + nOut;
-                if (tangent.sqrMagnitude < 1e-8f)
-                    tangent = nIn;
-                tangent.Normalize();
-                float denom = Vector2.Dot(tangent, nIn);
-                if (Mathf.Abs(denom) < 1e-4f)
-                    denom = 1f;
-                float miter = beachWidth / Mathf.Max(0.25f, Mathf.Abs(denom));
-                miter = Mathf.Min(miter, beachWidth * MiterLimitFactor);
-                Vector2 o = curr + tangent * miter;
-                outer.Add(new Vector3(o.x, inner[i].y, o.y));
+                var (cx, cz) = HexMath.ToWorldPosition(coord, hexScale);
+                if (Vector2.Distance(xz, new Vector2(cx, cz)) <= coverRadius)
+                    return true;
             }
 
-            return outer;
+            return false;
+        }
+
+        private static void AppendScaledHexCap(
+            HexCoord coord,
+            float hexScale,
+            float sandScale,
+            float y,
+            List<Vector3> vertices,
+            List<int> triangles)
+        {
+            var (centerX, centerZ) = HexMath.ToWorldPosition(coord, hexScale);
+            int centerIndex = vertices.Count;
+            vertices.Add(new Vector3(centerX, y, centerZ));
+
+            int firstCorner = vertices.Count;
+            for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
+            {
+                var (vx, vz) = HexMath.VertexToWorldPosition(coord, corner, hexScale);
+                float lx = (vx - centerX) * sandScale;
+                float lz = (vz - centerZ) * sandScale;
+                vertices.Add(new Vector3(centerX + lx, y, centerZ + lz));
+            }
+
+            for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
+            {
+                int next = (corner + 1) % HexPrismMesh.SideCount;
+                triangles.Add(centerIndex);
+                triangles.Add(firstCorner + corner);
+                triangles.Add(firstCorner + next);
+            }
         }
 
         private static HashSet<HexCoord> CollectLandCoords(BoardState board)
@@ -262,21 +197,19 @@ namespace CatanRoguelike.Game
 
         public static float ComputeOuterExtentRadius(BoardState board, float hexScale, float beachWidth)
         {
-            if (!TryBuildLandOutlinePolygon(board, hexScale, 0f, out var inner))
-                return TableCameraFraming.ComputeBoardBoundingRadius(board, hexScale);
-
-            var outer = OffsetOutlinePolygonMiter(inner, beachWidth);
+            float sandScale = ComputeSandHexScale(hexScale, beachWidth);
             float maxR = 0f;
-            for (int i = 0; i < outer.Count; i++)
+            var tileSet = CollectLandCoords(board);
+            foreach (var coord in tileSet)
             {
-                var p = outer[i];
-                maxR = Mathf.Max(maxR, new Vector2(p.x, p.z).magnitude);
-            }
-
-            for (int i = 0; i < inner.Count; i++)
-            {
-                var p = inner[i];
-                maxR = Mathf.Max(maxR, new Vector2(p.x, p.z).magnitude);
+                var (cx, cz) = HexMath.ToWorldPosition(coord, hexScale);
+                for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
+                {
+                    var (vx, vz) = HexMath.VertexToWorldPosition(coord, corner, hexScale);
+                    float sx = cx + (vx - cx) * sandScale;
+                    float sz = cz + (vz - cz) * sandScale;
+                    maxR = Mathf.Max(maxR, new Vector2(sx, sz).magnitude);
+                }
             }
 
             return maxR > 0f
@@ -284,19 +217,15 @@ namespace CatanRoguelike.Game
                 : TableCameraFraming.ComputeBoardBoundingRadius(board, hexScale);
         }
 
-        public static bool TryMeasureMeshWidthAtCoastalEdgeMidpoint(
-            Mesh mesh,
+        public static bool TryMeasureSandAtCoastalEdgeMidpoint(
             BoardState board,
             HexCoord coord,
             int direction,
             float hexScale,
             float beachWidth,
-            out float width)
+            out Vector2 samplePoint)
         {
-            width = 0f;
-            if (mesh == null || board == null)
-                return false;
-
+            samplePoint = default;
             var tileSet = CollectLandCoords(board);
             if (!tileSet.Contains(coord) || tileSet.Contains(HexMath.GetNeighbor(coord, direction)))
                 return false;
@@ -312,11 +241,10 @@ namespace CatanRoguelike.Game
                 (inner0.x + inner1.x) * 0.5f,
                 0f,
                 (inner0.z + inner1.z) * 0.5f);
-            var outerMid = OffsetEdgePoint(innerMid, outward, beachWidth);
-            width = Vector2.Distance(
-                new Vector2(innerMid.x, innerMid.z),
-                new Vector2(outerMid.x, outerMid.z));
-            return width > 0.001f;
+            samplePoint = new Vector2(
+                innerMid.x + outward.x * (beachWidth * 0.5f),
+                innerMid.z + outward.y * (beachWidth * 0.5f));
+            return IsPointCoveredBySand(board, hexScale, beachWidth, samplePoint);
         }
 
         public static void AppendOuterFramingSamples(
@@ -326,18 +254,22 @@ namespace CatanRoguelike.Game
             float sampleY,
             List<Vector3> samples)
         {
-            if (board == null || samples == null || beachWidth <= 0f)
+            if (board == null || samples == null)
                 return;
 
-            if (!TryBuildLandOutlinePolygon(board, hexScale, sampleY, out var inner))
-                return;
-
-            for (int i = 0; i < inner.Count; i++)
-                samples.Add(inner[i]);
-
-            var outer = OffsetOutlinePolygonMiter(inner, beachWidth);
-            for (int i = 0; i < outer.Count; i++)
-                samples.Add(outer[i]);
+            float sandScale = ComputeSandHexScale(hexScale, beachWidth);
+            var tileSet = CollectLandCoords(board);
+            foreach (var coord in tileSet)
+            {
+                var (centerX, centerZ) = HexMath.ToWorldPosition(coord, hexScale);
+                for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
+                {
+                    var (vx, vz) = HexMath.VertexToWorldPosition(coord, corner, hexScale);
+                    float lx = (vx - centerX) * sandScale;
+                    float lz = (vz - centerZ) * sandScale;
+                    samples.Add(new Vector3(centerX + lx, sampleY, centerZ + lz));
+                }
+            }
         }
 
         private static Vector3 CornerVertex(HexCoord coord, int cornerIndex, float hexScale, float y)
@@ -357,125 +289,6 @@ namespace CatanRoguelike.Game
             var mid = new Vector2((inner0.x + inner1.x) * 0.5f, (inner0.z + inner1.z) * 0.5f);
             var toMid = mid - hexCenter;
             return Vector2.Dot(n1, toMid) >= Vector2.Dot(n2, toMid) ? n1 : n2;
-        }
-
-        private static Vector3 OffsetEdgePoint(Vector3 inner, Vector2 outward, float beachWidth) =>
-            new Vector3(inner.x + outward.x * beachWidth, inner.y, inner.z + outward.y * beachWidth);
-
-        private static void AddAdjacency(Dictionary<QuantizedVertex, List<QuantizedVertex>> map, QuantizedVertex a, QuantizedVertex b)
-        {
-            if (!map.TryGetValue(a, out var list))
-            {
-                list = new List<QuantizedVertex>(2);
-                map[a] = list;
-            }
-
-            if (!list.Contains(b))
-                list.Add(b);
-        }
-
-        private static bool TryWalkBoundaryLoop(
-            Dictionary<QuantizedVertex, List<QuantizedVertex>> adjacency,
-            Dictionary<QuantizedVertex, Vector2> positions,
-            QuantizedVertex startKey,
-            Vector2 landCentroid,
-            out List<QuantizedVertex> loopKeys)
-        {
-            loopKeys = new List<QuantizedVertex>(adjacency.Count);
-            QuantizedVertex? prev = null;
-            var curr = startKey;
-            int guard = 0;
-            while (guard++ < adjacency.Count + 4)
-            {
-                loopKeys.Add(curr);
-                if (!adjacency.TryGetValue(curr, out var neighbors) || neighbors.Count == 0)
-                    return false;
-
-                QuantizedVertex? next = null;
-                var currPos = positions[curr];
-                if (!prev.HasValue)
-                {
-                    float bestCross = float.NegativeInfinity;
-                    for (int i = 0; i < neighbors.Count; i++)
-                    {
-                        var nPos = positions[neighbors[i]];
-                        float cross = CrossZ(nPos - currPos, landCentroid - currPos);
-                        if (cross > bestCross)
-                        {
-                            bestCross = cross;
-                            next = neighbors[i];
-                        }
-                    }
-                }
-                else
-                {
-                    var prevPos = positions[prev.Value];
-                    Vector2 inDir = (currPos - prevPos).normalized;
-                    float bestTurn = float.PositiveInfinity;
-                    for (int i = 0; i < neighbors.Count; i++)
-                    {
-                        if (neighbors[i].Equals(prev.Value))
-                            continue;
-
-                        var nPos = positions[neighbors[i]];
-                        Vector2 outDir = (nPos - currPos).normalized;
-                        float turn = SignedTurnRadians(inDir, outDir);
-                        if (turn < bestTurn)
-                        {
-                            bestTurn = turn;
-                            next = neighbors[i];
-                        }
-                    }
-                }
-
-                if (!next.HasValue)
-                    return false;
-
-                if (next.Value.Equals(startKey) && loopKeys.Count > 2)
-                    return loopKeys.Count >= 3;
-
-                prev = curr;
-                curr = next.Value;
-            }
-
-            return false;
-        }
-
-        private static float SignedTurnRadians(Vector2 inDir, Vector2 outDir)
-        {
-            float cross = CrossZ(inDir, outDir);
-            float dot = Vector2.Dot(inDir, outDir);
-            float angle = Mathf.Atan2(cross, dot);
-            if (angle < 0f)
-                angle += Mathf.PI * 2f;
-            return angle;
-        }
-
-        private static float CrossZ(Vector2 a, Vector2 b) => a.x * b.y - a.y * b.x;
-
-        private static Vector2 OutwardNormal(Vector2 edgeDir)
-        {
-            var n = new Vector2(edgeDir.y, -edgeDir.x);
-            if (n.sqrMagnitude < 1e-8f)
-                return Vector2.right;
-            return n.normalized;
-        }
-
-        private static Vector2 ToXZ(Vector3 v) => new Vector2(v.x, v.z);
-
-        private static QuantizedVertex QuantizeKey(Vector3 vertex) =>
-            new QuantizedVertex(
-                Mathf.RoundToInt(vertex.x * 10000f),
-                Mathf.RoundToInt(vertex.z * 10000f));
-
-        private static void AddQuadUp(List<int> triangles, int a, int b, int c, int d)
-        {
-            triangles.Add(a);
-            triangles.Add(c);
-            triangles.Add(b);
-            triangles.Add(a);
-            triangles.Add(d);
-            triangles.Add(c);
         }
     }
 }

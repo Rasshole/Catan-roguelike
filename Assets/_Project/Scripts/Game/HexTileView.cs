@@ -117,11 +117,14 @@ namespace CatanRoguelike.Game
         /// <summary>Port rate badge disc diameter as a fraction of the number token face diameter.</summary>
         public const float PortBadgeDiameterFraction = 0.9f;
         public static float TokenRimWorldDiameter => TokenWorldFaceDiameter * RimOuterRadiusFactor;
+        public static float TokenRimBandWorldWidth => TokenWorldFaceDiameter * 0.5f * TokenRimBandWidthFractionOfFaceRadius;
         public static float PortBadgeDiscWorldRadius =>
             TokenRimWorldDiameter * 0.5f * PortBadgeDiameterFraction;
 
         private const float WorldFaceDiameter = TokenWorldFaceDiameter;
-        public const float RimOuterRadiusFactor = 1.18f;
+        /// <summary>Visible rim annulus width as a fraction of face radius (world + screen probe).</summary>
+        public const float TokenRimBandWidthFractionOfFaceRadius = 0.08f;
+        public static float RimOuterRadiusFactor => 1f + TokenRimBandWidthFractionOfFaceRadius;
         private const float WorldChipThickness = 0.04f;
 
         // Tile-local Y offsets from hex prism top (TopY = 1).

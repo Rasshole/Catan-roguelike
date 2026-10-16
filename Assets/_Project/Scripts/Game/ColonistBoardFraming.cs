@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace CatanRoguelike.Game
 {
@@ -141,6 +142,36 @@ namespace CatanRoguelike.Game
 
             for (int i = 0; i < offsets.Length; i++)
                 samples.Add(center + offsets[i]);
+        }
+
+        public static float GetPlayAreaTopEdgeScreenY(int screenWidth, int screenHeight)
+        {
+            var play = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
+            return play.Bottom + play.PlayHeight;
+        }
+
+        public static void AssertBoardTopBelowTurnBanner(
+            Camera camera,
+            BoardView boardView,
+            int screenWidth,
+            int screenHeight)
+        {
+            Assert.IsNotNull(camera);
+            Assert.IsNotNull(boardView);
+
+            float playTopY = GetPlayAreaTopEdgeScreenY(screenWidth, screenHeight);
+            float maxBoardY = float.NegativeInfinity;
+            var samples = new System.Collections.Generic.List<Vector3>(512);
+            boardView.FillColonistFramingSamples(samples);
+            foreach (var world in samples)
+            {
+                var px = WorldToLayoutPixels(camera, world, screenWidth, screenHeight);
+                maxBoardY = Mathf.Max(maxBoardY, px.y);
+            }
+
+            UnityEngine.Assertions.Assert.IsTrue(
+                maxBoardY < playTopY,
+                $"Board top screen Y ({maxBoardY:F1}) should sit below play-area top / banner bottom ({playTopY:F1}).");
         }
 
         public static void LogCaptureFramingState(Camera camera, int screenWidth, int screenHeight)

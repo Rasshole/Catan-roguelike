@@ -7,6 +7,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace CatanRoguelike.Tests.PlayMode
 {
@@ -14,10 +15,11 @@ namespace CatanRoguelike.Tests.PlayMode
     {
         private const string ColonistScenePath = "Assets/_Project/Scenes/ColonistStylePrototype.unity";
         private const string ColonistSceneName = "ColonistStylePrototype";
+        private const int HudReadyMaxFrames = 120;
 
         [Timeout(90000)]
         [UnityTest]
-        public IEnumerator BoardContent_FitsPlayArea_WithTightFill()
+        public IEnumerator BoardContent_FitsPlayArea_WithTightFill_OnCapturePath()
         {
             if (!File.Exists(ColonistScenePath))
             {
@@ -36,63 +38,86 @@ namespace CatanRoguelike.Tests.PlayMode
                 yield return null;
 
             var gameManager = Object.FindFirstObjectByType<GameManager>();
-            if (gameManager != null && gameManager.Controller != null)
+            Assert.IsNotNull(gameManager);
+            if (gameManager.Controller.State.Phase == GamePhase.RunSelectMap)
+                GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
+            GameScenePlayHarness.AdvanceToDayPlayerActions(gameManager.Controller);
+            gameManager.EnsureRunHudReady();
+
+            RunHudController hud = null;
+            for (int i = 0; i < HudReadyMaxFrames; i++)
             {
-                if (gameManager.Controller.State.Phase == GamePhase.RunSelectMap)
-                    GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
-                GameScenePlayHarness.AdvanceToDayPlayerActions(gameManager.Controller);
+                hud = gameManager.GetComponent<RunHudController>();
+                if (hud != null && hud.IsHudCaptureReady())
+                    break;
                 gameManager.EnsureRunHudReady();
-                for (int i = 0; i < 4; i++)
-                    yield return null;
+                yield return null;
             }
+
+            Assert.IsNotNull(hud);
+            Assert.IsTrue(hud.IsHudCaptureReady());
+            hud.Refresh(gameManager.Controller.State);
+            Canvas.ForceUpdateCanvases();
+            if (hud.HudCanvas != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(hud.HudCanvas.GetComponent<RectTransform>());
+            yield return null;
 
             var boardView = Object.FindFirstObjectByType<BoardView>();
             var tableCamera = Object.FindFirstObjectByType<TableCamera>();
-            var camera = Camera.main;
             Assert.IsNotNull(boardView);
             Assert.IsNotNull(tableCamera);
-            Assert.IsNotNull(camera);
 
-            ColonistBoardFraming.GetLayoutPixelSize(camera, width, height, out int layoutW, out int layoutH);
-            tableCamera.ApplyCapturePose(layoutW, layoutH);
-            camera.pixelRect = new Rect(0f, 0f, layoutW, layoutH);
-            yield return null;
-            ColonistBoardFraming.LogCaptureFramingState(camera, layoutW, layoutH);
-
-            var samples = new List<Vector3>(512);
-            boardView.FillColonistFramingSamples(samples);
-            Assert.Greater(samples.Count, 8, "Colonist framing should sample land, sand, and port badges.");
-
-            var screenPoints = new Vector2[samples.Count];
-            for (int i = 0; i < samples.Count; i++)
-                screenPoints[i] = ColonistBoardFraming.WorldToLayoutPixels(camera, samples[i], layoutW, layoutH);
-
-            bool inside = ColonistBoardFraming.ArePointsInsideFitMargin(screenPoints, layoutW, layoutH);
-            if (!inside)
+            Texture2D boardOnly = GameSceneCapture.CaptureBoardOnlyTexture(width, height);
+            try
             {
-                ColonistBoardFraming.LogPlayAreaFitDiagnostics(screenPoints, layoutW, layoutH);
-                if (ColonistBoardFraming.TryGetFirstSampleOutsideFitMargin(
-                        samples, camera, layoutW, layoutH, out int badIndex, out Vector3 badWorld, out Vector2 badPx))
+                var camera = Camera.main;
+                Assert.IsNotNull(camera);
+                Assert.IsNotNull(boardOnly);
+
+                ColonistBoardFraming.LogCaptureFramingState(camera, width, height);
+
+                var samples = new List<Vector3>(512);
+                boardView.FillColonistFramingSamples(samples);
+                Assert.Greater(samples.Count, 8, "Colonist framing should sample land, sand, and port badges.");
+
+                var screenPoints = new Vector2[samples.Count];
+                for (int i = 0; i < samples.Count; i++)
+                    screenPoints[i] = ColonistBoardFraming.WorldToLayoutPixels(camera, samples[i], width, height);
+
+                bool inside = ColonistBoardFraming.ArePointsInsideFitMargin(screenPoints, width, height);
+                if (!inside)
                 {
-                    Debug.LogWarning(
-                        $"ColonistBoardFraming offender sample[{badIndex}] world={badWorld} screen=({badPx.x:F1},{badPx.y:F1})");
+                    ColonistBoardFraming.LogPlayAreaFitDiagnostics(screenPoints, width, height);
+                    if (ColonistBoardFraming.TryGetFirstSampleOutsideFitMargin(
+                            samples, camera, width, height, out int badIndex, out Vector3 badWorld, out Vector2 badPx))
+                    {
+                        Debug.LogWarning(
+                            $"ColonistBoardFraming offender sample[{badIndex}] world={badWorld} screen=({badPx.x:F1},{badPx.y:F1})");
+                    }
                 }
+
+                Assert.IsTrue(
+                    inside,
+                    "Land+sand+badges should fit inside colonist play area (3% margin) on capture camera pose.");
+
+                ColonistBoardFraming.MeasurePlayAreaFill(camera, samples, width, height, out float fillWidth, out float fillHeight);
+                float fill = Mathf.Max(fillWidth, fillHeight);
+                Debug.Log(
+                    $"ColonistBoardFraming fillWidth={fillWidth:F3} fillHeight={fillHeight:F3} " +
+                    $"layout={width}x{height} ortho={camera.orthographicSize:F4}");
+                Assert.GreaterOrEqual(
+                    fill,
+                    ColonistBoardFraming.MinPlayAreaFillRatio,
+                    $"Board content should fill at least {ColonistBoardFraming.MinPlayAreaFillRatio:P0} of play rect " +
+                    $"(fillW={fillWidth:F3} fillH={fillHeight:F3}).");
+
+                ColonistBoardFraming.AssertBoardTopBelowTurnBanner(camera, boardView, width, height);
             }
-
-            Assert.IsTrue(
-                inside,
-                "Land+sand+badges should fit inside colonist play area (3% margin). See offender log if failing.");
-
-            ColonistBoardFraming.MeasurePlayAreaFill(camera, samples, layoutW, layoutH, out float fillWidth, out float fillHeight);
-            float fill = Mathf.Max(fillWidth, fillHeight);
-            Debug.Log(
-                $"ColonistBoardFraming fillWidth={fillWidth:F3} fillHeight={fillHeight:F3} " +
-                $"layout={layoutW}x{layoutH} ortho={camera.orthographicSize:F4}");
-            Assert.GreaterOrEqual(
-                fill,
-                ColonistBoardFraming.MinPlayAreaFillRatio,
-                $"Board content should fill at least {ColonistBoardFraming.MinPlayAreaFillRatio:P0} of play rect " +
-                $"(fillW={fillWidth:F3} fillH={fillHeight:F3}).");
+            finally
+            {
+                if (boardOnly != null)
+                    Object.Destroy(boardOnly);
+            }
         }
     }
 }
