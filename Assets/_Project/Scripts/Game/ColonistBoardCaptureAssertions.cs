@@ -48,8 +48,31 @@ namespace CatanRoguelike.Game
             TableCamera tableCamera,
             BoardView boardView,
             int screenWidth,
-            int screenHeight) =>
-            ColonistBoardFraming.GetHexColorSampleTexturePixels(screenWidth, screenHeight);
+            int screenHeight)
+        {
+            int texW = boardCapture.width;
+            int texH = boardCapture.height;
+
+            if (camera != null && tableCamera != null && boardView != null)
+            {
+                return ColonistCaptureProjection.WorldToTexturePixel(
+                    boardView.GetCaptureHexSampleWorldPoint(),
+                    camera,
+                    tableCamera,
+                    texW,
+                    texH);
+            }
+
+            var fallback = ColonistBoardFraming.GetHexColorSampleTexturePixels(texW, texH);
+            if (texW == screenWidth && texH == screenHeight)
+                return fallback;
+
+            float sx = texW / (float)Mathf.Max(1, screenWidth);
+            float sy = texH / (float)Mathf.Max(1, screenHeight);
+            return new Vector2Int(
+                Mathf.RoundToInt(fallback.x * sx),
+                Mathf.RoundToInt(fallback.y * sy));
+        }
 
         public static void AssertCenterRegionShowsHexTiles(
             Texture2D boardCapture,
@@ -73,9 +96,9 @@ namespace CatanRoguelike.Game
             int samples = 0;
             var sampleColors = new List<Color>(32);
 
-            for (int x = sampleCenterX - rx; x <= sampleCenterX + rx; x += 10)
+            for (int x = sampleCenterX - rx; x <= sampleCenterX + rx; x += 8)
             {
-                for (int y = sampleCenterY - ry; y <= sampleCenterY + ry; y += 10)
+                for (int y = sampleCenterY - ry; y <= sampleCenterY + ry; y += 8)
                 {
                     if (x < 0 || x >= w || y < 0 || y >= h)
                         continue;

@@ -52,8 +52,10 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsNotNull(tableCamera);
             Assert.IsNotNull(camera);
 
-            tableCamera.ApplyCapturePose(width, height);
-            camera.pixelRect = new Rect(0f, 0f, width, height);
+            ColonistBoardFraming.GetLayoutPixelSize(camera, width, height, out int layoutW, out int layoutH);
+            tableCamera.ApplyCapturePose(layoutW, layoutH);
+            camera.pixelRect = new Rect(0f, 0f, layoutW, layoutH);
+            yield return null;
 
             Vector3 center = boardView.GetBoardWorldCenter();
             float extent = boardView.GetColonistFramingExtentRadius();
@@ -62,11 +64,11 @@ namespace CatanRoguelike.Tests.PlayMode
 
             var screenPoints = new Vector2[worldPoints.Length];
             for (int i = 0; i < worldPoints.Length; i++)
-                screenPoints[i] = ColonistBoardFraming.WorldToScreenPixelsFromBottom(camera, worldPoints[i]);
+                screenPoints[i] = ColonistBoardFraming.WorldToLayoutPixels(camera, worldPoints[i], layoutW, layoutH);
 
-            bool inside = ColonistBoardFraming.ArePointsInsidePlayArea(screenPoints, width, height);
+            bool inside = ColonistBoardFraming.ArePointsInsidePlayArea(screenPoints, layoutW, layoutH);
             if (!inside)
-                ColonistBoardFraming.LogPlayAreaFitDiagnostics(screenPoints, width, height);
+                ColonistBoardFraming.LogPlayAreaFitDiagnostics(screenPoints, layoutW, layoutH);
 
             Assert.IsTrue(inside, "Board+sand extent should fit inside colonist play area with margin.");
         }

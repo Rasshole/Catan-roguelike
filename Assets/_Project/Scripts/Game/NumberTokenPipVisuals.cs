@@ -16,12 +16,13 @@ namespace CatanRoguelike.Game
         public static void PlacePipOnLabelRow(Transform pip, float offsetX, Color pipColor)
         {
             pip.localPosition = new Vector3(offsetX * LabelOffsetScale, LabelLocalRowY, LabelLocalRowZ);
-            pip.localScale = Vector3.one * PipLocalScale;
+            pip.localScale = new Vector3(PipLocalScale, PipLocalScale * 0.35f, PipLocalScale);
             var renderer = pip.GetComponent<Renderer>();
             if (renderer != null)
             {
-                renderer.sharedMaterial = BuiltInMaterials.CreateOpaque(pipColor);
+                renderer.sharedMaterial = BuiltInMaterials.CreateUnlit(pipColor);
                 renderer.sharedMaterial.renderQueue = 3310;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             }
         }
     }

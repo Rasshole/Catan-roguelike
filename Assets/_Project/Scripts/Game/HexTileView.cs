@@ -39,6 +39,27 @@ namespace CatanRoguelike.Game
             && _chipFaceRenderer.sharedMaterial != null
             && _chipFaceRenderer.sharedMaterial.color.a >= 0.98f;
 
+        public bool ChipUsesUnlitMaterial =>
+            BuiltInMaterials.IsUnlitMaterial(_chipFaceRenderer != null ? _chipFaceRenderer.sharedMaterial : null);
+
+        public float ChipWorldDiameter =>
+            _chipRimRenderer != null ? Mathf.Max(_chipRimRenderer.bounds.size.x, _chipRimRenderer.bounds.size.z) : 0f;
+
+        public float ChipWorldHeight
+        {
+            get
+            {
+                if (_chipRimRenderer == null)
+                    return 0f;
+                float rim = _chipRimRenderer.bounds.size.y;
+                float face = _chipFaceRenderer != null ? _chipFaceRenderer.bounds.size.y : 0f;
+                return Mathf.Max(rim, face);
+            }
+        }
+
+        public bool IsChipFlat =>
+            ChipWorldDiameter > 0.01f && ChipWorldHeight / ChipWorldDiameter < 0.22f;
+
         public string TokenLabelText => _tokenLabel != null ? _tokenLabel.text : string.Empty;
 
         private static readonly Color FamineTint = new(0.55f, 0.35f, 0.15f);
@@ -93,6 +114,7 @@ namespace CatanRoguelike.Game
             EnsureTokenLabel();
             SetTokenVisible(true);
             ApplyTokenChipStyle(token);
+            UpdateTokenChipGeometry();
 
             _tokenLabel.text = token.ToString();
             var labelRgb = NumberTokenVisualStyle.GetLabel(token);
@@ -121,7 +143,7 @@ namespace CatanRoguelike.Game
 
             for (int i = 0; i < offsets.Length; i++)
             {
-                var pip = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                var pip = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 pip.name = $"Pip_{i}";
                 pip.transform.SetParent(_pipRoot.transform, false);
                 NumberTokenPipVisuals.PlacePipOnLabelRow(pip.transform, offsets[i], pipColor);
@@ -169,11 +191,24 @@ namespace CatanRoguelike.Game
             float localFaceHeight = WorldChipThickness * 0.85f / (ThinDiskMesh.MeshHeight * hexScale.y);
 
             _chipRimRenderer = CreateFlatChipDisc("Rim", localRimDiameter, localRimHeight, 0f);
-            _chipFaceRenderer = CreateFlatChipDisc(
-                "Face",
-                localFaceDiameter,
-                localFaceHeight,
-                localRimHeight * ThinDiskMesh.MeshHeight + localFaceHeight * 0.5f);
+            _chipFaceRenderer = CreateFlatChipDisc("Face", localFaceDiameter, localFaceHeight, localRimHeight);
+        }
+
+        private void UpdateTokenChipGeometry()
+        {
+            if (_tokenChip == null || _chipRimRenderer == null || _chipFaceRenderer == null)
+                return;
+
+            var hexScale = transform.lossyScale;
+            float localRimDiameter = WorldRimDiameter / hexScale.x;
+            float localFaceDiameter = WorldFaceDiameter / hexScale.x;
+            float localRimHeight = WorldChipThickness / (ThinDiskMesh.MeshHeight * hexScale.y);
+            float localFaceHeight = WorldChipThickness * 0.85f / (ThinDiskMesh.MeshHeight * hexScale.y);
+
+            _chipRimRenderer.transform.localScale = new Vector3(localRimDiameter, localRimHeight, localRimDiameter);
+            _chipRimRenderer.transform.localPosition = Vector3.zero;
+            _chipFaceRenderer.transform.localScale = new Vector3(localFaceDiameter, localFaceHeight, localFaceDiameter);
+            _chipFaceRenderer.transform.localPosition = new Vector3(0f, localRimHeight, 0f);
         }
 
         private Renderer CreateFlatChipDisc(string name, float diameter, float height, float localYOffset)
@@ -186,7 +221,7 @@ namespace CatanRoguelike.Game
             var meshFilter = disc.AddComponent<MeshFilter>();
             meshFilter.sharedMesh = ThinDiskMesh.Shared;
             var renderer = disc.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = BuiltInMaterials.CreateOpaque(Color.white);
+            renderer.sharedMaterial = BuiltInMaterials.CreateUnlit(Color.white);
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.sharedMaterial.renderQueue = 3100;
             return renderer;
@@ -196,10 +231,10 @@ namespace CatanRoguelike.Game
         {
             var faceRgb = NumberTokenVisualStyle.GetChipFace(token);
             var rimRgb = NumberTokenVisualStyle.GetChipRim(token);
-            _chipFaceRenderer.sharedMaterial = BuiltInMaterials.CreateOpaque(
+            _chipFaceRenderer.sharedMaterial = BuiltInMaterials.CreateUnlit(
                 new Color(faceRgb.R, faceRgb.G, faceRgb.B, 1f));
             _chipFaceRenderer.sharedMaterial.renderQueue = 3110;
-            _chipRimRenderer.sharedMaterial = BuiltInMaterials.CreateOpaque(
+            _chipRimRenderer.sharedMaterial = BuiltInMaterials.CreateUnlit(
                 new Color(rimRgb.R, rimRgb.G, rimRgb.B, 1f));
             _chipRimRenderer.sharedMaterial.renderQueue = 3100;
         }

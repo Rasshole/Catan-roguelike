@@ -10,6 +10,7 @@ namespace CatanRoguelike.Game
     public static class BuiltInMaterials
     {
         public const string StandardShaderName = "Standard";
+        public const string UnlitColorShaderName = "Unlit/Color";
 
         public static Shader Standard
         {
@@ -47,7 +48,7 @@ namespace CatanRoguelike.Game
 
         public static Material CreateUnlit(Color color)
         {
-            var shader = Shader.Find("Unlit/Color");
+            var shader = Shader.Find(UnlitColorShaderName);
             if (shader == null)
                 return Create(color);
 
@@ -55,6 +56,11 @@ namespace CatanRoguelike.Game
             mat.renderQueue = 3500;
             return mat;
         }
+
+        public static bool IsUnlitMaterial(Material material) =>
+            material != null
+            && material.shader != null
+            && material.shader.name.Contains("Unlit");
 
         /// <summary>Translucent Standard material for placement hover silhouettes.</summary>
         public static Material CreateGhost(Color color)

@@ -46,7 +46,8 @@ namespace CatanRoguelike.Game
             }
 
             Debug.LogWarning(
-                $"ColonistBoardFraming playRect margin=({minX:F1},{minY:F1})-({maxX:F1},{maxY:F1}) " +
+                $"ColonistBoardFraming layout={screenWidth}x{screenHeight} " +
+                $"playRect margin=({minX:F1},{minY:F1})-({maxX:F1},{maxY:F1}) " +
                 $"play=({play.Left:F1},{play.Bottom:F1}) {play.PlayWidth:F0}x{play.PlayHeight:F0}");
         }
 
@@ -103,6 +104,52 @@ namespace CatanRoguelike.Game
         {
             var screen = camera.WorldToScreenPoint(world);
             return new Vector2(screen.x, screen.y);
+        }
+
+        /// <summary>
+        /// Pixel size used for play-area layout and viewport projection (matches WorldToViewportPoint scaling).
+        /// </summary>
+        public static void GetLayoutPixelSize(
+            Camera camera,
+            int nominalWidth,
+            int nominalHeight,
+            out int width,
+            out int height)
+        {
+            if (camera != null && camera.targetTexture != null)
+            {
+                width = camera.targetTexture.width;
+                height = camera.targetTexture.height;
+                return;
+            }
+
+            if (Screen.width > 0 && Screen.height > 0)
+            {
+                width = Screen.width;
+                height = Screen.height;
+                return;
+            }
+
+            if (camera != null)
+            {
+                int pw = Mathf.RoundToInt(camera.pixelRect.width);
+                int ph = Mathf.RoundToInt(camera.pixelRect.height);
+                if (pw > 0 && ph > 0)
+                {
+                    width = pw;
+                    height = ph;
+                    return;
+                }
+            }
+
+            width = nominalWidth;
+            height = nominalHeight;
+        }
+
+        public static Vector2 WorldToLayoutPixels(Camera camera, Vector3 world, int layoutWidth, int layoutHeight)
+        {
+            var viewport = camera.WorldToViewportPoint(world);
+            return new Vector2(viewport.x * layoutWidth, viewport.y * layoutHeight);
         }
     }
 }
