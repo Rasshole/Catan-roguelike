@@ -39,6 +39,9 @@ namespace CatanRoguelike.Game
             if (fishCoords.Count == 0)
                 return;
 
+            if (!PortBadgeConflictsWithSeaFish(board, ports, hexScale, discRadius))
+                return;
+
             foreach (var coord in fishCoords)
                 board.Tiles.Remove(coord);
 
