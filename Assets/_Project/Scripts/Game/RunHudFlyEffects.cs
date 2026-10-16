@@ -84,7 +84,7 @@ namespace CatanRoguelike.Game
             icon.anchoredPosition = from;
             yield return SimpleTweens.FlyAnchoredPosition(icon, from, to, duration, arcHeight: 36f);
             yield return SimpleTweens.FadeGraphic(icon.GetComponent<Image>(), 1f, 0f, 0.12f);
-            Destroy(icon.gameObject);
+            ColonistSceneDestroy.SafeDestroy(icon.gameObject);
         }
 
         private RectTransform CreateFlyIcon(ResourceType type)

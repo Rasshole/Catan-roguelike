@@ -123,7 +123,7 @@ namespace CatanRoguelike.Game
                 return;
             }
 #endif
-            Destroy(target);
+            ColonistSceneDestroy.SafeDestroy(target);
         }
 
         private void BuildBoard(BoardState board)

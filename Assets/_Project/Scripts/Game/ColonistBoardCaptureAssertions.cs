@@ -304,7 +304,7 @@ namespace CatanRoguelike.Game
                 $"ColonistBoardCaptureAssertions wrote sample patch ({centerX},{centerY}) r={radius} to {path} " +
                 $"centerRgb={boardCapture.GetPixel(Mathf.Clamp(centerX,0,w-1), Mathf.Clamp(centerY,0,h-1))} " +
                 $"yFlippedRgb={boardCapture.GetPixel(Mathf.Clamp(centerX,0,w-1), Mathf.Clamp(h-1-centerY,0,h-1))}");
-            Object.Destroy(patch);
+            ColonistSceneDestroy.SafeDestroy(patch);
         }
 
         private static void LogSampleFailure(
@@ -388,6 +388,94 @@ namespace CatanRoguelike.Game
 
         private static float ColorDistance(Color a, Color b) =>
             Mathf.Abs(a.r - b.r) + Mathf.Abs(a.g - b.g) + Mathf.Abs(a.b - b.b);
+
+        public static void AssertPortRateLabelVisibleOnBoardCapture(
+            Texture2D boardCapture,
+            Camera camera,
+            TableCamera tableCamera,
+            int textureWidth,
+            int textureHeight)
+        {
+            Assert.IsNotNull(boardCapture);
+            Assert.IsNotNull(camera);
+            Assert.IsNotNull(tableCamera);
+
+            Transform labelTransform = null;
+            Renderer discRenderer = null;
+            foreach (var renderer in Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+            {
+                if (renderer == null)
+                    continue;
+                if (renderer.gameObject.name == "RateLabel")
+                    labelTransform = renderer.transform;
+                if (renderer.gameObject.name == "BadgeDisc")
+                    discRenderer = renderer;
+            }
+
+            Assert.IsNotNull(labelTransform, "Expected a port RateLabel quad on the board.");
+            Assert.IsNotNull(discRenderer, "Expected a port BadgeDisc for reference height.");
+            ColonistFlatBoardQuad.LogDiagnostics("PortRateLabelCapture", labelTransform, discRenderer);
+
+            var robberIcon = FindRobberTopIconTransform();
+            if (robberIcon != null)
+            {
+                Renderer pawnTop = null;
+                foreach (var renderer in robberIcon.parent.GetComponentsInChildren<Renderer>())
+                {
+                    if (renderer.transform == robberIcon)
+                        continue;
+                    if (pawnTop == null || renderer.bounds.max.y > pawnTop.bounds.max.y)
+                        pawnTop = renderer;
+                }
+
+                ColonistFlatBoardQuad.LogDiagnostics("RobberTopIconCapture", robberIcon, pawnTop);
+            }
+
+            var labelRenderer = labelTransform.GetComponent<Renderer>();
+            Assert.IsNotNull(labelRenderer);
+            Vector3 sampleWorld = labelRenderer.bounds.center;
+            var pixel = ColonistCaptureProjection.WorldToTexturePixel(
+                sampleWorld,
+                camera,
+                tableCamera,
+                textureWidth,
+                textureHeight);
+
+            int darkSamples = 0;
+            int totalSamples = 0;
+            const int patchRadius = 5;
+            for (int dx = -patchRadius; dx <= patchRadius; dx += 2)
+            {
+                for (int dy = -patchRadius; dy <= patchRadius; dy += 2)
+                {
+                    int x = Mathf.Clamp(pixel.x + dx, 0, boardCapture.width - 1);
+                    int y = Mathf.Clamp(pixel.y + dy, 0, boardCapture.height - 1);
+                    Color c = boardCapture.GetPixel(x, y);
+                    float luminance = c.r + c.g + c.b;
+                    if (luminance < 0.55f)
+                        darkSamples++;
+                    totalSamples++;
+                }
+            }
+
+            Assert.IsTrue(
+                darkSamples >= 3,
+                $"Port rate label patch should include dark glyph pixels (dark={darkSamples}/{totalSamples} at tex={pixel}).");
+        }
+
+        private static Transform FindRobberTopIconTransform()
+        {
+            foreach (var tile in Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
+            {
+                if (!tile.Data.HasRobber)
+                    continue;
+                var icon = tile.transform.Find("RobberPawn/RobberTopIcon");
+                if (icon != null)
+                    return icon;
+            }
+
+            return null;
+        }
 
         public static void AssertRobberPawnReadableOnBoardCapture(
             Camera camera,

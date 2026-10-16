@@ -92,7 +92,7 @@ namespace CatanRoguelike.Game
                 UnityEngine.Object.DestroyImmediate(collider);
             else
 #endif
-                UnityEngine.Object.Destroy(collider);
+                ColonistSceneDestroy.SafeDestroy(collider);
         }
     }
 }

@@ -200,7 +200,7 @@ namespace CatanRoguelike.Game
                 pip.name = $"Pip_{i}";
                 pip.transform.SetParent(_pipRoot.transform, false);
                 NumberTokenPipVisuals.PlacePipOnLabelRow(pip.transform, offsets[i], pipColor, pipScale);
-                Destroy(pip.GetComponent<Collider>());
+                ColonistSceneDestroy.SafeDestroy(pip.GetComponent<Collider>());
                 _pipRenderers.Add(pip.GetComponent<Renderer>());
             }
         }
@@ -211,7 +211,7 @@ namespace CatanRoguelike.Game
             if (_pipRoot == null)
                 return;
 
-            Destroy(_pipRoot);
+            ColonistSceneDestroy.SafeDestroy(_pipRoot);
             _pipRoot = null;
         }
 
@@ -410,13 +410,13 @@ namespace CatanRoguelike.Game
                 && _robberMarker.transform.Find(RobberShoulderPartName) != null
                 && _robberMarker.transform.Find(RobberTopIconPartName) != null)
             {
-                ApplyRobberTopIconFacing(_robberMarker.transform.Find(RobberTopIconPartName));
+                ApplyRobberTopIconPlacement();
                 return;
             }
 
             if (_robberMarker != null)
             {
-                Destroy(_robberMarker);
+                ColonistSceneDestroy.SafeDestroy(_robberMarker);
                 _robberMarker = null;
             }
 
@@ -470,16 +470,27 @@ namespace CatanRoguelike.Game
                 PrimitiveType.Sphere);
 
             float iconLocalY = stackLocalY + 0.01f / sy;
-            float iconLocalDiameter = WorldRobberTopIconDiameter / sx;
+            Renderer pawnTopRenderer = null;
+            float pawnTopY = float.NegativeInfinity;
+            foreach (var partRenderer in _robberMarker.GetComponentsInChildren<Renderer>())
+            {
+                if (partRenderer.bounds.max.y > pawnTopY)
+                {
+                    pawnTopY = partRenderer.bounds.max.y;
+                    pawnTopRenderer = partRenderer;
+                }
+            }
+
             var iconGo = ColonistFlatBoardQuad.Create(
                 _robberMarker.transform,
                 RobberTopIconPartName,
                 new Vector3(0f, iconLocalY, 0f),
-                iconLocalDiameter,
-                iconLocalDiameter,
+                WorldRobberTopIconDiameter,
+                WorldRobberTopIconDiameter,
                 ColonistRobberTopIconTextures.Get(),
-                3250);
-            ApplyRobberTopIconFacing(iconGo.transform);
+                3250,
+                pawnTopRenderer);
+            ApplyRobberTopIconPlacement();
 
             Debug.Log(
                 $"HexTileView RobberPawn tile={Data.Coord} boundsY={RobberWorldBounds.size.y:F3} " +
@@ -499,13 +510,41 @@ namespace CatanRoguelike.Game
                     || name.Contains("Thief")
                     || name.Contains("thief")
                     || (name.Contains("Robber") && name != "RobberPawn"))
-                    Destroy(child.gameObject);
+                    ColonistSceneDestroy.SafeDestroy(child.gameObject);
             }
         }
 
-        private static void ApplyRobberTopIconFacing(Transform iconTransform)
+        private void ApplyRobberTopIconPlacement()
         {
-            ColonistFlatBoardQuad.ApplyWorldFacing(iconTransform);
+            if (_robberMarker == null)
+                return;
+
+            var icon = _robberMarker.transform.Find(RobberTopIconPartName);
+            if (icon == null)
+                return;
+
+            ColonistFlatBoardQuad.ApplyWorldFacing(icon);
+            ColonistFlatBoardQuad.ApplyWorldSize(
+                icon,
+                _robberMarker.transform,
+                WorldRobberTopIconDiameter,
+                WorldRobberTopIconDiameter);
+
+            Renderer pawnTopRenderer = null;
+            float pawnTopY = float.NegativeInfinity;
+            foreach (var partRenderer in _robberMarker.GetComponentsInChildren<Renderer>())
+            {
+                if (partRenderer.transform == icon)
+                    continue;
+                if (partRenderer.bounds.max.y > pawnTopY)
+                {
+                    pawnTopY = partRenderer.bounds.max.y;
+                    pawnTopRenderer = partRenderer;
+                }
+            }
+
+            if (pawnTopRenderer != null)
+                ColonistFlatBoardQuad.PlaceWorldYAbove(icon, pawnTopRenderer, 0.01f);
         }
 
         private float AddRobberCylinder(
@@ -540,7 +579,7 @@ namespace CatanRoguelike.Game
             renderer.sharedMaterial = BuiltInMaterials.CreateUnlit(RobberColor);
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
-            Destroy(part.GetComponent<Collider>());
+            ColonistSceneDestroy.SafeDestroy(part.GetComponent<Collider>());
         }
 
         public void SetEventOverlay(EventTileOverlayKind kind)

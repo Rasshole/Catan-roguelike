@@ -99,7 +99,7 @@ namespace CatanRoguelike.Game
                 return;
 
             if (Application.isPlaying)
-                Object.Destroy(texture);
+                ColonistSceneDestroy.SafeDestroy(texture);
             else
                 Object.DestroyImmediate(texture);
         }

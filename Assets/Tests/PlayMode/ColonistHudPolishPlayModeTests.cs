@@ -176,8 +176,16 @@ namespace CatanRoguelike.Tests.PlayMode
                 ColonistPortRateLabelTextures.HasOpaquePixels(labelTexture),
                 "Port rate label texture should contain opaque glyph pixels.");
 
-            float faceDot = Vector3.Dot(label.transform.up.normalized, Vector3.up);
+            ColonistFlatBoardQuad.LogDiagnostics("PortRateLabelPlayMode", label, discRenderer);
+            float faceDot = Vector3.Dot(ColonistFlatBoardQuad.GetBoardFaceNormal(label), Vector3.up);
             Assert.Greater(faceDot, 0.85f, $"Port rate label should lie flat on the board (dot={faceDot:F3}).");
+
+            float discDiameter = Mathf.Max(discRenderer.bounds.size.x, discRenderer.bounds.size.z);
+            float labelWidth = Mathf.Max(labelRenderer.bounds.size.x, labelRenderer.bounds.size.z);
+            Assert.Greater(
+                labelWidth,
+                discDiameter * 0.55f,
+                $"Port rate label should span most of the badge (label={labelWidth:F3} disc={discDiameter:F3}).");
 
             var discBounds = discRenderer.bounds;
             var labelBounds = labelRenderer.bounds;

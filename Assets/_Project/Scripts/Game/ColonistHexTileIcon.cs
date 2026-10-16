@@ -16,10 +16,8 @@ namespace CatanRoguelike.Game
             if (data.IsDesert)
                 return;
 
-            var lossy = tileRoot.transform.lossyScale;
             float hexSize = hexScale * HexMath.OuterRadius;
             float worldDiameter = hexSize * IconSizeFactor * 2f;
-            float localDiameter = worldDiameter / Mathf.Max(lossy.x, 0.001f);
             float corner = hexSize * CornerOffsetFactor;
             var iconGo = ColonistFlatBoardQuad.Create(
                 tileRoot.transform,
@@ -28,8 +26,8 @@ namespace CatanRoguelike.Game
                     corner * 0.12f,
                     HexPrismMesh.TopY + IconLiftAboveHexTop,
                     corner),
-                localDiameter,
-                localDiameter,
+                worldDiameter,
+                worldDiameter,
                 ColonistResourceIconTextures.Get(data.Resource),
                 3180);
             iconGo.layer = 0;

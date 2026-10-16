@@ -343,7 +343,7 @@ namespace CatanRoguelike.Game
         private void ClearHighlights()
         {
             foreach (var h in _highlights)
-                if (h != null) Destroy(h);
+                if (h != null) ColonistSceneDestroy.SafeDestroy(h);
             _highlights.Clear();
         }
 

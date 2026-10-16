@@ -416,7 +416,7 @@ namespace CatanRoguelike.Game
                 return;
 
             for (int i = _shopListRoot.childCount - 1; i >= 0; i--)
-                Destroy(_shopListRoot.GetChild(i).gameObject);
+                ColonistSceneDestroy.SafeDestroy(_shopListRoot.GetChild(i).gameObject);
 
             if (state.Phase != GamePhase.DayPlayerActions || state.Winner.HasValue)
                 return;
@@ -435,7 +435,7 @@ namespace CatanRoguelike.Game
         private void RebuildHand(GameState state)
         {
             foreach (var go in _handCardObjects)
-                Destroy(go);
+                ColonistSceneDestroy.SafeDestroy(go);
             _handCardObjects.Clear();
 
             bool showHand = !state.Winner.HasValue
@@ -540,7 +540,7 @@ namespace CatanRoguelike.Game
             if (_actionBarBuildRoot != null)
             {
                 for (int i = _actionBarBuildRoot.childCount - 1; i >= 0; i--)
-                    Destroy(_actionBarBuildRoot.GetChild(i).gameObject);
+                    ColonistSceneDestroy.SafeDestroy(_actionBarBuildRoot.GetChild(i).gameObject);
             }
 
             _actionButtons.Clear();

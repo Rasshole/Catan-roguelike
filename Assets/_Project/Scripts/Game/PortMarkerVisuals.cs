@@ -126,7 +126,9 @@ namespace CatanRoguelike.Game
             disc.transform.localPosition = Vector3.zero;
             float discDiameter = BadgeDiscRadius * 2f;
             disc.transform.localScale = new Vector3(discDiameter, BadgeDiscHeight, discDiameter);
-            disc.GetComponent<Renderer>().sharedMaterial = BuiltInMaterials.CreateUnlit(new Color(0.95f, 0.95f, 0.93f, 1f));
+            var discRenderer = disc.GetComponent<Renderer>();
+            discRenderer.sharedMaterial = BuiltInMaterials.CreateUnlit(new Color(0.95f, 0.95f, 0.93f, 1f));
+            discRenderer.sharedMaterial.renderQueue = 3100;
             DestroyCollider(disc.GetComponent<Collider>());
 
             float labelLocalY = BadgeDiscHeight + 0.006f;
@@ -143,7 +145,8 @@ namespace CatanRoguelike.Game
                 labelWorldWidth,
                 labelWorldHeight,
                 labelTexture,
-                3200);
+                3210,
+                discRenderer);
 
             if (!isGeneric && specificResource.HasValue)
             {
@@ -155,24 +158,13 @@ namespace CatanRoguelike.Game
                     iconSize,
                     iconSize,
                     ColonistResourceIconTextures.Get(specificResource.Value),
-                    3195);
+                    3205,
+                    discRenderer);
             }
         }
 
-        private static void DestroyCollider(Collider collider)
-        {
-            if (collider == null)
-                return;
-
-#if UNITY_EDITOR
-            if (!Application.isPlaying)
-            {
-                Object.DestroyImmediate(collider);
-                return;
-            }
-#endif
-            Object.Destroy(collider);
-        }
+        private static void DestroyCollider(Collider collider) =>
+            ColonistSceneDestroy.SafeDestroy(collider);
 
         private static void CreatePart(
             string name,

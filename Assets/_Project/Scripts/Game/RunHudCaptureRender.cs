@@ -84,7 +84,7 @@ namespace CatanRoguelike.Game
             finally
             {
                 if (Application.isPlaying)
-                    Object.Destroy(scratch);
+                    ColonistSceneDestroy.SafeDestroy(scratch);
                 else
                     Object.DestroyImmediate(scratch);
             }
@@ -96,7 +96,7 @@ namespace CatanRoguelike.Game
                 return;
 
             if (Application.isPlaying)
-                Object.Destroy(go);
+                ColonistSceneDestroy.SafeDestroy(go);
             else
                 Object.DestroyImmediate(go);
         }
@@ -107,7 +107,7 @@ namespace CatanRoguelike.Game
                 return;
 
             if (Application.isPlaying)
-                Object.Destroy(component);
+                ColonistSceneDestroy.SafeDestroy(component);
             else
                 Object.DestroyImmediate(component);
         }

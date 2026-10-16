@@ -11,7 +11,7 @@ namespace CatanRoguelike.Game
         {
             var button = RunHudUiFactory.CreateButton(parent, string.Empty, RunHudUiFactory.ButtonSecondary);
             foreach (Transform child in button.transform)
-                Object.Destroy(child.gameObject);
+                ColonistSceneDestroy.SafeDestroy(child.gameObject);
 
             var labelModel = button.gameObject.GetComponent<ColonistBuildButtonLabel>();
             if (labelModel == null)

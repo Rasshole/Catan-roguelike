@@ -149,6 +149,12 @@ namespace CatanRoguelike.Tests.PlayMode
                     tableCamera,
                     GameSceneCapture.CaptureWidth,
                     GameSceneCapture.CaptureHeight);
+                ColonistBoardCaptureAssertions.AssertPortRateLabelVisibleOnBoardCapture(
+                    boardOnly,
+                    mainCamera,
+                    tableCamera,
+                    GameSceneCapture.CaptureWidth,
+                    GameSceneCapture.CaptureHeight);
 
                 AssertTextureHasVisibleContent(withHud);
                 AssertBottomBandDiffersBoardOnlyVsHud(boardOnly, withHud);

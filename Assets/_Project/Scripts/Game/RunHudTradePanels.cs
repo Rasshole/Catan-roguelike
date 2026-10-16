@@ -169,7 +169,7 @@ namespace CatanRoguelike.Game
                 return;
 
             for (int i = _playerTradeResponsesRoot.childCount - 1; i >= 0; i--)
-                Destroy(_playerTradeResponsesRoot.GetChild(i).gameObject);
+                ColonistSceneDestroy.SafeDestroy(_playerTradeResponsesRoot.GetChild(i).gameObject);
 
             if (!state.PendingPlayerTrade.HasValue || state.PendingAiTradeResponses == null)
                 return;
