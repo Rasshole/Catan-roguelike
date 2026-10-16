@@ -189,6 +189,7 @@ namespace CatanRoguelike.Game
         }
 
         private readonly Dictionary<HexCoord, HexTileView> _tiles = new();
+        private readonly HashSet<HexCoord> _boardTileCoords = new();
         private GameController _controller;
         private int _lastBuildingVisualCount;
 
@@ -217,6 +218,7 @@ namespace CatanRoguelike.Game
             }
 
             _tiles.Clear();
+            _boardTileCoords.Clear();
         }
 
         private static void DestroySceneObject(GameObject target)
@@ -236,6 +238,10 @@ namespace CatanRoguelike.Game
             if (boardRoot == null) boardRoot = transform;
 
             DisableLegacySceneTable();
+
+            _boardTileCoords.Clear();
+            foreach (var coord in board.Tiles.Keys)
+                _boardTileCoords.Add(coord);
 
             foreach (var kvp in board.Tiles)
             {
@@ -347,14 +353,20 @@ namespace CatanRoguelike.Game
             meshFilter.sharedMesh = mesh;
 
             var renderer = go.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = BuiltInMaterials.Create(BoardResourceColors.GetTileFace(data));
+            renderer.sharedMaterial = ColonistPresentation.IsActive
+                ? BoardTerrainMaterialSlots.GetTileMaterial(data)
+                : BuiltInMaterials.Create(BoardResourceColors.GetTileFace(data));
 
             var collider = go.AddComponent<MeshCollider>();
             collider.sharedMesh = mesh;
 
-            HexCartoonTileDecor.ApplyOutline(go, data.Coord, hexScale);
+            HexCartoonTileDecor.ApplyOutline(go, data.Coord, hexScale, _boardTileCoords);
             if (ColonistPresentation.IsActive)
+            {
                 ColonistHexTileIcon.Apply(go, data, hexScale);
+                if (data.IsDesert)
+                    ColonistDesertDuneDecor.Apply(go, hexScale);
+            }
             else
                 HexCartoonTileDecor.ApplyTopCap(go, data, hexScale, go.transform.lossyScale);
 
