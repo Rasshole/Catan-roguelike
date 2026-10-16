@@ -78,8 +78,8 @@ namespace CatanRoguelike.Game
         {
             if (ColonistPresentation.IsActive)
             {
-                BuildColonistDieFace(parent, "DieA", out _colonistDiePipsA);
-                BuildColonistDieFace(parent, "DieB", out _colonistDiePipsB);
+                BuildColonistDieFace(parent, "DieA", out _colonistDieFaceA, out _colonistDiePipsA);
+                BuildColonistDieFace(parent, "DieB", out _colonistDieFaceB, out _colonistDiePipsB);
             }
             else
             {

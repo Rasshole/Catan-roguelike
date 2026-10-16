@@ -5,6 +5,8 @@ import secrets
 
 ROOT = Path(__file__).resolve().parents[1] / "Assets/_Project"
 BOARD = ROOT / "Resources/Art/Board"
+ICONS = ROOT / "Resources/Art/Icons"
+BOARDGAME = ROOT / "Resources/Art/Boardgame"
 
 TEXTURE_META = """fileFormatVersion: 2
 guid: {guid}
@@ -141,18 +143,12 @@ def write_folder(path: Path) -> None:
     print(f"folder meta {path}")
 
 
-def main() -> None:
-    write_folder(ROOT / "Resources" / "Art")
-    write_folder(BOARD)
-    art_doc = ROOT / "Art" / "ART_LICENSES.md"
-    if not (art_doc.parent / "ART_LICENSES.md.meta").exists():
-        (art_doc.parent / "ART_LICENSES.md.meta").write_text(DOC_META.format(guid=guid()), encoding="utf-8")
-        print("ART_LICENSES.md.meta")
-
-    for png in sorted(BOARD.glob("*.png")):
+def write_png_metas(folder: Path) -> None:
+    if not folder.is_dir():
+        return
+    for png in sorted(folder.glob("*.png")):
         meta_path = png.with_suffix(".png.meta")
         if meta_path.exists():
-            # patch isReadable if missing
             text = meta_path.read_text(encoding="utf-8")
             if "isReadable: 1" not in text:
                 text = text.replace("isReadable: 0", "isReadable: 1")
@@ -161,6 +157,26 @@ def main() -> None:
             continue
         meta_path.write_text(TEXTURE_META.format(guid=guid()), encoding="utf-8")
         print(f"wrote {meta_path.name}")
+
+
+def main() -> None:
+    write_folder(ROOT / "Resources" / "Art")
+    write_folder(BOARD)
+    write_folder(ICONS)
+    write_folder(BOARDGAME)
+    write_folder(BOARDGAME / "Dice")
+    write_folder(BOARDGAME / "Cards")
+    write_folder(ROOT / "Resources" / "Art" / "Models")
+    write_folder(ROOT / "Resources" / "Art" / "Models" / "Nature")
+    art_doc = ROOT / "Art" / "ART_LICENSES.md"
+    if not (art_doc.parent / "ART_LICENSES.md.meta").exists():
+        (art_doc.parent / "ART_LICENSES.md.meta").write_text(DOC_META.format(guid=guid()), encoding="utf-8")
+        print("ART_LICENSES.md.meta")
+
+    write_png_metas(BOARD)
+    write_png_metas(ICONS)
+    write_png_metas(BOARDGAME / "Dice")
+    write_png_metas(BOARDGAME / "Cards")
 
 
 if __name__ == "__main__":

@@ -7,6 +7,8 @@ namespace CatanRoguelike.Game
     public sealed partial class RunHudController
     {
         private RectTransform _actionBarTradeRoot;
+        private Image _colonistDieFaceA;
+        private Image _colonistDieFaceB;
         private Image[] _colonistDiePipsA;
         private Image[] _colonistDiePipsB;
 
@@ -94,13 +96,14 @@ namespace CatanRoguelike.Game
             _openTradeDialogButton = tradeBtn;
         }
 
-        private void BuildColonistDieFace(Transform parent, string name, out Image[] pipImages)
+        private void BuildColonistDieFace(Transform parent, string name, out Image dieFace, out Image[] pipImages)
         {
             var dieGo = new GameObject(name);
             dieGo.layer = parent.gameObject.layer;
             dieGo.transform.SetParent(parent, false);
             RunHudUiFactory.AddLayoutElement(dieGo, 48f).preferredWidth = 48f;
-            dieGo.AddComponent<Image>().color = new Color(0.96f, 0.94f, 0.88f, 1f);
+            dieFace = dieGo.AddComponent<Image>();
+            dieFace.color = new Color(0.96f, 0.94f, 0.88f, 1f);
             ColonistDiceFaceUi.Build(dieGo.transform, out pipImages);
         }
 
@@ -112,23 +115,21 @@ namespace CatanRoguelike.Game
             var dice = state.IsNightPhase ? state.TomorrowDiceRolls : state.TodayDiceRolls;
             if (dice == null || dice.Count == 0)
             {
-                ColonistDiceFaceUi.SetValue(_colonistDiePipsA, 0);
-                ColonistDiceFaceUi.SetValue(_colonistDiePipsB, 0);
+                ColonistKenneyDiceUi.ApplyFace(_colonistDieFaceA, _colonistDiePipsA, 0);
+                ColonistKenneyDiceUi.ApplyFace(_colonistDieFaceB, _colonistDiePipsB, 0);
                 return;
             }
 
             int a = dice[0];
             int b = dice.Count >= 2 ? dice[1] : 0;
-            ColonistDiceFaceUi.SetValue(_colonistDiePipsA, a);
-            ColonistDiceFaceUi.SetValue(_colonistDiePipsB, b);
+            ColonistKenneyDiceUi.ApplyFace(_colonistDieFaceA, _colonistDiePipsA, a);
+            ColonistKenneyDiceUi.ApplyFace(_colonistDieFaceB, _colonistDiePipsB, b);
         }
 
         private void SetColonistDieValues(int a, int b)
         {
-            if (_colonistDiePipsA != null)
-                ColonistDiceFaceUi.SetValue(_colonistDiePipsA, a);
-            if (_colonistDiePipsB != null)
-                ColonistDiceFaceUi.SetValue(_colonistDiePipsB, b);
+            ColonistKenneyDiceUi.ApplyFace(_colonistDieFaceA, _colonistDiePipsA, a);
+            ColonistKenneyDiceUi.ApplyFace(_colonistDieFaceB, _colonistDiePipsB, b);
         }
     }
 }

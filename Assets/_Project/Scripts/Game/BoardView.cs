@@ -515,7 +515,10 @@ namespace CatanRoguelike.Game
             if (ColonistPresentation.IsActive)
             {
                 if (!data.IsDesert && !IsSeaFishTile(data))
+                {
                     ColonistHexTileIcon.Apply(go, data, hexScale);
+                    ColonistHexTileNatureDecor.Apply(go, data, hexScale);
+                }
                 if (data.IsDesert && !data.IsFishTile)
                     ColonistDesertDuneDecor.Apply(go, hexScale);
                 if (data.IsDesert && data.IsFishTile)

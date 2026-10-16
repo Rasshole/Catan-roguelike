@@ -109,7 +109,14 @@ namespace CatanRoguelike.Game
             RunHudUiFactory.AddLayoutElement(cardGo, cardH).preferredWidth = cardW;
 
             var bg = cardGo.AddComponent<Image>();
-            bg.color = BoardResourceColors.GetHudSwatch(resource);
+            var cardBack = ColonistKenneyDiceSprites.TryGetCardBack();
+            if (cardBack != null)
+            {
+                bg.sprite = cardBack;
+                bg.color = Color.white;
+            }
+            else
+                bg.color = BoardResourceColors.GetHudSwatch(resource);
 
             var iconGo = new GameObject("Icon");
             iconGo.transform.SetParent(cardGo.transform, false);

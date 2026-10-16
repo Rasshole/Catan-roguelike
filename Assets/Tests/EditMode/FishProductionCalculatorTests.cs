@@ -5,8 +5,6 @@ using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Yield;
 using NUnit.Framework;
-using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
-
 namespace CatanRoguelike.Tests.EditMode
 {
     public class FishProductionCalculatorTests

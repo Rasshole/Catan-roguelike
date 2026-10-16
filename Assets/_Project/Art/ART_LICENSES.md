@@ -1,10 +1,40 @@
 # Board art licenses
 
-## `Resources/Art/Board/*.png` (terrain albedos)
+## Kenney — Hexagon Pack (terrain albedos)
 
-- **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (public domain)
-- **Source:** Generated for this project by `tools/generate-board-art.py` (painted-style procedural tiles, 256×256). No third-party texture files are bundled.
+- **Files:** `Resources/Art/Board/Wood.png`, `Brick.png`, `Wheat.png`, `Sheep.png`, `Ore.png`, `Desert.png`, `SeaLake.png`, `CoastSand.png` (baked from Kenney terrain tiles)
+- **License:** [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- **Source:** [Kenney Hexagon Pack](https://kenney.nl/assets/hexagon-pack) (OpenGameArt mirror used in `tools/import-kenney-board-art.py`)
 - **Attribution:** Not required.
+
+## Kenney — Board Game Icons (resource HUD / hex icons)
+
+- **Files:** `Resources/Art/Icons/*.png`
+- **License:** CC0 1.0
+- **Source:** [Kenney Board Game Icons](https://kenney.nl/assets/board-game-icons)
+- **Mapping:** wood, planks→brick, wheat, structure_farm→sheep, iron→stone/ore
+
+## Kenney — Boardgame Pack (dice, card back)
+
+- **Files:** `Resources/Art/Boardgame/Dice/DieWhite1–6.png`, `Resources/Art/Boardgame/Cards/CardBack_blue.png`
+- **License:** CC0 1.0
+- **Source:** [Kenney Boardgame Pack](https://kenney.nl/assets/boardgame-pack)
+- **Note:** Number tokens on hexes still use **Roboto Slab** text (more readable than chip sprites at board scale).
+
+## Quaternius — Ultimate Nature (3D props)
+
+- **Files:** `Resources/Art/Models/Nature/NormalTree_2.fbx`, `Rock_3.fbx`, `Flower_2_Clump.fbx`
+- **License:** CC0 1.0
+- **Source:** [Quaternius Ultimate Nature](https://quaternius.com/packs/ultimatenature.html) (FBX via community Godot bundle mirror in import script)
+- **Use:** Small props on forest, mountain, and wheat hex tops.
+
+## Fishermen fishing-ground art
+
+- **File:** `Resources/Art/Board/FishShoal.png` — light-blue water with simple fish motifs (project composite; chevron mesh tint in `ColonistCoastalFishShoalVisual`)
+
+## Procedural fallback
+
+- `tools/generate-board-art.py` remains for local regeneration if Kenney sources are absent; shipped builds use committed Kenney bakes above.
 
 ## Fonts
 
@@ -12,4 +42,4 @@
 
 ## Reference (not redistributed)
 
-Fishing-ground layout follows the *Fishermen of Catan* / Seafarers scenario (triangular coastal shoal pieces at land–sea edges). Physical component photos and Catan™ trade dress are © Catan GmbH; this project uses original meshes and textures only.
+Fishing-ground layout follows the *Fishermen of Catan* expansion (chevron frame, three border intersections). Catan™ trade dress is © Catan GmbH; this project uses original code and licensed CC0 art only.
