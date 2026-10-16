@@ -46,14 +46,15 @@ namespace CatanRoguelike.Game
             return mat;
         }
 
-        public static Material CreateUnlit(Color color)
+        public static Material CreateUnlit(Color color, bool zWrite = true)
         {
             var shader = Shader.Find(UnlitColorShaderName);
             if (shader == null)
                 return Create(color);
 
             var mat = new Material(shader) { color = color };
-            mat.renderQueue = 3500;
+            mat.SetInt("_ZWrite", zWrite ? 1 : 0);
+            mat.renderQueue = zWrite ? 3500 : 3080;
             return mat;
         }
 

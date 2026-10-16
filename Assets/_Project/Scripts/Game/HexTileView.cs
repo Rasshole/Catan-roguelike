@@ -69,8 +69,8 @@ namespace CatanRoguelike.Game
         private static readonly Color StormMarkerColor = new(0.1f, 0.15f, 0.55f);
 
         // Target world-space chip size (visible disc on the hex top).
-        private const float WorldRimDiameter = 0.62f;
-        private const float WorldFaceDiameter = 0.52f;
+        private const float WorldRimDiameter = 0.70f;
+        private const float WorldFaceDiameter = 0.50f;
         private const float WorldChipThickness = 0.04f;
 
         // Hex prism mesh top is parent-local y=1; flat chips + label sit above that surface (top-down view).
@@ -143,7 +143,7 @@ namespace CatanRoguelike.Game
 
             for (int i = 0; i < offsets.Length; i++)
             {
-                var pip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                var pip = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 pip.name = $"Pip_{i}";
                 pip.transform.SetParent(_pipRoot.transform, false);
                 NumberTokenPipVisuals.PlacePipOnLabelRow(pip.transform, offsets[i], pipColor);
@@ -264,8 +264,8 @@ namespace CatanRoguelike.Game
 
             _tokenLabel.anchor = TextAnchor.MiddleCenter;
             _tokenLabel.alignment = TextAlignment.Center;
-            _tokenLabel.fontSize = 48;
-            _tokenLabel.characterSize = 0.5f;
+            _tokenLabel.fontSize = 58;
+            _tokenLabel.characterSize = 0.6f;
             _tokenLabel.color = Color.black;
 
             var labelRenderer = labelGo.GetComponent<MeshRenderer>();

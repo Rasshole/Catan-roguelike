@@ -9,14 +9,14 @@ namespace CatanRoguelike.Game
         public const float LabelLocalRowY = -1.75f;
         public const float LabelLocalRowZ = 0.1f;
         public const float LabelOffsetScale = 2.35f;
-        public const float PipLocalScale = 0.32f;
+        public const float PipLocalScale = 0.82f;
 
         public static int GetExpectedPipCount(int token) => NumberTokenPipLayout.GetPipCount(token);
 
         public static void PlacePipOnLabelRow(Transform pip, float offsetX, Color pipColor)
         {
             pip.localPosition = new Vector3(offsetX * LabelOffsetScale, LabelLocalRowY, LabelLocalRowZ);
-            pip.localScale = new Vector3(PipLocalScale, PipLocalScale * 0.35f, PipLocalScale);
+            pip.localScale = Vector3.one * PipLocalScale;
             var renderer = pip.GetComponent<Renderer>();
             if (renderer != null)
             {

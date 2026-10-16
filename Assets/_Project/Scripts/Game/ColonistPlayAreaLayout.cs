@@ -18,16 +18,24 @@ namespace CatanRoguelike.Game
 
         public static Rect Compute(int screenWidth, int screenHeight)
         {
-            float left = RunHudLayout.GetContentLeftInset();
-            float right = RunHudLayout.GetContentRightInset();
-            float bottom = RunHudLayout.GetBottomHandHeight()
+            float left = ColonistUiScale.ScaleReferencePixels(
+                RunHudLayout.GetContentLeftInset(), screenWidth, screenHeight);
+            float right = ColonistUiScale.ScaleReferencePixels(
+                RunHudLayout.GetContentRightInset(), screenWidth, screenHeight);
+            float bottom = ColonistUiScale.ScaleReferencePixels(
+                RunHudLayout.GetBottomHandHeight()
                 + RunHudLayout.GetBottomActionBarHeight()
-                + RunHudLayout.Margin * 2f;
-            float top = RunHudLayout.Margin + TurnBannerReserve;
+                + RunHudLayout.Margin * 2f,
+                screenWidth,
+                screenHeight);
+            float top = ColonistUiScale.ScaleReferencePixels(
+                RunHudLayout.Margin + TurnBannerReserve, screenWidth, screenHeight);
+            float breathing = ColonistUiScale.ScaleReferencePixels(
+                ColonistBoardViewConstants.BoardBottomBreathingRoomPixels, screenWidth, screenHeight);
             float playWidth = Mathf.Max(64f, screenWidth - left - right);
             float playHeight = Mathf.Max(
                 64f,
-                screenHeight - bottom - top - ColonistBoardViewConstants.BoardBottomBreathingRoomPixels);
+                screenHeight - bottom - top - breathing);
 
             return new Rect
             {

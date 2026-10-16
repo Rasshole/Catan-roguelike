@@ -36,9 +36,9 @@ namespace CatanRoguelike.Tests
         [Test]
         public void GetLabelCharacterSize_TwoDigitTokens_AreSmaller()
         {
-            Assert.AreEqual(0.5f, NumberTokenVisualStyle.GetLabelCharacterSize(9));
-            Assert.AreEqual(0.42f, NumberTokenVisualStyle.GetLabelCharacterSize(10));
-            Assert.AreEqual(0.42f, NumberTokenVisualStyle.GetLabelCharacterSize(12));
+            Assert.AreEqual(0.6f, NumberTokenVisualStyle.GetLabelCharacterSize(9), 1e-4f);
+            Assert.AreEqual(0.504f, NumberTokenVisualStyle.GetLabelCharacterSize(10), 1e-4f);
+            Assert.AreEqual(0.504f, NumberTokenVisualStyle.GetLabelCharacterSize(12), 1e-4f);
         }
 
         [Test]

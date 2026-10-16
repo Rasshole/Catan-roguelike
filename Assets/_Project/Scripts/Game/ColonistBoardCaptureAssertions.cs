@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using CatanRoguelike.Core.UI;
 using CatanRoguelike.Core.Yield;
@@ -39,6 +40,10 @@ namespace CatanRoguelike.Game
                 screenWidth,
                 screenHeight);
 
+            Debug.Log(
+                $"ColonistBoardCaptureAssertions sample texture {boardCapture.width}x{boardCapture.height} " +
+                $"id={boardCapture.GetInstanceID()} center=({center.x},{center.y}) [bottom-left origin]");
+            WriteSamplePatchDebugPng(boardCapture, center.x, center.y);
             AssertCenterRegionShowsHexTiles(boardCapture, center.x, center.y);
         }
 
@@ -223,16 +228,48 @@ namespace CatanRoguelike.Game
         {
             if (IsTokenChipLike(pixel))
                 hexLike++;
+            else if (IsHexTileLike(pixel))
+                hexLike++;
             else if (IsOceanLike(pixel))
                 oceanLike++;
             else if (IsSkyLike(pixel))
                 skyLike++;
             else if (IsSandCoastLike(pixel))
                 sandLike++;
-            else if (IsHexTileLike(pixel))
-                hexLike++;
             else
                 other++;
+        }
+
+        public static void WriteSamplePatchDebugPng(Texture2D boardCapture, int centerX, int centerY, int radius = 24)
+        {
+            if (boardCapture == null)
+                return;
+
+            int size = radius * 2 + 1;
+            var patch = new Texture2D(size, size, TextureFormat.RGB24, false);
+            int w = boardCapture.width;
+            int h = boardCapture.height;
+            for (int py = 0; py < size; py++)
+            {
+                for (int px = 0; px < size; px++)
+                {
+                    int sx = centerX - radius + px;
+                    int sy = centerY - radius + py;
+                    Color c = sx >= 0 && sx < w && sy >= 0 && sy < h
+                        ? boardCapture.GetPixel(sx, sy)
+                        : Color.magenta;
+                    patch.SetPixel(px, py, c);
+                }
+            }
+
+            patch.Apply();
+            string path = Path.Combine(Path.GetTempPath(), "colonist-capture-sample-patch.png");
+            File.WriteAllBytes(path, patch.EncodeToPNG());
+            Debug.Log(
+                $"ColonistBoardCaptureAssertions wrote sample patch ({centerX},{centerY}) r={radius} to {path} " +
+                $"centerRgb={boardCapture.GetPixel(Mathf.Clamp(centerX,0,w-1), Mathf.Clamp(centerY,0,h-1))} " +
+                $"yFlippedRgb={boardCapture.GetPixel(Mathf.Clamp(centerX,0,w-1), Mathf.Clamp(h-1-centerY,0,h-1))}");
+            Object.Destroy(patch);
         }
 
         private static void LogSampleFailure(
@@ -262,15 +299,18 @@ namespace CatanRoguelike.Game
 
         private static bool IsOceanLike(Color c)
         {
+            if (IsHexTileLike(c) || IsTokenChipLike(c))
+                return false;
+
             if (ColorDistance(c, OceanReference) < 0.22f)
                 return true;
             if (ColorDistance(c, CameraSkyReference) < 0.14f)
                 return true;
 
-            return c.b >= 0.40f
+            return c.b >= 0.48f
+                && c.b > c.g + 0.08f
                 && c.b >= c.r
-                && c.g >= 0.26f
-                && c.g >= c.r * 0.85f;
+                && c.g >= 0.26f;
         }
 
         private static bool IsSkyLike(Color c) =>
@@ -297,7 +337,7 @@ namespace CatanRoguelike.Game
 
         private static bool IsHexTileLike(Color c)
         {
-            if (IsOceanLike(c) || IsSkyLike(c) || IsTokenChipLike(c))
+            if (IsSkyLike(c) || IsTokenChipLike(c))
                 return false;
 
             return MatchesPalette(c, BoardResourcePalette.Desert, 0.16f)

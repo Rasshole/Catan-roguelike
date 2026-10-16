@@ -33,15 +33,20 @@ namespace CatanRoguelike.Game
 
             var previousRect = camera.pixelRect;
             var previousTarget = camera.targetTexture;
+            RenderTexture tempTarget = null;
             try
             {
                 ApplyCaptureCameraState(camera, tableCamera, textureWidth, textureHeight);
+                tempTarget = RenderTexture.GetTemporary(textureWidth, textureHeight, 16);
+                camera.targetTexture = tempTarget;
                 return camera.WorldToViewportPoint(worldPoint);
             }
             finally
             {
-                camera.pixelRect = previousRect;
                 camera.targetTexture = previousTarget;
+                camera.pixelRect = previousRect;
+                if (tempTarget != null)
+                    RenderTexture.ReleaseTemporary(tempTarget);
             }
         }
 

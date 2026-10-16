@@ -17,8 +17,9 @@ namespace CatanRoguelike.Game
             float cameraAspect)
         {
             var play = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
-            float usableWidth = Mathf.Max(8f, play.PlayWidth - PlayAreaMarginPixels * 2f);
-            float usableHeight = Mathf.Max(8f, play.PlayHeight - PlayAreaMarginPixels * 2f);
+            float margin = ColonistUiScale.ScaleReferencePixels(PlayAreaMarginPixels, screenWidth, screenHeight);
+            float usableWidth = Mathf.Max(8f, play.PlayWidth - margin * 2f);
+            float usableHeight = Mathf.Max(8f, play.PlayHeight - margin * 2f);
             float diameter = Mathf.Max(0.01f, boardExtentRadiusWorld * 2f);
 
             float fromHeight = diameter * screenHeight / (2f * usableHeight);
@@ -32,10 +33,11 @@ namespace CatanRoguelike.Game
             int screenHeight)
         {
             var play = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
-            float minX = play.Left + PlayAreaMarginPixels;
-            float maxX = play.Left + play.PlayWidth - PlayAreaMarginPixels;
-            float minY = play.Bottom + PlayAreaMarginPixels;
-            float maxY = play.Bottom + play.PlayHeight - PlayAreaMarginPixels;
+            float margin = ColonistUiScale.ScaleReferencePixels(PlayAreaMarginPixels, screenWidth, screenHeight);
+            float minX = play.Left + margin;
+            float maxX = play.Left + play.PlayWidth - margin;
+            float minY = play.Bottom + margin;
+            float maxY = play.Bottom + play.PlayHeight - margin;
 
             for (int i = 0; i < screenPixelsFromBottom.Length; i++)
             {
@@ -85,10 +87,11 @@ namespace CatanRoguelike.Game
             float marginPixels = PlayAreaMarginPixels)
         {
             var play = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
-            float minX = play.Left + marginPixels;
-            float maxX = play.Left + play.PlayWidth - marginPixels;
-            float minY = play.Bottom + marginPixels;
-            float maxY = play.Bottom + play.PlayHeight - marginPixels;
+            float margin = ColonistUiScale.ScaleReferencePixels(marginPixels, screenWidth, screenHeight);
+            float minX = play.Left + margin;
+            float maxX = play.Left + play.PlayWidth - margin;
+            float minY = play.Bottom + margin;
+            float maxY = play.Bottom + play.PlayHeight - margin;
 
             for (int i = 0; i < screenPixelsFromBottom.Length; i++)
             {

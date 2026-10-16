@@ -39,6 +39,7 @@ namespace CatanRoguelike.Tests.PlayMode
 
             var tiles = Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None);
             int iconsChecked = 0;
+            bool loggedDiagnostics = false;
             foreach (var tile in tiles)
             {
                 if (tile.Data.IsDesert)
@@ -54,9 +55,33 @@ namespace CatanRoguelike.Tests.PlayMode
                     BuiltInMaterials.IsUnlitMaterial(renderer.sharedMaterial),
                     $"ResourceIcon on {tile.Data.Coord} should use an unlit material.");
 
+                int layer = iconTransform.gameObject.layer;
+                Assert.IsTrue(
+                    (camera.cullingMask & (1 << layer)) != 0,
+                    $"Camera cullingMask should include ResourceIcon layer {layer}.");
+
+                float facesCamera = Vector3.Dot(iconTransform.up, -camera.transform.forward);
+                Assert.Greater(
+                    facesCamera,
+                    0.85f,
+                    $"ResourceIcon on {tile.Data.Coord} should face the camera (dot={facesCamera:F3}).");
+
+                float hexTopY = tile.transform.position.y + tile.transform.lossyScale.y * HexPrismMesh.TopY;
+                Assert.Greater(
+                    iconTransform.position.y,
+                    hexTopY - 0.001f,
+                    $"ResourceIcon should sit above hex top on {tile.Data.Coord}.");
+
                 Assert.IsTrue(
                     GeometryUtility.TestPlanesAABB(planes, renderer.bounds),
                     $"ResourceIcon on {tile.Data.Coord} should be inside the camera frustum.");
+
+                if (!loggedDiagnostics)
+                {
+                    ColonistResourceIconDiagnostics.Log(iconTransform, camera, tile.transform);
+                    loggedDiagnostics = true;
+                }
+
                 iconsChecked++;
             }
 
