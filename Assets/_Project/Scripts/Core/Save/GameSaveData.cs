@@ -57,6 +57,8 @@ namespace CatanRoguelike.Core.Save
         public bool IsDesert { get; set; }
         /// <summary>Optional v1 — classic number token 2–12.</summary>
         public int? NumberToken { get; set; }
+        public bool IsFishTile { get; set; }
+        public int FishValue { get; set; }
     }
 
     public sealed class RoadSaveData
@@ -161,5 +163,10 @@ namespace CatanRoguelike.Core.Save
         public bool EventStoneDouble { get; set; }
         public int EventShopBonus { get; set; }
         public BoardSaveData Board { get; set; }
+        public bool FishermenOfCatanEnabled { get; set; }
+        public int FishermenRunSeed { get; set; }
+        public int PlayerFish { get; set; }
+        public int AiFish { get; set; }
+        public List<int> FishBagRemaining { get; set; }
     }
 }

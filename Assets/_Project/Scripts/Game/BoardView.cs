@@ -38,7 +38,9 @@ namespace CatanRoguelike.Game
         {
             float beachWidth = hexScale * ColonistCoastSandMesh.BeachWidthFactor;
             Vector3 center = GetBoardWorldCenter();
-            float sandFromCenter = ComputeFarthestSandDistanceFromCenter(center, beachWidth);
+            float sandFromCenter = ColonistCoastSandMesh.SandSkirtEnabled
+                ? ComputeFarthestSandDistanceFromCenter(center, beachWidth)
+                : 0f;
             float badgeFromCenter = ComputeLivePortBadgeExtentFromCenter(center);
             if (badgeFromCenter <= 0f && _controller != null && _controller.State?.Board != null)
             {
@@ -382,6 +384,8 @@ namespace CatanRoguelike.Game
                 ColonistHexTileIcon.Apply(go, data, hexScale);
                 if (data.IsDesert)
                     ColonistDesertDuneDecor.Apply(go, hexScale);
+                if (data.IsFishTile)
+                    ColonistFishTileVisual.Apply(go, data, hexScale);
             }
             else
                 HexCartoonTileDecor.ApplyTopCap(go, data, hexScale, go.transform.lossyScale);

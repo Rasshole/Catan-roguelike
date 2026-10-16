@@ -159,7 +159,7 @@ namespace CatanRoguelike.Game
             var meshFilter = disc.AddComponent<MeshFilter>();
             meshFilter.sharedMesh = ThinDiskMesh.Shared;
             var discRenderer = disc.AddComponent<MeshRenderer>();
-            discRenderer.sharedMaterial = BuiltInMaterials.CreateUnlit(new Color(0.95f, 0.95f, 0.93f, 1f));
+            discRenderer.sharedMaterial = BuiltInMaterials.CreateUnlit(new Color(0.98f, 0.96f, 0.90f, 1f));
             discRenderer.sharedMaterial.renderQueue = 3100;
             discRenderer.shadowCastingMode = ShadowCastingMode.Off;
 

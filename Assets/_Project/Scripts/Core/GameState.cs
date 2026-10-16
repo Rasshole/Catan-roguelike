@@ -20,8 +20,10 @@ namespace CatanRoguelike.Core
         public MapSize MapSize { get; set; } = MapSize.Small;
         public GamePhase Phase { get; set; } = GamePhase.RunSelectMap;
         public bool FishermenOfCatanEnabled { get; set; }
+        public int FishermenRunSeed { get; set; }
         public int PlayerFish { get; set; }
         public int AiFish { get; set; }
+        public List<int> FishBagRemaining { get; set; } = new();
 
         public ResourceBundle PlayerInventory { get; set; }
         public ResourceBundle AiInventory { get; set; }
@@ -181,8 +183,10 @@ namespace CatanRoguelike.Core
             PendingSevenDiscard = 0;
             PendingPlayerTrade = null;
             FishermenOfCatanEnabled = false;
+            FishermenRunSeed = 0;
             PlayerFish = 0;
             AiFish = 0;
+            FishBagRemaining = new List<int>();
             PendingAiTradeResponses = Array.Empty<AiTradeResponse>();
             IncomingAiTrade = null;
             ToastMessage = null;

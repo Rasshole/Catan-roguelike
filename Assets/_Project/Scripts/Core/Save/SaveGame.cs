@@ -145,7 +145,14 @@ namespace CatanRoguelike.Core.Save
                     : null,
                 EventStoneDouble = state.EventStoneDouble,
                 EventShopBonus = state.EventShopBonus,
-                Board = BuildBoardSaveData(state.Board)
+                Board = BuildBoardSaveData(state.Board),
+                FishermenOfCatanEnabled = state.FishermenOfCatanEnabled,
+                FishermenRunSeed = state.FishermenRunSeed,
+                PlayerFish = state.PlayerFish,
+                AiFish = state.AiFish,
+                FishBagRemaining = state.FishBagRemaining != null && state.FishBagRemaining.Count > 0
+                    ? new List<int>(state.FishBagRemaining)
+                    : null
             };
         }
 
@@ -215,6 +222,13 @@ namespace CatanRoguelike.Core.Save
                 : null;
             state.EventStoneDouble = data.EventStoneDouble;
             state.EventShopBonus = data.EventShopBonus;
+            state.FishermenOfCatanEnabled = data.FishermenOfCatanEnabled;
+            state.FishermenRunSeed = data.FishermenRunSeed;
+            state.PlayerFish = data.PlayerFish;
+            state.AiFish = data.AiFish;
+            state.FishBagRemaining = data.FishBagRemaining != null
+                ? new List<int>(data.FishBagRemaining)
+                : new List<int>();
 
             ApplyBoardSaveData(state.Board, data.Board);
         }
@@ -242,7 +256,9 @@ namespace CatanRoguelike.Core.Save
                     VertexIndex = tile.VertexIndex,
                     IsCoastal = tile.IsCoastal,
                     IsDesert = tile.IsDesert,
-                    NumberToken = tile.NumberToken
+                    NumberToken = tile.NumberToken,
+                    IsFishTile = tile.IsFishTile,
+                    FishValue = tile.FishValue
                 });
             }
 
@@ -285,7 +301,9 @@ namespace CatanRoguelike.Core.Save
                     Owner = tileData.Owner,
                     VertexIndex = tileData.VertexIndex,
                     IsDesert = tileData.IsDesert,
-                    NumberToken = tileData.NumberToken
+                    NumberToken = tileData.NumberToken,
+                    IsFishTile = tileData.IsFishTile,
+                    FishValue = tileData.FishValue
                 };
                 board.Tiles[coord] = tile;
             }
@@ -326,7 +344,9 @@ namespace CatanRoguelike.Core.Save
                     Owner = tileData.Owner,
                     VertexIndex = tileData.VertexIndex,
                     IsDesert = tileData.IsDesert,
-                    NumberToken = tileData.NumberToken
+                    NumberToken = tileData.NumberToken,
+                    IsFishTile = tileData.IsFishTile,
+                    FishValue = tileData.FishValue
                 };
                 board.Tiles[coord] = tile;
             }
@@ -347,7 +367,6 @@ namespace CatanRoguelike.Core.Save
                 board.PlaceRobber(ToHexCoord(data.RobberTile));
             else
             {
-                // Clear robber marker when absent in save.
                 foreach (var tile in board.Tiles.Values)
                     tile.HasRobber = false;
             }

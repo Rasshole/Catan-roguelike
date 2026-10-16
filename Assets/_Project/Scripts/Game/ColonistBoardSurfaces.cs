@@ -31,8 +31,11 @@ namespace CatanRoguelike.Game
                 $"sandOuterExtent={layout.SandOuterRadius:F3} beachWidth={beachWidth:F3} " +
                 $"hexPrismHeightScale={hexPrismHeightScale:F4}");
 
-            float hexTopY = hexPrismHeightScale * HexPrismMesh.TopY;
-            CreateSandCoastMesh(boardRoot, board, hexTopY, layout.SandThicknessY, hexScale, beachWidth);
+            if (ColonistCoastSandMesh.SandSkirtEnabled)
+            {
+                float hexTopY = hexPrismHeightScale * HexPrismMesh.TopY;
+                CreateSandCoastMesh(boardRoot, board, hexTopY, layout.SandThicknessY, hexScale, beachWidth);
+            }
         }
 
         private static void CreateSandCoastMesh(

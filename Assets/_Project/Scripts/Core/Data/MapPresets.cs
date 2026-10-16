@@ -362,7 +362,20 @@ namespace CatanRoguelike.Core.Data
                 board.Tiles[coord] = tile;
             }
 
+            ApplyDesertFishingLake(board);
+
             NumberTokenLibrary.AssignMissingTokens(board, seed);
+        }
+
+        private static void ApplyDesertFishingLake(BoardState board)
+        {
+            var center = new HexCoord(0, 0);
+            if (!board.TryGetTile(center, out var tile) || !tile.IsDesert)
+                return;
+
+            tile.IsFishTile = true;
+            tile.FishValue = 0;
+            tile.IsCoastal = true;
         }
 
         /// <summary>Coastal = has at least one missing neighbor (board edge → port vertex).</summary>

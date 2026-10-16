@@ -26,8 +26,8 @@ namespace CatanRoguelike.Core.Shop
     public static class PortAccess
     {
         /// <summary>
-        /// Classic Catan scales specific 2:1 + generic 3:1 ports to map size.
-        /// Not every coastal vertex is a port — sparse harbor layout.
+        /// Classic Catan harbor counts (5×2:1 + 4×3:1 on the 19-hex frame) scaled for other sizes.
+        /// Harbors are spaced so no two share a coastal vertex or adjacent coast vertices.
         /// </summary>
         public static List<PortDefinition> DiscoverPorts(BoardState board)
         {
@@ -45,8 +45,10 @@ namespace CatanRoguelike.Core.Shop
 
                 foreach (var vertex in edgeVertices)
                 {
-                    if (used.Contains(vertex)) continue;
-                    if (!VertexTouchesCoastalResource(board, vertex, resource)) continue;
+                    if (PortSpacingRules.ConflictsWithAny(vertex, used))
+                        continue;
+                    if (!VertexTouchesCoastalResource(board, vertex, resource))
+                        continue;
 
                     ports.Add(new PortDefinition(vertex, resource));
                     used.Add(vertex);
@@ -55,17 +57,38 @@ namespace CatanRoguelike.Core.Shop
             }
 
             var remaining = edgeVertices.Where(v => !used.Contains(v)).ToList();
-            int genericCount = System.Math.Min(genericTarget, remaining.Count);
-            for (int i = 0; i < genericCount; i++)
+            int genericPlaced = 0;
+            int stride = MathfMax(1, remaining.Count / MathfMax(1, genericTarget));
+            for (int i = 0; i < remaining.Count && genericPlaced < genericTarget; i += stride)
             {
-                int idx = (i * remaining.Count) / genericCount;
-                var vertex = remaining[idx];
+                var vertex = remaining[i];
+                if (PortSpacingRules.ConflictsWithAny(vertex, used))
+                    continue;
+
                 ports.Add(new PortDefinition(vertex, null));
                 used.Add(vertex);
+                genericPlaced++;
+            }
+
+            if (genericPlaced < genericTarget)
+            {
+                foreach (var vertex in remaining)
+                {
+                    if (genericPlaced >= genericTarget)
+                        break;
+                    if (used.Contains(vertex) || PortSpacingRules.ConflictsWithAny(vertex, used))
+                        continue;
+
+                    ports.Add(new PortDefinition(vertex, null));
+                    used.Add(vertex);
+                    genericPlaced++;
+                }
             }
 
             return ports;
         }
+
+        private static int MathfMax(int a, int b) => a > b ? a : b;
 
         private static (int specific, int generic) GetPortTargets(int tileCount) => tileCount switch
         {
@@ -84,13 +107,16 @@ namespace CatanRoguelike.Core.Shop
 
             foreach (var hex in board.Tiles.Values)
             {
-                if (!hex.IsCoastal) continue;
+                if (!hex.IsCoastal || hex.IsFishTile)
+                    continue;
 
                 for (int c = 0; c < 6; c++)
                 {
                     var vertex = VertexGraph.Canonicalize(new HexMath.Vertex(hex.Coord, c));
-                    if (!seen.Add(vertex)) continue;
-                    if (!IsBoardEdgeVertex(board, vertex)) continue;
+                    if (!seen.Add(vertex))
+                        continue;
+                    if (!IsBoardEdgeVertex(board, vertex))
+                        continue;
                     edgeVertices.Add(vertex);
                 }
             }
@@ -113,10 +139,14 @@ namespace CatanRoguelike.Core.Shop
         {
             foreach (var hex in VertexGraph.GetHexesForVertex(vertex))
             {
-                if (!board.Tiles.TryGetValue(hex, out var tile)) continue;
+                if (!board.Tiles.TryGetValue(hex, out var tile))
+                    continue;
+                if (tile.IsFishTile)
+                    continue;
                 if (tile.IsCoastal && tile.Resource == resource)
                     return true;
             }
+
             return false;
         }
 
@@ -125,8 +155,10 @@ namespace CatanRoguelike.Core.Shop
             int onBoard = 0;
             foreach (var hex in VertexGraph.GetHexesForVertex(vertex))
             {
-                if (board.Tiles.ContainsKey(hex)) onBoard++;
+                if (board.Tiles.ContainsKey(hex))
+                    onBoard++;
             }
+
             return onBoard <= 2;
         }
 

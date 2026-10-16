@@ -1,5 +1,18 @@
 # Agent log
 
+## 2026-10-16 (UTC) — PR #109 Rasmus feedback (post af67f29)
+
+Checklist (branch `cursor/colonist-style-ui-e52d`):
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Remove sand/beach ring — land meets water; `ColonistCoastSandMesh.SandSkirtEnabled=false`; surfaces skip skirt; tests updated | Done |
+| 2 | Number token font — Roboto Slab Bold (Apache-2.0) in `Resources/Fonts`; `ColonistNumberTokenFont`; bold TextMesh, no pips | Done |
+| 3 | Official harbor spacing — 9 ports on 19-hex (5×2:1, 4×3:1); `PortSpacingRules`; no adjacent harbor vertices; `PortSpacingTests` | Done |
+| 4 | Fishermen of Catan — fish bag draw on production; desert lake; HUD fish spend panel; AI fish spend; save/load fish+bag; coastal fish icon | Done (boot steal UX minimal; fish icon placeholder) |
+| 5 | Painted board look — procedural terrain textures; warmer port badges; top-down layout kept | Done (optional `Resources/Art/Board/*` PNGs; table/holders later) |
+
+
 ## 2026-08-26 (PT) — Fase 0 uden Unity-licens
 
 Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.meta` / `Game.unity`):

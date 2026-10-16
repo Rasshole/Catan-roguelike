@@ -23,7 +23,10 @@ namespace CatanRoguelike.Game
             if (texture != null)
                 mat = BuiltInMaterials.Create(texture, Color.white);
             else
-                mat = BuiltInMaterials.CreateOpaque(GetFallbackColor(slot));
+            {
+                texture = ColonistProceduralBoardTextures.Create(slot);
+                mat = BuiltInMaterials.Create(texture, Color.white);
+            }
 
             mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry;
 
@@ -32,6 +35,8 @@ namespace CatanRoguelike.Game
         }
 
         public static void ClearCache() => _cache.Clear();
+
+        public static Color GetFallbackColorForSlot(BoardTerrainSlot slot) => GetFallbackColor(slot);
 
         private static Color GetFallbackColor(BoardTerrainSlot slot) => slot switch
         {

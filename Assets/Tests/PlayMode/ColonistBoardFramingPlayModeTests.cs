@@ -78,7 +78,7 @@ namespace CatanRoguelike.Tests.PlayMode
 
                 var samples = new List<Vector3>(512);
                 boardView.FillColonistFramingSamples(samples);
-                Assert.Greater(samples.Count, 8, "Colonist framing should sample land, sand, and port badges.");
+                Assert.Greater(samples.Count, 8, "Colonist framing should sample land corners and port badges.");
 
                 var screenPoints = new Vector2[samples.Count];
                 for (int i = 0; i < samples.Count; i++)
@@ -98,7 +98,7 @@ namespace CatanRoguelike.Tests.PlayMode
 
                 Assert.IsTrue(
                     inside,
-                    "Land+sand+badges should fit inside colonist play area (3% margin) on capture camera pose.");
+                    "Land+badges should fit inside colonist play area (3% margin) on capture camera pose.");
 
                 ColonistBoardFraming.MeasurePlayAreaFill(camera, samples, width, height, out float fillWidth, out float fillHeight);
                 float fill = Mathf.Max(fillWidth, fillHeight);

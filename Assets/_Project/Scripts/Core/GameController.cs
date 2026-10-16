@@ -126,6 +126,9 @@ namespace CatanRoguelike.Core
             var board = MapPresets.CreateBoard(mapSize, RunSeed, gen);
             State.ResetForNewMap(board, mapSize);
             State.FishermenOfCatanEnabled = FishermenMapOption;
+            State.FishermenRunSeed = RunSeed;
+            if (FishermenMapOption)
+                FishTokenBag.EnsureInitialized(State, RunSeed);
             State.Ports = PortAccess.DiscoverPorts(board);
             State.StatusMessage = "Vælg din leader.";
             _lastPlacedSettlement = null;

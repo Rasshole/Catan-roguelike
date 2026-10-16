@@ -35,10 +35,15 @@ namespace CatanRoguelike.Core.Yield
                     if (hits <= 0)
                         continue;
 
-                    int perHit = building == BuildingType.City
-                        ? tile.FishValue + 1
-                        : tile.FishValue;
-                    fish += perHit * hits;
+                    for (int h = 0; h < hits; h++)
+                    {
+                        int drawn = FishTokenBag.Draw(state, state.FishermenRunSeed);
+                        if (drawn <= 0)
+                            continue;
+
+                        int yield = building == BuildingType.City ? drawn + 1 : drawn;
+                        fish += yield;
+                    }
                 }
             }
 

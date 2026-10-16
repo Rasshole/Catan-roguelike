@@ -378,9 +378,14 @@ namespace CatanRoguelike.Game
 
             _tokenLabel.anchor = TextAnchor.MiddleCenter;
             _tokenLabel.alignment = TextAlignment.Center;
-            _tokenLabel.fontSize = 58;
-            _tokenLabel.characterSize = 0.6f;
+            var font = ColonistNumberTokenFont.Get();
+            if (font != null)
+                _tokenLabel.font = font;
+
+            _tokenLabel.fontSize = 64;
+            _tokenLabel.characterSize = 0.62f;
             _tokenLabel.color = Color.black;
+            _tokenLabel.fontStyle = FontStyle.Bold;
 
             var labelRenderer = labelGo.GetComponent<MeshRenderer>();
             if (labelRenderer != null)

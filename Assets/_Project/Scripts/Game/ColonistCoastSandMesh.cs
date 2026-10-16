@@ -8,6 +8,9 @@ namespace CatanRoguelike.Game
     /// <summary>Beach from slightly enlarged land hex caps (union forms a continuous sand skirt).</summary>
     public static class ColonistCoastSandMesh
     {
+        /// <summary>Classic Catan frame: land hexes meet water directly (no beach skirt).</summary>
+        public static bool SandSkirtEnabled { get; set; } = false;
+
         public const float BeachWidthFactor = 0.25f;
         public const float DefaultLandHexSandScale = 1.18f;
 
@@ -21,6 +24,15 @@ namespace CatanRoguelike.Game
 
         public static Mesh Create(BoardState board, float hexScale, float beachWidth, float meshLocalY = 0f)
         {
+            if (!SandSkirtEnabled)
+            {
+                LastTargetBeachWidth = beachWidth;
+                LastSandHexScale = 0f;
+                LastLandHexCount = 0;
+                LastBuiltQuadCount = 0;
+                return new Mesh { name = "ColonistCoastSand_Disabled" };
+            }
+
             LastTargetBeachWidth = beachWidth;
             float sandScale = ComputeSandHexScale(hexScale, beachWidth);
             LastSandHexScale = sandScale;
