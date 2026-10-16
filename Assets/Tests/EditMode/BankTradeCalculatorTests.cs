@@ -1,5 +1,6 @@
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Trade;
 using NUnit.Framework;
 
