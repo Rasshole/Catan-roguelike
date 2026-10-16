@@ -112,8 +112,6 @@ namespace CatanRoguelike.Game
             internal Quaternion CanvasLocalRotation;
             internal Vector3 CanvasLocalScale;
             internal Vector2 CanvasSizeDelta;
-            internal GameObject SanityProbeObject;
-            internal GameObject BottomBandMarkerObject;
         }
 
         /// <summary>
@@ -165,12 +163,6 @@ namespace CatanRoguelike.Game
             canvasRect.sizeDelta = new Vector2(captureWidth, captureHeight);
             canvasRect.localScale = Vector3.one * WorldCaptureCanvasUnitScale;
 
-            if (HudCaptureSanityProbeEnabled)
-            {
-                restore.SanityProbeObject = CreateHudCaptureSanityProbe(uiGo.transform, captureWidth, captureHeight);
-                restore.BottomBandMarkerObject = CreateCaptureBottomBandMarker(canvasRect);
-            }
-
             LayoutRebuilder.ForceRebuildLayoutImmediate(canvasRect);
             Canvas.ForceUpdateCanvases();
             return restore;
@@ -199,11 +191,6 @@ namespace CatanRoguelike.Game
 
             if (!restore.CanvasWasActiveSelf)
                 _canvas.gameObject.SetActive(false);
-
-            DestroyCaptureObject(restore.SanityProbeObject);
-            restore.SanityProbeObject = null;
-            DestroyCaptureObject(restore.BottomBandMarkerObject);
-            restore.BottomBandMarkerObject = null;
 
             if (restore.UiCameraObject != null)
                 DestroyCaptureObject(restore.UiCameraObject);

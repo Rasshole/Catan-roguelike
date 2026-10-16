@@ -13,17 +13,17 @@ namespace CatanRoguelike.Core.UI
             AppendPart(sb, cost.Wheat, ResourceType.Wheat);
             AppendPart(sb, cost.Sheep, ResourceType.Sheep);
             AppendPart(sb, cost.Stone, ResourceType.Stone);
-            return sb.Length == 0 ? "Gratis" : sb.ToString().TrimEnd();
+            return sb.Length == 0 ? "Free" : sb.ToString().TrimEnd();
         }
 
         public static string FormatButtonLabel(string action, ResourceBundle cost, bool canAfford)
         {
-            string suffix = canAfford ? string.Empty : " (mangler)";
+            string suffix = canAfford ? string.Empty : " (can't afford)";
             return $"{action} · {FormatShort(cost)}{suffix}";
         }
 
         public static string FormatTooltip(ResourceBundle cost) =>
-            $"Koster: {FormatShort(cost)}";
+            $"Cost: {FormatShort(cost)}";
 
         private static void AppendPart(StringBuilder sb, int amount, ResourceType type)
         {
@@ -33,7 +33,7 @@ namespace CatanRoguelike.Core.UI
                 sb.Append(' ');
             sb.Append(amount);
             sb.Append(' ');
-            sb.Append(ResourceDisplayNames.GetDanish(type));
+            sb.Append(ResourceDisplayNames.GetEnglish(type));
         }
     }
 }

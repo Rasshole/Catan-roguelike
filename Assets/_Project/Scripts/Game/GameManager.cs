@@ -3,6 +3,7 @@ using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Turn;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace CatanRoguelike.Game
 {
@@ -18,6 +19,15 @@ namespace CatanRoguelike.Game
 
         public GameController Controller { get; private set; }
         public MetaProgression Meta { get; private set; }
+
+        private void Awake()
+        {
+            if (GetComponent<ColonistPresentationMode>() != null)
+                return;
+
+            if (SceneManager.GetActiveScene().name == "ColonistStylePrototype")
+                ColonistPresentation.SetActive(true);
+        }
 
         public void SaveMeta() => MetaProgressionFile.Save(Meta);
 

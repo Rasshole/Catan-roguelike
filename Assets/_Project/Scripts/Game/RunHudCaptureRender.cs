@@ -8,12 +8,6 @@ namespace CatanRoguelike.Game
 {
     public sealed partial class RunHudController
     {
-        /// <summary>Optional magenta probe + debug overlays during capture (off in normal screenshots).</summary>
-        internal const bool HudCaptureSanityProbeEnabled = false;
-
-        internal const float SanityProbeScreenX = 0.88f;
-        internal const float SanityProbeScreenY = 0.88f;
-
         public void LogCanvasWorldBoundsVsUiCamera(Camera uiCamera)
         {
             if (_canvas == null || uiCamera == null)
@@ -94,65 +88,6 @@ namespace CatanRoguelike.Game
                 else
                     Object.DestroyImmediate(scratch);
             }
-        }
-
-        internal static bool ColorLooksMagenta(Color c) =>
-            c.r > 0.75f && c.g < 0.35f && c.b > 0.75f;
-
-        internal GameObject CreateCaptureBottomBandMarker(RectTransform canvasRect)
-        {
-            if (canvasRect == null)
-                return null;
-
-            var go = new GameObject("HudCaptureBottomBandMarker");
-            go.layer = canvasRect.gameObject.layer;
-            go.transform.SetParent(canvasRect, false);
-            go.transform.SetAsLastSibling();
-
-            var rect = go.AddComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0f, 0f);
-            rect.anchorMax = new Vector2(1f, 0f);
-            rect.pivot = new Vector2(0.5f, 0f);
-            rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = new Vector2(0f, 160f);
-
-            var image = go.AddComponent<Image>();
-            image.raycastTarget = false;
-            image.color = new Color(0f, 0.92f, 1f, 1f);
-            return go;
-        }
-
-        internal GameObject CreateHudCaptureSanityProbe(Transform uiCameraRoot, int captureWidth, int captureHeight)
-        {
-            if (!HudCaptureSanityProbeEnabled || uiCameraRoot == null)
-                return null;
-
-            var probeGo = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            probeGo.name = "HudCaptureSanityProbe";
-            probeGo.layer = HudCaptureUiLayer;
-            DestroyCaptureComponent(probeGo.GetComponent<Collider>());
-
-            var renderer = probeGo.GetComponent<MeshRenderer>();
-            var shader = Shader.Find("Unlit/Color");
-            if (shader != null)
-            {
-                var mat = new Material(shader);
-                mat.color = Color.magenta;
-                renderer.sharedMaterial = mat;
-            }
-
-            float halfHeight = captureHeight * WorldCaptureCanvasUnitScale * 0.5f;
-            float halfWidth = halfHeight * (captureWidth / (float)captureHeight);
-            float probeWorldSize = Mathf.Min(halfWidth, halfHeight) * 0.18f;
-
-            probeGo.transform.SetParent(uiCameraRoot, false);
-            probeGo.transform.localPosition = new Vector3(
-                halfWidth * 0.72f,
-                halfHeight * 0.72f,
-                WorldCaptureCanvasDistance - 0.02f);
-            probeGo.transform.localRotation = Quaternion.identity;
-            probeGo.transform.localScale = new Vector3(probeWorldSize, probeWorldSize, 1f);
-            return probeGo;
         }
 
         internal static void DestroyCaptureObject(GameObject go)

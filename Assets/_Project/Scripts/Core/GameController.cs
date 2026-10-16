@@ -513,7 +513,7 @@ namespace CatanRoguelike.Core
             State.TodayRolls = new Dictionary<ResourceType, int>(State.TomorrowRolls);
             State.TodayDiceRolls = new List<int>(State.TomorrowDiceRolls);
             State.Phase = GamePhase.DayProduction;
-            State.StatusMessage = "Tryk Rul (Space) for at slå terninger.";
+            State.StatusMessage = "Press Roll (Space) to roll the dice.";
             NotifyChanged();
         }
 

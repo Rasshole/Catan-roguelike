@@ -70,23 +70,31 @@ namespace CatanRoguelike.Game
             if (!inRun)
                 return;
 
-            PlaceholderHudLayout.SetActivePanelWidth(RunHudLayout.SidePanelWidth);
+            if (ColonistPresentation.IsActive)
+                PlaceholderHudLayout.SetActivePanelWidth(0f);
+            else
+                PlaceholderHudLayout.SetActivePanelWidth(RunHudLayout.SidePanelWidth);
 
             if (state.Winner.HasValue)
                 TryGrantRunReward(state);
 
-            _dayPhaseText.text =
-                $"Dag {state.Board.DayNumber} · {MapPresets.GetDisplayName(state.MapSize)}\n{state.Phase}";
+            if (!ColonistPresentation.IsActive && _dayPhaseText != null)
+            {
+                _dayPhaseText.text =
+                    $"Day {state.Board.DayNumber} · {MapPresets.GetDisplayName(state.MapSize)}\n{state.Phase}";
+            }
 
             var status = new StringBuilder();
             if (!string.IsNullOrEmpty(state.StatusMessage))
-                status.AppendLine(state.StatusMessage);
+                status.AppendLine(ColonistPresentation.IsActive
+                    ? ColonistHudCopy.TranslateStatus(state.StatusMessage)
+                    : state.StatusMessage);
             if (state.ActiveEvent != Core.Events.EventId.None)
                 status.AppendLine(state.EventMessage);
             if (state.PendingCard.HasValue)
                 status.AppendLine($"Pending: {CardLibrary.Get(state.PendingCard.Value).Name}");
             if (state.IsSetupPhase)
-                status.AppendLine("Setup: klik grønt hjørne (by) eller gul kant (vej).");
+                status.AppendLine("Setup: click a green corner (settlement) or yellow edge (road).");
             if (state.Winner.HasValue)
             {
                 if (RunSummaryDisplay.TryGetSummaryLines(state, _controller.RunSeed, out var summaryLines)
@@ -96,28 +104,44 @@ namespace CatanRoguelike.Game
                 }
                 else
                 {
-                    status.AppendLine(state.Winner == PlayerId.Human ? "Du vandt!" : "AI vandt!");
+                    status.AppendLine(state.Winner == PlayerId.Human ? "You win!" : "AI wins!");
                 }
 
                 if (_lastRunStarsEarned > 0)
                     status.AppendLine($"+{_lastRunStarsEarned}★");
             }
-            _statusText.text = status.ToString().Trim();
+            if (ColonistPresentation.IsActive)
+            {
+                RefreshColonistPresentation(state);
+                RefreshColonistResources(
+                    _resourceAnimLock ? _resourceAnimDisplay : state.PlayerInventory);
+            }
+            else
+            {
+                if (_statusText != null)
+                    _statusText.text = status.ToString().Trim();
 
-            _vpText.text =
-                $"VP: Dig {state.PlayerVictoryPoints}  ·  AI {state.AiVictoryPoints}\n" +
-                $"  {VictoryCalculator.GetBreakdown(state, PlayerId.Human).FormatLine()}\n" +
-                $"  {VictoryCalculator.GetBreakdown(state, PlayerId.Ai).FormatLine()}";
+                if (_vpText != null)
+                {
+                    _vpText.text =
+                        $"VP: You {state.PlayerVictoryPoints}  ·  AI {state.AiVictoryPoints}\n" +
+                        $"  {VictoryCalculator.GetBreakdown(state, PlayerId.Human).FormatLine()}\n" +
+                        $"  {VictoryCalculator.GetBreakdown(state, PlayerId.Ai).FormatLine()}";
+                }
 
-            RefreshResourcesPartial(state.PlayerInventory);
-            _aiText.text = FormatAiSummary(state);
+                RefreshResourcesPartial(state.PlayerInventory);
+                if (_aiText != null)
+                    _aiText.text = FormatAiSummary(state);
 
-            RebuildShopList(state);
-            RebuildHand(state);
+                RebuildShopList(state);
+                RebuildHand(state);
+            }
+
             RebuildActionBar(state);
             RefreshActionBarChrome(state);
             RefreshBuildButtons(state);
-            RefreshColonistChrome(state);
+            if (!ColonistPresentation.IsActive)
+                RefreshColonistChrome(state);
             RefreshToastWidget(state);
             RefreshIncomingTradePanel(state);
         }
@@ -126,6 +150,12 @@ namespace CatanRoguelike.Game
         {
             if (_canvas != null)
                 return;
+
+            if (ColonistPresentation.IsActive)
+            {
+                EnsureColonistCanvasBuilt();
+                return;
+            }
 
             _canvas = RunHudUiFactory.CreateCanvas(transform);
 
@@ -520,7 +550,7 @@ namespace CatanRoguelike.Game
 
             if (state.Winner.HasValue)
             {
-                var restart = RunHudUiFactory.CreateButton(_actionBarBuildRoot, "Genstart", RunHudUiFactory.ButtonFill);
+                var restart = RunHudUiFactory.CreateButton(_actionBarBuildRoot, ColonistHudCopy.Restart, RunHudUiFactory.ButtonFill);
                 restart.onClick.AddListener(() =>
                     UnityEngine.SceneManagement.SceneManager.LoadScene(
                         UnityEngine.SceneManagement.SceneManager.GetActiveScene().name));
@@ -543,21 +573,17 @@ namespace CatanRoguelike.Game
 
             if (state.Phase == GamePhase.NightPlayCard)
             {
-                if (state.PlayerHand.Count > 0)
+                if (!ColonistPresentation.IsActive && state.PlayerHand.Count > 0)
                 {
-                    if (RunHudDevFlags.ShowDebugToolbar)
-                    {
-                        AddResourcePickerButtons();
-                        AddRobberButtons(state, steal: false);
-                        AddRoadPickerButtons(state);
-                    }
-
-                    var play = RunHudUiFactory.CreateButton(_actionBarBuildRoot, "Spil kort", RunHudUiFactory.ButtonFill);
+                    var play = RunHudUiFactory.CreateButton(_actionBarBuildRoot, "Play card", RunHudUiFactory.ButtonFill);
                     play.onClick.AddListener(PlaySelectedCard);
                     _actionButtons.Add(play);
                 }
 
-                var skip = RunHudUiFactory.CreateButton(_actionBarBuildRoot, "Spring over → Dag", RunHudUiFactory.ButtonSecondary);
+                var skip = RunHudUiFactory.CreateButton(
+                    _actionBarBuildRoot,
+                    ColonistPresentation.IsActive ? "Continue" : "Skip to day",
+                    RunHudUiFactory.ButtonSecondary);
                 skip.onClick.AddListener(() => _controller.SkipNightCard());
                 _actionButtons.Add(skip);
                 return;
@@ -567,12 +593,10 @@ namespace CatanRoguelike.Game
             {
                 EnsureBuildButtons();
                 RefreshBuildButtons(state);
-                if (RunHudDevFlags.ShowDebugToolbar)
-                    AddRobberButtons(state, steal: true);
 
                 if (_boardInput != null && _boardInput.IsPlacementModeActive)
                 {
-                    var cancel = RunHudUiFactory.CreateButton(_actionBarBuildRoot, "Annuller (Esc)", RunHudUiFactory.ButtonSecondary);
+                    var cancel = RunHudUiFactory.CreateButton(_actionBarBuildRoot, ColonistHudCopy.CancelPlacement, RunHudUiFactory.ButtonSecondary);
                     cancel.onClick.AddListener(() => _boardInput.CancelBuildMode());
                     _actionButtons.Add(cancel);
                 }

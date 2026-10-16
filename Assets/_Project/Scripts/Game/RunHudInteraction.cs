@@ -32,7 +32,12 @@ namespace CatanRoguelike.Game
         {
             _resourceAnimLock = false;
             if (_controller != null)
-                RefreshResources(_controller.State.PlayerInventory);
+            {
+                if (ColonistPresentation.IsActive)
+                    RefreshColonistResources(_controller.State.PlayerInventory);
+                else
+                    RefreshResources(_controller.State.PlayerInventory);
+            }
         }
 
         public IEnumerator AnimateResourceCounts(ResourceBundle from, ResourceBundle to, float duration)
@@ -61,7 +66,9 @@ namespace CatanRoguelike.Game
             yield return SimpleTweens.AnimateInt(from, to, duration, value =>
             {
                 _resourceAnimDisplay.Set(type, value);
-                label.text = HudResourceFormatting.FormatInventoryLine(_resourceAnimDisplay, type);
+                label.text = ColonistPresentation.IsActive
+                    ? value.ToString()
+                    : HudResourceFormatting.FormatInventoryLine(_resourceAnimDisplay, type);
                 float pop = 1f + Mathf.Sin(Time.time * 24f) * 0.04f;
                 rect.localScale = baseScale * pop;
             });
@@ -98,14 +105,16 @@ namespace CatanRoguelike.Game
                 return;
 
             RunHudCostTooltip.EnsureShared(_canvas.transform);
-            _buildRoadButton = CreateBuildButton("Vej", out _buildRoadChip);
-            _buildSettlementButton = CreateBuildButton("By", out _buildSettlementChip);
-            _buildCityButton = CreateBuildButton("Storby", out _buildCityChip);
+            _buildRoadButton = CreateBuildButton(ColonistHudCopy.Road, out _buildRoadChip);
+            _buildSettlementButton = CreateBuildButton(ColonistHudCopy.Settlement, out _buildSettlementChip);
+            _buildCityButton = CreateBuildButton(ColonistHudCopy.City, out _buildCityChip);
             Text devChip;
-            _buildDevButton = CreateBuildButton("Kort", out devChip);
+            _buildDevButton = CreateBuildButton(ColonistHudCopy.DevCard, out devChip);
             _buildDevButton.interactable = false;
             var devTip = _buildDevButton.gameObject.AddComponent<RunHudCostTooltip>();
-            devTip.SetTooltip("Roguelike-kort spilles om natten.");
+            devTip.SetTooltip(ColonistPresentation.IsActive
+                ? "Development cards are played from the roguelike deck (hidden in classic view)."
+                : "Roguelike cards are played at night.");
             _actionButtons.Add(_buildRoadButton);
             _actionButtons.Add(_buildSettlementButton);
             _actionButtons.Add(_buildCityButton);
@@ -171,21 +180,21 @@ namespace CatanRoguelike.Game
 
             ConfigureBuildButton(
                 _buildRoadButton,
-                BuildCostFormatter.FormatButtonLabel("Vej", roadCost, roadOk),
+                BuildCostFormatter.FormatButtonLabel(ColonistHudCopy.Road, roadCost, roadOk),
                 BuildCostFormatter.FormatTooltip(roadCost),
                 roadOk,
                 () => _boardInput.SetBuildModeRoad());
 
             ConfigureBuildButton(
                 _buildSettlementButton,
-                BuildCostFormatter.FormatButtonLabel("By", settlementCost, settlementOk),
+                BuildCostFormatter.FormatButtonLabel(ColonistHudCopy.Settlement, settlementCost, settlementOk),
                 BuildCostFormatter.FormatTooltip(settlementCost),
                 settlementOk,
                 () => _boardInput.SetBuildModeSettlement());
 
             ConfigureBuildButton(
                 _buildCityButton,
-                BuildCostFormatter.FormatButtonLabel("Storby", cityCost, cityOk),
+                BuildCostFormatter.FormatButtonLabel(ColonistHudCopy.City, cityCost, cityOk),
                 BuildCostFormatter.FormatTooltip(cityCost),
                 cityOk,
                 () => _boardInput.SetBuildModeCity());

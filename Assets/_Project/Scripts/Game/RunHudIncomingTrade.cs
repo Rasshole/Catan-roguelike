@@ -50,7 +50,7 @@ namespace CatanRoguelike.Game
             rowLayout.childAlignment = TextAnchor.MiddleCenter;
             RunHudUiFactory.AddLayoutElement(row, 36f);
 
-            _incomingAccept = RunHudUiFactory.CreateButton(row.transform, "Accepter", RunHudUiFactory.ButtonFill);
+            _incomingAccept = RunHudUiFactory.CreateButton(row.transform, ColonistHudCopy.Accept, RunHudUiFactory.ButtonFill);
             _incomingAccept.onClick.AddListener(() =>
             {
                 if (_controller != null)
@@ -107,7 +107,7 @@ namespace CatanRoguelike.Game
                     sb.Append(", ");
                 sb.Append(pair.amount);
                 sb.Append(' ');
-                sb.Append(ResourceDisplayNames.GetDanish(pair.type));
+                sb.Append(ResourceDisplayNames.GetEnglish(pair.type));
             }
 
             return sb.Length == 0 ? "—" : sb.ToString();

@@ -96,23 +96,29 @@ namespace CatanRoguelike.Game
         {
             float boundingRadius = TableCameraFraming.ComputeBoardBoundingRadius(board, hexScale);
 
-            CreateTableDisk(
-                "BoardSurface",
-                TableCameraFraming.TableSurfaceLocalY,
-                TableCameraFraming.ComputeTableDiskScale(boundingRadius),
-                BoardSurfaceMaterial.Create());
+            if (!ColonistPresentation.IsActive)
+            {
+                CreateTableDisk(
+                    "BoardSurface",
+                    TableCameraFraming.TableSurfaceLocalY,
+                    TableCameraFraming.ComputeTableDiskScale(boundingRadius),
+                    BoardSurfaceMaterial.Create());
+            }
 
             CreateTableDisk(
                 "WaterSurface",
-                TableCameraFraming.WaterSurfaceLocalY,
+                ColonistPresentation.IsActive ? -0.12f : TableCameraFraming.WaterSurfaceLocalY,
                 TableCameraFraming.ComputeWaterDiskScale(boundingRadius),
                 BoardWaterMaterial.Create());
 
-            CreateTableDisk(
-                "FeltSurface",
-                TableCameraFraming.FeltSurfaceLocalY,
-                TableCameraFraming.ComputeFeltDiskScale(boundingRadius),
-                BoardFeltMaterial.Create());
+            if (!ColonistPresentation.IsActive)
+            {
+                CreateTableDisk(
+                    "FeltSurface",
+                    TableCameraFraming.FeltSurfaceLocalY,
+                    TableCameraFraming.ComputeFeltDiskScale(boundingRadius),
+                    BoardFeltMaterial.Create());
+            }
         }
 
         private void CreateTableDisk(string name, float localY, Vector3 localScale, Material material)

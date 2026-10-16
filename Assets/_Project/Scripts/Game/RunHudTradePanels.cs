@@ -21,9 +21,9 @@ namespace CatanRoguelike.Game
 
         private void BuildTradePanel(RectTransform sidePanel)
         {
-            AddPanelLabel(sidePanel, "Bytte", 17);
+            AddPanelLabel(sidePanel, ColonistHudCopy.Trade, 17);
             _tradeSummary = AddPanelText(sidePanel, 14, FontStyle.Normal);
-            _openTradeDialogButton = RunHudUiFactory.CreateButton(sidePanel, "Bytte…", RunHudUiFactory.ButtonSecondary);
+            _openTradeDialogButton = RunHudUiFactory.CreateButton(sidePanel, ColonistHudCopy.Trade, RunHudUiFactory.ButtonSecondary);
             _openTradeDialogButton.onClick.AddListener(() => SetTradeDialogVisible(true));
             RunHudUiFactory.AddLayoutElement(_openTradeDialogButton.gameObject, 36f);
             UpdateTradeInfo();
@@ -52,13 +52,13 @@ namespace CatanRoguelike.Game
 
             var title = AddPanelText(_tradeDialogRoot, 18, FontStyle.Bold);
             title.alignment = TextAnchor.MiddleCenter;
-            title.text = "Bytte";
+            title.text = ColonistHudCopy.TradeDialogTitle;
 
             _tradeDialogInfo = AddPanelText(_tradeDialogRoot, 14, FontStyle.Normal);
             _tradeDialogInfo.alignment = TextAnchor.UpperLeft;
 
-            BuildTradeDialogResourceRow(_tradeDialogRoot, "Du giver:", true);
-            BuildTradeDialogResourceRow(_tradeDialogRoot, "Du modtager:", false);
+            BuildTradeDialogResourceRow(_tradeDialogRoot, "You give:", true);
+            BuildTradeDialogResourceRow(_tradeDialogRoot, "You receive:", false);
 
             var actions = new GameObject("TradeDialogActions");
             actions.layer = _tradeDialogRoot.gameObject.layer;
@@ -70,9 +70,9 @@ namespace CatanRoguelike.Game
 
             var bankBtn = RunHudUiFactory.CreateButton(actions.transform, "Bank", RunHudUiFactory.ButtonFill);
             bankBtn.onClick.AddListener(ExecuteBankTrade);
-            var offerBtn = RunHudUiFactory.CreateButton(actions.transform, "Tilbyd AI", RunHudUiFactory.ButtonSecondary);
+            var offerBtn = RunHudUiFactory.CreateButton(actions.transform, ColonistHudCopy.OfferAi, RunHudUiFactory.ButtonSecondary);
             offerBtn.onClick.AddListener(ExecutePlayerTradeProposal);
-            var closeBtn = RunHudUiFactory.CreateButton(actions.transform, "Luk", RunHudUiFactory.ButtonSecondary);
+            var closeBtn = RunHudUiFactory.CreateButton(actions.transform, ColonistHudCopy.Close, RunHudUiFactory.ButtonSecondary);
             closeBtn.onClick.AddListener(() => SetTradeDialogVisible(false));
 
             var responsesGo = new GameObject("PlayerTradeResponses");
@@ -115,7 +115,7 @@ namespace CatanRoguelike.Game
             foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
             {
                 var captured = resource;
-                string shortName = ResourceDisplayNames.GetDanish(captured);
+                string shortName = ResourceDisplayNames.GetEnglish(captured);
                 var btn = RunHudUiFactory.CreateButton(chips.transform, shortName, RunHudUiFactory.ButtonSecondary);
                 RunHudUiFactory.AddLayoutElement(btn.gameObject, 30f).preferredWidth = 72f;
                 btn.onClick.AddListener(() =>
@@ -146,8 +146,8 @@ namespace CatanRoguelike.Game
             string rateLabel = rate == BankTradeCalculator.SpecificPortRate ? "2:1 havn"
                 : rate == BankTradeCalculator.GenericPortRate ? "3:1 havn" : "4:1 bank";
             var sb = new StringBuilder();
-            sb.AppendLine($"{ResourceDisplayNames.GetDanish(_tradeGive)} → {ResourceDisplayNames.GetDanish(_tradeReceive)}");
-            sb.AppendLine($"{rateLabel} (betaler {rate} {ResourceDisplayNames.GetDanish(_tradeGive)})");
+            sb.AppendLine($"{ResourceDisplayNames.GetEnglish(_tradeGive)} → {ResourceDisplayNames.GetEnglish(_tradeReceive)}");
+            sb.AppendLine($"{rateLabel} (pay {rate} {ResourceDisplayNames.GetEnglish(_tradeGive)})");
 
             if (_controller.State.PendingPlayerTrade.HasValue)
             {
@@ -197,7 +197,7 @@ namespace CatanRoguelike.Game
 
                 if (response.Accept)
                 {
-                    var acceptBtn = RunHudUiFactory.CreateButton(row.transform, "Accepter", RunHudUiFactory.ButtonFill);
+                    var acceptBtn = RunHudUiFactory.CreateButton(row.transform, ColonistHudCopy.Accept, RunHudUiFactory.ButtonFill);
                     var captured = response.Ai;
                     acceptBtn.onClick.AddListener(() =>
                     {
@@ -216,7 +216,7 @@ namespace CatanRoguelike.Game
                 if (sb.Length > 0)
                     sb.Append('+');
                 sb.Append(pair.amount);
-                sb.Append(ResourceDisplayNames.GetDanish(pair.type)[0]);
+                sb.Append(ResourceDisplayNames.GetEnglish(pair.type)[0]);
             }
 
             return sb.Length == 0 ? "—" : sb.ToString();

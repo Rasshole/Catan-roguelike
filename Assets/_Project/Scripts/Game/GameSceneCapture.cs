@@ -127,12 +127,6 @@ namespace CatanRoguelike.Game
 
                 texture = ReadbackRgbFromRenderTexture(renderTexture, width, height);
                 LogCaptureTextureFingerprint(texture, "after-readback");
-                if (RunHudController.HudCaptureSanityProbeEnabled)
-                {
-                    AssertHudCaptureSanityProbeVisible(texture, width, height);
-                    LogCaptureTextureFingerprint(texture, "after-probe");
-                    Debug.Log($"{HudCompositePipelineMarker} sanity probe passed on readback texture id={texture.GetInstanceID()}");
-                }
 
                 Debug.Log($"{HudCompositePipelineMarker} CaptureMainCameraWithHudComposite exit");
                 return texture;
@@ -229,24 +223,5 @@ namespace CatanRoguelike.Game
             }
         }
 
-        private static void AssertHudCaptureSanityProbeVisible(Texture2D texture, int width, int height)
-        {
-            if (!RunHudController.HudCaptureSanityProbeEnabled)
-                return;
-
-            if (texture == null)
-                throw new InvalidOperationException($"{HudCompositePipelineMarker} sanity probe: texture is null.");
-
-            int x = Mathf.Clamp((int)(width * RunHudController.SanityProbeScreenX), 0, width - 1);
-            int y = Mathf.Clamp((int)(height * RunHudController.SanityProbeScreenY), 0, height - 1);
-            var pixel = texture.GetPixel(x, y);
-
-            if (!RunHudController.ColorLooksMagenta(pixel))
-            {
-                throw new InvalidOperationException(
-                    $"{HudCompositePipelineMarker} sanity probe: expected magenta at ({x},{y}) on texture id={texture.GetInstanceID()} " +
-                    $"but got r={pixel.r:F3} g={pixel.g:F3} b={pixel.b:F3}.");
-            }
-        }
     }
 }

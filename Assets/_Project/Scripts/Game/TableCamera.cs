@@ -24,9 +24,14 @@ namespace CatanRoguelike.Game
         private void Start()
         {
             EnsureLookTarget();
-            ApplyOrbitPose();
-            if (frameBoardRightOfHud && _camera != null)
-                ApplyBoardFramingOffset();
+            if (ColonistPresentation.IsActive)
+                ApplyColonistTopDownPose();
+            else
+            {
+                ApplyOrbitPose();
+                if (frameBoardRightOfHud && _camera != null)
+                    ApplyBoardFramingOffset();
+            }
         }
 
 #if UNITY_EDITOR
@@ -46,9 +51,14 @@ namespace CatanRoguelike.Game
             try
             {
                 _angle = DefaultOrbitYawDegrees;
-                ApplyOrbitPose();
-                if (frameBoardRightOfHud && _camera != null)
-                    ApplyBoardFramingOffset(screenWidth, screenHeight);
+                if (ColonistPresentation.IsActive)
+                    ApplyColonistTopDownPose(screenWidth, screenHeight);
+                else
+                {
+                    ApplyOrbitPose();
+                    if (frameBoardRightOfHud && _camera != null)
+                        ApplyBoardFramingOffset(screenWidth, screenHeight);
+                }
             }
             finally
             {
@@ -83,6 +93,12 @@ namespace CatanRoguelike.Game
 
         private void Update()
         {
+            if (ColonistPresentation.IsActive)
+            {
+                ApplyColonistTopDownPose();
+                return;
+            }
+
             if (Input.GetKey(KeyCode.Q))
                 _angle -= orbitSpeed * Time.deltaTime;
             if (Input.GetKey(KeyCode.E))
@@ -91,6 +107,46 @@ namespace CatanRoguelike.Game
             ApplyOrbitPose();
             if (frameBoardRightOfHud && _camera != null)
                 ApplyBoardFramingOffset();
+        }
+
+        private void ApplyColonistTopDownPose(int screenWidth = 0, int screenHeight = 0)
+        {
+            if (_camera == null)
+                return;
+
+            if (screenWidth <= 0)
+                screenWidth = Screen.width;
+            if (screenHeight <= 0)
+                screenHeight = Screen.height;
+
+            float boardRadius = boardView != null ? boardView.GetBoardBoundingRadius() : 0f;
+            if (boardRadius <= 0f)
+                boardRadius = 4f;
+
+            _camera.orthographic = true;
+            _camera.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            _camera.transform.position = lookTarget.position + Vector3.up * 24f;
+
+            float margin = TableCameraFraming.DefaultMarginFactor;
+            float hudBottom = (RunHudLayout.BottomHandHeight + RunHudLayout.BottomActionBarHeight + RunHudLayout.Margin * 3f)
+                / Mathf.Max(1f, screenHeight);
+            float hudRight = (RunHudLayout.RightChromePanelWidth + RunHudLayout.Margin * 2f)
+                / Mathf.Max(1f, screenWidth);
+
+            float usableHeight = 1f - hudBottom;
+            float usableWidth = 1f - hudRight;
+            float sizeFromHeight = (boardRadius * 2f * margin) / Mathf.Max(0.35f, usableHeight);
+            float sizeFromWidth = (boardRadius * 2f * margin) / Mathf.Max(0.35f, usableWidth);
+            _camera.orthographicSize = Mathf.Max(sizeFromHeight, sizeFromWidth) * 0.55f;
+
+            float offsetX = screenWidth * hudRight * 0.5f;
+            float offsetY = screenHeight * hudBottom * 0.35f;
+            Vector3 boardScreen = _camera.WorldToScreenPoint(lookTarget.position);
+            Vector3 worldAtBoard = _camera.ScreenToWorldPoint(
+                new Vector3(boardScreen.x, boardScreen.y, boardScreen.z));
+            Vector3 worldShifted = _camera.ScreenToWorldPoint(
+                new Vector3(boardScreen.x - offsetX, boardScreen.y + offsetY, boardScreen.z));
+            transform.position += worldAtBoard - worldShifted;
         }
 
         private void ApplyOrbitPose()

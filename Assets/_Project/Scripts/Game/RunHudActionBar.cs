@@ -39,6 +39,14 @@ namespace CatanRoguelike.Game
 
             BuildDiceAndRollCluster(_actionBarCenterRoot);
             BuildEndTurnButton(_actionBarEndRoot);
+
+            if (ColonistPresentation.IsActive && _openTradeDialogButton == null)
+            {
+                var tradeBtn = RunHudUiFactory.CreateButton(_actionBarBuildRoot, ColonistHudCopy.Trade, RunHudUiFactory.ButtonSecondary);
+                RunHudUiFactory.AddLayoutElement(tradeBtn.gameObject, 48f).preferredWidth = 96f;
+                tradeBtn.onClick.AddListener(() => SetTradeDialogVisible(true));
+                _openTradeDialogButton = tradeBtn;
+            }
         }
 
         private RectTransform CreateActionBarSlot(string name, float flexibleWidth, float minWidth = 0f)
@@ -78,7 +86,7 @@ namespace CatanRoguelike.Game
                 RunHudUiFactory.TextPrimary,
                 FontStyle.Bold);
 
-            _rollPinned = RunHudUiFactory.CreateButton(parent, "Rul", RunHudUiFactory.ButtonFill);
+            _rollPinned = RunHudUiFactory.CreateButton(parent, ColonistHudCopy.Roll, RunHudUiFactory.ButtonFill);
             RunHudUiFactory.AddLayoutElement(_rollPinned.gameObject, 48f).preferredWidth = 96f;
             _rollPinned.onClick.AddListener(() => _feel?.RequestMorningRoll());
             _rollButtonGlow = _rollPinned.GetComponent<Image>();
@@ -86,7 +94,7 @@ namespace CatanRoguelike.Game
 
         private void BuildEndTurnButton(RectTransform parent)
         {
-            _endTurnPinned = RunHudUiFactory.CreateButton(parent, "Afslut tur", new Color(0.18f, 0.55f, 0.32f, 1f));
+            _endTurnPinned = RunHudUiFactory.CreateButton(parent, ColonistHudCopy.EndTurn, new Color(0.18f, 0.55f, 0.32f, 1f));
             RunHudUiFactory.AddLayoutElement(_endTurnPinned.gameObject, 52f).preferredWidth = 140f;
             var label = _endTurnPinned.GetComponentInChildren<Text>();
             if (label != null)

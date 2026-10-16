@@ -1,16 +1,18 @@
 namespace CatanRoguelike.Core.UI
 {
-    /// <summary>Danish resource labels for colonist-style HUD (matches in-game copy tone).</summary>
     public static class ResourceDisplayNames
     {
-        public static string GetDanish(ResourceType resource) => resource switch
+        public static string GetEnglish(ResourceType resource) => resource switch
         {
-            ResourceType.Wood => "Træ",
-            ResourceType.Brick => "Tegl",
-            ResourceType.Wheat => "Korn",
-            ResourceType.Sheep => "Uld",
-            ResourceType.Stone => "Sten",
+            ResourceType.Wood => "Lumber",
+            ResourceType.Brick => "Brick",
+            ResourceType.Wheat => "Wheat",
+            ResourceType.Sheep => "Wool",
+            ResourceType.Stone => "Ore",
             _ => resource.ToString()
         };
+
+        /// <summary>Legacy alias — English labels for colonist HUD.</summary>
+        public static string GetDanish(ResourceType resource) => GetEnglish(resource);
     }
 }

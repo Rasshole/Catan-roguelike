@@ -27,6 +27,8 @@ namespace CatanRoguelike.Editor
             {
                 if (manager.GetComponent<RunHudController>() == null)
                     manager.gameObject.AddComponent<RunHudController>();
+                if (manager.GetComponent<ColonistPresentationMode>() == null)
+                    manager.gameObject.AddComponent<ColonistPresentationMode>();
             }
 
             var camera = Camera.main;
