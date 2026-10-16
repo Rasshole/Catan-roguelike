@@ -33,6 +33,17 @@ namespace CatanRoguelike.Game
             return 0f;
         }
 
+        public Vector3 GetBoardWorldCenter()
+        {
+            if (_tiles.Count == 0)
+                return transform.position;
+
+            Vector3 sum = Vector3.zero;
+            foreach (var tile in _tiles.Values)
+                sum += tile.transform.position;
+            return sum / _tiles.Count;
+        }
+
         /// <summary>World point on the top of the reference hex for capture colour sampling.</summary>
         public Vector3 GetCaptureReferenceWorldPoint()
         {

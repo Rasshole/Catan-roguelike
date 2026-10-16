@@ -24,8 +24,9 @@ namespace CatanRoguelike.Core.Hex
         /// <summary>World position for pointy-top hex center (XZ plane, Y up).</summary>
         public static (float x, float z) ToWorldPosition(HexCoord hex, float scale = 1f)
         {
-            float x = scale * InnerRadius * (hex.Q + hex.R * 0.5f) * 2f / 1.7320508f;
-            float z = scale * OuterRadius * 1.5f * hex.R;
+            float size = scale * OuterRadius;
+            float x = size * 1.7320508f * (hex.Q + hex.R * 0.5f);
+            float z = size * 1.5f * hex.R;
             return (x, z);
         }
 

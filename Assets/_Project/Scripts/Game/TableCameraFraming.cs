@@ -138,7 +138,7 @@ namespace CatanRoguelike.Game
             boardBoundingRadius;
 
         public static float ComputeColonistSandOuterRadius(float boardBoundingRadius, float hexScale) =>
-            boardBoundingRadius + hexScale * 0.38f;
+            boardBoundingRadius + hexScale * 0.22f;
 
         public struct ColonistSurfaceLayout
         {

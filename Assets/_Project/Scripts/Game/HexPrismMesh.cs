@@ -1,14 +1,12 @@
 using CatanRoguelike.Core.Hex;
-using CatanRoguelike.Core.Map;
 using UnityEngine;
-using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
 namespace CatanRoguelike.Game
 {
     /// <summary>
-    /// Pointy-top hexagonal prism whose top ring matches settlement vertex positions from
-    /// <see cref="HexMath.VertexToWorldPosition"/> on the canonical graph vertex for each
-    /// corner. Top at local y=+1, bottom at y=-1; XZ vertices are already in world units at
+    /// Pointy-top hexagonal prism whose top ring matches <see cref="HexMath.VertexToWorldPosition"/>
+    /// for this tile's corner indices (same world points as canonical settlement vertices).
+    /// Top at local y=+1, bottom at y=-1; XZ vertices are already in world units at
     /// <paramref name="hexScale"/> so tile transforms use XZ scale 1.
     /// </summary>
     public static class HexPrismMesh
@@ -34,8 +32,7 @@ namespace CatanRoguelike.Game
             var (centerX, centerZ) = HexMath.ToWorldPosition(hex, hexScale);
             for (int i = 0; i < SideCount; i++)
             {
-                var canonical = VertexGraph.Canonicalize(new Vertex(hex, i));
-                var (worldX, worldZ) = HexMath.VertexToWorldPosition(canonical, hexScale);
+                var (worldX, worldZ) = HexMath.VertexToWorldPosition(hex, i, hexScale);
                 float localX = worldX - centerX;
                 float localZ = worldZ - centerZ;
 

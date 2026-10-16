@@ -148,7 +148,7 @@ namespace CatanRoguelike.Game
             float deltaScreenX = desiredScreenX - pixelWidth * 0.5f;
             float deltaScreenY = desiredScreenY - pixelHeight * 0.5f;
 
-            Vector3 center = boardView != null ? boardView.transform.position : lookTarget.position;
+            Vector3 center = boardView != null ? boardView.GetBoardWorldCenter() : lookTarget.position;
             var panRight = transform.right;
             panRight.y = 0f;
             panRight.Normalize();

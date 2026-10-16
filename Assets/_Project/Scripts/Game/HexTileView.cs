@@ -89,24 +89,16 @@ namespace CatanRoguelike.Game
                 return;
 
             EnsureTokenChip();
+            bool colonist = ColonistPresentation.IsActive;
+            if (colonist)
+                EnsureTokenLabel();
+
             _pipRoot = new GameObject("TokenPips");
-            _pipRoot.transform.SetParent(_tokenChip.transform, false);
+            _pipRoot.transform.SetParent(
+                colonist ? _tokenLabel.transform : _tokenChip.transform,
+                false);
 
             var hexScale = transform.lossyScale;
-            float localDiameter = ColonistPresentation.IsActive
-                ? 0.14f / hexScale.x
-                : 0.09f / hexScale.x;
-            float localHeight = ColonistPresentation.IsActive
-                ? 0.04f / hexScale.y
-                : 0.025f / hexScale.y;
-            bool colonist = ColonistPresentation.IsActive;
-            float rowY = colonist
-                ? WorldChipThickness * 0.12f / hexScale.y
-                : WorldChipThickness * 0.35f / hexScale.y;
-            float rowZ = colonist
-                ? -0.22f / hexScale.z
-                : -0.14f / hexScale.z;
-
             var offsets = NumberTokenPipLayout.GetPipOffsetsX(pipCount);
             var labelRgb = NumberTokenVisualStyle.GetLabel(token);
             var pipColor = new Color(labelRgb.R, labelRgb.G, labelRgb.B);
@@ -117,10 +109,20 @@ namespace CatanRoguelike.Game
                 pip.name = $"Pip_{i}";
                 pip.transform.SetParent(_pipRoot.transform, false);
                 float offset = offsets[i];
-                pip.transform.localPosition = colonist
-                    ? new Vector3(offset / hexScale.x, rowY, rowZ)
-                    : new Vector3(offset / hexScale.x, rowY, rowZ);
-                pip.transform.localScale = new Vector3(localDiameter, localHeight, localDiameter);
+                if (colonist)
+                {
+                    pip.transform.localPosition = new Vector3(offset * 2.4f, -1.65f, 0.08f);
+                    pip.transform.localScale = Vector3.one * 0.22f;
+                }
+                else
+                {
+                    float localDiameter = 0.09f / hexScale.x;
+                    float localHeight = 0.025f / hexScale.y;
+                    float rowY = WorldChipThickness * 0.35f / hexScale.y;
+                    float rowZ = -0.14f / hexScale.z;
+                    pip.transform.localPosition = new Vector3(offset / hexScale.x, rowY, rowZ);
+                    pip.transform.localScale = new Vector3(localDiameter, localHeight, localDiameter);
+                }
                 Destroy(pip.GetComponent<Collider>());
                 var renderer = pip.GetComponent<Renderer>();
                 renderer.sharedMaterial = BuiltInMaterials.Create(pipColor);
