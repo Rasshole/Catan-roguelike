@@ -247,30 +247,33 @@ namespace CatanRoguelike.Game
             return IsPointCoveredBySand(board, hexScale, beachWidth, samplePoint);
         }
 
-        public static void AppendOuterFramingSamples(
+        public static void AppendLandHexTopCornerSamples(
             BoardState board,
             float hexScale,
-            float beachWidth,
             float sampleY,
             List<Vector3> samples)
         {
             if (board == null || samples == null)
                 return;
 
-            float sandScale = ComputeSandHexScale(hexScale, beachWidth);
             var tileSet = CollectLandCoords(board);
             foreach (var coord in tileSet)
             {
-                var (centerX, centerZ) = HexMath.ToWorldPosition(coord, hexScale);
                 for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
                 {
                     var (vx, vz) = HexMath.VertexToWorldPosition(coord, corner, hexScale);
-                    float lx = (vx - centerX) * sandScale;
-                    float lz = (vz - centerZ) * sandScale;
-                    samples.Add(new Vector3(centerX + lx, sampleY, centerZ + lz));
+                    samples.Add(new Vector3(vx, sampleY, vz));
                 }
             }
         }
+
+        public static void AppendOuterFramingSamples(
+            BoardState board,
+            float hexScale,
+            float beachWidth,
+            float sampleY,
+            List<Vector3> samples) =>
+            AppendLandHexTopCornerSamples(board, hexScale, sampleY, samples);
 
         private static Vector3 CornerVertex(HexCoord coord, int cornerIndex, float hexScale, float y)
         {

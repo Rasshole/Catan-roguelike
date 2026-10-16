@@ -21,13 +21,11 @@ namespace CatanRoguelike.Game
             var texture = Resources.Load<Texture2D>($"{ArtRoot}/{slot}");
             Material mat;
             if (texture != null)
-            {
                 mat = BuiltInMaterials.Create(texture, Color.white);
-            }
             else
-            {
-                mat = BuiltInMaterials.Create(GetFallbackColor(slot));
-            }
+                mat = BuiltInMaterials.CreateOpaque(GetFallbackColor(slot));
+
+            mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry;
 
             _cache[slot] = mat;
             return mat;

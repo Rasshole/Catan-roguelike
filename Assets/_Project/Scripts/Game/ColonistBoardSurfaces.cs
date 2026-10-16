@@ -6,7 +6,9 @@ namespace CatanRoguelike.Game
     internal static class ColonistBoardSurfaces
     {
         public static readonly Color OceanClearColor = new(0.05f, 0.28f, 0.48f, 1f);
-        private static readonly Color SandAlbedo = new(0.82f, 0.74f, 0.52f, 1f);
+        public static readonly Color SandAlbedo = new(0.82f, 0.74f, 0.52f, 1f);
+        public const int SandRenderQueue = 1990;
+        private const float SandBelowHexTopLocalOffset = 0.012f;
 
         public static void CreateOceanAndCoast(
             Transform boardRoot,
@@ -44,7 +46,7 @@ namespace CatanRoguelike.Game
             var go = new GameObject("ColonistSandCoast");
             go.transform.SetParent(parent, false);
             go.transform.SetAsFirstSibling();
-            go.transform.localPosition = new Vector3(0f, hexTopLocalY + 0.0015f, 0f);
+            go.transform.localPosition = new Vector3(0f, hexTopLocalY - SandBelowHexTopLocalOffset, 0f);
             go.transform.localRotation = Quaternion.identity;
             float yScale = thinY / ThinDiskMesh.MeshHeight;
             go.transform.localScale = new Vector3(1f, yScale, 1f);
@@ -52,8 +54,9 @@ namespace CatanRoguelike.Game
             var meshFilter = go.AddComponent<MeshFilter>();
             meshFilter.sharedMesh = ColonistCoastSandMesh.Create(board, hexScale, beachWidth, meshLocalY: 0f);
             var renderer = go.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = BuiltInMaterials.CreateUnlit(SandAlbedo);
-            renderer.sharedMaterial.renderQueue = 2980;
+            var mat = BuiltInMaterials.CreateUnlit(SandAlbedo, zWrite: true);
+            mat.renderQueue = SandRenderQueue;
+            renderer.sharedMaterial = mat;
         }
     }
 }

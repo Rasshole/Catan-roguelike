@@ -128,6 +128,10 @@ namespace CatanRoguelike.Tests.PlayMode
                     boardView,
                     GameSceneCapture.CaptureWidth,
                     GameSceneCapture.CaptureHeight);
+                ColonistBoardCaptureAssertions.AssertLandHexCenterPixelsNotSandColor(
+                    boardOnly,
+                    mainCamera,
+                    tableCamera);
                 ColonistBoardCaptureAssertions.AssertNumberTokenLabelsUprightForCamera(mainCamera);
                 ColonistBoardCaptureAssertions.AssertNumberTokenLabelsMatchBoardDiceValues(mainCamera);
 

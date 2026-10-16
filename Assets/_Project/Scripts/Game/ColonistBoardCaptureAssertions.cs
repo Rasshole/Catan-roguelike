@@ -25,7 +25,7 @@ namespace CatanRoguelike.Game
             ClassifyPixelKind(pixel);
 
         public static readonly Color OceanReference = ColonistBoardSurfaces.OceanClearColor;
-        public static readonly Color SandReference = new(0.82f, 0.74f, 0.52f, 1f);
+        public static readonly Color SandReference = ColonistBoardSurfaces.SandAlbedo;
         public static readonly Color CameraSkyReference = new(0.08f, 0.22f, 0.38f, 1f);
 
         public static void AssertColonistBoardCaptureShowsHexTiles(
@@ -58,6 +58,38 @@ namespace CatanRoguelike.Game
                 $"id={boardCapture.GetInstanceID()} center=({center.x},{center.y}) [bottom-left origin]");
             WriteSamplePatchDebugPng(boardCapture, center.x, center.y);
             AssertCenterRegionShowsHexTiles(boardCapture, center.x, center.y);
+        }
+
+        public static void AssertLandHexCenterPixelsNotSandColor(
+            Texture2D boardCapture,
+            Camera camera,
+            TableCamera tableCamera)
+        {
+            Assert.IsNotNull(boardCapture);
+            Assert.IsNotNull(camera);
+            Assert.IsNotNull(tableCamera);
+
+            int w = boardCapture.width;
+            int h = boardCapture.height;
+            int checkedTiles = 0;
+            foreach (var tile in Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
+            {
+                if (tile.Data.IsFishTile)
+                    continue;
+
+                var world = new Vector3(tile.transform.position.x, tile.HexTopWorldY, tile.transform.position.z);
+                var px = ColonistCaptureProjection.WorldToTexturePixel(world, camera, tableCamera, w, h);
+                Color pixel = boardCapture.GetPixel(px.x, px.y);
+                Assert.IsFalse(
+                    MatchesSandCoastColor(pixel),
+                    $"Land hex {tile.Data.Coord} center should show terrain, not sand (rgb=({pixel.r:F3},{pixel.g:F3},{pixel.b:F3}) " +
+                    $"tex=({px.x},{px.y}) world={world}).");
+                checkedTiles++;
+            }
+
+            Assert.IsTrue(
+                checkedTiles > 6,
+                "Board capture should sample multiple land hex centers.");
         }
 
         private static Vector2Int ResolveCaptureSampleCenter(

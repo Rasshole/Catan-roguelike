@@ -282,6 +282,10 @@ namespace CatanRoguelike.Game
                     sampleIndex = i;
                     worldPoint = worldSamples[i];
                     screenPixels = px;
+                    Debug.LogWarning(
+                        $"ColonistBoardFraming offender sample[{i}] world={worldPoint} " +
+                        $"screen=({px.x:F1},{px.y:F1}) bottomLeftOrigin playY=[{minY:F1},{maxY:F1}] " +
+                        $"playBottom={ColonistPlayAreaLayout.Compute(layoutWidth, layoutHeight).Bottom:F1}");
                     return true;
                 }
             }
@@ -298,10 +302,13 @@ namespace CatanRoguelike.Game
             out float maxY)
         {
             var play = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
-            minX = play.Left + play.PlayWidth * PlayAreaFitMarginFraction;
-            maxX = play.Left + play.PlayWidth * (1f - PlayAreaFitMarginFraction);
-            minY = play.Bottom + play.PlayHeight * PlayAreaFitMarginFraction;
-            maxY = play.Bottom + play.PlayHeight * (1f - PlayAreaFitMarginFraction);
+            float marginPx = ColonistUiScale.ScaleReferencePixels(PlayAreaMarginPixels, screenWidth, screenHeight);
+            float padX = Mathf.Max(play.PlayWidth * PlayAreaFitMarginFraction, marginPx);
+            float padY = Mathf.Max(play.PlayHeight * PlayAreaFitMarginFraction, marginPx);
+            minX = play.Left + padX;
+            maxX = play.Left + play.PlayWidth - padX;
+            minY = play.Bottom + padY;
+            maxY = play.Bottom + play.PlayHeight - padY;
         }
 
         public static Vector2 WorldToScreenPixelsFromBottom(Camera camera, Vector3 world)

@@ -5,7 +5,7 @@ namespace CatanRoguelike.Game
     /// <summary>Screen-space measurements from renderer bounds (colonist capture camera).</summary>
     public static class ColonistBoardScreenMetrics
     {
-        public const float PortBadgeTargetTokenScreenDiameterRatio = 0.9f;
+        public const float PortBadgeTargetTokenScreenDiameterRatio = 0.85f;
 
         public static Vector2 MeasureScreenPixelSize(Renderer renderer, Camera camera)
         {

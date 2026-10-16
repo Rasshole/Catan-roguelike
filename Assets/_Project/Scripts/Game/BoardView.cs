@@ -130,10 +130,9 @@ namespace CatanRoguelike.Game
 
             if (_controller?.State?.Board != null)
             {
-                ColonistCoastSandMesh.AppendOuterFramingSamples(
+                ColonistCoastSandMesh.AppendLandHexTopCornerSamples(
                     _controller.State.Board,
                     hexScale,
-                    beachWidth,
                     sampleY,
                     samples);
             }
