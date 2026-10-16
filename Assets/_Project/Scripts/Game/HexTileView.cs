@@ -326,7 +326,7 @@ namespace CatanRoguelike.Game
                 $"meshVerts={vertCount} rimBounds={rimBounds} faceBounds={faceBounds} " +
                 $"rimW={rimWidth:F4} faceW={faceWidth:F4} rimWider={rimWidth > faceWidth} " +
                 $"shader={(mat != null ? mat.shader.name : "null")} queue={(mat != null ? mat.renderQueue : -1)} " +
-                $"color={(mat != null ? mat.color.ToString() : "null")} layer={layer} cullingMask={cullingMask} " +
+                $"mat={BuiltInMaterials.FormatMaterialColorForLog(mat)} layer={layer} cullingMask={cullingMask} " +
                 $"layerVisible={layerVisible} meshAvgNormal={avgNormal}");
         }
 
