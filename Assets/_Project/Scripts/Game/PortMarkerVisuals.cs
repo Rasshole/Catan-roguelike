@@ -31,7 +31,7 @@ namespace CatanRoguelike.Game
         public const float BadgeLabelWidthFractionGeneric = 0.65f;
         public const float BadgeLabelWidthFractionSpecific = 0.45f;
         /// <summary>World quad edge length; reads ~40% of disc diameter on screen under the colonist camera.</summary>
-        public const float BadgeRateIconDiameterFraction = 0.42f;
+        public const float BadgeRateIconDiameterFraction = 0.50f;
         private const float BadgeStackGapFraction = 0.05f;
         private static bool _loggedPortMarkerChildren;
 

@@ -156,13 +156,12 @@ namespace CatanRoguelike.Game
             if (boardRoot == null)
                 return;
 
-            foreach (var disc in boardRoot.GetComponentsInChildren<Transform>(true))
+            foreach (var badgeRoot in boardRoot.GetComponentsInChildren<Transform>(true))
             {
-                if (disc.name != "BadgeDisc")
+                if (badgeRoot.name != "PortRateBadge")
                     continue;
 
-                var renderer = disc.GetComponent<Renderer>();
-                if (renderer != null)
+                foreach (var renderer in badgeRoot.GetComponentsInChildren<Renderer>(true))
                     ColonistBoardFraming.AppendBoundsCorners(renderer.bounds, samples);
             }
         }

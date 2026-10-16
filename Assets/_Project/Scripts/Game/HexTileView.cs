@@ -115,7 +115,7 @@ namespace CatanRoguelike.Game
         // Target world-space chip size (visible disc on the hex top).
         public const float TokenWorldFaceDiameter = 0.62f;
         /// <summary>Port rate badge disc diameter as a fraction of the number token face diameter.</summary>
-        public const float PortBadgeDiameterFraction = 0.85f;
+        public const float PortBadgeDiameterFraction = 0.90f;
         public static float TokenRimWorldDiameter => TokenWorldFaceDiameter * RimOuterRadiusFactor;
         public static float TokenRimBandWorldWidth => TokenWorldFaceDiameter * 0.5f * TokenRimBandWidthFractionOfFaceRadius;
         public static float PortBadgeDiscWorldRadius =>
@@ -231,8 +231,8 @@ namespace CatanRoguelike.Game
             float localFaceHeight = WorldChipThickness / (ThinDiskMesh.MeshHeight * hexScale.y);
             float localRimHeight = WorldChipThickness * 0.55f / (ThinDiskMesh.MeshHeight * hexScale.y);
 
-            _chipRimRenderer = CreateTokenRimRing(localFaceDiameter, localRimHeight, 3115);
-            _chipFaceRenderer = CreateFlatChipDisc("Face", localFaceDiameter, localFaceHeight, 0f, 3120);
+            _chipRimRenderer = CreateTokenRimRing(localFaceDiameter, localRimHeight, 3135);
+            _chipFaceRenderer = CreateFlatChipDisc("Face", localFaceDiameter, localFaceHeight, 0f, 3145);
             UpdateTokenChipGeometry();
         }
 
@@ -343,8 +343,8 @@ namespace CatanRoguelike.Game
                 new Color(faceRgb.R, faceRgb.G, faceRgb.B, 1f));
             _chipRimRenderer.sharedMaterial = BuiltInMaterials.CreateUnlit(
                 new Color(rimRgb.R, rimRgb.G, rimRgb.B, 1f));
-            _chipRimRenderer.sharedMaterial.renderQueue = 3110;
-            _chipFaceRenderer.sharedMaterial.renderQueue = 3120;
+            _chipRimRenderer.sharedMaterial.renderQueue = 3135;
+            _chipFaceRenderer.sharedMaterial.renderQueue = 3145;
         }
 
         private void EnsureTokenLabel()

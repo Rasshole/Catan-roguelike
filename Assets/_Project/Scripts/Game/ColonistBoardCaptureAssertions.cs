@@ -632,8 +632,8 @@ namespace CatanRoguelike.Game
             }
 
             screenRight.Normalize();
-            float rimBandWidthPx = faceRadiusPixels * HexTileView.TokenRimBandWidthFractionOfFaceRadius;
-            float rimProbeRadiusPixels = faceRadiusPixels + rimBandWidthPx * 0.5f;
+            float rimBandWidthPx = Mathf.Max(0.01f, rimRadiusPixels - faceRadiusPixels);
+            float rimProbeRadiusPixels = (faceRadiusPixels + rimRadiusPixels) * 0.5f;
             var faceSamplePx = centerPxV + screenRight * (faceRadiusPixels * 0.35f);
             var rimSamplePx = centerPxV + screenRight * rimProbeRadiusPixels;
             int facePxX = Mathf.Clamp(Mathf.RoundToInt(faceSamplePx.x), 0, w - 1);
@@ -654,13 +654,14 @@ namespace CatanRoguelike.Game
                 $"faceWorld={faceWorld} rimWorld={rimWorld} faceTex=({facePxX},{facePxY}) rimTex=({rimPxX},{rimPxY}) " +
                 $"pixelSep={pixelSeparation:F1} rimRadiusPx~{rimRadiusPixels:F1})).");
             float expectedProbeRatio = rimProbeRadiusPixels / Mathf.Max(0.01f, faceRadiusPixels);
-            float expectedBandRatio = 1f + HexTileView.TokenRimBandWidthFractionOfFaceRadius * 0.5f;
+            float expectedBandRatio = (faceRadiusPixels + rimRadiusPixels) * 0.5f / Mathf.Max(0.01f, faceRadiusPixels);
             float rimSampleToFaceRatio = centerToRimSamplePx / Mathf.Max(0.01f, faceRadiusPixels);
             Assert.IsTrue(
                 Mathf.Abs(rimSampleToFaceRatio - expectedBandRatio) < 0.08f,
-                $"Rim sample should sit at face + half rim band on screen " +
+                $"Rim sample should sit at mid annulus on screen " +
                 $"(sample/face={rimSampleToFaceRatio:F3} expected~{expectedBandRatio:F3} " +
-                $"probePx={rimProbeRadiusPixels:F1} bandPx={rimBandWidthPx:F1} faceRadiusPx={faceRadiusPixels:F1}).");
+                $"probePx={rimProbeRadiusPixels:F1} bandPx={rimBandWidthPx:F1} faceRadiusPx={faceRadiusPixels:F1} " +
+                $"rimRadiusPx={rimRadiusPixels:F1}).");
             Assert.IsTrue(
                 rimRadiusPixels > 6f,
                 $"Rim radius should project to visible pixels (rimRadiusPx={rimRadiusPixels:F1}).");

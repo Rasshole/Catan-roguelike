@@ -5,9 +5,10 @@ namespace CatanRoguelike.Game
     /// <summary>Flat annulus cap (inner/outer radius in mesh XZ, top at y=1) for token rim rings.</summary>
     public static class TokenChipAnnulusMesh
     {
-        public const float InnerRadius = ThinDiskMesh.MeshRadius;
-        /// <summary>Matches <see cref="HexTileView.RimOuterRadiusFactor"/> (15% rim band).</summary>
-        public const float OuterRadius = ThinDiskMesh.MeshRadius * 1.15f;
+        /// <summary>Slightly inside the face disc edge so the rim band underlaps the face (no hex gap).</summary>
+        public const float InnerRadius = ThinDiskMesh.MeshRadius * 0.76f;
+        /// <summary>Matches <see cref="HexTileView.RimOuterRadiusFactor"/> (15% rim band past face edge).</summary>
+        public const float OuterRadius = ThinDiskMesh.MeshRadius * HexTileView.RimOuterRadiusFactor;
         public const float TopY = ThinDiskMesh.TopY;
         public const int SegmentCount = ThinDiskMesh.SegmentCount;
 

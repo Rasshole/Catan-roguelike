@@ -13,7 +13,7 @@ namespace CatanRoguelike.Game
         public const float ColonistCameraHeight = 28f;
 
         /// <summary>Tight fit slack after solving screen-space AABB.</summary>
-        public const float FramingFitSlackMultiplier = 1.0f;
+        public const float FramingFitSlackMultiplier = 1.04f;
 
         public struct ColonistCameraFit
         {

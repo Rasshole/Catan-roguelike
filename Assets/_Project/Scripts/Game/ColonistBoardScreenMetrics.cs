@@ -5,7 +5,7 @@ namespace CatanRoguelike.Game
     /// <summary>Screen-space measurements from renderer bounds (colonist capture camera).</summary>
     public static class ColonistBoardScreenMetrics
     {
-        public const float PortBadgeTargetTokenScreenDiameterRatio = 0.85f;
+        public const float PortBadgeTargetTokenScreenDiameterRatio = 0.90f;
 
         public static Vector2 MeasureScreenPixelSize(Renderer renderer, Camera camera)
         {
@@ -52,16 +52,29 @@ namespace CatanRoguelike.Game
             if (faceRenderer == null)
                 return 0f;
 
-            Vector3 center = faceRenderer.bounds.center;
-            float faceDiameter = MeasureProjectedScreenDiameter(
+            Vector3 center = tile.GetChipFaceWorldCenter();
+            float faceRadius = MeasureProjectedRadiusFromCenter(
                 faceRenderer, camera, tableCamera, textureWidth, textureHeight, center);
-            if (rimRenderer == null)
-                return faceDiameter * HexTileView.RimOuterRadiusFactor;
+            float rimRadius = rimRenderer != null
+                ? MeasureProjectedRadiusFromCenter(
+                    rimRenderer, camera, tableCamera, textureWidth, textureHeight, center)
+                : 0f;
 
-            float rimDiameter = MeasureProjectedScreenDiameter(
-                rimRenderer, camera, tableCamera, textureWidth, textureHeight, center);
-            float faceScaled = faceDiameter * HexTileView.RimOuterRadiusFactor;
-            return Mathf.Max(rimDiameter, faceScaled, faceDiameter);
+            float outerRadius = Mathf.Max(faceRadius, rimRadius);
+            if (outerRadius < 0.01f)
+            {
+                outerRadius = MeasureProjectedBoundsRadiusFromCenter(
+                    faceRenderer, camera, tableCamera, textureWidth, textureHeight, center);
+                if (rimRenderer != null)
+                {
+                    outerRadius = Mathf.Max(
+                        outerRadius,
+                        MeasureProjectedBoundsRadiusFromCenter(
+                            rimRenderer, camera, tableCamera, textureWidth, textureHeight, center));
+                }
+            }
+
+            return outerRadius * 2f;
         }
 
         public static float MeasureProjectedRadiusFromCenter(
