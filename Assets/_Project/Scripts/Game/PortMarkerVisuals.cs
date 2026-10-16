@@ -97,7 +97,7 @@ namespace CatanRoguelike.Game
             float textWorldHeight = discDiameter * 0.6f;
             float labelLocalY = BadgeDiscHeight + 0.008f;
             float labelX = isGeneric ? 0f : -discDiameter * 0.12f;
-            var worldUpLabelRotation = Quaternion.Inverse(badgeRoot.rotation) * Quaternion.Euler(90f, 0f, 0f);
+            var worldUpLabelRotation = Quaternion.Inverse(badgeRoot.transform.rotation) * Quaternion.Euler(90f, 0f, 0f);
 
             var labelGo = new GameObject("RateLabel");
             labelGo.transform.SetParent(badgeRoot.transform, false);
