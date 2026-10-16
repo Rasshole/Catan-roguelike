@@ -98,7 +98,15 @@ namespace CatanRoguelike.Tests
             var discRenderer = badge.Find("BadgeDisc").GetComponent<Renderer>();
             float discWidth = discRenderer.transform.localScale.x;
             float iconWidth = ColonistFlatBoardQuad.MeasureWorldWidthAlongTextureU(rateIcon);
-            Assert.Greater(iconWidth, discWidth * 0.35f, "Rate icon should be a visible fraction of the badge disc.");
+            float expectedIcon = discWidth * PortMarkerVisuals.BadgeRateIconDiameterFraction;
+            Assert.Greater(
+                iconWidth,
+                expectedIcon * 0.92f,
+                $"Rate icon should be ~{PortMarkerVisuals.BadgeRateIconDiameterFraction:P0} of badge disc diameter.");
+            Assert.Less(
+                iconWidth,
+                expectedIcon * 1.08f,
+                $"Rate icon should stay near {PortMarkerVisuals.BadgeRateIconDiameterFraction:P0} of disc diameter.");
 
             AssertMinWorldYAboveHexTop(specificMarker);
             AssertSharedMaterialsAssigned(specificMarker);

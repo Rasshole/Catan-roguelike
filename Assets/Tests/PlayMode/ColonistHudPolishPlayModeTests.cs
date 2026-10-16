@@ -185,10 +185,14 @@ namespace CatanRoguelike.Tests.PlayMode
 
             float discMeshWidth = disc.localScale.x;
             float labelMeshWidth = ColonistFlatBoardQuad.MeasureWorldWidthAlongTextureU(label);
+            Transform rateIconProbe = badge.Find("RateIcon") ?? badge.Find("RateLabel/RateIcon");
+            float minLabelFraction = rateIconProbe != null
+                ? PortMarkerVisuals.BadgeLabelWidthFractionSpecific - 0.06f
+                : PortMarkerVisuals.BadgeLabelWidthFractionGeneric - 0.01f;
             Assert.Greater(
                 labelMeshWidth,
-                discMeshWidth * 0.65f - 0.01f,
-                $"Port rate label should be >= 65% of disc width (label={labelMeshWidth:F3} disc={discMeshWidth:F3}).");
+                discMeshWidth * minLabelFraction,
+                $"Port rate label should fit on badge (label={labelMeshWidth:F3} disc={discMeshWidth:F3}).");
 
             var camera = Camera.main;
             Assert.IsNotNull(camera);
@@ -219,16 +223,18 @@ namespace CatanRoguelike.Tests.PlayMode
                 Assert.IsNotNull(iconRenderer);
                 Vector2 labelScreen = ColonistFlatBoardQuad.MeasureScreenPixelSize(labelRenderer, camera);
                 Vector2 iconScreen = ColonistFlatBoardQuad.MeasureScreenPixelSize(iconRenderer, camera);
+                Vector2 discScreenSize = ColonistFlatBoardQuad.MeasureScreenPixelSize(discRenderer, camera);
+                float targetIconScreen = discScreenSize.y * PortMarkerVisuals.BadgeRateIconDiameterFraction;
                 Assert.Greater(
                     iconScreen.y,
-                    labelScreen.y * 0.85f,
-                    $"2:1 port icon height should match label text on screen (iconH={iconScreen.y:F1} labelH={labelScreen.y:F1}).");
+                    targetIconScreen * 0.75f,
+                    $"2:1 port icon should be ~{PortMarkerVisuals.BadgeRateIconDiameterFraction:P0} of disc on screen " +
+                    $"(iconH={iconScreen.y:F1} target≈{targetIconScreen:F1}).");
                 Assert.Greater(iconScreen.y, 10f, $"2:1 port icon screen height should not be a sliver (h={iconScreen.y:F1}px).");
 
                 Vector3 iconScreenCenter = camera.WorldToScreenPoint(iconRenderer.bounds.center);
                 Vector3 labelScreenCenter = camera.WorldToScreenPoint(labelRenderer.bounds.center);
                 Vector3 discScreenCenter = camera.WorldToScreenPoint(discRenderer.bounds.center);
-                Vector2 discScreenSize = ColonistFlatBoardQuad.MeasureScreenPixelSize(discRenderer, camera);
                 Assert.Greater(
                     iconScreenCenter.y,
                     labelScreenCenter.y,

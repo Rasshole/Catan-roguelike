@@ -26,6 +26,11 @@ namespace CatanRoguelike.Game
         private const float FlagWidth = 0.06f;
         private const float BadgeDiscRadius = 0.22f;
         private const float BadgeDiscHeight = 0.012f;
+        public const float BadgeLabelWidthFractionGeneric = 0.65f;
+        public const float BadgeLabelWidthFractionSpecific = 0.50f;
+        public const float BadgeRateIconDiameterFraction = 0.40f;
+        private const float BadgeStackGapFraction = 0.05f;
+        private const float BadgeMaxStackSpanFraction = 0.88f;
         private static bool _loggedPortMarkerChildren;
 
         public static void LogChildRenderersOnce(GameObject portRoot)
@@ -129,7 +134,10 @@ namespace CatanRoguelike.Game
 
             float labelLocalY = BadgeDiscHeight + 0.006f;
             var labelTexture = ColonistPortRateLabelTextures.Get(isGeneric);
-            float labelWorldWidth = discDiameter * 0.65f;
+            bool hasRateIcon = !isGeneric && specificResource.HasValue;
+            float labelWorldWidth = discDiameter * (hasRateIcon
+                ? BadgeLabelWidthFractionSpecific
+                : BadgeLabelWidthFractionGeneric);
             float aspect = labelTexture.height / (float)labelTexture.width;
             float labelWorldHeight = labelWorldWidth * aspect;
 
@@ -145,10 +153,19 @@ namespace CatanRoguelike.Game
                 placeAbove: null,
                 alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);
 
-            if (!isGeneric && specificResource.HasValue)
+            if (hasRateIcon)
             {
-                float iconWorldSize = labelWorldHeight;
-                float stackGap = discDiameter * 0.06f;
+                float iconWorldSize = discDiameter * BadgeRateIconDiameterFraction;
+                float stackGap = discDiameter * BadgeStackGapFraction;
+                float maxStackSpan = discDiameter * BadgeMaxStackSpanFraction;
+                float stackSpan = iconWorldSize + stackGap + labelWorldHeight;
+                if (stackSpan > maxStackSpan)
+                {
+                    float labelBudget = Mathf.Max(maxStackSpan - iconWorldSize - stackGap, 1e-4f);
+                    float shrink = labelBudget / labelWorldHeight;
+                    labelWorldWidth *= shrink;
+                    labelWorldHeight *= shrink;
+                }
                 Vector3 upBoard = ColonistFlatBoardQuad.GetColonistCameraUpOnBoard();
                 Vector3 upLocal = badgeRoot.transform.InverseTransformDirection(upBoard);
                 if (upLocal.sqrMagnitude > 1e-6f)
