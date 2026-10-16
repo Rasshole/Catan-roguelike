@@ -94,11 +94,14 @@ namespace CatanRoguelike.Tests.PlayMode
                 Assert.IsNotNull(tile.transform.Find("RobberPawn/RobberTopIcon"),
                     "Robber pawn should include a top-down hood icon.");
                 var robberIcon = tile.transform.Find("RobberPawn/RobberTopIcon");
+                var camera = Camera.main;
+                Assert.IsNotNull(camera);
                 Vector3 textureV = ColonistFlatBoardQuad.GetTextureVWorldAxis(robberIcon);
+                Vector3 cameraUp = ColonistFlatBoardQuad.GetColonistCameraUpOnBoard(camera);
                 Assert.Greater(
-                    Vector3.Dot(textureV, Vector3.forward),
+                    Vector3.Dot(textureV, cameraUp),
                     0.85f,
-                    $"Robber icon head should point world +Z (textureV={textureV} dot={Vector3.Dot(textureV, Vector3.forward):F3}).");
+                    $"Robber icon head should align with camera up on board (textureV={textureV} dot={Vector3.Dot(textureV, cameraUp):F3}).");
 
                 if (tile.Data.NumberToken.HasValue)
                 {
@@ -180,18 +183,21 @@ namespace CatanRoguelike.Tests.PlayMode
             float faceDot = Vector3.Dot(ColonistFlatBoardQuad.GetBoardFaceNormal(label), Vector3.up);
             Assert.Greater(faceDot, 0.85f, $"Port rate label should lie flat on the board (dot={faceDot:F3}).");
 
-            float discDiameter = Mathf.Max(discRenderer.bounds.size.x, discRenderer.bounds.size.z);
-            float labelWidth = Mathf.Max(labelRenderer.bounds.size.x, labelRenderer.bounds.size.z);
+            float discMeshWidth = disc.localScale.x;
+            float labelMeshWidth = ColonistFlatBoardQuad.MeasureWorldWidthAlongTextureU(label);
             Assert.Greater(
-                labelWidth,
-                discDiameter * 0.55f,
-                $"Port rate label should span most of the badge (label={labelWidth:F3} disc={discDiameter:F3}).");
+                labelMeshWidth,
+                discMeshWidth * 0.65f - 0.01f,
+                $"Port rate label should be >= 65% of disc width (label={labelMeshWidth:F3} disc={discMeshWidth:F3}).");
 
-            float uDot = Vector3.Dot(ColonistFlatBoardQuad.GetTextureUWorldAxis(label), Vector3.right);
+            var camera = Camera.main;
+            Assert.IsNotNull(camera);
+            Vector3 cameraRight = ColonistFlatBoardQuad.GetColonistCameraRightOnBoard(camera);
+            float uDot = Vector3.Dot(ColonistFlatBoardQuad.GetTextureUWorldAxis(label), cameraRight);
             Assert.Greater(
                 uDot,
                 0.85f,
-                $"Port rate label texture +U should align with world +X (dot={uDot:F3}).");
+                $"Port rate label texture +U should align with camera right on board (dot={uDot:F3}).");
 
             var discBounds = discRenderer.bounds;
             var labelBounds = labelRenderer.bounds;

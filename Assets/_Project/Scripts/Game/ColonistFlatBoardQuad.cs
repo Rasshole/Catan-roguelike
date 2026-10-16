@@ -3,11 +3,11 @@ using UnityEngine.Rendering;
 
 namespace CatanRoguelike.Game
 {
-    /// <summary>Unlit transparent quads lying in the board XZ plane (world rotation 90,0,0).</summary>
+    /// <summary>Unlit transparent quads on the colonist board, aligned to the table camera.</summary>
     public static class ColonistFlatBoardQuad
     {
-        public const float WorldPitchDegrees = 90f;
         public const float DefaultClearanceAboveReference = 0.01f;
+        private const float DefaultMeshExtent = 1f;
 
         public static GameObject Create(
             Transform parent,
@@ -18,17 +18,18 @@ namespace CatanRoguelike.Game
             Texture2D texture,
             int renderQueue,
             Renderer placeAbove = null,
-            float clearanceAbove = DefaultClearanceAboveReference)
+            float clearanceAbove = DefaultClearanceAboveReference,
+            bool zWrite = false)
         {
             var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             quad.name = name;
             quad.transform.SetParent(parent, false);
             quad.transform.localPosition = localPosition;
-            ApplyWorldFacing(quad.transform);
+            AlignToColonistCamera(quad.transform);
             ApplyWorldSize(quad.transform, parent, worldWidth, worldHeight);
 
             var renderer = quad.GetComponent<Renderer>();
-            renderer.sharedMaterial = BuiltInMaterials.CreateUnlitTransparent(texture);
+            renderer.sharedMaterial = BuiltInMaterials.CreateUnlitTransparent(texture, zWrite);
             renderer.sharedMaterial.renderQueue = renderQueue;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
@@ -43,27 +44,35 @@ namespace CatanRoguelike.Game
             return quad;
         }
 
-        public static void AlignTextureUToWorldPositiveX(Transform quadTransform)
+        public static void AlignToColonistCamera(Transform quadTransform, Camera camera = null)
         {
             if (quadTransform == null)
                 return;
-
-            ApplyWorldFacing(quadTransform);
-            Vector3 textureU = GetTextureUWorldAxis(quadTransform);
-            textureU.y = 0f;
-            if (textureU.sqrMagnitude < 1e-6f)
-                return;
-
-            textureU.Normalize();
-            float yaw = Vector3.SignedAngle(textureU, Vector3.right, Vector3.up);
-            quadTransform.rotation = Quaternion.AngleAxis(yaw, Vector3.up) * quadTransform.rotation;
+            quadTransform.rotation = NumberTokenLabelOrientation.ComputeColonistTopDownRotation(camera);
         }
 
-        public static void ApplyWorldFacing(Transform quadTransform)
+        public static Vector3 ProjectOnBoardXZ(Vector3 direction)
         {
-            if (quadTransform == null)
-                return;
-            quadTransform.rotation = Quaternion.Euler(WorldPitchDegrees, 0f, 0f);
+            direction.y = 0f;
+            if (direction.sqrMagnitude < 1e-8f)
+                return Vector3.forward;
+            return direction.normalized;
+        }
+
+        public static Vector3 GetColonistCameraRightOnBoard(Camera camera = null)
+        {
+            camera ??= Camera.main;
+            if (camera == null)
+                return Vector3.right;
+            return ProjectOnBoardXZ(camera.transform.right);
+        }
+
+        public static Vector3 GetColonistCameraUpOnBoard(Camera camera = null)
+        {
+            camera ??= Camera.main;
+            if (camera == null)
+                return Vector3.forward;
+            return ProjectOnBoardXZ(camera.transform.up);
         }
 
         public static void ApplyWorldSize(
@@ -81,6 +90,11 @@ namespace CatanRoguelike.Game
             quadTransform.localScale = new Vector3(worldWidth / sx, worldHeight / sz, 1f);
         }
 
+        public static float MeasureWorldWidthAlongTextureU(Transform quadTransform) =>
+            quadTransform != null
+                ? quadTransform.lossyScale.x * DefaultMeshExtent
+                : 0f;
+
         public static void PlaceWorldYAbove(Transform quadTransform, Renderer referenceBelow, float clearance)
         {
             if (quadTransform == null || referenceBelow == null)
@@ -91,17 +105,35 @@ namespace CatanRoguelike.Game
             quadTransform.position = new Vector3(world.x, targetY, world.z);
         }
 
+        public static void PlaceWorldYAboveAll(Transform quadTransform, Transform root, float clearance)
+        {
+            if (quadTransform == null || root == null)
+                return;
+
+            float maxY = float.NegativeInfinity;
+            foreach (var renderer in root.GetComponentsInChildren<Renderer>())
+            {
+                if (renderer.transform == quadTransform)
+                    continue;
+                maxY = Mathf.Max(maxY, renderer.bounds.max.y);
+            }
+
+            if (maxY > float.NegativeInfinity)
+            {
+                Vector3 world = quadTransform.position;
+                quadTransform.position = new Vector3(world.x, maxY + clearance, world.z);
+            }
+        }
+
         /// <summary>Visible board normal for a flat quad (faces +Y).</summary>
         public static Vector3 GetBoardFaceNormal(Transform quadTransform) =>
             quadTransform != null ? (-quadTransform.forward).normalized : Vector3.zero;
 
-        /// <summary>World direction corresponding to texture +U (left-to-right in glyph art).</summary>
         public static Vector3 GetTextureUWorldAxis(Transform quadTransform) =>
             quadTransform != null
                 ? quadTransform.TransformDirection(Vector3.right).normalized
                 : Vector3.zero;
 
-        /// <summary>World direction corresponding to texture +V on a board-flat quad.</summary>
         public static Vector3 GetTextureVWorldAxis(Transform quadTransform) =>
             quadTransform != null
                 ? quadTransform.TransformDirection(Vector3.up).normalized

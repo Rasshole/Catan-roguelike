@@ -80,23 +80,26 @@ namespace CatanRoguelike.Game
             root.transform.position = new Vector3(vertexX, hexTopY + BaseGapAboveHex, vertexZ);
             root.transform.rotation = Quaternion.LookRotation(outward, Vector3.up);
 
+            float coastOffset = hexScale * 0.35f;
+            float badgeLocalZ = PierLength + PostWidth * 0.35f + coastOffset;
+            float pierLen = Mathf.Max(PierLength, badgeLocalZ * 0.9f);
+
             CreatePart("PierPlank", root.transform,
-                new Vector3(0f, PierHeight * 0.5f, PierLength * 0.5f),
-                new Vector3(PierWidth, PierHeight, PierLength),
+                new Vector3(0f, PierHeight * 0.5f, pierLen * 0.5f),
+                new Vector3(PierWidth, PierHeight, pierLen),
                 PierWoodColor);
 
             CreatePart("PierPost", root.transform,
-                new Vector3(0f, PostHeight * 0.5f, PierLength + PostWidth * 0.35f),
+                new Vector3(0f, PostHeight * 0.5f, badgeLocalZ - PostWidth * 0.25f),
                 new Vector3(PostWidth, PostHeight, PostWidth),
                 isGeneric ? GenericPostColor : resourceColor);
 
             CreatePortRateBadge(
                 root.transform,
-                hexScale,
                 isGeneric,
                 specificResource,
                 PostHeight + 0.02f,
-                PierLength + PostWidth * 0.35f);
+                badgeLocalZ);
 
             LogChildRenderersOnce(root);
             return root;
@@ -104,16 +107,14 @@ namespace CatanRoguelike.Game
 
         private static void CreatePortRateBadge(
             Transform parent,
-            float hexScale,
             bool isGeneric,
             ResourceType? specificResource,
             float localY,
             float localZ)
         {
-            float coastOffset = hexScale * 0.35f;
             var badgeRoot = new GameObject("PortRateBadge");
             badgeRoot.transform.SetParent(parent, false);
-            badgeRoot.transform.localPosition = new Vector3(0f, localY, localZ + coastOffset);
+            badgeRoot.transform.localPosition = new Vector3(0f, localY, localZ);
 
             var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             disc.name = "BadgeDisc";
@@ -141,23 +142,23 @@ namespace CatanRoguelike.Game
                 labelTexture,
                 3210,
                 discRenderer);
-            ColonistFlatBoardQuad.AlignTextureUToWorldPositiveX(labelGo.transform);
 
             if (!isGeneric && specificResource.HasValue)
             {
-                float iconSize = discDiameter * 0.24f;
-                float iconX = labelWorldWidth * 0.58f;
-                float iconZ = -discDiameter * 0.1f;
-                var iconGo = ColonistFlatBoardQuad.Create(
+                float iconSize = discDiameter * 0.40f;
+                Vector3 worldOffset =
+                    ColonistFlatBoardQuad.GetColonistCameraRightOnBoard() * (labelWorldWidth * 0.55f)
+                    + ColonistFlatBoardQuad.GetColonistCameraUpOnBoard() * (-discDiameter * 0.12f);
+                Vector3 localOffset = badgeRoot.transform.InverseTransformDirection(worldOffset);
+                ColonistFlatBoardQuad.Create(
                     badgeRoot.transform,
                     "RateIcon",
-                    new Vector3(iconX, labelLocalY, iconZ),
+                    new Vector3(localOffset.x, labelLocalY, localOffset.z),
                     iconSize,
                     iconSize,
                     ColonistResourceIconTextures.Get(specificResource.Value),
                     3205,
                     discRenderer);
-                ColonistFlatBoardQuad.AlignTextureUToWorldPositiveX(iconGo.transform);
             }
         }
 

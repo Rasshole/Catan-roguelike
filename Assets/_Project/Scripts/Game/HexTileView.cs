@@ -411,6 +411,7 @@ namespace CatanRoguelike.Game
                 && _robberMarker.transform.Find(RobberTopIconPartName) != null)
             {
                 ApplyRobberTopIconPlacement();
+                LogRobberPawnRenderers();
                 return;
             }
 
@@ -488,9 +489,12 @@ namespace CatanRoguelike.Game
                 WorldRobberTopIconDiameter,
                 WorldRobberTopIconDiameter,
                 ColonistRobberTopIconTextures.Get(),
-                3250,
-                pawnTopRenderer);
+                3360,
+                pawnTopRenderer,
+                clearanceAbove: 0.015f,
+                zWrite: true);
             ApplyRobberTopIconPlacement();
+            LogRobberPawnRenderers();
 
             Debug.Log(
                 $"HexTileView RobberPawn tile={Data.Coord} boundsY={RobberWorldBounds.size.y:F3} " +
@@ -523,28 +527,35 @@ namespace CatanRoguelike.Game
             if (icon == null)
                 return;
 
-            ColonistFlatBoardQuad.AlignTextureUToWorldPositiveX(icon);
+            ColonistFlatBoardQuad.AlignToColonistCamera(icon);
             ColonistFlatBoardQuad.ApplyWorldSize(
                 icon,
                 _robberMarker.transform,
                 WorldRobberTopIconDiameter,
                 WorldRobberTopIconDiameter);
+            ColonistFlatBoardQuad.PlaceWorldYAboveAll(icon, _robberMarker.transform, 0.015f);
 
-            Renderer pawnTopRenderer = null;
-            float pawnTopY = float.NegativeInfinity;
-            foreach (var partRenderer in _robberMarker.GetComponentsInChildren<Renderer>())
+            var iconRenderer = icon.GetComponent<Renderer>();
+            if (iconRenderer != null && iconRenderer.sharedMaterial != null)
+                iconRenderer.sharedMaterial.renderQueue = 3360;
+        }
+
+        private void LogRobberPawnRenderers()
+        {
+            if (_robberMarker == null)
+                return;
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"HexTileView RobberPawn renderers tile={Data.Coord}:");
+            foreach (var renderer in _robberMarker.GetComponentsInChildren<Renderer>())
             {
-                if (partRenderer.transform == icon)
-                    continue;
-                if (partRenderer.bounds.max.y > pawnTopY)
-                {
-                    pawnTopY = partRenderer.bounds.max.y;
-                    pawnTopRenderer = partRenderer;
-                }
+                Color c = renderer.sharedMaterial != null ? renderer.sharedMaterial.color : Color.magenta;
+                sb.AppendLine(
+                    $"  {renderer.gameObject.name} maxY={renderer.bounds.max.y:F4} " +
+                    $"bounds={renderer.bounds.size} queue={renderer.sharedMaterial?.renderQueue} color={c}");
             }
 
-            if (pawnTopRenderer != null)
-                ColonistFlatBoardQuad.PlaceWorldYAbove(icon, pawnTopRenderer, 0.01f);
+            Debug.Log(sb.ToString());
         }
 
         private float AddRobberCylinder(
@@ -577,6 +588,7 @@ namespace CatanRoguelike.Game
             part.transform.localScale = localScale;
             var renderer = part.GetComponent<Renderer>();
             renderer.sharedMaterial = BuiltInMaterials.CreateUnlit(RobberColor);
+            renderer.sharedMaterial.renderQueue = 3180;
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
             ColonistSceneDestroy.SafeDestroy(part.GetComponent<Collider>());
