@@ -113,7 +113,7 @@ namespace CatanRoguelike.Game
         private static readonly Color StormMarkerColor = new(0.1f, 0.15f, 0.55f);
 
         // Target world-space chip size (visible disc on the hex top).
-        public const float TokenWorldFaceDiameter = 0.62f;
+        public const float TokenWorldFaceDiameter = 0.68f;
         /// <summary>Port rate badge disc diameter as a fraction of the number token face diameter.</summary>
         public const float PortBadgeDiameterFraction = 0.90f;
         public static float TokenRimWorldDiameter => TokenWorldFaceDiameter * RimOuterRadiusFactor;
@@ -228,10 +228,11 @@ namespace CatanRoguelike.Game
             // multiplied by that lossyScale, so divide target world sizes to keep a visible cream disc.
             var hexScale = transform.lossyScale;
             float localFaceDiameter = WorldFaceDiameter / hexScale.x;
+            float localRimDiameter = WorldFaceDiameter * RimOuterRadiusFactor / hexScale.x;
             float localFaceHeight = WorldChipThickness / (ThinDiskMesh.MeshHeight * hexScale.y);
             float localRimHeight = WorldChipThickness * 0.55f / (ThinDiskMesh.MeshHeight * hexScale.y);
 
-            _chipRimRenderer = CreateTokenRimRing(localFaceDiameter, localRimHeight, 3135);
+            _chipRimRenderer = CreateTokenRimDisc(localRimDiameter, localRimHeight, 3135);
             _chipFaceRenderer = CreateFlatChipDisc("Face", localFaceDiameter, localFaceHeight, 0f, 3145);
             UpdateTokenChipGeometry();
         }
@@ -254,31 +255,34 @@ namespace CatanRoguelike.Game
 
             var hexScale = transform.lossyScale;
             float localFaceDiameter = WorldFaceDiameter / hexScale.x;
+            float localRimDiameter = WorldFaceDiameter * RimOuterRadiusFactor / hexScale.x;
             float localFaceHeight = WorldChipThickness / (ThinDiskMesh.MeshHeight * hexScale.y);
             float localRimHeight = WorldChipThickness * 0.55f / (ThinDiskMesh.MeshHeight * hexScale.y);
 
-            float rimTopY = localRimHeight * TokenChipAnnulusMesh.TopY;
+            float rimTopY = localRimHeight * ThinDiskMesh.TopY;
             float faceCenterY = rimTopY + FaceAboveRimGapLocal + localFaceHeight;
 
             _tokenChip.transform.localPosition = new Vector3(0f, HexPrismMesh.TopY + ChipBaseLiftLocal, 0f);
-            _chipRimRenderer.transform.localScale = new Vector3(localFaceDiameter, localRimHeight, localFaceDiameter);
+            _chipRimRenderer.transform.localScale = new Vector3(localRimDiameter, localRimHeight, localRimDiameter);
             _chipRimRenderer.transform.localPosition = Vector3.zero;
             _chipFaceRenderer.transform.localScale = new Vector3(localFaceDiameter, localFaceHeight, localFaceDiameter);
             _chipFaceRenderer.transform.localPosition = new Vector3(0f, faceCenterY, 0f);
         }
 
-        private Renderer CreateTokenRimRing(float faceDiameter, float height, int renderQueue)
+        /// <summary>Full brown disc under the cream face (Catan-style rim ring when viewed top-down).</summary>
+        private Renderer CreateTokenRimDisc(float rimDiameter, float height, int renderQueue)
         {
             var ring = new GameObject("Rim");
             ring.transform.SetParent(_tokenChip.transform, false);
             ring.transform.localPosition = Vector3.zero;
-            ring.transform.localScale = new Vector3(faceDiameter, height, faceDiameter);
+            ring.transform.localScale = new Vector3(rimDiameter, height, rimDiameter);
 
             var meshFilter = ring.AddComponent<MeshFilter>();
-            meshFilter.sharedMesh = TokenChipAnnulusMesh.Shared;
+            meshFilter.sharedMesh = ThinDiskMesh.Shared;
             var renderer = ring.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = BuiltInMaterials.CreateUnlit(Color.white);
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
             renderer.sharedMaterial.renderQueue = renderQueue;
             return renderer;
         }

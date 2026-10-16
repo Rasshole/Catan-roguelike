@@ -35,7 +35,7 @@ namespace CatanRoguelike.Tests
         [Test]
         public void ComputeRowLayout_RowWidthStaysInsideFaceDiameter()
         {
-            const float faceDiameter = 0.62f;
+            const float faceDiameter = HexTileView.TokenWorldFaceDiameter;
             const float labelScale = 0.08f;
             float maxRow = faceDiameter * NumberTokenPipVisuals.MaxRowWidthFaceFraction;
 
