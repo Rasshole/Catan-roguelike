@@ -139,15 +139,15 @@ namespace CatanRoguelike.Game
         public static Vector3 ComputeColonistSandDiskScale(float boardBoundingRadius) =>
             ComputeCylinderDiskScale(boardBoundingRadius * 1.18f, WaterSurfaceThinY * 0.9f);
 
-        public readonly struct ColonistSurfaceLayout
+        public struct ColonistSurfaceLayout
         {
-            public readonly float HexBottomY;
-            public readonly float SandCenterY;
-            public readonly float SandTopY;
-            public readonly float OceanCenterY;
-            public readonly float OceanTopY;
-            public readonly Vector3 OceanScale;
-            public readonly Vector3 SandScale;
+            public float HexBottomY;
+            public float SandCenterY;
+            public float SandTopY;
+            public float OceanCenterY;
+            public float OceanTopY;
+            public Vector3 OceanScale;
+            public Vector3 SandScale;
         }
 
         /// <summary>Ocean below sand below hex prism base (top-down camera sees hex tops first).</summary>
