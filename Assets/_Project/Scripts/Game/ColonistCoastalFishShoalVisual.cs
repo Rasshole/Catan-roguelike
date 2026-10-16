@@ -1,6 +1,6 @@
-using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace CatanRoguelike.Game
 {
@@ -12,32 +12,46 @@ namespace CatanRoguelike.Game
             Transform boardRoot,
             HexTileData data,
             FishShoalPlacement placement,
-            float hexScale,
-            float hexTopY)
+            float hexHeightScale)
         {
             var root = new GameObject($"{ShoalRootName}_{data.Coord.Q}_{data.Coord.R}");
             root.transform.SetParent(boardRoot, false);
-
             root.transform.localPosition = new Vector3(
                 placement.TokenCenter.X,
                 0f,
                 placement.TokenCenter.Z);
+            root.transform.localScale = new Vector3(1f, hexHeightScale, 1f);
 
             var meshGo = new GameObject("ShoalMesh");
             meshGo.transform.SetParent(root.transform, false);
-            var mesh = CoastalFishShoalMesh.Create(placement, hexTopY, placement.TokenCenter);
+            var mesh = CoastalFishShoalMesh.CreateLocal(placement, placement.TokenCenter);
             var meshFilter = meshGo.AddComponent<MeshFilter>();
             meshFilter.sharedMesh = mesh;
             var renderer = meshGo.AddComponent<MeshRenderer>();
-            var shoalMat = ColonistBoardTextureLoader.GetTerrainMaterial(BoardTerrainSlot.FishShoal);
-            renderer.sharedMaterial = shoalMat;
-            renderer.sharedMaterial.renderQueue = 1990;
-            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.sharedMaterial = CreateShoalMaterial();
+            renderer.sharedMaterial.renderQueue = 2002;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
 
             var view = root.AddComponent<HexTileView>();
             view.Initialize(data, renderer);
             view.RefreshNumberToken(data);
             return view;
+        }
+
+        private static Material CreateShoalMaterial()
+        {
+            var tex = ColonistBoardTextureLoader.LoadBoardTexture(BoardTerrainSlot.FishShoal);
+            if (tex != null)
+            {
+                var mat = BuiltInMaterials.Create(tex, Color.white);
+                mat.renderQueue = 2002;
+                return mat;
+            }
+
+            var fallback = BuiltInMaterials.CreateUnlit(new Color(0.48f, 0.72f, 0.78f, 1f), zWrite: true);
+            fallback.renderQueue = 2002;
+            return fallback;
         }
     }
 }

@@ -16,11 +16,13 @@ namespace CatanRoguelike.Core.Map
         private const int HexCornerCount = 6;
         public const float DefaultBadgeDiscRadius = 0.42f;
         public const float BadgeLandPolygonClearance = 0.03f;
+        /// <summary>Extra radius so clearance matches drawn hex outline + badge rim (world units).</summary>
+        public const float BadgeRenderedLandInset = 0.055f;
         public const float FishShoalLandClearance = 0.05f;
-        private const float FishShoalCoastInsetFactor = 0.11f;
-        private const float FishShoalSeaDepthFactor = 0.26f;
+        private const float FishShoalCoastInsetFactor = 0.14f;
+        private const float FishShoalSeaDepthFactor = 0.28f;
         private const float FishShoalBaseHalfWidthFactor = 0.36f;
-        private const float FishShoalTokenDepthFactor = 0.62f;
+        private const float FishShoalTokenDepthFactor = 0.76f;
         private const float BadgeClearanceEpsilon = 0.004f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 
@@ -319,7 +321,7 @@ namespace CatanRoguelike.Core.Map
             float polygonClearance,
             float hexScale)
         {
-            float probeRadius = badgeRadius + polygonClearance + BadgeClearanceEpsilon;
+            float probeRadius = badgeRadius + BadgeRenderedLandInset + polygonClearance + BadgeClearanceEpsilon;
             foreach (var landCoord in board.Tiles.Keys)
             {
                 if (DiscIntersectsHexPolygon(center, probeRadius, landCoord, hexScale))

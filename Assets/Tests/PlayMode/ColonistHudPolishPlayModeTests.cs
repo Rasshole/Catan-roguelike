@@ -358,7 +358,8 @@ namespace CatanRoguelike.Tests.PlayMode
 
                 Vector3 worldCenter = renderer.bounds.center;
                 var center = new MapPlaneXz(worldCenter.x, worldCenter.z);
-                float radius = renderer.transform.lossyScale.x * 0.5f;
+                float radius = Mathf.Max(renderer.bounds.extents.x, renderer.bounds.extents.z)
+                    + SeaFrameSlotLayout.BadgeRenderedLandInset;
                 float minDist = SeaFrameSlotLayout.MinDistanceToLandHexPolygons(board, center, hexScale);
                 float required = radius + SeaFrameSlotLayout.BadgeLandPolygonClearance;
                 Assert.Greater(

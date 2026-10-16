@@ -15,8 +15,6 @@ namespace CatanRoguelike.Game
         {
             if (data.IsDesert)
                 return;
-            if (ColonistBoardTextureLoader.HasCommittedTerrainArt())
-                return;
 
             float hexSize = hexScale * HexMath.OuterRadius;
             float worldDiameter = hexSize * IconSizeFactor * 2f;

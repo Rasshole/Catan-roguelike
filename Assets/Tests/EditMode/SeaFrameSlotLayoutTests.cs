@@ -70,7 +70,8 @@ namespace CatanRoguelike.Tests.EditMode
         {
             var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
             var ports = PortAccess.DiscoverPorts(board);
-            float radius = SeaFrameSlotLayout.DefaultBadgeDiscRadius;
+            float radius = SeaFrameSlotLayout.DefaultBadgeDiscRadius
+                + SeaFrameSlotLayout.BadgeRenderedLandInset;
             float requiredGap = radius + SeaFrameSlotLayout.BadgeLandPolygonClearance;
 
             foreach (var port in ports)
@@ -94,7 +95,8 @@ namespace CatanRoguelike.Tests.EditMode
         {
             var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
             var ports = PortAccess.DiscoverPorts(board);
-            float radius = SeaFrameSlotLayout.DefaultBadgeDiscRadius;
+            float radius = SeaFrameSlotLayout.DefaultBadgeDiscRadius
+                + SeaFrameSlotLayout.BadgeRenderedLandInset;
 
             foreach (var port in ports)
             {

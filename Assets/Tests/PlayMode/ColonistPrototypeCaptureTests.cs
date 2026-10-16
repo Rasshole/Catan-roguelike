@@ -174,6 +174,14 @@ namespace CatanRoguelike.Tests.PlayMode
                     tableCamera,
                     GameSceneCapture.CaptureWidth,
                     GameSceneCapture.CaptureHeight);
+                ColonistBoardCaptureAssertions.AssertCoastalFishShoalsVisibleOnBoardCapture(
+                    boardOnly,
+                    mainCamera,
+                    tableCamera,
+                    gameManager.Controller.State.Board,
+                    boardView.HexScale,
+                    GameSceneCapture.CaptureWidth,
+                    GameSceneCapture.CaptureHeight);
                 ColonistBoardCaptureAssertions.AssertFishermenHarnessBoardAndHud(gameManager.Controller.State);
 
                 AssertTextureHasVisibleContent(withHud);

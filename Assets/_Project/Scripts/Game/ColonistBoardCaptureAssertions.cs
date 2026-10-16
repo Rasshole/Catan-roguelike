@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using CatanRoguelike.Core;
+using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.UI;
 using CatanRoguelike.Core.Yield;
 using UnityEngine;
@@ -765,6 +766,61 @@ namespace CatanRoguelike.Game
                 land,
                 $"Colonist board should show {expectedLandHexes} land hex views (sea fish are separate).");
         }
+
+        public static void AssertCoastalFishShoalsVisibleOnBoardCapture(
+            Texture2D boardCapture,
+            Camera camera,
+            TableCamera tableCamera,
+            BoardState board,
+            float hexScale,
+            int textureWidth,
+            int textureHeight)
+        {
+            Assert.IsNotNull(boardCapture);
+            Assert.IsNotNull(camera);
+            Assert.IsNotNull(tableCamera);
+            Assert.IsNotNull(board);
+
+            int shoals = 0;
+            int tealSamples = 0;
+            int tealHits = 0;
+            foreach (var tile in Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
+            {
+                if (!BoardState.IsSeaFishGround(tile.Data))
+                    continue;
+
+                shoals++;
+                if (!SeaFrameSlotLayout.TryGetFishShoalPlacement(
+                        board, tile.Data.Coord, hexScale, out FishShoalPlacement placement))
+                    continue;
+
+                float y = tile.ChipTopWorldY;
+                var probeWorld = new Vector3(placement.SeaTip.X, y, placement.SeaTip.Z);
+                var pixel = ColonistCaptureProjection.WorldToTexturePixel(
+                    probeWorld, camera, tableCamera, textureWidth, textureHeight);
+
+                for (int dx = -4; dx <= 4; dx++)
+                {
+                    for (int dy = -4; dy <= 4; dy++)
+                    {
+                        int x = Mathf.Clamp(pixel.x + dx, 0, boardCapture.width - 1);
+                        int yPx = Mathf.Clamp(pixel.y + dy, 0, boardCapture.height - 1);
+                        Color c = boardCapture.GetPixel(x, yPx);
+                        tealSamples++;
+                        if (IsFishShoalTeal(c))
+                            tealHits++;
+                    }
+                }
+            }
+
+            Assert.IsTrue(shoals > 2, "Board should render multiple coastal fish shoals.");
+            Assert.IsTrue(
+                tealHits > Mathf.Max(12, tealSamples / 6),
+                $"Fish shoal capture should include teal shoal pixels (teal={tealHits}/{tealSamples}).");
+        }
+
+        private static bool IsFishShoalTeal(Color c) =>
+            c.g > c.r + 0.06f && c.b > c.r + 0.04f && c.g > 0.42f && c.b > 0.38f;
 
         public static void AssertFishermenHarnessBoardAndHud(GameState state)
         {

@@ -369,31 +369,11 @@ namespace CatanRoguelike.Game
                         board, kvp.Key, hexScale, out FishShoalPlacement placement))
                     continue;
 
-                float topY = ResolveCoastalFishShoalTopY(board, kvp.Key, placement);
+                float hexHeight = tileHeight * 0.25f;
                 var view = ColonistCoastalFishShoalVisual.Build(
-                    boardRoot, kvp.Value, placement, hexScale, topY);
+                    boardRoot, kvp.Value, placement, hexHeight);
                 _fishShoalViews[kvp.Key] = view;
             }
-        }
-
-        private float ResolveCoastalFishShoalTopY(
-            BoardState board,
-            HexCoord seaCoord,
-            FishShoalPlacement placement)
-        {
-            foreach (var kvp in _tiles)
-            {
-                for (int d = 0; d < 6; d++)
-                {
-                    if (HexMath.GetNeighbor(kvp.Key, d) != seaCoord)
-                        continue;
-
-                    return GetHexTopWorldPoint(kvp.Value.transform).y;
-                }
-            }
-
-            float height = ColonistPresentation.IsActive ? tileHeight * 0.25f : tileHeight;
-            return height * HexPrismMesh.TopY;
         }
 
         private void CreateTableSurface(BoardState board)

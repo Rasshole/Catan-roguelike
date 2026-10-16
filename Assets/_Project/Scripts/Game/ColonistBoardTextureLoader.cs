@@ -54,8 +54,8 @@ namespace CatanRoguelike.Game
 
         public static void ClearCache() => _cache.Clear();
 
-        public static bool HasCommittedTerrainArt() =>
-            Resources.Load<Texture2D>($"{ArtRoot}/Wood") != null;
+        public static Texture2D LoadBoardTexture(BoardTerrainSlot slot) =>
+            Resources.Load<Texture2D>($"{ArtRoot}/{slot}");
 
         private static void ApplyTerrainSurface(Material mat)
         {
