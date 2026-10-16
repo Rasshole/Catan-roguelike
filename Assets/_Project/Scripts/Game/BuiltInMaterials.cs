@@ -92,6 +92,17 @@ namespace CatanRoguelike.Game
             && material.shader != null
             && material.shader.name.Contains("Unlit");
 
+        public static string FormatMaterialColorForLog(Material material)
+        {
+            if (material == null)
+                return "null";
+            if (material.HasProperty("_Color"))
+                return material.GetColor("_Color").ToString();
+            if (material.HasProperty("_MainTex") && material.mainTexture != null)
+                return $"tex={material.mainTexture.name}";
+            return material.shader != null ? material.shader.name : "mat";
+        }
+
         /// <summary>Translucent Standard material for placement hover silhouettes.</summary>
         public static Material CreateGhost(Color color)
         {

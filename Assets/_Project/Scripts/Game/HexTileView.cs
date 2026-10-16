@@ -549,10 +549,10 @@ namespace CatanRoguelike.Game
             sb.AppendLine($"HexTileView RobberPawn renderers tile={Data.Coord}:");
             foreach (var renderer in _robberMarker.GetComponentsInChildren<Renderer>())
             {
-                Color c = renderer.sharedMaterial != null ? renderer.sharedMaterial.color : Color.magenta;
+                string matInfo = BuiltInMaterials.FormatMaterialColorForLog(renderer.sharedMaterial);
                 sb.AppendLine(
                     $"  {renderer.gameObject.name} maxY={renderer.bounds.max.y:F4} " +
-                    $"bounds={renderer.bounds.size} queue={renderer.sharedMaterial?.renderQueue} color={c}");
+                    $"bounds={renderer.bounds.size} queue={renderer.sharedMaterial?.renderQueue} mat={matInfo}");
             }
 
             Debug.Log(sb.ToString());
