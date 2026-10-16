@@ -19,6 +19,9 @@ NATURE_TEX = ROOT / "Assets/_Project/Resources/Art/Models/Nature/Textures"
 
 OUT_SIZE = 256
 TOP_FACE_HEIGHT_FRAC = 0.72
+# Kenney hex tops include a white/cyan coast strip on one edge — sample inner face only.
+INNER_HEX_SCALE = 0.84
+DST_HEX_RADIUS_FRAC = 0.42
 
 # Plain terrain tops only (no buildings). Graded toward Catan-style palette in PALETTE_RGB.
 TERRAIN_SOURCES: dict[str, str] = {
@@ -36,13 +39,26 @@ TERRAIN_SOURCES: dict[str, str] = {
 PALETTE_RGB: dict[str, tuple[int, int, int]] = {
     "Wood": (46, 158, 56),
     "Sheep": (158, 235, 140),
-    "Wheat": (242, 209, 46),
+    "Wheat": (232, 197, 71),
     "Brick": (209, 97, 56),
     "Ore": (125, 128, 135),
     "Desert": (237, 209, 132),
     "CoastSand": (240, 224, 184),
     "SeaLake": (118, 178, 220),
 }
+
+
+def scale_hex(poly: list[tuple[float, float]], scale: float) -> list[tuple[float, float]]:
+    cx = sum(p[0] for p in poly) / len(poly)
+    cy = sum(p[1] for p in poly) / len(poly)
+    return [(cx + (x - cx) * scale, cy + (y - cy) * scale) for x, y in poly]
+
+
+def is_coast_sliver_pixel(r: int, g: int, b: int) -> bool:
+    """Kenney edge foam / cyan coast paint on terrain tops."""
+    if r + g + b < 200:
+        return False
+    return b > 175 and g > 165 and r > 130 and (b - r) > 18
 
 
 def pointy_hex_corners(cx: float, cy: float, radius: float) -> list[tuple[float, float]]:
@@ -104,8 +120,9 @@ def extract_top_face_raw(src: Path) -> tuple[Image.Image, list[tuple[float, floa
         min_y, max_y = 0, ch - 1
     cx = (min_x + max_x) * 0.5
     cy = (min_y + max_y) * 0.5
-    radius = min(max_x - min_x, max_y - min_y) * 0.46
-    return crop, pointy_hex_corners(cx, cy, radius)
+    radius = min(max_x - min_x, max_y - min_y) * 0.40
+    hex_poly = pointy_hex_corners(cx, cy, radius)
+    return crop, scale_hex(hex_poly, INNER_HEX_SCALE)
 
 
 def sample_top_face_to_hex(crop: Image.Image, src_hex: list[tuple[float, float]]) -> Image.Image:
@@ -118,7 +135,7 @@ def sample_top_face_to_hex(crop: Image.Image, src_hex: list[tuple[float, float]]
 
     dst_cx = OUT_SIZE * 0.5
     dst_cy = OUT_SIZE * 0.5
-    dst_r = OUT_SIZE * 0.475
+    dst_r = OUT_SIZE * DST_HEX_RADIUS_FRAC
     dst_hex = pointy_hex_corners(dst_cx, dst_cy, dst_r)
 
     rgba = Image.new("RGBA", (OUT_SIZE, OUT_SIZE), (0, 0, 0, 0))
@@ -137,7 +154,7 @@ def sample_top_face_to_hex(crop: Image.Image, src_hex: list[tuple[float, float]]
             iy = int(round(sy))
             if 0 <= ix < cw and 0 <= iy < ch:
                 r, g, b, a = px[ix, iy]
-                if r + g + b < 100:
+                if r + g + b < 100 or is_coast_sliver_pixel(r, g, b):
                     continue
                 out_px[x, y] = (r, g, b, 255)
     return rgba
@@ -214,7 +231,7 @@ def fill_outside_hex_with_face(im: Image.Image, outline_strength: float = 0.08) 
     """No charcoal frame: exterior of UV square uses face colour; thin edge darkening only."""
     dst_cx = OUT_SIZE * 0.5
     dst_cy = OUT_SIZE * 0.5
-    dst_r = OUT_SIZE * 0.475
+    dst_r = OUT_SIZE * DST_HEX_RADIUS_FRAC
     dst_hex = pointy_hex_corners(dst_cx, dst_cy, dst_r)
     ar, ag, ab = average_rgb(im)
     fill = (int(ar), int(ag), int(ab), 255)
@@ -239,10 +256,10 @@ def build_terrain_slot(src: Path, slot: str) -> Image.Image:
     target = PALETTE_RGB[slot]
     im = grade_to_palette(im, target, strength=0.78)
     if slot == "Wheat":
-        im = grade_to_palette(im, target, strength=0.92)
-        im = ImageEnhance.Color(im.convert("RGB")).enhance(1.22)
+        im = grade_to_palette(im, target, strength=0.88)
+        im = ImageEnhance.Color(im.convert("RGB")).enhance(0.82)
         im = im.convert("RGBA")
-        im = grade_to_palette(im, target, strength=0.65)
+        im = grade_to_palette(im, target, strength=0.55)
     if slot == "Wood":
         im = grade_to_palette(im, target, strength=0.88)
         im = ImageEnhance.Color(im.convert("RGB")).enhance(1.18)
@@ -265,27 +282,16 @@ def build_terrain_slot(src: Path, slot: str) -> Image.Image:
     return nudge_average_to_target(im, target)
 
 
-def make_fish_chevron_albedo() -> Image.Image:
-    """Chevron albedo: light blue frame + fish on arms (UV matches CoastalFishShoalMesh)."""
-    w = h = OUT_SIZE
+def make_fish_icon_albedo() -> Image.Image:
+    """Small fish sprite for transparent board quads (alpha outside fish)."""
+    w = h = 128
     im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(im)
-    water = (148, 198, 232, 255)
-    cx, cy = w // 2, int(h * 0.52)
-    # Pentagon matching mesh UV layout (inland top, arms, sea flat bottom)
-    inland = (cx, int(h * 0.08))
-    arm_l = (int(w * 0.12), int(h * 0.42))
-    arm_r = (int(w * 0.88), int(h * 0.42))
-    sea_l = (int(w * 0.08), int(h * 0.95))
-    sea_r = (int(w * 0.92), int(h * 0.95))
-    draw.polygon([inland, arm_l, arm_r, sea_r, sea_l], fill=water)
-    fish = (42, 108, 148, 230)
-    for fx, fy, sc in [(cx - 55, cy - 10, 1.0), (cx + 40, cy - 35, 0.85), (cx + 10, cy + 25, 0.7)]:
-        draw.ellipse((fx - 18 * sc, fy - 8 * sc, fx + 18 * sc, fy + 8 * sc), fill=fish)
-        draw.polygon(
-            [(fx + 18 * sc, fy), (fx + 30 * sc, fy - 10 * sc), (fx + 30 * sc, fy + 10 * sc)],
-            fill=fish,
-        )
+    fish = (38, 98, 138, 255)
+    cx, cy = w // 2, h // 2
+    draw.ellipse((cx - 34, cy - 14, cx + 34, cy + 14), fill=fish)
+    draw.polygon([(cx + 34, cy), (cx + 52, cy - 18), (cx + 52, cy + 18)], fill=fish)
+    draw.ellipse((cx - 10, cy - 4, cx - 2, cy + 4), fill=(220, 235, 245, 255))
     return im
 
 
@@ -313,8 +319,8 @@ def main() -> None:
         save_png(BOARD / f"{slot}.png", im)
         print(f"board {slot}")
 
-    save_png(BOARD / "FishShoal.png", make_fish_chevron_albedo())
-    print("board FishShoal")
+    save_png(BOARD / "FishIcon.png", make_fish_icon_albedo())
+    print("board FishIcon")
 
     dice_src = Path("/tmp/art-import")
     for i in range(1, 7):

@@ -6,7 +6,7 @@ namespace CatanRoguelike.Core.UI
         public static readonly Rgb Desert = new(0.93f, 0.82f, 0.52f);
         public static readonly Rgb Wood = new(0.18f, 0.62f, 0.22f);
         public static readonly Rgb Brick = new(0.82f, 0.38f, 0.22f);
-        public static readonly Rgb Wheat = new(0.95f, 0.82f, 0.18f);
+        public static readonly Rgb Wheat = new(0.91f, 0.77f, 0.28f);
         public static readonly Rgb Sheep = new(0.62f, 0.92f, 0.55f);
         public static readonly Rgb Stone = new(0.49f, 0.50f, 0.53f);
         public static readonly Rgb TileOutline = new(0.12f, 0.14f, 0.16f);
