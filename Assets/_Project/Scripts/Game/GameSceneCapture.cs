@@ -17,6 +17,15 @@ namespace CatanRoguelike.Game
         public const int CaptureWidth = 1920;
         public const int CaptureHeight = 1080;
 
+        private static void PrepareMainCameraPoseForCapture(Camera camera, int width, int height)
+        {
+            if (camera == null)
+                return;
+
+            var tableCamera = camera.GetComponent<TableCamera>();
+            tableCamera?.ApplyCapturePose(width, height);
+        }
+
         public static string ResolveOutputPath()
         {
             var env = Environment.GetEnvironmentVariable(OutputPathEnvVar);
@@ -106,6 +115,7 @@ namespace CatanRoguelike.Game
                 camera.pixelRect = new Rect(0f, 0f, width, height);
                 camera.targetTexture = renderTexture;
                 RenderTexture.active = renderTexture;
+                PrepareMainCameraPoseForCapture(camera, width, height);
                 camera.cullingMask = previousCullingMask & ~(1 << RunHudController.HudCaptureUiLayer);
 
                 canvasRestore = hud.BeginCanvasCameraCapture(camera, width, height);
@@ -163,6 +173,7 @@ namespace CatanRoguelike.Game
                 camera.pixelRect = new Rect(0f, 0f, width, height);
                 camera.targetTexture = renderTexture;
                 RenderTexture.active = renderTexture;
+                PrepareMainCameraPoseForCapture(camera, width, height);
 
                 NumberTokenLabelOrientation.RefreshAllLabelsForCamera(camera);
                 Canvas.ForceUpdateCanvases();

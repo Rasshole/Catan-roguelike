@@ -95,7 +95,9 @@ namespace CatanRoguelike.Game
             var hexScale = transform.lossyScale;
             float localDiameter = 0.09f / hexScale.x;
             float localHeight = 0.025f / hexScale.y;
-            float rowZ = -0.14f / hexScale.z;
+            float rowZ = ColonistPresentation.IsActive
+                ? 0.20f / hexScale.z
+                : -0.14f / hexScale.z;
             float rowY = WorldChipThickness * 0.35f / hexScale.y;
 
             var offsets = NumberTokenPipLayout.GetPipOffsetsX(pipCount);

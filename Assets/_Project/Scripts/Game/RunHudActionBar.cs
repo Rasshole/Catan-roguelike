@@ -38,6 +38,12 @@ namespace CatanRoguelike.Game
             rootLayout.childControlHeight = true;
 
             _actionBarBuildRoot = CreateActionBarSlot("BuildSlot", flexibleWidth: 1f);
+            if (ColonistPresentation.IsActive)
+            {
+                var buildLayout = _actionBarBuildRoot.GetComponent<LayoutElement>();
+                if (buildLayout != null)
+                    buildLayout.minWidth = 420f;
+            }
             _actionBarTradeRoot = CreateActionBarSlot("TradeSlot", flexibleWidth: 0f, minWidth: 96f);
             _actionBarCenterRoot = CreateActionBarSlot("DiceRollSlot", flexibleWidth: 0f, minWidth: 200f);
             float endTurnMinWidth = ColonistPresentation.IsActive ? 200f : 148f;
@@ -71,8 +77,8 @@ namespace CatanRoguelike.Game
         {
             if (ColonistPresentation.IsActive)
             {
-                BuildColonistDieFace(parent, "DieA", out _colonistDieFaceA);
-                BuildColonistDieFace(parent, "DieB", out _colonistDieFaceB);
+                BuildColonistDieFace(parent, "DieA", out _colonistDiePipsA);
+                BuildColonistDieFace(parent, "DieB", out _colonistDiePipsB);
             }
             else
             {

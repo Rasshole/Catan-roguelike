@@ -7,8 +7,62 @@ namespace CatanRoguelike.Game
     public sealed partial class RunHudController
     {
         private RectTransform _actionBarTradeRoot;
-        private Text _colonistDieFaceA;
-        private Text _colonistDieFaceB;
+        private Image[] _colonistDiePipsA;
+        private Image[] _colonistDiePipsB;
+
+        public struct ColonistActionBarLayoutProbe
+        {
+            public bool EndTurnActiveInHierarchy;
+            public Vector2 EndTurnSize;
+            public bool RollActiveInHierarchy;
+            public Vector2 RollSize;
+            public bool RoadActiveInHierarchy;
+            public Vector2 RoadSize;
+            public bool SettlementActiveInHierarchy;
+            public Vector2 SettlementSize;
+            public bool CityActiveInHierarchy;
+            public Vector2 CitySize;
+            public bool DevActiveInHierarchy;
+            public Vector2 DevSize;
+
+            public void LogToConsole()
+            {
+                Debug.Log(
+                    "ColonistActionBarLayout: " +
+                    $"endTurn active={EndTurnActiveInHierarchy} size={EndTurnSize} " +
+                    $"roll active={RollActiveInHierarchy} size={RollSize} " +
+                    $"road active={RoadActiveInHierarchy} size={RoadSize} " +
+                    $"settlement active={SettlementActiveInHierarchy} size={SettlementSize} " +
+                    $"city active={CityActiveInHierarchy} size={CitySize} " +
+                    $"dev active={DevActiveInHierarchy} size={DevSize}");
+            }
+        }
+
+        public ColonistActionBarLayoutProbe GetColonistActionBarLayoutForTests() =>
+            ColonistPresentation.IsActive ? GatherColonistActionBarLayout() : default;
+
+        private ColonistActionBarLayoutProbe GatherColonistActionBarLayout()
+        {
+            var probe = new ColonistActionBarLayoutProbe();
+            SampleButton(_endTurnPinned, ref probe.EndTurnActiveInHierarchy, ref probe.EndTurnSize);
+            SampleButton(_rollPinned, ref probe.RollActiveInHierarchy, ref probe.RollSize);
+            SampleButton(_buildRoadButton, ref probe.RoadActiveInHierarchy, ref probe.RoadSize);
+            SampleButton(_buildSettlementButton, ref probe.SettlementActiveInHierarchy, ref probe.SettlementSize);
+            SampleButton(_buildCityButton, ref probe.CityActiveInHierarchy, ref probe.CitySize);
+            SampleButton(_buildDevButton, ref probe.DevActiveInHierarchy, ref probe.DevSize);
+            return probe;
+        }
+
+        private static void SampleButton(Button button, ref bool activeInHierarchy, ref Vector2 size)
+        {
+            if (button == null)
+                return;
+
+            activeInHierarchy = button.gameObject.activeInHierarchy;
+            var rect = button.transform as RectTransform;
+            if (rect != null)
+                size = rect.rect.size;
+        }
 
         private void EnsureColonistTradeButton()
         {
@@ -27,48 +81,41 @@ namespace CatanRoguelike.Game
             _openTradeDialogButton = tradeBtn;
         }
 
-        private void BuildColonistDieFace(Transform parent, string name, out Text faceLabel)
+        private void BuildColonistDieFace(Transform parent, string name, out Image[] pipImages)
         {
             var dieGo = new GameObject(name);
             dieGo.layer = parent.gameObject.layer;
             dieGo.transform.SetParent(parent, false);
             RunHudUiFactory.AddLayoutElement(dieGo, 48f).preferredWidth = 48f;
-            var bg = dieGo.AddComponent<Image>();
-            bg.color = new Color(0.96f, 0.94f, 0.88f, 1f);
-
-            faceLabel = RunHudUiFactory.CreateText(
-                dieGo.transform,
-                "Face",
-                "·",
-                22,
-                TextAnchor.MiddleCenter,
-                new Color(0.12f, 0.14f, 0.18f, 1f),
-                FontStyle.Bold);
+            dieGo.AddComponent<Image>().color = new Color(0.96f, 0.94f, 0.88f, 1f);
+            ColonistDiceFaceUi.Build(dieGo.transform, out pipImages);
         }
 
         private void RefreshColonistDiceFaces(GameState state)
         {
-            if (_colonistDieFaceA == null || _colonistDieFaceB == null)
+            if (_colonistDiePipsA == null || _colonistDiePipsB == null)
                 return;
 
             var dice = state.IsNightPhase ? state.TomorrowDiceRolls : state.TodayDiceRolls;
             if (dice == null || dice.Count == 0)
             {
-                _colonistDieFaceA.text = "·";
-                _colonistDieFaceB.text = "·";
+                ColonistDiceFaceUi.SetValue(_colonistDiePipsA, 0);
+                ColonistDiceFaceUi.SetValue(_colonistDiePipsB, 0);
                 return;
             }
 
-            if (dice.Count >= 2)
-            {
-                _colonistDieFaceA.text = dice[0].ToString();
-                _colonistDieFaceB.text = dice[1].ToString();
-            }
-            else
-            {
-                _colonistDieFaceA.text = dice[0].ToString();
-                _colonistDieFaceB.text = "·";
-            }
+            int a = dice[0];
+            int b = dice.Count >= 2 ? dice[1] : 0;
+            ColonistDiceFaceUi.SetValue(_colonistDiePipsA, a);
+            ColonistDiceFaceUi.SetValue(_colonistDiePipsB, b);
+        }
+
+        private void SetColonistDieValues(int a, int b)
+        {
+            if (_colonistDiePipsA != null)
+                ColonistDiceFaceUi.SetValue(_colonistDiePipsA, a);
+            if (_colonistDiePipsB != null)
+                ColonistDiceFaceUi.SetValue(_colonistDiePipsB, b);
         }
     }
 }

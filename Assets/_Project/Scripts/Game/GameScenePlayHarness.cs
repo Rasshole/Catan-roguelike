@@ -5,6 +5,7 @@ using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Turn;
+using CatanRoguelike.Core.Yield;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
@@ -58,6 +59,70 @@ namespace CatanRoguelike.Game
         {
             CompleteRunSelect(controller, meta);
             CompleteSetup(controller);
+        }
+
+        /// <summary>After setup: night skip → morning production → player day (handles 7 flow when needed).</summary>
+        public static void AdvanceToDayPlayerActions(GameController controller)
+        {
+            if (controller.State.Phase == GamePhase.NightPlayCard)
+                controller.SkipNightCard();
+
+            int guard = 0;
+            while (controller.State.Phase != GamePhase.DayPlayerActions && guard++ < 12)
+            {
+                switch (controller.State.Phase)
+                {
+                    case GamePhase.DayProduction:
+                        controller.ResolveDayProduction();
+                        break;
+                    case GamePhase.DayDiscardForSeven:
+                        if (!TrySubmitMinimalSevenDiscard(controller))
+                            throw new InvalidOperationException("could not submit seven discard.");
+                        break;
+                    case GamePhase.DayPlaceRobberSeven:
+                        if (!TryPlaceRobberForSeven(controller))
+                            throw new InvalidOperationException("could not place robber after seven.");
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"AdvanceToDayPlayerActions stalled in {controller.State.Phase}.");
+                }
+            }
+
+            if (controller.State.Phase != GamePhase.DayPlayerActions)
+                throw new InvalidOperationException(
+                    $"expected DayPlayerActions, got {controller.State.Phase}.");
+        }
+
+        private static bool TrySubmitMinimalSevenDiscard(GameController controller)
+        {
+            int need = controller.State.PendingSevenDiscard;
+            if (need <= 0)
+                return false;
+
+            var inv = controller.State.PlayerInventory;
+            var discard = new ResourceBundle();
+            foreach (ResourceType type in System.Enum.GetValues(typeof(ResourceType)))
+            {
+                while (need > 0 && inv[type] > discard[type])
+                {
+                    discard.Set(type, discard[type] + 1);
+                    need--;
+                }
+            }
+
+            return controller.SubmitSevenDiscard(discard);
+        }
+
+        private static bool TryPlaceRobberForSeven(GameController controller)
+        {
+            foreach (var coord in controller.State.Board.Tiles.Keys)
+            {
+                if (controller.PlaceRobberForSeven(coord))
+                    return true;
+            }
+
+            return false;
         }
 
         private static void AdvanceSetupStep(GameController game)

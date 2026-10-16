@@ -34,31 +34,33 @@ namespace CatanRoguelike.Game
             }
         }
 
-#if UNITY_EDITOR
-        /// <summary>
-        /// Edit-mode capture: apply the same orbit pose and HUD framing as <see cref="Start"/>
-        /// without relying on Play Mode lifecycle or <see cref="Update"/> input.
-        /// </summary>
-        public void ApplyPoseForCapture(int screenWidth, int screenHeight)
+        /// <summary>Apply play/capture camera pose for the given render size (PlayMode PNG + editor capture).</summary>
+        public void ApplyCapturePose(int screenWidth, int screenHeight)
         {
             EnsureCameraAndBoardView();
             EnsureLookTarget();
+            _angle = DefaultOrbitYawDegrees;
 
+            if (ColonistPresentation.IsActive)
+                ApplyColonistTopDownPose(screenWidth, screenHeight);
+            else
+            {
+                ApplyOrbitPose();
+                if (frameBoardRightOfHud && _camera != null)
+                    ApplyBoardFramingOffset(screenWidth, screenHeight);
+            }
+        }
+
+#if UNITY_EDITOR
+        public void ApplyPoseForCapture(int screenWidth, int screenHeight)
+        {
             var previousPixelRect = _camera != null ? _camera.pixelRect : default;
             if (_camera != null && screenWidth > 0 && screenHeight > 0)
                 _camera.pixelRect = new Rect(0f, 0f, screenWidth, screenHeight);
 
             try
             {
-                _angle = DefaultOrbitYawDegrees;
-                if (ColonistPresentation.IsActive)
-                    ApplyColonistTopDownPose(screenWidth, screenHeight);
-                else
-                {
-                    ApplyOrbitPose();
-                    if (frameBoardRightOfHud && _camera != null)
-                        ApplyBoardFramingOffset(screenWidth, screenHeight);
-                }
+                ApplyCapturePose(screenWidth, screenHeight);
             }
             finally
             {
@@ -66,7 +68,6 @@ namespace CatanRoguelike.Game
                     _camera.pixelRect = previousPixelRect;
             }
         }
-
 #endif
 
         private void EnsureCameraAndBoardView()
@@ -129,7 +130,8 @@ namespace CatanRoguelike.Game
                 boardRadius = 4f;
 
             _camera.orthographic = true;
-            transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            _camera.aspect = screenWidth / (float)screenHeight;
+            transform.rotation = Quaternion.Euler(90f, 90f, 0f);
 
             float left = RunHudLayout.GetContentLeftInset();
             float right = RunHudLayout.GetContentRightInset();
@@ -140,9 +142,9 @@ namespace CatanRoguelike.Game
 
             float playWidth = Mathf.Max(64f, screenWidth - left - right);
             float playHeight = Mathf.Max(64f, screenHeight - bottom - top);
-            float pad = 1.06f;
-            float orthoFromHeight = boardRadius * pad * screenHeight / (playHeight * 0.94f);
-            float orthoFromWidth = boardRadius * pad * screenHeight / (playWidth * 0.94f * _camera.aspect);
+            const float boardFill = 0.60f;
+            float orthoFromHeight = boardRadius * screenHeight / (boardFill * playHeight);
+            float orthoFromWidth = boardRadius * screenHeight / (boardFill * playWidth * _camera.aspect);
             _camera.orthographicSize = Mathf.Max(orthoFromHeight, orthoFromWidth);
 
             float worldPerPixel = (2f * _camera.orthographicSize) / screenHeight;
@@ -151,7 +153,7 @@ namespace CatanRoguelike.Game
             float deltaScreenX = desiredScreenX - screenWidth * 0.5f;
             float deltaScreenY = desiredScreenY - screenHeight * 0.5f;
 
-            Vector3 center = lookTarget.position;
+            Vector3 center = boardView != null ? boardView.transform.position : lookTarget.position;
             transform.position = new Vector3(
                 center.x - deltaScreenX * worldPerPixel,
                 center.y + 28f,

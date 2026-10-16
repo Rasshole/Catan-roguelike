@@ -22,7 +22,7 @@ namespace CatanRoguelike.Game
 
         public void SetDiceOverlay(string text)
         {
-            if (ColonistPresentation.IsActive && _colonistDieFaceA != null && _colonistDieFaceB != null)
+            if (ColonistPresentation.IsActive && _colonistDiePipsA != null && _colonistDiePipsB != null)
             {
                 if (string.IsNullOrEmpty(text))
                 {
@@ -32,10 +32,7 @@ namespace CatanRoguelike.Game
                 }
 
                 if (TryParseDiePair(text, out int a, out int b))
-                {
-                    _colonistDieFaceA.text = a.ToString();
-                    _colonistDieFaceB.text = b.ToString();
-                }
+                    SetColonistDieValues(a, b);
 
                 return;
             }

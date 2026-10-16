@@ -6,6 +6,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace CatanRoguelike.Tests.PlayMode
 {
@@ -47,6 +48,9 @@ namespace CatanRoguelike.Tests.PlayMode
             if (gameManager.Controller.State.Phase == GamePhase.RunSelectMap)
                 GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
 
+            GameScenePlayHarness.AdvanceToDayPlayerActions(gameManager.Controller);
+            Assert.AreEqual(GamePhase.DayPlayerActions, gameManager.Controller.State.Phase);
+
             gameManager.EnsureRunHudReady();
 
             Assert.IsFalse(gameManager.Controller.State.IsSetupPhase,
@@ -67,6 +71,15 @@ namespace CatanRoguelike.Tests.PlayMode
             Debug.Log($"Colonist capture HUD graphics count: {graphicCount}");
             Assert.IsTrue(hud.IsHudCaptureReady(),
                 $"HUD canvas should be built with graphics before capture (found {graphicCount}).");
+
+            hud.Refresh(gameManager.Controller.State);
+            Canvas.ForceUpdateCanvases();
+            if (hud.HudCanvas != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(hud.HudCanvas.GetComponent<RectTransform>());
+
+            var actionBar = hud.GetColonistActionBarLayoutForTests();
+            actionBar.LogToConsole();
+            AssertColonistActionBarVisible(actionBar);
 
             for (int i = 0; i < 4; i++)
                 yield return null;
@@ -184,6 +197,22 @@ namespace CatanRoguelike.Tests.PlayMode
         private static float ColorDistance(Color a, Color b)
         {
             return Mathf.Abs(a.r - b.r) + Mathf.Abs(a.g - b.g) + Mathf.Abs(a.b - b.b);
+        }
+
+        private static void AssertColonistActionBarVisible(RunHudController.ColonistActionBarLayoutProbe probe)
+        {
+            Assert.IsTrue(probe.EndTurnActiveInHierarchy, "End Turn should be active in hierarchy during DayPlayerActions.");
+            Assert.Greater(probe.EndTurnSize.x, 8f, "End Turn button width should be non-zero.");
+            Assert.Greater(probe.EndTurnSize.y, 8f, "End Turn button height should be non-zero.");
+
+            Assert.IsTrue(probe.RoadActiveInHierarchy, "Road build button should be active.");
+            Assert.Greater(probe.RoadSize.x, 8f, "Road button width should be non-zero.");
+            Assert.IsTrue(probe.SettlementActiveInHierarchy, "Settlement build button should be active.");
+            Assert.Greater(probe.SettlementSize.x, 8f, "Settlement button width should be non-zero.");
+            Assert.IsTrue(probe.CityActiveInHierarchy, "City build button should be active.");
+            Assert.Greater(probe.CitySize.x, 8f, "City button width should be non-zero.");
+            Assert.IsTrue(probe.DevActiveInHierarchy, "Dev button should be active.");
+            Assert.Greater(probe.DevSize.x, 8f, "Dev button width should be non-zero.");
         }
     }
 }

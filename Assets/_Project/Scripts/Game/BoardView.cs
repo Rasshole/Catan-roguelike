@@ -105,14 +105,23 @@ namespace CatanRoguelike.Game
                     BoardSurfaceMaterial.Create());
             }
 
-            var waterScale = TableCameraFraming.ComputeWaterDiskScale(boundingRadius);
             if (ColonistPresentation.IsActive)
-                waterScale *= 1.22f;
-            CreateTableDisk(
-                "WaterSurface",
-                ColonistPresentation.IsActive ? -0.14f : TableCameraFraming.WaterSurfaceLocalY,
-                waterScale,
-                BoardWaterMaterial.Create());
+            {
+                var waterScale = TableCameraFraming.ComputeWaterDiskScale(boundingRadius) * 1.35f;
+                CreateTableDisk(
+                    "WaterSurface",
+                    -0.16f,
+                    waterScale,
+                    BoardWaterMaterial.Create());
+            }
+            else
+            {
+                CreateTableDisk(
+                    "WaterSurface",
+                    TableCameraFraming.WaterSurfaceLocalY,
+                    TableCameraFraming.ComputeWaterDiskScale(boundingRadius),
+                    BoardWaterMaterial.Create());
+            }
 
             if (!ColonistPresentation.IsActive)
             {
