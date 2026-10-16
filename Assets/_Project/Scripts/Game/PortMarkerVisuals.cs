@@ -146,14 +146,24 @@ namespace CatanRoguelike.Game
             if (!isGeneric && specificResource.HasValue)
             {
                 float iconSize = discDiameter * 0.40f;
+                var labelRenderer = labelGo.GetComponent<Renderer>();
+                Vector3 right = ColonistFlatBoardQuad.GetColonistCameraRightOnBoard();
+                Vector3 upBoard = ColonistFlatBoardQuad.GetColonistCameraUpOnBoard();
+                Vector3 iconWorld = labelRenderer.bounds.center
+                    + right * (labelWorldWidth * 0.34f + iconSize * 0.55f)
+                    + upBoard * (iconSize * 0.40f);
+                iconWorld.y = labelRenderer.bounds.max.y + 0.008f;
+                Vector3 iconLocal = badgeRoot.transform.InverseTransformPoint(iconWorld);
+
                 ColonistFlatBoardQuad.Create(
-                    labelGo.transform,
+                    badgeRoot.transform,
                     "RateIcon",
-                    new Vector3(0.58f, 0.30f, -0.002f),
+                    iconLocal,
                     iconSize,
                     iconSize,
                     ColonistResourceIconTextures.Get(specificResource.Value),
                     3220,
+                    discRenderer,
                     alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);
             }
         }

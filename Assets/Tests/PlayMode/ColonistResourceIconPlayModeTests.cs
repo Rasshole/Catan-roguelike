@@ -136,7 +136,7 @@ namespace CatanRoguelike.Tests.PlayMode
 
                 var icon = tile.transform.Find("ResourceIcon");
                 Assert.IsNotNull(icon, $"Hex {tile.Data.Coord} should have ResourceIcon.");
-                Vector3 textureV = ColonistFlatBoardQuad.GetTextureVWorldAxis(icon);
+                Vector3 textureV = ColonistFlatBoardQuad.GetTextureVOnBoard(icon);
                 Assert.Greater(
                     Vector3.Dot(textureV, cameraUp),
                     0.85f,

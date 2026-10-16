@@ -86,9 +86,19 @@ namespace CatanRoguelike.Tests
             var badge = specificMarker.transform.Find("PortRateBadge");
             Assert.IsNotNull(badge);
             Assert.IsNotNull(badge.Find("RateLabel"));
-            Assert.IsNotNull(badge.Find("RateIcon"));
+            var rateIcon = badge.Find("RateLabel/RateIcon");
+            if (rateIcon == null)
+                rateIcon = badge.Find("RateIcon");
+            Assert.IsNotNull(rateIcon, "2:1 port should include a RateIcon on the badge.");
             Assert.IsNull(specificMarker.transform.Find("ResourceFlag"));
+            Assert.IsNull(genericMarker.transform.Find("PortRateBadge/RateLabel/RateIcon"));
             Assert.IsNull(genericMarker.transform.Find("PortRateBadge/RateIcon"));
+
+            var iconRenderer = rateIcon.GetComponent<Renderer>();
+            var discRenderer = badge.Find("BadgeDisc").GetComponent<Renderer>();
+            float discWidth = discRenderer.transform.localScale.x;
+            float iconWidth = ColonistFlatBoardQuad.MeasureWorldWidthAlongTextureU(rateIcon);
+            Assert.Greater(iconWidth, discWidth * 0.35f, "Rate icon should be a visible fraction of the badge disc.");
 
             AssertMinWorldYAboveHexTop(specificMarker);
             AssertSharedMaterialsAssigned(specificMarker);

@@ -155,6 +155,10 @@ namespace CatanRoguelike.Game
                 ? quadTransform.TransformDirection(Vector3.up).normalized
                 : Vector3.zero;
 
+        /// <summary>Texture +V projected onto the board XZ plane (for camera-up alignment tests).</summary>
+        public static Vector3 GetTextureVOnBoard(Transform quadTransform) =>
+            ProjectOnBoardXZ(GetTextureVWorldAxis(quadTransform));
+
         public static void LogDiagnostics(string tag, Transform quadTransform, Renderer referenceBelow = null)
         {
             if (quadTransform == null)
