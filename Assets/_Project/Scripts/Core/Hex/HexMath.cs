@@ -146,5 +146,16 @@ namespace CatanRoguelike.Core.Hex
             int c1 = (edgeIndex + 1) % 6;
             return new Edge(new Vertex(hex, c0), new Vertex(hex, c1));
         }
+
+        /// <summary>
+        /// Edge on <paramref name="hex"/> that borders <see cref="GetNeighbor"/>(hex, direction).
+        /// <see cref="GetEdge"/>(hex, d) lies between corners d and d+1 and faces neighbor (d+5)%6;
+        /// the coast toward neighbor d uses edge index (d+1)%6.
+        /// </summary>
+        public static Edge GetEdgeFacing(HexCoord hex, int direction)
+        {
+            direction = ((direction % 6) + 6) % 6;
+            return GetEdge(hex, (direction + 1) % 6);
+        }
     }
 }

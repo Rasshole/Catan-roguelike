@@ -5,6 +5,7 @@ using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Shop;
 using NUnit.Framework;
+using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
 namespace CatanRoguelike.Tests.EditMode
 {
@@ -34,6 +35,31 @@ namespace CatanRoguelike.Tests.EditMode
                 Assert.IsFalse(land.Contains(coord), $"Port slot {coord} must not be land.");
             foreach (var coord in board.SeaFishGrounds.Keys)
                 Assert.IsFalse(land.Contains(coord), $"Fish slot {coord} must not be land.");
+        }
+
+        [Test]
+        public void PortSeaSlots_UseCoastEdgeThatContainsPortVertex()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
+            var ports = PortAccess.DiscoverPorts(board);
+
+            foreach (var port in ports)
+            {
+                var vertex = VertexGraph.Canonicalize(port.Vertex);
+                Assert.IsTrue(board.PortVertexToSeaSlot.TryGetValue(vertex, out var sea),
+                    $"Missing sea slot for port {vertex}.");
+
+                Assert.IsTrue(
+                    SeaFrameSlotLayout.TryGetHarborCoastEdge(
+                        board, vertex, sea, HexScale, out _, out var coastA, out var coastB),
+                    $"Harbor coast edge should resolve for port {vertex} and sea {sea}.");
+
+                var canon = VertexGraph.Canonicalize(vertex);
+                Assert.IsTrue(
+                    VertexGraph.Canonicalize(coastA).Equals(canon)
+                    || VertexGraph.Canonicalize(coastB).Equals(canon),
+                    $"Sea slot {sea} for port {vertex} is not on the port's coast edge.");
+            }
         }
 
         [Test]

@@ -186,7 +186,7 @@ namespace CatanRoguelike.Core.Map
                     if (HexMath.GetNeighbor(hex, d) != seaCoord)
                         continue;
 
-                    var edge = HexMath.GetEdge(hex, d);
+                    var edge = HexMath.GetEdgeFacing(hex, d);
                     var (mx, mz) = HexMath.EdgeMidpoint(edge, hexScale);
                     var (ax, az) = HexMath.VertexToWorldPosition(edge.A, hexScale);
                     var (bx, bz) = HexMath.VertexToWorldPosition(edge.B, hexScale);
@@ -257,44 +257,52 @@ namespace CatanRoguelike.Core.Map
             out HexCoord sea)
         {
             sea = default;
-            var candidates = CollectSeaCandidatesForPort(board, portVertex, land);
-            if (candidates.Count == 0)
-                return false;
+            portVertex = VertexGraph.Canonicalize(portVertex);
+            var anchored = new List<HexCoord>();
 
-            MapPlaneXz boardCenter = ComputeBoardCenter(board);
-            HexCoord? best = null;
-            float bestDist = float.NegativeInfinity;
-
-            foreach (var candidate in candidates)
+            foreach (var hex in VertexGraph.GetHexesForVertex(portVertex))
             {
-                if (usedSea.Contains(candidate))
+                if (!land.Contains(hex))
                     continue;
 
-                var (cx, cz) = HexMath.ToWorldPosition(candidate, 1f);
-                float dist = (new MapPlaneXz(cx, cz) - boardCenter).SqrMagnitude;
-                if (dist > bestDist)
+                for (int d = 0; d < 6; d++)
                 {
-                    bestDist = dist;
-                    best = candidate;
+                    var neighbor = HexMath.GetNeighbor(hex, d);
+                    if (land.Contains(neighbor))
+                        continue;
+
+                    var edge = HexMath.GetEdgeFacing(hex, d);
+                    if (!EdgeContainsVertex(edge, portVertex))
+                        continue;
+
+                    if (!usedSea.Contains(neighbor))
+                        anchored.Add(neighbor);
                 }
             }
 
-            if (!best.HasValue)
+            if (anchored.Count > 0)
             {
-                foreach (var candidate in candidates)
-                {
-                    if (!usedSea.Contains(candidate))
-                    {
-                        sea = candidate;
-                        return true;
-                    }
-                }
-
-                return false;
+                sea = anchored[0];
+                return true;
             }
 
-            sea = best.Value;
-            return true;
+            foreach (var candidate in CollectSeaCandidatesForPort(board, portVertex, land))
+            {
+                if (!usedSea.Contains(candidate))
+                {
+                    sea = candidate;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool EdgeContainsVertex(Edge edge, Vertex vertex)
+        {
+            vertex = VertexGraph.Canonicalize(vertex);
+            return VertexGraph.Canonicalize(edge.A).Equals(vertex)
+                || VertexGraph.Canonicalize(edge.B).Equals(vertex);
         }
 
         private static List<HexCoord> CollectSeaCandidatesForPort(

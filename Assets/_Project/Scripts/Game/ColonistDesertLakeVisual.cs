@@ -19,34 +19,25 @@ namespace CatanRoguelike.Game
             float shoreDiameter = pondDiameter * 1.18f;
             float top = HexPrismMesh.TopY + 0.04f;
 
-            var shore = ColonistFlatBoardQuad.Create(
+            ColonistFlatBoardQuad.Create(
                 hexRoot.transform,
                 "DesertLakeShore",
                 new Vector3(0f, top, 0f),
                 shoreDiameter,
                 shoreDiameter,
-                ColonistProceduralBoardTextures.CreateRoundPondMask(),
+                ColonistProceduralBoardTextures.CreateRoundPondMask(ShoreColor),
                 3188,
                 alignment: ColonistFlatBoardQuad.AlignmentMode.BoardPitchOnly);
-            Tint(shore, ShoreColor);
 
-            var pond = ColonistFlatBoardQuad.Create(
+            ColonistFlatBoardQuad.Create(
                 hexRoot.transform,
                 "DesertLakeRipple",
                 new Vector3(0f, top + 0.008f, 0f),
                 pondDiameter,
                 pondDiameter,
-                ColonistProceduralBoardTextures.CreateRoundPondMask(),
+                ColonistProceduralBoardTextures.CreateRoundPondMask(PondColor),
                 3190,
                 alignment: ColonistFlatBoardQuad.AlignmentMode.BoardPitchOnly);
-            Tint(pond, PondColor);
-        }
-
-        private static void Tint(GameObject quad, Color color)
-        {
-            var renderer = quad.GetComponent<Renderer>();
-            if (renderer?.sharedMaterial != null && renderer.sharedMaterial.HasProperty("_Color"))
-                renderer.sharedMaterial.color = color;
         }
     }
 }

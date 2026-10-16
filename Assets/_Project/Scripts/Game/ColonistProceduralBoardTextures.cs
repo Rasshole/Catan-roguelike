@@ -77,7 +77,7 @@ namespace CatanRoguelike.Game
             return Color.HSVToRGB(h, s, v);
         }
 
-        public static Texture2D CreateRoundPondMask()
+        public static Texture2D CreateRoundPondMask(Color fill)
         {
             const int size = 64;
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
@@ -86,6 +86,11 @@ namespace CatanRoguelike.Game
                 wrapMode = TextureWrapMode.Clamp,
                 filterMode = FilterMode.Bilinear
             };
+
+            byte r = (byte)Mathf.Clamp(Mathf.RoundToInt(fill.r * 255f), 0, 255);
+            byte g = (byte)Mathf.Clamp(Mathf.RoundToInt(fill.g * 255f), 0, 255);
+            byte b = (byte)Mathf.Clamp(Mathf.RoundToInt(fill.b * 255f), 0, 255);
+            byte innerAlpha = (byte)Mathf.Clamp(Mathf.RoundToInt(fill.a * 255f), 0, 255);
 
             var pixels = new Color32[size * size];
             float center = size * 0.5f - 0.5f;
@@ -97,8 +102,8 @@ namespace CatanRoguelike.Game
                     float dx = x - center;
                     float dy = y - center;
                     float dist = Mathf.Sqrt(dx * dx + dy * dy);
-                    byte alpha = dist <= radius ? (byte)255 : (byte)0;
-                    pixels[y * size + x] = new Color32(255, 255, 255, alpha);
+                    byte alpha = dist <= radius ? innerAlpha : (byte)0;
+                    pixels[y * size + x] = new Color32(r, g, b, alpha);
                 }
             }
 

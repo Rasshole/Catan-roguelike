@@ -1,5 +1,6 @@
 using System.Collections;
 using System.IO;
+using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Game;
 using NUnit.Framework;
@@ -144,7 +145,8 @@ namespace CatanRoguelike.Tests.PlayMode
                 var tokenTile = UnityEngine.Object.FindFirstObjectByType<HexTileView>();
                 foreach (var tile in UnityEngine.Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
                 {
-                    if (!tile.Data.IsDesert && tile.Data.NumberToken.HasValue)
+                    if (!tile.Data.IsDesert && tile.Data.NumberToken.HasValue
+                        && !BoardState.IsSeaFishGround(tile.Data))
                     {
                         tokenTile = tile;
                         break;
