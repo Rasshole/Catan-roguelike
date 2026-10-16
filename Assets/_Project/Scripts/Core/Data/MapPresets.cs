@@ -50,49 +50,39 @@ namespace CatanRoguelike.Core.Data
         {
             var resources = new[]
             {
-                ResourceType.Stone,  // center — desert (no production); robber starts here
+                ResourceType.Desert,
                 ResourceType.Wood, ResourceType.Wheat, ResourceType.Sheep,
                 ResourceType.Brick, ResourceType.Wood, ResourceType.Wheat,
-                ResourceType.Sheep, ResourceType.Brick, ResourceType.Wood,
-                ResourceType.Wheat, ResourceType.Stone, ResourceType.Sheep,
-                ResourceType.Brick, ResourceType.Wood, ResourceType.Wheat,
-                ResourceType.Sheep, ResourceType.Stone, ResourceType.Brick
+                ResourceType.Sheep, ResourceType.Stone, ResourceType.Wood,
+                ResourceType.Wheat, ResourceType.Sheep, ResourceType.Brick,
+                ResourceType.Wood, ResourceType.Wheat, ResourceType.Sheep,
+                ResourceType.Stone, ResourceType.Brick, ResourceType.Stone
             };
 
             return BuildFromSpiral(2, resources);
         }
 
-        /// <summary>30-hex extended board (radius 3 minus 7 outer tips) — 5–6 player shape.</summary>
+        /// <summary>Classic 5–6 player island (30 land hexes) — row widths 3,4,5,6,5,4,3.</summary>
+        private static readonly int[] ExtendedThirtyHexRowR = { -3, -2, -1, 0, 1, 2, 3 };
+
+        private static readonly int[][] ExtendedThirtyHexRowQ =
+        {
+            new[] { -1, 0, 1 },
+            new[] { -2, -1, 0, 1 },
+            new[] { -2, -1, 0, 1, 2 },
+            new[] { -3, -2, -1, 0, 1, 2 },
+            new[] { -2, -1, 0, 1, 2 },
+            new[] { -1, 0, 1, 2 },
+            new[] { -1, 0, 1 }
+        };
+
         public static IEnumerable<HexCoord> ExtendedThirtyHexCoords()
         {
-            var center = new HexCoord(0, 0);
-            var full = HexMath.Spiral(center, 3).ToList();
-            var set = full.ToHashSet();
-            var drop = new HashSet<HexCoord>();
-
-            foreach (var coord in full)
+            for (int row = 0; row < ExtendedThirtyHexRowR.Length; row++)
             {
-                if (HexMath.Distance(center, coord) != 3)
-                    continue;
-                if (CountBoardNeighbors(set, coord) <= 2)
-                    drop.Add(coord);
-            }
-
-            if (full.Count - drop.Count > 30)
-            {
-                var extra = full
-                    .Where(c => HexMath.Distance(center, c) == 3 && !drop.Contains(c))
-                    .Where(c => CountBoardNeighbors(set, c) == 3)
-                    .OrderByDescending(c => c.Q + c.R)
-                    .ThenByDescending(c => c.Q)
-                    .First();
-                drop.Add(extra);
-            }
-
-            foreach (var coord in full)
-            {
-                if (!drop.Contains(coord))
-                    yield return coord;
+                int r = ExtendedThirtyHexRowR[row];
+                foreach (int q in ExtendedThirtyHexRowQ[row])
+                    yield return new HexCoord(q, r);
             }
         }
 
@@ -112,18 +102,6 @@ namespace CatanRoguelike.Core.Data
             return BuildFromCoords(coords, BuildResourcesForLandCoords(coords, new HexCoord(0, 0)));
         }
 
-        private static int CountBoardNeighbors(HashSet<HexCoord> set, HexCoord coord)
-        {
-            int neighbors = 0;
-            foreach (var dir in HexCoord.Directions)
-            {
-                if (set.Contains(coord + dir))
-                    neighbors++;
-            }
-
-            return neighbors;
-        }
-
         private static ResourceType[] BuildResourcesForLandCoords(
             IReadOnlyList<HexCoord> coords, HexCoord desertCoord)
         {
@@ -134,7 +112,7 @@ namespace CatanRoguelike.Core.Data
             for (int i = 0; i < coords.Count; i++)
             {
                 if (coords[i].Equals(desertCoord))
-                    resources[i] = ResourceType.Stone;
+                    resources[i] = ResourceType.Desert;
                 else
                     resources[i] = multiset[pi++];
             }
@@ -268,7 +246,7 @@ namespace CatanRoguelike.Core.Data
                 if (board.Tiles.ContainsKey(coord))
                     continue;
 
-                board.Tiles[coord] = new HexTileData(coord, resource, isCoastal: false);
+                board.Tiles[coord] = CreateLandTile(coord, resource);
                 added++;
             }
 
@@ -299,7 +277,7 @@ namespace CatanRoguelike.Core.Data
             foreach (var (coord, resource) in preset)
             {
                 coords.Add(coord);
-                board.Tiles[coord] = new HexTileData(coord, resource, isCoastal: false);
+                board.Tiles[coord] = CreateLandTile(coord, resource);
             }
 
             foreach (var coord in coords)
@@ -399,5 +377,13 @@ namespace CatanRoguelike.Core.Data
         }
 
         public static int GetHexCount(MapSize size) => (int)size;
+
+        private static HexTileData CreateLandTile(HexCoord coord, ResourceType resource)
+        {
+            var tile = new HexTileData(coord, resource, isCoastal: false);
+            if (resource == ResourceType.Desert)
+                tile.IsDesert = true;
+            return tile;
+        }
     }
 }

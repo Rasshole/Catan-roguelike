@@ -19,6 +19,7 @@ namespace CatanRoguelike.Core.UI
             ResourceType.Wheat => Wheat,
             ResourceType.Sheep => Sheep,
             ResourceType.Stone => Stone,
+            ResourceType.Desert => Desert,
             _ => new Rgb(0.5f, 0.5f, 0.5f)
         };
 

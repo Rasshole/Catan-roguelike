@@ -1,3 +1,4 @@
+using CatanRoguelike.Core;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using UnityEngine;
@@ -13,7 +14,7 @@ namespace CatanRoguelike.Game
 
         public static void Apply(GameObject tileRoot, HexTileData data, float hexScale)
         {
-            if (data.IsDesert)
+            if (data.IsDesert || data.Resource == ResourceType.Desert)
                 return;
 
             float hexSize = hexScale * HexMath.OuterRadius;

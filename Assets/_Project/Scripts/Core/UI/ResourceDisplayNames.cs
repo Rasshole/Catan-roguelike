@@ -9,6 +9,7 @@ namespace CatanRoguelike.Core.UI
             ResourceType.Wheat => "Wheat",
             ResourceType.Sheep => "Wool",
             ResourceType.Stone => "Ore",
+            ResourceType.Desert => "Desert",
             _ => resource.ToString()
         };
 

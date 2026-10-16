@@ -39,6 +39,8 @@ namespace CatanRoguelike.Core.Shop
 
             foreach (var resource in System.Enum.GetValues(typeof(ResourceType)).Cast<ResourceType>())
             {
+                if (resource == ResourceType.Desert)
+                    continue;
                 if (ports.Count(p => !p.IsGeneric) >= specificTarget)
                     break;
 

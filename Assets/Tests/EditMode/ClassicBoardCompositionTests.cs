@@ -16,7 +16,8 @@ namespace CatanRoguelike.Tests.EditMode
             Assert.AreEqual(19, preset.Count);
 
             var center = new HexCoord(0, 0);
-            var productive = preset.Where(p => p.coord != center);
+            Assert.AreEqual(ResourceType.Desert, preset.First(p => p.coord == center).resource);
+            var productive = preset.Where(p => p.resource != ResourceType.Desert);
             int wood = productive.Count(p => p.resource == ResourceType.Wood);
             int sheep = productive.Count(p => p.resource == ResourceType.Sheep);
             int wheat = productive.Count(p => p.resource == ResourceType.Wheat);

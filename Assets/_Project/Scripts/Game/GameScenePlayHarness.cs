@@ -22,6 +22,7 @@ namespace CatanRoguelike.Game
 
         public static void CompleteRunSelect(GameController controller, MetaProgression meta)
         {
+            EnsureHarnessMapUnlocked(meta);
             controller.SelectMap(DefaultHarnessMapSize);
             if (controller.State.Phase != GamePhase.RunSelectLeader)
                 throw new InvalidOperationException(
@@ -174,6 +175,22 @@ namespace CatanRoguelike.Game
                     return true;
             }
             return false;
+        }
+
+        /// <summary>Play/capture harness uses Base 19 — grant Large map unlock when meta would block SelectMap.</summary>
+        private static void EnsureHarnessMapUnlocked(MetaProgression meta)
+        {
+            if (meta == null)
+                return;
+
+            var unlock = MetaCatalog.MapUnlockFor(DefaultHarnessMapSize);
+            if (!unlock.HasValue || meta.IsMapAvailable(DefaultHarnessMapSize))
+                return;
+
+            meta.AddStarsForTesting(MetaCatalog.Get(unlock.Value).Cost);
+            if (!meta.TryPurchase(unlock.Value))
+                throw new InvalidOperationException(
+                    $"Harness could not unlock {DefaultHarnessMapSize} for scripted SelectMap.");
         }
     }
 }

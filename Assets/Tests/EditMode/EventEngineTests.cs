@@ -148,7 +148,10 @@ namespace CatanRoguelike.Tests
         public void ApplyEvent_BanditRaid_PlacesRobberOnHumanBestTile()
         {
             var state = CreateState();
+            Assert.AreEqual(ResourceType.Brick, state.Board.Tiles[BrickHex].Resource,
+                "BanditRaid test pins Small map layout — brick at (1,0).");
             PlaceTwoSettlementsOnHex(state.Board, BrickHex, PlayerId.Human);
+            state.Board.Tiles[BrickHex].NumberToken = 8;
             var engine = new EventEngine(14);
 
             engine.ApplyEvent(state, EventId.BanditRaid);
