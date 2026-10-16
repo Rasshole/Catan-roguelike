@@ -17,14 +17,11 @@ namespace CatanRoguelike.Game
             var toCamera = cameraWorldPosition - labelWorldPosition;
             toCamera.y = 0f;
             if (toCamera.sqrMagnitude < MinPlanarDistanceSq)
-                return Quaternion.Euler(FlatPitchDegrees, 0f, 0f);
+                return Quaternion.Euler(FlatPitchDegrees, 180f, 0f);
 
             float yaw = Mathf.Atan2(toCamera.x, toCamera.z) * Mathf.Rad2Deg;
-            var flatA = Quaternion.Euler(FlatPitchDegrees, yaw, 0f);
-            var flatB = Quaternion.Euler(FlatPitchDegrees, yaw + 180f, 0f);
-            float scoreA = GetReadableAlignmentScore(flatA, labelWorldPosition, cameraWorldPosition);
-            float scoreB = GetReadableAlignmentScore(flatB, labelWorldPosition, cameraWorldPosition);
-            return scoreA >= scoreB ? flatA : flatB;
+            // TextMesh glyphs read correctly when yaw faces the camera from the chip's top side.
+            return Quaternion.Euler(FlatPitchDegrees, yaw + 180f, 0f);
         }
 
         /// <summary>Best planar alignment between label axes and the camera (0–1).</summary>

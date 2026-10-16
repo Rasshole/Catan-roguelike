@@ -128,22 +128,46 @@ namespace CatanRoguelike.Game
             internal RenderMode RenderMode;
             internal Camera WorldCamera;
             internal float PlaneDistance;
+            internal bool CanvasWasActiveSelf;
+            internal Camera UiCamera;
+            internal GameObject UiCameraObject;
         }
 
-        public CanvasCaptureRestore BeginCanvasCameraCapture(Camera camera)
+        /// <summary>
+        /// Routes HUD through a stacked UI camera (UI layer only) into the same RT as <paramref name="mainCamera"/>.
+        /// </summary>
+        public CanvasCaptureRestore BeginCanvasCameraCapture(Camera mainCamera)
         {
             var restore = new CanvasCaptureRestore();
-            if (_canvas == null || camera == null)
+            if (_canvas == null || mainCamera == null)
                 return restore;
 
             restore.Active = true;
             restore.RenderMode = _canvas.renderMode;
             restore.WorldCamera = _canvas.worldCamera;
             restore.PlaneDistance = _canvas.planeDistance;
+            restore.CanvasWasActiveSelf = _canvas.gameObject.activeSelf;
+            if (!_canvas.gameObject.activeSelf)
+                _canvas.gameObject.SetActive(true);
+
+            SetLayerRecursively(_canvas.gameObject, HudCaptureUiLayer);
+
+            var uiGo = new GameObject("HudCaptureUiCamera");
+            uiGo.transform.SetParent(mainCamera.transform, false);
+            var uiCamera = uiGo.AddComponent<Camera>();
+            CopyCameraLensForHudStack(mainCamera, uiCamera);
+            uiCamera.depth = mainCamera.depth + 1f;
+            uiCamera.clearFlags = CameraClearFlags.Depth;
+            uiCamera.cullingMask = 1 << HudCaptureUiLayer;
+            uiCamera.targetTexture = mainCamera.targetTexture;
+            uiCamera.pixelRect = mainCamera.pixelRect;
+
+            restore.UiCamera = uiCamera;
+            restore.UiCameraObject = uiGo;
 
             _canvas.renderMode = RenderMode.ScreenSpaceCamera;
-            _canvas.worldCamera = camera;
-            _canvas.planeDistance = 1f;
+            _canvas.worldCamera = uiCamera;
+            _canvas.planeDistance = uiCamera.nearClipPlane + 0.1f;
             Canvas.ForceUpdateCanvases();
             return restore;
         }
@@ -156,7 +180,32 @@ namespace CatanRoguelike.Game
             _canvas.renderMode = restore.RenderMode;
             _canvas.worldCamera = restore.WorldCamera;
             _canvas.planeDistance = restore.PlaneDistance;
+
+            if (!restore.CanvasWasActiveSelf)
+                _canvas.gameObject.SetActive(false);
+
+            SetLayerRecursively(_canvas.gameObject, 0);
+
+            if (restore.UiCameraObject != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(restore.UiCameraObject);
+                else
+                    DestroyImmediate(restore.UiCameraObject);
+            }
+
             Canvas.ForceUpdateCanvases();
+        }
+
+        private static void CopyCameraLensForHudStack(Camera source, Camera dest)
+        {
+            dest.orthographic = source.orthographic;
+            dest.fieldOfView = source.fieldOfView;
+            dest.orthographicSize = source.orthographicSize;
+            dest.nearClipPlane = source.nearClipPlane;
+            dest.farClipPlane = source.farClipPlane;
+            dest.rect = source.rect;
+            dest.aspect = source.aspect;
         }
 
         public void PrepareCanvasForCameraCapture(Camera camera) =>

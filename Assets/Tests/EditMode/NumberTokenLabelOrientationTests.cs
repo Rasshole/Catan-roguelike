@@ -42,18 +42,18 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void ComputeWorldRotation_DefaultTableSide_BeatsUnorientedBase()
+        public void ComputeWorldRotation_DefaultTableSide_UsesYawPlus180()
         {
             var cameraPosition = LabelPosition + new Vector3(0f, 5f, -8f);
-            var baseRotation = Quaternion.Euler(NumberTokenLabelOrientation.FlatPitchDegrees, 0f, 0f);
+            var toCamera = cameraPosition - LabelPosition;
+            toCamera.y = 0f;
+            float expectedYaw = Mathf.Atan2(toCamera.x, toCamera.z) * Mathf.Rad2Deg + 180f;
+
             var orientedRotation = NumberTokenLabelOrientation.ComputeWorldRotation(LabelPosition, cameraPosition);
+            var euler = orientedRotation.eulerAngles;
 
-            float baseScore = NumberTokenLabelOrientation.GetReadableAlignmentScore(
-                baseRotation, LabelPosition, cameraPosition);
-            float orientedScore = NumberTokenLabelOrientation.GetReadableAlignmentScore(
-                orientedRotation, LabelPosition, cameraPosition);
-
-            Assert.Greater(orientedScore, baseScore);
+            Assert.That(Mathf.Abs(euler.x - NumberTokenLabelOrientation.FlatPitchDegrees), Is.LessThan(0.5f));
+            Assert.That(Mathf.Abs(Mathf.DeltaAngle(euler.y, expectedYaw)), Is.LessThan(0.5f));
             Assert.IsTrue(NumberTokenLabelOrientation.IsReadableFromCamera(
                 orientedRotation, LabelPosition, cameraPosition));
         }

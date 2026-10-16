@@ -69,6 +69,10 @@ namespace CatanRoguelike.Tests.PlayMode
             for (int i = 0; i < 4; i++)
                 yield return null;
 
+            var mainCamera = Camera.main;
+            Assert.IsNotNull(mainCamera, "TableCamera should be tagged MainCamera.");
+            hud.GetCaptureDiagnostics(mainCamera).LogToConsole("ColonistPrototypeCapture");
+
             Texture2D boardOnly = GameSceneCapture.CaptureMainCameraToTexture(null);
             Texture2D withHud = GameSceneCapture.CaptureMainCameraToTexture(hud);
             try

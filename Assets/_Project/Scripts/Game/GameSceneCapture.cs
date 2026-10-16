@@ -73,6 +73,9 @@ namespace CatanRoguelike.Game
                 Canvas.ForceUpdateCanvases();
                 camera.Render();
 
+                if (canvasRestore.Active && canvasRestore.UiCamera != null)
+                    canvasRestore.UiCamera.Render();
+
                 texture = new Texture2D(width, height, TextureFormat.RGB24, false);
                 texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
                 texture.Apply();
@@ -84,6 +87,7 @@ namespace CatanRoguelike.Game
                     hud.RestoreCanvasAfterCapture(canvasRestore);
 
                 camera.targetTexture = previousTarget;
+                camera.pixelRect = previousPixelRect;
                 RenderTexture.active = previousActive;
                 renderTexture.Release();
                 DestroyCaptureTexture(renderTexture);
