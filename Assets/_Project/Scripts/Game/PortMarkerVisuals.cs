@@ -27,10 +27,10 @@ namespace CatanRoguelike.Game
         private const float BadgeDiscRadius = 0.22f;
         private const float BadgeDiscHeight = 0.012f;
         public const float BadgeLabelWidthFractionGeneric = 0.65f;
-        public const float BadgeLabelWidthFractionSpecific = 0.50f;
-        public const float BadgeRateIconDiameterFraction = 0.40f;
+        public const float BadgeLabelWidthFractionSpecific = 0.36f;
+        /// <summary>World quad edge length; reads ~40% of disc diameter on screen under the colonist camera.</summary>
+        public const float BadgeRateIconDiameterFraction = 0.42f;
         private const float BadgeStackGapFraction = 0.05f;
-        private const float BadgeMaxStackSpanFraction = 0.88f;
         private static bool _loggedPortMarkerChildren;
 
         public static void LogChildRenderersOnce(GameObject portRoot)
@@ -157,15 +157,6 @@ namespace CatanRoguelike.Game
             {
                 float iconWorldSize = discDiameter * BadgeRateIconDiameterFraction;
                 float stackGap = discDiameter * BadgeStackGapFraction;
-                float maxStackSpan = discDiameter * BadgeMaxStackSpanFraction;
-                float stackSpan = iconWorldSize + stackGap + labelWorldHeight;
-                if (stackSpan > maxStackSpan)
-                {
-                    float labelBudget = Mathf.Max(maxStackSpan - iconWorldSize - stackGap, 1e-4f);
-                    float shrink = labelBudget / labelWorldHeight;
-                    labelWorldWidth *= shrink;
-                    labelWorldHeight *= shrink;
-                }
                 Vector3 upBoard = ColonistFlatBoardQuad.GetColonistCameraUpOnBoard();
                 Vector3 upLocal = badgeRoot.transform.InverseTransformDirection(upBoard);
                 if (upLocal.sqrMagnitude > 1e-6f)
@@ -187,7 +178,7 @@ namespace CatanRoguelike.Game
                     iconLocal,
                     iconWorldSize,
                     iconWorldSize,
-                    ColonistResourceIconTextures.Get(specificResource.Value),
+                    ColonistResourceIconTextures.GetForHud(specificResource.Value),
                     3220,
                     placeAbove: null,
                     alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);

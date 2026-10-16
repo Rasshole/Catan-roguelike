@@ -224,11 +224,12 @@ namespace CatanRoguelike.Tests.PlayMode
                 Vector2 labelScreen = ColonistFlatBoardQuad.MeasureScreenPixelSize(labelRenderer, camera);
                 Vector2 iconScreen = ColonistFlatBoardQuad.MeasureScreenPixelSize(iconRenderer, camera);
                 Vector2 discScreenSize = ColonistFlatBoardQuad.MeasureScreenPixelSize(discRenderer, camera);
-                float targetIconScreen = discScreenSize.y * PortMarkerVisuals.BadgeRateIconDiameterFraction;
+                const float screenTargetFraction = 0.40f;
+                float targetIconScreen = discScreenSize.y * screenTargetFraction;
                 Assert.Greater(
                     iconScreen.y,
                     targetIconScreen * 0.75f,
-                    $"2:1 port icon should be ~{PortMarkerVisuals.BadgeRateIconDiameterFraction:P0} of disc on screen " +
+                    $"2:1 port icon should read ~{screenTargetFraction:P0} of disc height on screen " +
                     $"(iconH={iconScreen.y:F1} target≈{targetIconScreen:F1}).");
                 Assert.Greater(iconScreen.y, 10f, $"2:1 port icon screen height should not be a sliver (h={iconScreen.y:F1}px).");
 
