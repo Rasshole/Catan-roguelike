@@ -79,7 +79,7 @@ namespace CatanRoguelike.Tests.PlayMode
             var hud = gameManager.GetComponent<RunHudController>();
             Assert.IsNotNull(hud, "RunHudController should exist on Game scene.");
             hud.Refresh(gameManager.Controller.State);
-            UnityEngine.UI.Canvas.ForceUpdateCanvases();
+            Canvas.ForceUpdateCanvases();
             Assert.IsTrue(hud.IsHudCaptureReady(), "HUD must be built before composited Game capture.");
 
             GameSceneCapture.CaptureMainCameraToPng(outputPath, hud);
