@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using UnityEngine;
@@ -18,11 +19,12 @@ namespace CatanRoguelike.Game
             ApplyTopCap(tileRoot, data, hexScale, tileRoot.transform.lossyScale);
         }
 
-        public static void ApplyOutline(GameObject tileRoot, HexCoord hex, float hexScale)
+        public static void ApplyOutline(GameObject tileRoot, HexCoord hex, float hexScale,
+            IReadOnlyCollection<HexCoord> landTiles = null)
         {
             var outlineRoot = new GameObject("TileOutline");
             outlineRoot.transform.SetParent(tileRoot.transform, false);
-            CreateEdgeOutlines(outlineRoot.transform, hex, hexScale, tileRoot.transform.lossyScale);
+            CreateEdgeOutlines(outlineRoot.transform, hex, hexScale, tileRoot.transform.lossyScale, landTiles);
         }
 
         public static void ApplyTopCap(GameObject tileRoot, HexTileData data, float hexScale, Vector3 hexLossy)
@@ -44,13 +46,18 @@ namespace CatanRoguelike.Game
             DestroyCollider(cap);
         }
 
-        private static void CreateEdgeOutlines(Transform parent, HexCoord hex, float hexScale, Vector3 hexLossyScale)
+        private static void CreateEdgeOutlines(Transform parent, HexCoord hex, float hexScale, Vector3 hexLossyScale,
+            IReadOnlyCollection<HexCoord> landTiles)
         {
             var outlineColor = BoardResourceColors.GetOutline();
             var (centerX, centerZ) = HexMath.ToWorldPosition(hex, hexScale);
+            var tileSet = landTiles as HashSet<HexCoord> ?? (landTiles != null ? new HashSet<HexCoord>(landTiles) : null);
 
             for (int i = 0; i < HexPrismMesh.SideCount; i++)
             {
+                if (tileSet != null && !tileSet.Contains(HexMath.GetNeighbor(hex, i)))
+                    continue;
+
                 int next = (i + 1) % HexPrismMesh.SideCount;
                 var (ax, az) = HexMath.VertexToWorldPosition(hex, i, hexScale);
                 var (bx, bz) = HexMath.VertexToWorldPosition(hex, next, hexScale);
