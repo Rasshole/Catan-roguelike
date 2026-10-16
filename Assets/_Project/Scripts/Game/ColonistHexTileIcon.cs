@@ -16,29 +16,23 @@ namespace CatanRoguelike.Game
             if (data.IsDesert)
                 return;
 
-            var iconGo = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            iconGo.name = "ResourceIcon";
-            iconGo.layer = 0;
-            iconGo.transform.SetParent(tileRoot.transform, false);
-            UnityEngine.Object.Destroy(iconGo.GetComponent<Collider>());
-
             var lossy = tileRoot.transform.lossyScale;
             float hexSize = hexScale * HexMath.OuterRadius;
             float worldDiameter = hexSize * IconSizeFactor * 2f;
             float localDiameter = worldDiameter / Mathf.Max(lossy.x, 0.001f);
             float corner = hexSize * CornerOffsetFactor;
-            iconGo.transform.localPosition = new Vector3(
-                corner * 0.12f,
-                HexPrismMesh.TopY + IconLiftAboveHexTop,
-                corner);
-            iconGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            iconGo.transform.localScale = new Vector3(localDiameter, localDiameter, 1f);
-
-            var texture = ColonistResourceIconTextures.Get(data.Resource);
-            var renderer = iconGo.GetComponent<MeshRenderer>();
-            renderer.sharedMaterial = BuiltInMaterials.CreateUnlitTransparent(texture);
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
+            var iconGo = ColonistFlatBoardQuad.Create(
+                tileRoot.transform,
+                "ResourceIcon",
+                new Vector3(
+                    corner * 0.12f,
+                    HexPrismMesh.TopY + IconLiftAboveHexTop,
+                    corner),
+                localDiameter,
+                localDiameter,
+                ColonistResourceIconTextures.Get(data.Resource),
+                3180);
+            iconGo.layer = 0;
         }
     }
 

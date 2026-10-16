@@ -470,16 +470,15 @@ namespace CatanRoguelike.Game
                 PrimitiveType.Sphere);
 
             float iconLocalY = stackLocalY + 0.01f / sy;
-            var iconGo = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            iconGo.name = RobberTopIconPartName;
-            iconGo.transform.SetParent(_robberMarker.transform, false);
-            iconGo.transform.localPosition = new Vector3(0f, iconLocalY, 0f);
             float iconLocalDiameter = WorldRobberTopIconDiameter / sx;
-            iconGo.transform.localScale = new Vector3(iconLocalDiameter, iconLocalDiameter, 1f);
-            var iconRenderer = iconGo.GetComponent<Renderer>();
-            iconRenderer.sharedMaterial = BuiltInMaterials.CreateUnlitTransparent(ColonistRobberTopIconTextures.Get());
-            iconRenderer.sharedMaterial.renderQueue = 3250;
-            Destroy(iconGo.GetComponent<Collider>());
+            var iconGo = ColonistFlatBoardQuad.Create(
+                _robberMarker.transform,
+                RobberTopIconPartName,
+                new Vector3(0f, iconLocalY, 0f),
+                iconLocalDiameter,
+                iconLocalDiameter,
+                ColonistRobberTopIconTextures.Get(),
+                3250);
             ApplyRobberTopIconFacing(iconGo.transform);
 
             Debug.Log(
@@ -506,9 +505,7 @@ namespace CatanRoguelike.Game
 
         private static void ApplyRobberTopIconFacing(Transform iconTransform)
         {
-            if (iconTransform == null)
-                return;
-            iconTransform.rotation = NumberTokenLabelOrientation.ComputeColonistTopDownRotation(Camera.main);
+            ColonistFlatBoardQuad.ApplyWorldFacing(iconTransform);
         }
 
         private float AddRobberCylinder(
@@ -539,7 +536,10 @@ namespace CatanRoguelike.Game
             part.transform.SetParent(_robberMarker.transform, false);
             part.transform.localPosition = localPos;
             part.transform.localScale = localScale;
-            part.GetComponent<Renderer>().sharedMaterial = BuiltInMaterials.Create(RobberColor);
+            var renderer = part.GetComponent<Renderer>();
+            renderer.sharedMaterial = BuiltInMaterials.CreateUnlit(RobberColor);
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
             Destroy(part.GetComponent<Collider>());
         }
 

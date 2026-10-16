@@ -35,6 +35,7 @@ namespace CatanRoguelike.Game
             FillCircle(pixels, 32, 44, 7, fill);
 
             RotatePixels90Clockwise(pixels);
+            RotatePixels90Clockwise(pixels);
 
             tex.SetPixels32(pixels);
             tex.Apply(false, false);

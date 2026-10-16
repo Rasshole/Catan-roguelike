@@ -93,6 +93,12 @@ namespace CatanRoguelike.Tests.PlayMode
                     "Robber pawn should include a wide shoulder readable from top-down.");
                 Assert.IsNotNull(tile.transform.Find("RobberPawn/RobberTopIcon"),
                     "Robber pawn should include a top-down hood icon.");
+                var robberIcon = tile.transform.Find("RobberPawn/RobberTopIcon");
+                Vector3 textureV = ColonistFlatBoardQuad.GetTextureVWorldAxis(robberIcon);
+                Assert.Greater(
+                    Vector3.Dot(textureV, Vector3.forward),
+                    0.85f,
+                    $"Robber icon head should point world +Z (textureV={textureV} dot={Vector3.Dot(textureV, Vector3.forward):F3}).");
 
                 if (tile.Data.NumberToken.HasValue)
                 {
@@ -170,10 +176,8 @@ namespace CatanRoguelike.Tests.PlayMode
                 ColonistPortRateLabelTextures.HasOpaquePixels(labelTexture),
                 "Port rate label texture should contain opaque glyph pixels.");
 
-            var camera = Camera.main;
-            Assert.IsNotNull(camera);
-            float faceDot = Vector3.Dot(label.transform.up.normalized, camera.transform.up.normalized);
-            Assert.Greater(faceDot, 0.85f, $"Port rate label should face the table camera (dot={faceDot:F3}).");
+            float faceDot = Vector3.Dot(label.transform.up.normalized, Vector3.up);
+            Assert.Greater(faceDot, 0.85f, $"Port rate label should lie flat on the board (dot={faceDot:F3}).");
 
             var discBounds = discRenderer.bounds;
             var labelBounds = labelRenderer.bounds;

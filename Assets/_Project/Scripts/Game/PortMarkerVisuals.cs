@@ -130,18 +130,16 @@ namespace CatanRoguelike.Game
             DestroyCollider(disc.GetComponent<Collider>());
 
             float labelLocalY = BadgeDiscHeight + 0.006f;
-            var worldUpLabelRotation = WorldUpQuadLocalRotation(badgeRoot.transform);
             var labelTexture = ColonistPortRateLabelTextures.Get(isGeneric);
             float labelWorldWidth = discDiameter * 0.7f;
             float aspect = labelTexture.height / (float)labelTexture.width;
             float labelWorldHeight = labelWorldWidth * aspect;
             float labelLiftZ = isGeneric ? 0f : discDiameter * 0.08f;
 
-            CreateRateQuad(
+            ColonistFlatBoardQuad.Create(
                 badgeRoot.transform,
                 "RateLabel",
                 new Vector3(0f, labelLocalY, labelLiftZ),
-                worldUpLabelRotation,
                 labelWorldWidth,
                 labelWorldHeight,
                 labelTexture,
@@ -150,43 +148,15 @@ namespace CatanRoguelike.Game
             if (!isGeneric && specificResource.HasValue)
             {
                 float iconSize = discDiameter * 0.26f;
-                CreateRateQuad(
+                ColonistFlatBoardQuad.Create(
                     badgeRoot.transform,
                     "RateIcon",
                     new Vector3(0f, labelLocalY, labelLiftZ - discDiameter * 0.22f),
-                    worldUpLabelRotation,
                     iconSize,
                     iconSize,
                     ColonistResourceIconTextures.Get(specificResource.Value),
                     3195);
             }
-        }
-
-        private static Quaternion WorldUpQuadLocalRotation(Transform badgeRoot) =>
-            Quaternion.Inverse(badgeRoot.rotation) * Quaternion.Euler(90f, 0f, 0f);
-
-        private static void CreateRateQuad(
-            Transform parent,
-            string name,
-            Vector3 localPosition,
-            Quaternion localRotation,
-            float worldWidth,
-            float worldHeight,
-            Texture2D texture,
-            int renderQueue)
-        {
-            var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            quad.name = name;
-            quad.transform.SetParent(parent, false);
-            quad.transform.localPosition = localPosition;
-            quad.transform.localRotation = localRotation;
-            quad.transform.localScale = new Vector3(worldWidth, worldHeight, 1f);
-            var renderer = quad.GetComponent<Renderer>();
-            renderer.sharedMaterial = BuiltInMaterials.CreateUnlitTransparent(texture);
-            renderer.sharedMaterial.renderQueue = renderQueue;
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
-            DestroyCollider(quad.GetComponent<Collider>());
         }
 
         private static void DestroyCollider(Collider collider)
