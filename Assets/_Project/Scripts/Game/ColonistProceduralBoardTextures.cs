@@ -77,6 +77,36 @@ namespace CatanRoguelike.Game
             return Color.HSVToRGB(h, s, v);
         }
 
+        public static Texture2D CreateRoundPondMask()
+        {
+            const int size = 64;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = "Procedural_RoundPond",
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear
+            };
+
+            var pixels = new Color32[size * size];
+            float center = size * 0.5f - 0.5f;
+            float radius = center - 1f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - center;
+                    float dy = y - center;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    byte alpha = dist <= radius ? (byte)255 : (byte)0;
+                    pixels[y * size + x] = new Color32(255, 255, 255, alpha);
+                }
+            }
+
+            tex.SetPixels32(pixels);
+            tex.Apply();
+            return tex;
+        }
+
         public static Texture2D CreateRippleMask()
         {
             const int size = 64;

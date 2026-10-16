@@ -232,9 +232,27 @@ namespace CatanRoguelike.Game
         /// <summary>Land hex top offset toward a corner (fully off centre number token) for capture sampling.</summary>
         public Vector3 GetCaptureHexSampleWorldPoint()
         {
-            var top = GetCaptureReferenceWorldPoint();
+            HexTileView tile = null;
+            if (_tiles.TryGetValue(new HexCoord(1, -1), out var preferred) && !preferred.Data.IsDesert)
+                tile = preferred;
+
+            if (tile == null)
+            {
+                foreach (var kvp in _tiles)
+                {
+                    if (IsSeaFishTile(kvp.Value.Data) || kvp.Value.Data.IsDesert)
+                        continue;
+                    tile = kvp.Value;
+                    break;
+                }
+            }
+
+            if (tile == null)
+                return GetCaptureReferenceWorldPoint();
+
+            var top = GetHexTopWorldPoint(tile.transform);
             float outer = hexScale * HexMath.OuterRadius;
-            const float cornerInset = 0.78f;
+            const float cornerInset = 0.72f;
             return new Vector3(
                 top.x + outer * cornerInset * 0.8660254f,
                 top.y + 0.002f,

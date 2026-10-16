@@ -3,11 +3,11 @@ using UnityEngine;
 
 namespace CatanRoguelike.Game
 {
-    /// <summary>Small desert fishing pond (~35% of hex) with sandy shoreline.</summary>
+    /// <summary>Small centred desert pond (~35% of hex) with a thin sandy shore ring on the desert face.</summary>
     public static class ColonistDesertLakeVisual
     {
-        private static readonly Color PondColor = new(0.36f, 0.52f, 0.58f, 0.88f);
-        private static readonly Color ShoreColor = new(0.88f, 0.76f, 0.50f, 0.92f);
+        private static readonly Color PondColor = new(0.34f, 0.50f, 0.56f, 0.92f);
+        private static readonly Color ShoreColor = new(0.94f, 0.84f, 0.62f, 0.95f);
 
         public static void Apply(GameObject hexRoot, float hexScale)
         {
@@ -16,16 +16,16 @@ namespace CatanRoguelike.Game
 
             float hexDiameter = hexScale * HexMath.OuterRadius * 2f;
             float pondDiameter = hexDiameter * 0.35f;
-            float shoreDiameter = pondDiameter * 1.22f;
-            float top = HexPrismMesh.TopY + 0.035f;
+            float shoreDiameter = pondDiameter * 1.18f;
+            float top = HexPrismMesh.TopY + 0.04f;
 
             var shore = ColonistFlatBoardQuad.Create(
                 hexRoot.transform,
                 "DesertLakeShore",
-                new Vector3(0.08f * hexScale, top, -0.06f * hexScale),
+                new Vector3(0f, top, 0f),
                 shoreDiameter,
-                shoreDiameter * 0.92f,
-                ColonistProceduralBoardTextures.CreateRippleMask(),
+                shoreDiameter,
+                ColonistProceduralBoardTextures.CreateRoundPondMask(),
                 3188,
                 alignment: ColonistFlatBoardQuad.AlignmentMode.BoardPitchOnly);
             Tint(shore, ShoreColor);
@@ -33,10 +33,10 @@ namespace CatanRoguelike.Game
             var pond = ColonistFlatBoardQuad.Create(
                 hexRoot.transform,
                 "DesertLakeRipple",
-                new Vector3(0.08f * hexScale, top + 0.012f, -0.06f * hexScale),
+                new Vector3(0f, top + 0.008f, 0f),
                 pondDiameter,
-                pondDiameter * 0.88f,
-                ColonistProceduralBoardTextures.CreateRippleMask(),
+                pondDiameter,
+                ColonistProceduralBoardTextures.CreateRoundPondMask(),
                 3190,
                 alignment: ColonistFlatBoardQuad.AlignmentMode.BoardPitchOnly);
             Tint(pond, PondColor);

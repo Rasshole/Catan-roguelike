@@ -446,7 +446,7 @@ namespace CatanRoguelike.Game
             if (Data == null)
                 return RobberLocalOffset;
             if (Data.IsDesert && Data.IsFishTile && ColonistPresentation.IsActive)
-                return new Vector3(0.38f, 0f, -0.30f);
+                return new Vector3(0.34f, 0f, 0.28f);
             if (Data.IsDesert)
                 return Vector3.zero;
             return RobberLocalOffset;

@@ -57,5 +57,42 @@ namespace CatanRoguelike.Tests.EditMode
                 }
             }
         }
+
+        [Test]
+        public void FishGrounds_AreSpreadAroundTheSeaRing()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
+            Assert.GreaterOrEqual(board.SeaFishGrounds.Count, 4);
+
+            MapPlaneXz center = MapPlaneXz.Zero;
+            int count = 0;
+            foreach (var coord in board.Tiles.Keys)
+            {
+                var (x, z) = HexMath.ToWorldPosition(coord, 1f);
+                center += new MapPlaneXz(x, z);
+                count++;
+            }
+
+            center /= count;
+            var angles = new List<float>();
+            foreach (var coord in board.SeaFishGrounds.Keys)
+            {
+                var (x, z) = HexMath.ToWorldPosition(coord, 1f);
+                angles.Add((float)System.Math.Atan2(z - center.Z, x - center.X));
+            }
+
+            angles.Sort();
+            float minGap = float.MaxValue;
+            for (int i = 0; i < angles.Count; i++)
+            {
+                int next = (i + 1) % angles.Count;
+                float gap = angles[next] - angles[i];
+                if (next == 0)
+                    gap = (float)(2.0 * System.Math.PI) + angles[0] - angles[^1];
+                minGap = System.Math.Min(minGap, gap);
+            }
+
+            Assert.Greater(minGap, 0.35f, "Fish grounds should not cluster on one arc of the sea ring.");
+        }
     }
 }

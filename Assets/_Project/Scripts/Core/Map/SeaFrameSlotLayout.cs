@@ -13,6 +13,7 @@ namespace CatanRoguelike.Core.Map
     public static class SeaFrameSlotLayout
     {
         private const int HexCornerCount = 6;
+        public const float HarborBadgeTowardSeaFactor = 0.35f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 
         public static void AssignPortSeaSlots(BoardState board, IReadOnlyList<PortDefinition> ports)
@@ -52,16 +53,13 @@ namespace CatanRoguelike.Core.Map
                     fishCandidates.Add(coord);
             }
 
-            var rng = seed.HasValue ? new Random(seed.Value ^ 0xF15E) : new Random();
             int fishCount = Math.Min(6, fishCandidates.Count);
             var fishValues = new[] { 1, 1, 2, 2, 3, 0 };
+            var picked = PickFishCoordsEvenlyAroundRing(board, fishCandidates, fishCount);
 
-            for (int i = 0; i < fishCount; i++)
+            for (int i = 0; i < picked.Count; i++)
             {
-                int pick = rng.Next(fishCandidates.Count);
-                var coord = fishCandidates[pick];
-                fishCandidates.RemoveAt(pick);
-
+                var coord = picked[i];
                 board.SeaFishGrounds[coord] = new HexTileData(coord, ResourceType.Wheat, isCoastal: true)
                 {
                     IsFishTile = true,
@@ -69,6 +67,62 @@ namespace CatanRoguelike.Core.Map
                     NumberToken = SeaFishDisplayTokens[i % SeaFishDisplayTokens.Length]
                 };
             }
+        }
+
+        private static List<HexCoord> PickFishCoordsEvenlyAroundRing(
+            BoardState board,
+            List<HexCoord> candidates,
+            int fishCount)
+        {
+            var result = new List<HexCoord>(fishCount);
+            if (fishCount <= 0 || candidates.Count == 0)
+                return result;
+
+            MapPlaneXz center = ComputeBoardCenter(board);
+            var scored = new List<(HexCoord coord, float angle)>(candidates.Count);
+            foreach (var coord in candidates)
+            {
+                var (x, z) = HexMath.ToWorldPosition(coord, 1f);
+                float angle = (float)Math.Atan2(z - center.Z, x - center.X);
+                scored.Add((coord, angle));
+            }
+
+            var used = new HashSet<HexCoord>();
+            for (int i = 0; i < fishCount; i++)
+            {
+                double target = -Math.PI + (2.0 * Math.PI * (i + 0.5) / fishCount);
+                HexCoord? best = null;
+                float bestDelta = float.MaxValue;
+                foreach (var (coord, angle) in scored)
+                {
+                    if (used.Contains(coord))
+                        continue;
+
+                    float delta = Math.Abs(NormalizeAngle(angle - (float)target));
+                    if (delta < bestDelta)
+                    {
+                        bestDelta = delta;
+                        best = coord;
+                    }
+                }
+
+                if (!best.HasValue)
+                    break;
+
+                used.Add(best.Value);
+                result.Add(best.Value);
+            }
+
+            return result;
+        }
+
+        private static float NormalizeAngle(float radians)
+        {
+            while (radians > Math.PI)
+                radians -= (float)(2.0 * Math.PI);
+            while (radians < -Math.PI)
+                radians += (float)(2.0 * Math.PI);
+            return Math.Abs(radians);
         }
 
         public static void AssignPortAndFishSlots(
@@ -91,9 +145,55 @@ namespace CatanRoguelike.Core.Map
             if (!board.PortVertexToSeaSlot.TryGetValue(portVertex, out HexCoord sea))
                 return false;
 
-            var (x, z) = HexMath.ToWorldPosition(sea, hexScale);
-            center = new MapPlaneXz(x, z);
+            if (!TryGetHarborCoastEdge(board, portVertex, sea, hexScale, out MapPlaneXz coastMid, out _, out _))
+            {
+                var (x, z) = HexMath.ToWorldPosition(sea, hexScale);
+                center = new MapPlaneXz(x, z);
+                return true;
+            }
+
+            var (sx, sz) = HexMath.ToWorldPosition(sea, hexScale);
+            var seaCenter = new MapPlaneXz(sx, sz);
+            center = coastMid + (seaCenter - coastMid) * HarborBadgeTowardSeaFactor;
             return true;
+        }
+
+        public static bool TryGetHarborCoastEdge(
+            BoardState board,
+            Vertex portVertex,
+            HexCoord seaCoord,
+            float hexScale,
+            out MapPlaneXz coastMid,
+            out MapPlaneXz coastVertexA,
+            out MapPlaneXz coastVertexB)
+        {
+            coastMid = MapPlaneXz.Zero;
+            coastVertexA = MapPlaneXz.Zero;
+            coastVertexB = MapPlaneXz.Zero;
+            portVertex = VertexGraph.Canonicalize(portVertex);
+
+            foreach (var hex in VertexGraph.GetHexesForVertex(portVertex))
+            {
+                if (!board.Tiles.ContainsKey(hex))
+                    continue;
+
+                for (int d = 0; d < 6; d++)
+                {
+                    if (HexMath.GetNeighbor(hex, d) != seaCoord)
+                        continue;
+
+                    var edge = HexMath.GetEdge(hex, d);
+                    var (mx, mz) = HexMath.EdgeMidpoint(edge, hexScale);
+                    var (ax, az) = HexMath.VertexToWorldPosition(edge.A, hexScale);
+                    var (bx, bz) = HexMath.VertexToWorldPosition(edge.B, hexScale);
+                    coastMid = new MapPlaneXz(mx, mz);
+                    coastVertexA = new MapPlaneXz(ax, az);
+                    coastVertexB = new MapPlaneXz(bx, bz);
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static bool DiscIntersectsHexPolygon(
