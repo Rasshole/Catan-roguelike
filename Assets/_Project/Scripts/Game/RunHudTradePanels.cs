@@ -11,60 +11,73 @@ namespace CatanRoguelike.Game
 {
     public sealed partial class RunHudController
     {
-        private Text _tradeInfo;
+        private Text _tradeSummary;
+        private Button _openTradeDialogButton;
+        private RectTransform _tradeDialogRoot;
+        private Text _tradeDialogInfo;
+        private RectTransform _playerTradeResponsesRoot;
         private ResourceType _tradeGive = ResourceType.Wood;
         private ResourceType _tradeReceive = ResourceType.Brick;
-        private RectTransform _playerTradeResponsesRoot;
 
         private void BuildTradePanel(RectTransform sidePanel)
         {
             AddPanelLabel(sidePanel, "Bytte", 17);
-            _tradeInfo = AddPanelText(sidePanel, 14, FontStyle.Normal);
+            _tradeSummary = AddPanelText(sidePanel, 14, FontStyle.Normal);
+            _openTradeDialogButton = RunHudUiFactory.CreateButton(sidePanel, "Bytte…", RunHudUiFactory.ButtonSecondary);
+            _openTradeDialogButton.onClick.AddListener(() => SetTradeDialogVisible(true));
+            RunHudUiFactory.AddLayoutElement(_openTradeDialogButton.gameObject, 36f);
+            UpdateTradeInfo();
+        }
 
-            var row = new GameObject("TradeGiveRow");
-            row.transform.SetParent(sidePanel, false);
-            var rowLayout = row.AddComponent<HorizontalLayoutGroup>();
-            rowLayout.spacing = 4f;
-            RunHudUiFactory.AddLayoutElement(row, 32f);
+        private void EnsureTradeDialogBuilt()
+        {
+            if (_tradeDialogRoot != null || _canvas == null)
+                return;
 
-            foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
-            {
-                var captured = resource;
-                var btn = RunHudUiFactory.CreateButton(row.transform, ResourceDisplayNames.GetDanish(captured), RunHudUiFactory.ButtonSecondary);
-                btn.onClick.AddListener(() =>
-                {
-                    _tradeGive = captured;
-                    UpdateTradeInfo();
-                });
-            }
+            _tradeDialogRoot = RunHudUiFactory.CreatePanel(
+                _canvas.transform,
+                "TradeDialog",
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(-220f, -160f),
+                new Vector2(220f, 160f));
+            _tradeDialogRoot.GetComponent<Image>().color = new Color(0.10f, 0.14f, 0.20f, 0.97f);
 
-            var row2 = new GameObject("TradeReceiveRow");
-            row2.transform.SetParent(sidePanel, false);
-            var row2Layout = row2.AddComponent<HorizontalLayoutGroup>();
-            row2Layout.spacing = 4f;
-            RunHudUiFactory.AddLayoutElement(row2, 32f);
+            var layout = _tradeDialogRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(14, 14, 12, 12);
+            layout.spacing = 8f;
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = true;
+            layout.childForceExpandWidth = true;
 
-            foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
-            {
-                var captured = resource;
-                var btn = RunHudUiFactory.CreateButton(row2.transform, "→ " + ResourceDisplayNames.GetDanish(captured), RunHudUiFactory.ButtonSecondary);
-                btn.onClick.AddListener(() =>
-                {
-                    _tradeReceive = captured;
-                    UpdateTradeInfo();
-                });
-            }
+            var title = AddPanelText(_tradeDialogRoot, 18, FontStyle.Bold);
+            title.alignment = TextAnchor.MiddleCenter;
+            title.text = "Bytte";
 
-            var tradeBtn = RunHudUiFactory.CreateButton(sidePanel, "Byt 1 (bank/havn)", RunHudUiFactory.ButtonFill);
-            tradeBtn.onClick.AddListener(ExecuteBankTrade);
-            RunHudUiFactory.AddLayoutElement(tradeBtn.gameObject, 36f);
+            _tradeDialogInfo = AddPanelText(_tradeDialogRoot, 14, FontStyle.Normal);
+            _tradeDialogInfo.alignment = TextAnchor.UpperLeft;
 
-            var proposeBtn = RunHudUiFactory.CreateButton(sidePanel, "Tilbyd 1:1 til AI", RunHudUiFactory.ButtonSecondary);
-            proposeBtn.onClick.AddListener(ExecutePlayerTradeProposal);
-            RunHudUiFactory.AddLayoutElement(proposeBtn.gameObject, 36f);
+            BuildTradeDialogResourceRow(_tradeDialogRoot, "Du giver:", true);
+            BuildTradeDialogResourceRow(_tradeDialogRoot, "Du modtager:", false);
+
+            var actions = new GameObject("TradeDialogActions");
+            actions.layer = _tradeDialogRoot.gameObject.layer;
+            actions.transform.SetParent(_tradeDialogRoot, false);
+            var actionsLayout = actions.AddComponent<HorizontalLayoutGroup>();
+            actionsLayout.spacing = 8f;
+            actionsLayout.childAlignment = TextAnchor.MiddleCenter;
+            RunHudUiFactory.AddLayoutElement(actions, 40f);
+
+            var bankBtn = RunHudUiFactory.CreateButton(actions.transform, "Bank", RunHudUiFactory.ButtonFill);
+            bankBtn.onClick.AddListener(ExecuteBankTrade);
+            var offerBtn = RunHudUiFactory.CreateButton(actions.transform, "Tilbyd AI", RunHudUiFactory.ButtonSecondary);
+            offerBtn.onClick.AddListener(ExecutePlayerTradeProposal);
+            var closeBtn = RunHudUiFactory.CreateButton(actions.transform, "Luk", RunHudUiFactory.ButtonSecondary);
+            closeBtn.onClick.AddListener(() => SetTradeDialogVisible(false));
 
             var responsesGo = new GameObject("PlayerTradeResponses");
-            responsesGo.transform.SetParent(sidePanel, false);
+            responsesGo.layer = _tradeDialogRoot.gameObject.layer;
+            responsesGo.transform.SetParent(_tradeDialogRoot, false);
             _playerTradeResponsesRoot = responsesGo.AddComponent<RectTransform>();
             var responsesLayout = responsesGo.AddComponent<VerticalLayoutGroup>();
             responsesLayout.spacing = 4f;
@@ -72,19 +85,68 @@ namespace CatanRoguelike.Game
             responsesLayout.childForceExpandWidth = true;
             RunHudUiFactory.AddLayoutElement(responsesGo, 8f);
 
-            UpdateTradeInfo();
+            SetTradeDialogVisible(false);
+        }
+
+        private void BuildTradeDialogResourceRow(RectTransform parent, string label, bool giveRow)
+        {
+            var row = new GameObject(giveRow ? "GiveRow" : "ReceiveRow");
+            row.layer = parent.gameObject.layer;
+            row.transform.SetParent(parent, false);
+            var col = row.AddComponent<VerticalLayoutGroup>();
+            col.spacing = 4f;
+            RunHudUiFactory.AddLayoutElement(row, 52f);
+
+            var header = RunHudUiFactory.CreateText(
+                row.transform,
+                "Header",
+                label,
+                13,
+                TextAnchor.UpperLeft,
+                RunHudUiFactory.TextMuted);
+
+            var chips = new GameObject("Chips");
+            chips.layer = row.layer;
+            chips.transform.SetParent(row.transform, false);
+            var chipLayout = chips.AddComponent<HorizontalLayoutGroup>();
+            chipLayout.spacing = 4f;
+            chipLayout.childAlignment = TextAnchor.MiddleLeft;
+
+            foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
+            {
+                var captured = resource;
+                string shortName = ResourceDisplayNames.GetDanish(captured);
+                var btn = RunHudUiFactory.CreateButton(chips.transform, shortName, RunHudUiFactory.ButtonSecondary);
+                RunHudUiFactory.AddLayoutElement(btn.gameObject, 30f).preferredWidth = 72f;
+                btn.onClick.AddListener(() =>
+                {
+                    if (giveRow)
+                        _tradeGive = captured;
+                    else
+                        _tradeReceive = captured;
+                    UpdateTradeInfo();
+                });
+            }
+        }
+
+        private void SetTradeDialogVisible(bool visible)
+        {
+            if (_tradeDialogRoot != null)
+                _tradeDialogRoot.gameObject.SetActive(visible);
+            if (visible)
+                UpdateTradeInfo();
         }
 
         private void UpdateTradeInfo()
         {
-            if (_tradeInfo == null || _controller == null)
+            if (_controller == null)
                 return;
 
             int rate = BankTradeCalculator.GetGiveRateForResource(_controller.State, PlayerId.Human, _tradeGive);
             string rateLabel = rate == BankTradeCalculator.SpecificPortRate ? "2:1 havn"
                 : rate == BankTradeCalculator.GenericPortRate ? "3:1 havn" : "4:1 bank";
             var sb = new StringBuilder();
-            sb.AppendLine($"Giv {_tradeGive} → modtag {_tradeReceive}");
+            sb.AppendLine($"{ResourceDisplayNames.GetDanish(_tradeGive)} → {ResourceDisplayNames.GetDanish(_tradeReceive)}");
             sb.AppendLine($"{rateLabel} (betaler {rate} {ResourceDisplayNames.GetDanish(_tradeGive)})");
 
             if (_controller.State.PendingPlayerTrade.HasValue)
@@ -93,7 +155,11 @@ namespace CatanRoguelike.Game
                 sb.AppendLine($"Dit bud: {FormatTradeBundle(offer.Give)} → {FormatTradeBundle(offer.Receive)}");
             }
 
-            _tradeInfo.text = sb.ToString().TrimEnd();
+            string body = sb.ToString().TrimEnd();
+            if (_tradeSummary != null)
+                _tradeSummary.text = body;
+            if (_tradeDialogInfo != null)
+                _tradeDialogInfo.text = body;
             RebuildPlayerTradeResponses(_controller.State);
         }
 
@@ -113,6 +179,7 @@ namespace CatanRoguelike.Game
                 string aiLabel = response.Ai == PlayerId.Ai ? "AI" : response.Ai.ToString();
                 string status = response.Accept ? "accepterer" : "afviser";
                 var row = new GameObject($"Response_{aiLabel}");
+                row.layer = _playerTradeResponsesRoot.gameObject.layer;
                 row.transform.SetParent(_playerTradeResponsesRoot, false);
                 var layout = row.AddComponent<HorizontalLayoutGroup>();
                 layout.spacing = 6f;
@@ -130,7 +197,7 @@ namespace CatanRoguelike.Game
 
                 if (response.Accept)
                 {
-                    var acceptBtn = RunHudUiFactory.CreateButton(row.transform, "Gennemfør", RunHudUiFactory.ButtonFill);
+                    var acceptBtn = RunHudUiFactory.CreateButton(row.transform, "Accepter", RunHudUiFactory.ButtonFill);
                     var captured = response.Ai;
                     acceptBtn.onClick.AddListener(() =>
                     {
@@ -185,7 +252,11 @@ namespace CatanRoguelike.Game
         private void RefreshTradePanel(GameState state)
         {
             if (state.Phase != GamePhase.DayPlayerActions || state.Winner.HasValue)
+            {
+                SetTradeDialogVisible(false);
                 return;
+            }
+
             UpdateTradeInfo();
         }
     }

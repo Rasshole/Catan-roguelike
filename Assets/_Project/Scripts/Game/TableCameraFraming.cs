@@ -11,8 +11,8 @@ namespace CatanRoguelike.Game
     public static class TableCameraFraming
     {
         public const float DistanceToRadiusRatio = 2.0f;
-        public const float HeightToDistanceRatio = 7f / 8f;
-        public const float DefaultMarginFactor = 0.86f;
+        public const float HeightToDistanceRatio = 0.72f;
+        public const float DefaultMarginFactor = 0.82f;
         public const float MinOrbitDistance = 2.4f;
 
         /// <summary>World thickness of the decorative table disk under the hex cluster.</summary>

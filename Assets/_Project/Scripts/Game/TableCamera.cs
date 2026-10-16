@@ -99,8 +99,8 @@ namespace CatanRoguelike.Game
             float distance = TableCameraFraming.ComputeOrbitDistance(boardRadius, distanceMargin);
             float height = TableCameraFraming.ComputeOrbitHeight(distance);
 
-            var offset = Quaternion.Euler(55f, _angle, 0f) * new Vector3(0f, 0f, -distance);
-            transform.position = lookTarget.position + offset + Vector3.up * (height * 0.3f);
+            var offset = Quaternion.Euler(64f, _angle, 0f) * new Vector3(0f, 0f, -distance);
+            transform.position = lookTarget.position + offset + Vector3.up * (height * 0.22f);
             transform.LookAt(lookTarget.position + Vector3.up * 0.5f);
         }
 
@@ -112,7 +112,10 @@ namespace CatanRoguelike.Game
                 screenHeight = Screen.height;
 
             float desiredScreenX = screenWidth * 0.5f
-                + PlaceholderHudLayout.GetBoardScreenOffsetX(PlaceholderHudLayout.LastPanelWidth, screenWidth);
+                + PlaceholderHudLayout.GetBoardScreenOffsetX(
+                    PlaceholderHudLayout.LastPanelWidth,
+                    screenWidth,
+                    RunHudLayout.RightChromePanelWidth);
             Vector3 boardScreen = _camera.WorldToScreenPoint(lookTarget.position);
             float deltaPx = desiredScreenX - boardScreen.x;
             if (Mathf.Abs(deltaPx) <= 0.5f)

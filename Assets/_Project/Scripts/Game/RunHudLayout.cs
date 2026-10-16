@@ -4,11 +4,12 @@ namespace CatanRoguelike.Game
     public static class RunHudLayout
     {
         public const float Margin = 10f;
-        public const float SidePanelWidth = 280f;
-        public const float BottomHandHeight = 148f;
-        public const float BottomActionBarHeight = 52f;
-        public const float CardWidth = 132f;
-        public const float CardHeight = 118f;
+        public const float SidePanelWidth = 232f;
+        public const float RightChromePanelWidth = 300f;
+        public const float BottomHandHeight = 168f;
+        public const float BottomActionBarHeight = 68f;
+        public const float CardWidth = 136f;
+        public const float CardHeight = 124f;
         public const float CardSpacing = 10f;
 
         public static float GetHandRowBottomInset() => Margin;

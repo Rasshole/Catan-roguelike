@@ -50,10 +50,11 @@ namespace CatanRoguelike.Game
         /// <summary>
         /// Horizontal screen offset (pixels) from screen center where the board origin should appear.
         /// </summary>
-        public static float GetBoardScreenOffsetX(float panelWidth, int screenWidth)
+        public static float GetBoardScreenOffsetX(float panelWidth, int screenWidth, float rightPanelWidth = 0f)
         {
-            float hudRight = Margin + panelWidth + Margin;
-            float unobstructedCenter = hudRight + (screenWidth - hudRight) * 0.5f;
+            float hudLeft = Margin + panelWidth + Margin;
+            float hudRight = Margin + rightPanelWidth + Margin;
+            float unobstructedCenter = hudLeft + (screenWidth - hudLeft - hudRight) * 0.5f;
             return unobstructedCenter - screenWidth * 0.5f;
         }
     }

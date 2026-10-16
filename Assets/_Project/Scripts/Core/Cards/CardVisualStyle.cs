@@ -17,6 +17,15 @@ namespace CatanRoguelike.Core.Cards
             _ => new Rgb(0.55f, 0.55f, 0.55f)
         };
 
+        public static string GetCategoryLabel(CardCategory category) => category switch
+        {
+            CardCategory.RollManipulation => "Terning",
+            CardCategory.BuildTempo => "Byg",
+            CardCategory.Sabotage => "Sab.",
+            CardCategory.Synergy => "Synergi",
+            _ => "Kort"
+        };
+
         public readonly struct Rgb
         {
             public readonly float R;

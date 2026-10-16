@@ -16,16 +16,14 @@ namespace CatanRoguelike.Game
         private Button _buildRoadButton;
         private Button _buildSettlementButton;
         private Button _buildCityButton;
-        private Button _endTurnPinned;
-        private Button _rollPinned;
-        private Text _diceOverlay;
+        private Button _buildDevButton;
         private bool _resourceAnimLock;
         private ResourceBundle _resourceAnimDisplay;
 
         public void SetDiceOverlay(string text)
         {
-            if (_diceOverlay != null)
-                _diceOverlay.text = text ?? string.Empty;
+            if (_diceWidgetValue != null && !string.IsNullOrEmpty(text))
+                _diceWidgetValue.text = text;
         }
 
         public void BeginResourceAnimationLock() => _resourceAnimLock = true;
@@ -70,49 +68,7 @@ namespace CatanRoguelike.Game
             rect.localScale = baseScale;
         }
 
-        private void BuildPinnedControls(Transform canvasRoot)
-        {
-            var bar = RunHudUiFactory.CreatePanel(
-                canvasRoot,
-                "PinnedControls",
-                new Vector2(1f, 0f),
-                new Vector2(1f, 0f),
-                new Vector2(-280f, 12f),
-                new Vector2(-12f, 64f));
-            bar.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.35f);
-
-            var layout = bar.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 8f;
-            layout.padding = new RectOffset(8, 8, 6, 6);
-            layout.childAlignment = TextAnchor.MiddleRight;
-
-            _rollPinned = RunHudUiFactory.CreateButton(bar, "Rul (Space)", RunHudUiFactory.ButtonFill);
-            _rollPinned.onClick.AddListener(() => _feel?.RequestMorningRoll());
-
-            _endTurnPinned = RunHudUiFactory.CreateButton(bar, "Afslut dag", RunHudUiFactory.ButtonSecondary);
-            _endTurnPinned.onClick.AddListener(() =>
-            {
-                if (_controller != null)
-                    _controller.EndPlayerDay();
-            });
-
-            var overlayGo = new GameObject("DiceOverlay");
-            overlayGo.transform.SetParent(canvasRoot, false);
-            var overlayRect = overlayGo.AddComponent<RectTransform>();
-            overlayRect.anchorMin = new Vector2(0.5f, 0.5f);
-            overlayRect.anchorMax = new Vector2(0.5f, 0.5f);
-            overlayRect.sizeDelta = new Vector2(420f, 80f);
-            _diceOverlay = RunHudUiFactory.CreateText(
-                overlayGo.transform,
-                "Dice",
-                string.Empty,
-                42,
-                TextAnchor.MiddleCenter,
-                RunHudUiFactory.TextPrimary,
-                FontStyle.Bold);
-        }
-
-        private void RefreshPinnedControls(GameState state)
+        private void RefreshActionBarChrome(GameState state)
         {
             if (_endTurnPinned != null)
             {
@@ -128,6 +84,7 @@ namespace CatanRoguelike.Game
                 _rollPinned.interactable = showRoll && (_feel == null || !_feel.IsBlockingInput);
             }
 
+            RefreshDiceWidget(state);
             RefreshTradePanel(state);
         }
 
@@ -143,15 +100,21 @@ namespace CatanRoguelike.Game
             RunHudCostTooltip.EnsureShared(_canvas.transform);
             _buildRoadButton = CreateBuildButton("Vej", out _buildRoadChip);
             _buildSettlementButton = CreateBuildButton("By", out _buildSettlementChip);
-            _buildCityButton = CreateBuildButton("Byudvid", out _buildCityChip);
+            _buildCityButton = CreateBuildButton("Storby", out _buildCityChip);
+            Text devChip;
+            _buildDevButton = CreateBuildButton("Kort", out devChip);
+            _buildDevButton.interactable = false;
+            var devTip = _buildDevButton.gameObject.AddComponent<RunHudCostTooltip>();
+            devTip.SetTooltip("Roguelike-kort spilles om natten.");
             _actionButtons.Add(_buildRoadButton);
             _actionButtons.Add(_buildSettlementButton);
             _actionButtons.Add(_buildCityButton);
+            _actionButtons.Add(_buildDevButton);
         }
 
         private Button CreateBuildButton(string title, out Text chipText)
         {
-            var button = RunHudUiFactory.CreateButton(_actionBar, title, RunHudUiFactory.ButtonSecondary);
+            var button = RunHudUiFactory.CreateButton(_actionBarBuildRoot, title, RunHudUiFactory.ButtonSecondary);
             button.gameObject.AddComponent<RunHudCostTooltip>();
 
             var chipGo = new GameObject("Chip");
@@ -199,6 +162,12 @@ namespace CatanRoguelike.Game
                 _buildSettlementChip.text = BuildingPieceLimits.GetSettlementsRemaining(board, PlayerId.Human).ToString();
             if (_buildCityChip != null)
                 _buildCityChip.text = BuildingPieceLimits.GetCitiesRemaining(board, PlayerId.Human).ToString();
+            if (_buildDevButton != null)
+            {
+                var devChip = _buildDevButton.GetComponentInChildren<Text>();
+                if (devChip != null && devChip.gameObject.name == "Count")
+                    devChip.text = state.PlayerHand.Count.ToString();
+            }
 
             ConfigureBuildButton(
                 _buildRoadButton,
@@ -216,7 +185,7 @@ namespace CatanRoguelike.Game
 
             ConfigureBuildButton(
                 _buildCityButton,
-                BuildCostFormatter.FormatButtonLabel("Byudvid", cityCost, cityOk),
+                BuildCostFormatter.FormatButtonLabel("Storby", cityCost, cityOk),
                 BuildCostFormatter.FormatTooltip(cityCost),
                 cityOk,
                 () => _boardInput.SetBuildModeCity());

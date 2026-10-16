@@ -30,7 +30,6 @@ namespace CatanRoguelike.Game
         private Text _dayPhaseText;
         private Text _statusText;
         private Text _vpText;
-        private Text _rollsText;
         private Text _aiText;
         private readonly List<Text> _resourceAmountTexts = new();
         private readonly List<Image> _resourceSwatches = new();
@@ -113,12 +112,10 @@ namespace CatanRoguelike.Game
             RefreshResourcesPartial(state.PlayerInventory);
             _aiText.text = FormatAiSummary(state);
 
-            _rollsText.text = BuildRollsBlock(state);
-
             RebuildShopList(state);
             RebuildHand(state);
             RebuildActionBar(state);
-            RefreshPinnedControls(state);
+            RefreshActionBarChrome(state);
             RefreshBuildButtons(state);
             RefreshColonistChrome(state);
             RefreshToastWidget(state);
@@ -134,9 +131,9 @@ namespace CatanRoguelike.Game
 
             BuildSidePanel(_canvas.transform);
             BuildHandRow(_canvas.transform);
-            BuildActionBar(_canvas.transform);
-            BuildPinnedControls(_canvas.transform);
+            BuildActionBarChrome(_canvas.transform);
             BuildColonistChrome(_canvas.transform);
+            EnsureTradeDialogBuilt();
             BuildToastWidget(_canvas.transform);
             BuildIncomingTradePanel(_canvas.transform);
             EnsureFlyLayer();
@@ -172,8 +169,6 @@ namespace CatanRoguelike.Game
             BuildTradePanel(panel);
 
             _aiText = AddPanelText(panel, 15, FontStyle.Normal);
-            AddPanelLabel(panel, "Terninger", 17);
-            _rollsText = AddPanelText(panel, 14, FontStyle.Normal);
 
             AddPanelLabel(panel, "Butik", 17);
             var shopScrollGo = new GameObject("ShopScroll");
@@ -218,30 +213,46 @@ namespace CatanRoguelike.Game
 
         private void BuildResourceRows(RectTransform panel)
         {
+            var gridGo = new GameObject("ResourceChipGrid");
+            gridGo.layer = panel.gameObject.layer;
+            gridGo.transform.SetParent(panel, false);
+            var grid = gridGo.AddComponent<GridLayoutGroup>();
+            grid.cellSize = new Vector2(96f, 30f);
+            grid.spacing = new Vector2(6f, 6f);
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = 2;
+            RunHudUiFactory.AddLayoutElement(gridGo, 108f);
+
             foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
             {
-                var row = new GameObject($"Res_{resource}");
-                row.transform.SetParent(panel, false);
-                var rowLayout = row.AddComponent<HorizontalLayoutGroup>();
-                rowLayout.spacing = 8f;
+                var chip = new GameObject($"Chip_{resource}");
+                chip.layer = gridGo.layer;
+                chip.transform.SetParent(gridGo.transform, false);
+                var chipBg = chip.AddComponent<Image>();
+                chipBg.color = new Color(0.11f, 0.14f, 0.19f, 0.95f);
+
+                var rowLayout = chip.AddComponent<HorizontalLayoutGroup>();
+                rowLayout.padding = new RectOffset(6, 6, 4, 4);
+                rowLayout.spacing = 6f;
                 rowLayout.childAlignment = TextAnchor.MiddleLeft;
-                RunHudUiFactory.AddLayoutElement(row, 28f);
 
                 var swatchGo = new GameObject("Swatch");
-                swatchGo.transform.SetParent(row.transform, false);
+                swatchGo.layer = chip.layer;
+                swatchGo.transform.SetParent(chip.transform, false);
                 var swatchRect = swatchGo.AddComponent<RectTransform>();
-                swatchRect.sizeDelta = new Vector2(22f, 22f);
+                swatchRect.sizeDelta = new Vector2(18f, 18f);
                 var swatch = swatchGo.AddComponent<Image>();
                 swatch.color = BoardResourceColors.GetHudSwatch(resource);
-                RunHudUiFactory.AddLayoutElement(swatchGo, 22f).preferredWidth = 22f;
+                RunHudUiFactory.AddLayoutElement(swatchGo, 18f).preferredWidth = 18f;
 
                 var amount = RunHudUiFactory.CreateText(
-                    row.transform,
+                    chip.transform,
                     "Amount",
                     HudResourceFormatting.FormatQuantity(0, resource),
-                    17,
+                    15,
                     TextAnchor.MiddleLeft,
-                    RunHudUiFactory.TextPrimary);
+                    RunHudUiFactory.TextPrimary,
+                    FontStyle.Bold);
                 _resourceAmountTexts.Add(amount);
                 _resourceSwatches.Add(swatch);
             }
@@ -257,7 +268,7 @@ namespace CatanRoguelike.Game
                 new Vector2(0f, 0f),
                 new Vector2(1f, 0f),
                 new Vector2(margin + RunHudLayout.SidePanelWidth + margin, bottom),
-                new Vector2(-margin, bottom + RunHudLayout.BottomHandHeight));
+                new Vector2(-(margin + RunHudLayout.RightChromePanelWidth + margin), bottom + RunHudLayout.BottomHandHeight));
             _handPanel.GetComponent<Image>().color = RunHudUiFactory.HandBackdrop;
 
             var scrollGo = new GameObject("HandScroll");
@@ -301,28 +312,6 @@ namespace CatanRoguelike.Game
 
             scroll.content = _handRow;
             scroll.viewport = viewportRect;
-        }
-
-        private void BuildActionBar(Transform root)
-        {
-            float margin = RunHudLayout.Margin;
-            float bottom = RunHudLayout.GetActionBarBottomInset();
-            _actionBar = RunHudUiFactory.CreatePanel(
-                root,
-                "ActionBar",
-                new Vector2(0f, 0f),
-                new Vector2(1f, 0f),
-                new Vector2(margin + RunHudLayout.SidePanelWidth + margin, bottom),
-                new Vector2(-margin, bottom + RunHudLayout.BottomActionBarHeight));
-
-            var layout = _actionBar.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 8f;
-            layout.padding = new RectOffset(8, 8, 6, 6);
-            layout.childAlignment = TextAnchor.MiddleLeft;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = true;
-            layout.childControlHeight = true;
-            layout.childControlWidth = false;
         }
 
         private static Text AddPanelText(RectTransform panel, int size, FontStyle style)
@@ -419,7 +408,8 @@ namespace CatanRoguelike.Game
                 Destroy(go);
             _handCardObjects.Clear();
 
-            bool showHand = state.Phase == GamePhase.NightPlayCard && !state.Winner.HasValue;
+            bool showHand = !state.Winner.HasValue
+                && (state.Phase == GamePhase.NightPlayCard || state.PlayerHand.Count > 0);
             if (_handPanel != null)
                 _handPanel.gameObject.SetActive(showHand);
 
@@ -470,6 +460,14 @@ namespace CatanRoguelike.Game
                     RunHudUiFactory.TextPrimary,
                     FontStyle.Bold);
 
+                RunHudUiFactory.CreateText(
+                    inner.transform,
+                    "Category",
+                    CardVisualStyle.GetCategoryLabel(def.Category),
+                    12,
+                    TextAnchor.UpperRight,
+                    RunHudUiFactory.TextMuted);
+
                 var body = RunHudUiFactory.CreateText(
                     inner.transform,
                     "Body",
@@ -509,8 +507,12 @@ namespace CatanRoguelike.Game
                 if (button != null)
                     button.onClick.RemoveAllListeners();
             }
-            for (int i = _actionBar.childCount - 1; i >= 0; i--)
-                Destroy(_actionBar.GetChild(i).gameObject);
+            if (_actionBarBuildRoot != null)
+            {
+                for (int i = _actionBarBuildRoot.childCount - 1; i >= 0; i--)
+                    Destroy(_actionBarBuildRoot.GetChild(i).gameObject);
+            }
+
             _actionButtons.Clear();
             _buildRoadButton = null;
             _buildSettlementButton = null;
@@ -518,7 +520,7 @@ namespace CatanRoguelike.Game
 
             if (state.Winner.HasValue)
             {
-                var restart = RunHudUiFactory.CreateButton(_actionBar, "Genstart", RunHudUiFactory.ButtonFill);
+                var restart = RunHudUiFactory.CreateButton(_actionBarBuildRoot, "Genstart", RunHudUiFactory.ButtonFill);
                 restart.onClick.AddListener(() =>
                     UnityEngine.SceneManagement.SceneManager.LoadScene(
                         UnityEngine.SceneManagement.SceneManager.GetActiveScene().name));
@@ -531,7 +533,7 @@ namespace CatanRoguelike.Game
                 foreach (var perk in state.PendingLevelUpChoices)
                 {
                     string label = LevelUpLibrary.GetDescription(perk);
-                    var button = RunHudUiFactory.CreateButton(_actionBar, label, RunHudUiFactory.ButtonFill);
+                    var button = RunHudUiFactory.CreateButton(_actionBarBuildRoot, label, RunHudUiFactory.ButtonFill);
                     var captured = perk;
                     button.onClick.AddListener(() => _controller.ChooseLevelUpPerk(captured));
                     _actionButtons.Add(button);
@@ -543,16 +545,19 @@ namespace CatanRoguelike.Game
             {
                 if (state.PlayerHand.Count > 0)
                 {
-                    AddResourcePickerButtons();
-                    AddRobberButtons(state, steal: false);
-                    AddRoadPickerButtons(state);
+                    if (RunHudDevFlags.ShowDebugToolbar)
+                    {
+                        AddResourcePickerButtons();
+                        AddRobberButtons(state, steal: false);
+                        AddRoadPickerButtons(state);
+                    }
 
-                    var play = RunHudUiFactory.CreateButton(_actionBar, "Spil kort", RunHudUiFactory.ButtonFill);
+                    var play = RunHudUiFactory.CreateButton(_actionBarBuildRoot, "Spil kort", RunHudUiFactory.ButtonFill);
                     play.onClick.AddListener(PlaySelectedCard);
                     _actionButtons.Add(play);
                 }
 
-                var skip = RunHudUiFactory.CreateButton(_actionBar, "Spring over → Dag", RunHudUiFactory.ButtonSecondary);
+                var skip = RunHudUiFactory.CreateButton(_actionBarBuildRoot, "Spring over → Dag", RunHudUiFactory.ButtonSecondary);
                 skip.onClick.AddListener(() => _controller.SkipNightCard());
                 _actionButtons.Add(skip);
                 return;
@@ -562,11 +567,12 @@ namespace CatanRoguelike.Game
             {
                 EnsureBuildButtons();
                 RefreshBuildButtons(state);
-                AddRobberButtons(state, steal: true);
+                if (RunHudDevFlags.ShowDebugToolbar)
+                    AddRobberButtons(state, steal: true);
 
                 if (_boardInput != null && _boardInput.IsPlacementModeActive)
                 {
-                    var cancel = RunHudUiFactory.CreateButton(_actionBar, "Annuller (Esc)", RunHudUiFactory.ButtonSecondary);
+                    var cancel = RunHudUiFactory.CreateButton(_actionBarBuildRoot, "Annuller (Esc)", RunHudUiFactory.ButtonSecondary);
                     cancel.onClick.AddListener(() => _boardInput.CancelBuildMode());
                     _actionButtons.Add(cancel);
                 }
@@ -575,7 +581,7 @@ namespace CatanRoguelike.Game
 
         private void AddBuildModeButton(string label, UnityEngine.Events.UnityAction action)
         {
-            var button = RunHudUiFactory.CreateButton(_actionBar, label, RunHudUiFactory.ButtonSecondary);
+            var button = RunHudUiFactory.CreateButton(_actionBarBuildRoot, label, RunHudUiFactory.ButtonSecondary);
             button.onClick.AddListener(action);
             _actionButtons.Add(button);
         }
@@ -586,7 +592,7 @@ namespace CatanRoguelike.Game
             {
                 int index = (int)resource;
                 string label = ResourceDisplayNames.GetDanish(resource);
-                var button = RunHudUiFactory.CreateButton(_actionBar, label, RunHudUiFactory.ButtonSecondary);
+                var button = RunHudUiFactory.CreateButton(_actionBarBuildRoot, label, RunHudUiFactory.ButtonSecondary);
                 bool selected = _selectedResourceIndex == index;
                 if (selected)
                     button.GetComponent<Image>().color = BoardResourceColors.GetHudSwatch(resource);
@@ -608,7 +614,7 @@ namespace CatanRoguelike.Game
             _selectedHexIndex = Mathf.Clamp(_selectedHexIndex, 0, tiles.Count - 1);
             var coord = tiles[_selectedHexIndex];
 
-            var prev = RunHudUiFactory.CreateButton(_actionBar, "◀ Hex", RunHudUiFactory.ButtonSecondary);
+            var prev = RunHudUiFactory.CreateButton(_actionBarBuildRoot, "◀ Hex", RunHudUiFactory.ButtonSecondary);
             prev.onClick.AddListener(() =>
             {
                 _selectedHexIndex = Mathf.Max(0, _selectedHexIndex - 1);
@@ -616,11 +622,11 @@ namespace CatanRoguelike.Game
             });
             _actionButtons.Add(prev);
 
-            var move = RunHudUiFactory.CreateButton(_actionBar, $"Røver @ {coord}", RunHudUiFactory.ButtonSecondary);
+            var move = RunHudUiFactory.CreateButton(_actionBarBuildRoot, $"Røver @ {coord}", RunHudUiFactory.ButtonSecondary);
             move.onClick.AddListener(() => _controller.MoveRobber(coord, PlayerId.Human, steal));
             _actionButtons.Add(move);
 
-            var next = RunHudUiFactory.CreateButton(_actionBar, "Hex ▶", RunHudUiFactory.ButtonSecondary);
+            var next = RunHudUiFactory.CreateButton(_actionBarBuildRoot, "Hex ▶", RunHudUiFactory.ButtonSecondary);
             next.onClick.AddListener(() =>
             {
                 _selectedHexIndex = Mathf.Min(tiles.Count - 1, _selectedHexIndex + 1);
@@ -644,7 +650,7 @@ namespace CatanRoguelike.Game
             _selectedRoadIndex = OpponentRoadSelector.ClampIndex(roads, _selectedRoadIndex);
             var edge = roads[_selectedRoadIndex];
 
-            var prev = RunHudUiFactory.CreateButton(_actionBar, "◀ Vej", RunHudUiFactory.ButtonSecondary);
+            var prev = RunHudUiFactory.CreateButton(_actionBarBuildRoot, "◀ Vej", RunHudUiFactory.ButtonSecondary);
             prev.onClick.AddListener(() =>
             {
                 _selectedRoadIndex = OpponentRoadSelector.ClampIndex(roads, _selectedRoadIndex - 1);
@@ -652,7 +658,7 @@ namespace CatanRoguelike.Game
             });
             _actionButtons.Add(prev);
 
-            var next = RunHudUiFactory.CreateButton(_actionBar, "Vej ▶", RunHudUiFactory.ButtonSecondary);
+            var next = RunHudUiFactory.CreateButton(_actionBarBuildRoot, "Vej ▶", RunHudUiFactory.ButtonSecondary);
             next.onClick.AddListener(() =>
             {
                 _selectedRoadIndex = OpponentRoadSelector.ClampIndex(roads, _selectedRoadIndex + 1);

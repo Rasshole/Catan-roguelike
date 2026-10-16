@@ -14,9 +14,6 @@ namespace CatanRoguelike.Game
         private RectTransform _bankStripPanel;
         private Text _bankStripText;
         private Text _opponentPanelText;
-        private Text _rollPromptText;
-        private Image _rollPromptGlow;
-
         private void BuildColonistChrome(Transform canvasRoot)
         {
             var logPanel = RunHudUiFactory.CreatePanel(
@@ -24,8 +21,8 @@ namespace CatanRoguelike.Game
                 "GameLog",
                 new Vector2(1f, 1f),
                 new Vector2(1f, 1f),
-                new Vector2(-320f, -220f),
-                new Vector2(-12f, -12f));
+                new Vector2(-(RunHudLayout.RightChromePanelWidth + RunHudLayout.Margin), -RunHudLayout.Margin),
+                new Vector2(-RunHudLayout.Margin, -RunHudLayout.Margin));
             _gameLogText = RunHudUiFactory.CreateText(
                 logPanel,
                 "Log",
@@ -39,8 +36,8 @@ namespace CatanRoguelike.Game
                 "BankStrip",
                 new Vector2(1f, 1f),
                 new Vector2(1f, 1f),
-                new Vector2(-320f, -250f),
-                new Vector2(-12f, -222f));
+                new Vector2(-(RunHudLayout.RightChromePanelWidth + RunHudLayout.Margin), -(RunHudLayout.Margin + 200f)),
+                new Vector2(-RunHudLayout.Margin, -(RunHudLayout.Margin + 172f)));
             SetBankFlyTarget(_bankStripPanel);
             _bankStripText = RunHudUiFactory.CreateText(
                 _bankStripPanel,
@@ -55,8 +52,8 @@ namespace CatanRoguelike.Game
                 "OpponentPanel",
                 new Vector2(1f, 1f),
                 new Vector2(1f, 1f),
-                new Vector2(-320f, -340f),
-                new Vector2(-12f, -252f));
+                new Vector2(-(RunHudLayout.RightChromePanelWidth + RunHudLayout.Margin), -(RunHudLayout.Margin + 320f)),
+                new Vector2(-RunHudLayout.Margin, -(RunHudLayout.Margin + 232f)));
             _opponentPanelText = RunHudUiFactory.CreateText(
                 oppPanel,
                 "Opp",
@@ -65,34 +62,6 @@ namespace CatanRoguelike.Game
                 TextAnchor.UpperLeft,
                 RunHudUiFactory.TextPrimary);
 
-            var promptGo = new GameObject("RollPrompt");
-            promptGo.transform.SetParent(canvasRoot, false);
-            promptGo.layer = canvasRoot.gameObject.layer;
-            var rect = promptGo.AddComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0.5f, 0.5f);
-            rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = new Vector2(360f, 48f);
-            rect.anchoredPosition = new Vector2(120f, 40f);
-            _rollPromptGlow = promptGo.AddComponent<Image>();
-            _rollPromptGlow.color = new Color(1f, 0.85f, 0.2f, 0f);
-            _rollPromptText = RunHudUiFactory.CreateText(
-                promptGo.transform,
-                "Prompt",
-                "Tryk Rul (Space)",
-                18,
-                TextAnchor.MiddleCenter,
-                RunHudUiFactory.TextPrimary,
-                FontStyle.Bold);
-        }
-
-        public void SetRollPromptActive(bool active)
-        {
-            if (_rollPromptText != null)
-                _rollPromptText.gameObject.SetActive(active);
-            if (_rollPromptGlow != null)
-                _rollPromptGlow.color = active
-                    ? new Color(1f, 0.85f, 0.2f, 0.35f)
-                    : new Color(1f, 0.85f, 0.2f, 0f);
         }
 
         private void RefreshColonistChrome(GameState state)
