@@ -67,7 +67,10 @@ namespace CatanRoguelike.Game
                 RenderTexture.active = renderTexture;
 
                 if (hud != null)
+                {
                     canvasRestore = hud.BeginCanvasCameraCapture(camera);
+                    hud.GetCaptureDiagnostics(camera).LogToConsole("GameSceneCapture");
+                }
 
                 NumberTokenLabelOrientation.RefreshAllLabelsForCamera(camera);
                 Canvas.ForceUpdateCanvases();
@@ -76,6 +79,7 @@ namespace CatanRoguelike.Game
                 if (canvasRestore.Active && canvasRestore.UiCamera != null)
                     canvasRestore.UiCamera.Render();
 
+                RenderTexture.active = renderTexture;
                 texture = new Texture2D(width, height, TextureFormat.RGB24, false);
                 texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
                 texture.Apply();

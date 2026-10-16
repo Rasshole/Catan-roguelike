@@ -16,6 +16,9 @@ namespace CatanRoguelike.Tests.PlayMode
         private const string ColonistSceneName = "ColonistStylePrototype";
         private const int HudReadyMaxFrames = 120;
 
+        // Matches RunHudUiFactory.HandBackdrop (hand row panel).
+        private static readonly Color HandBarReference = new(0.10f, 0.12f, 0.16f);
+
         [Timeout(90000)]
         [UnityTest]
         public IEnumerator ColonistPrototype_CaptureWithHud_WritesPng()
@@ -69,16 +72,17 @@ namespace CatanRoguelike.Tests.PlayMode
             for (int i = 0; i < 4; i++)
                 yield return null;
 
-            var mainCamera = Camera.main;
-            Assert.IsNotNull(mainCamera, "TableCamera should be tagged MainCamera.");
-            hud.GetCaptureDiagnostics(mainCamera).LogToConsole("ColonistPrototypeCapture");
-
             Texture2D boardOnly = GameSceneCapture.CaptureMainCameraToTexture(null);
             Texture2D withHud = GameSceneCapture.CaptureMainCameraToTexture(hud);
             try
             {
+                Assert.IsNotNull(boardOnly, "Board-only capture texture should be created.");
+                Assert.IsNotNull(withHud, "HUD-composited capture texture should be created.");
+                Assert.AreNotSame(boardOnly, withHud, "Captures should be distinct texture instances.");
+
                 AssertTextureHasVisibleContent(withHud);
-                AssertBottomBandShowsHud(boardOnly, withHud);
+                AssertBottomBandDiffersBoardOnlyVsHud(boardOnly, withHud);
+                AssertBottomBandShowsHudBarColor(withHud, boardOnly);
 
                 var envPath = Environment.GetEnvironmentVariable(GameSceneCapture.OutputPathEnvVar);
                 if (!string.IsNullOrWhiteSpace(envPath))
@@ -87,7 +91,13 @@ namespace CatanRoguelike.Tests.PlayMode
                     var directory = Path.GetDirectoryName(outputPath);
                     if (!string.IsNullOrEmpty(directory))
                         Directory.CreateDirectory(directory);
+
+                    var boardPath = outputPath + ".board.png";
+                    File.WriteAllBytes(boardPath, boardOnly.EncodeToPNG());
                     File.WriteAllBytes(outputPath, withHud.EncodeToPNG());
+                    Debug.Log(
+                        $"ColonistPrototypeCapture: wrote HUD PNG to {outputPath} " +
+                        $"and board-only debug PNG to {boardPath}");
                 }
             }
             finally
@@ -125,28 +135,59 @@ namespace CatanRoguelike.Tests.PlayMode
                 "Capture should contain non-black pixels (HUD + board).");
         }
 
-        private static void AssertBottomBandShowsHud(Texture2D boardOnly, Texture2D withHud)
+        private static void AssertBottomBandDiffersBoardOnlyVsHud(Texture2D boardOnly, Texture2D withHud)
         {
+            Assert.AreEqual(boardOnly.width, withHud.width);
+            Assert.AreEqual(boardOnly.height, withHud.height);
+
             int w = withHud.width;
             int h = withHud.height;
-            int bandStartY = (int)(h * 0.9f);
+            int bandStartY = (int)(h * 0.88f);
             int differing = 0;
             int samples = 0;
 
-            for (int x = 0; x < w; x += 32)
+            for (int x = 0; x < w; x += 24)
             {
-                for (int y = bandStartY; y < h; y += 8)
+                for (int y = bandStartY; y < h; y += 6)
                 {
-                    var a = boardOnly.GetPixel(x, y);
-                    var b = withHud.GetPixel(x, y);
-                    if (ColorDistance(a, b) > 0.04f)
+                    var boardPixel = boardOnly.GetPixel(x, y);
+                    var hudPixel = withHud.GetPixel(x, y);
+                    if (ColorDistance(boardPixel, hudPixel) > 0.04f)
                         differing++;
                     samples++;
                 }
             }
 
-            Assert.Greater(differing, samples / 10,
-                "Bottom 10% of frame should differ when HUD is composited (hand/action bar).");
+            Assert.Greater(differing, samples / 8,
+                "Bottom band of HUD capture must differ from board-only capture (hand/action bar).");
+        }
+
+        private static void AssertBottomBandShowsHudBarColor(Texture2D withHud, Texture2D boardOnly)
+        {
+            int w = withHud.width;
+            int h = withHud.height;
+            int bandStartY = (int)(h * 0.9f);
+            int matchingHudBar = 0;
+            int samples = 0;
+
+            for (int x = w / 8; x < w; x += w / 8)
+            {
+                for (int y = bandStartY; y < h; y += 12)
+                {
+                    var hudPixel = withHud.GetPixel(x, y);
+                    var boardPixel = boardOnly.GetPixel(x, y);
+
+                    Assert.Greater(ColorDistance(hudPixel, boardPixel), 0.04f,
+                        "HUD capture bottom band should differ from board-only at the same coordinates.");
+
+                    if (ColorDistance(hudPixel, HandBarReference) < 0.35f)
+                        matchingHudBar++;
+                    samples++;
+                }
+            }
+
+            Assert.Greater(matchingHudBar, samples / 4,
+                "Bottom band should include hand-bar backdrop color from the colonist HUD.");
         }
 
         private static float ColorDistance(Color a, Color b)
