@@ -20,9 +20,9 @@ namespace CatanRoguelike.Core.Map
         public const float BadgeRenderedLandInset = 0.055f;
         public const float FishShoalLandClearance = 0.05f;
         private const float FishShoalCoastInsetFactor = 0.14f;
-        private const float FishShoalSeaDepthFactor = 0.28f;
-        private const float FishShoalBaseHalfWidthFactor = 0.36f;
-        private const float FishShoalTokenDepthFactor = 0.76f;
+        private const float FishShoalSeaDepthFactor = 0.75f;
+        private const float FishShoalBaseHalfWidthFactor = 0.45f;
+        private const float FishShoalTokenDepthFactor = 0.45f;
         private const float BadgeClearanceEpsilon = 0.004f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 

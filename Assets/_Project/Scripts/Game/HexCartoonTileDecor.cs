@@ -55,7 +55,7 @@ namespace CatanRoguelike.Game
 
             for (int i = 0; i < HexPrismMesh.SideCount; i++)
             {
-                if (tileSet != null && !tileSet.Contains(HexMath.GetNeighbor(hex, i)))
+                if (tileSet != null && !tileSet.Contains(HexMath.GetNeighbor(hex, (i + 5) % 6)))
                     continue;
 
                 int next = (i + 1) % HexPrismMesh.SideCount;

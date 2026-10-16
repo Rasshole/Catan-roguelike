@@ -795,7 +795,10 @@ namespace CatanRoguelike.Game
                     continue;
 
                 float y = tile.ChipTopWorldY;
-                var probeWorld = new Vector3(placement.SeaTip.X, y, placement.SeaTip.Z);
+                const float probeAlongShoal = 0.15f;
+                var probeXz = placement.CoastVertexA
+                    + (placement.SeaTip - placement.CoastVertexA) * probeAlongShoal;
+                var probeWorld = new Vector3(probeXz.X, y, probeXz.Z);
                 var pixel = ColonistCaptureProjection.WorldToTexturePixel(
                     probeWorld, camera, tableCamera, textureWidth, textureHeight);
 

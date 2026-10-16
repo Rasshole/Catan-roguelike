@@ -1,5 +1,6 @@
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Game;
 using NUnit.Framework;
@@ -54,6 +55,44 @@ namespace CatanRoguelike.Tests
             AssertMinWorldYAboveHexTop(marker);
             AssertSharedMaterialsAssigned(marker);
             AssertPlankLengthReadableFromTable(marker);
+        }
+
+        [Test]
+        public void SeaSlotPort_PierPlankBounds_DoNotIntersectLandPolygons()
+        {
+            bool wasActive = ColonistPresentation.IsActive;
+            ColonistPresentation.SetActive(true);
+            try
+            {
+                var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
+                var ports = PortAccess.DiscoverPorts(board);
+                Assert.Greater(ports.Count, 0);
+
+                foreach (var port in ports)
+                {
+                    var marker = PortMarkerVisuals.Create(
+                        _root.transform,
+                        port.Vertex,
+                        HexScale,
+                        TileHeight,
+                        board,
+                        port.IsGeneric,
+                        port.IsGeneric ? null : port.SpecificResource,
+                        WoodColor);
+
+                    foreach (var renderer in marker.GetComponentsInChildren<Renderer>())
+                    {
+                        if (!renderer.gameObject.name.StartsWith("PierPlank"))
+                            continue;
+
+                        AssertPlankBoundsClearOfLand(board, renderer);
+                    }
+                }
+            }
+            finally
+            {
+                ColonistPresentation.SetActive(wasActive);
+            }
         }
 
         [Test]
@@ -128,6 +167,40 @@ namespace CatanRoguelike.Tests
         {
             foreach (var renderer in marker.GetComponentsInChildren<Renderer>())
                 Assert.IsNotNull(renderer.sharedMaterial);
+        }
+
+        private static void AssertPlankBoundsClearOfLand(BoardState board, Renderer plankRenderer)
+        {
+            var bounds = plankRenderer.bounds;
+            var samples = new[]
+            {
+                new MapPlaneXz(bounds.center.x, bounds.center.z),
+                new MapPlaneXz(bounds.min.x, bounds.min.z),
+                new MapPlaneXz(bounds.min.x, bounds.max.z),
+                new MapPlaneXz(bounds.max.x, bounds.min.z),
+                new MapPlaneXz(bounds.max.x, bounds.max.z),
+            };
+
+            foreach (var sample in samples)
+            {
+                float minDist = SeaFrameSlotLayout.MinDistanceToLandHexPolygons(board, sample, HexScale);
+                Assert.Greater(
+                    minDist,
+                    0.001f,
+                    $"Pier plank bounds should stay off land polygons (sample={sample} minDist={minDist:F4}).");
+
+                foreach (var landCoord in board.Tiles.Keys)
+                {
+                    float probeRadius = Mathf.Max(bounds.extents.x, bounds.extents.z) * 0.25f;
+                    Assert.IsFalse(
+                        SeaFrameSlotLayout.DiscIntersectsHexPolygon(
+                            sample,
+                            probeRadius,
+                            landCoord,
+                            HexScale),
+                        $"Pier plank near {sample} should not overlap land hex {landCoord}.");
+                }
+            }
         }
 
         private static void AssertPlankLengthReadableFromTable(GameObject marker)

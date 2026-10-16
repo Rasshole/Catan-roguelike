@@ -195,17 +195,20 @@ namespace CatanRoguelike.Game
                 float rim = BadgeDiscWorldRadius;
                 var coastAWorld = new Vector3(coastA.X, y, coastA.Z);
                 var coastBWorld = new Vector3(coastB.X, y, coastB.Z);
+                const float plankSeaInset = 0.12f;
+                var plankStartA = PierPlankStartInSea(coastAWorld, badgeWorld, plankSeaInset);
+                var plankStartB = PierPlankStartInSea(coastBWorld, badgeWorld, plankSeaInset);
                 CreateWorldPlank(
                     root.transform,
-                    coastAWorld,
-                    RimPointToward(badgeWorld, coastAWorld, rim),
+                    plankStartA,
+                    RimPointToward(badgeWorld, plankStartA, rim),
                     PierWoodColor,
                     SeaSlotPlankWidth,
                     SeaSlotPlankHeight);
                 CreateWorldPlank(
                     root.transform,
-                    coastBWorld,
-                    RimPointToward(badgeWorld, coastBWorld, rim),
+                    plankStartB,
+                    RimPointToward(badgeWorld, plankStartB, rim),
                     PierWoodColor,
                     SeaSlotPlankWidth,
                     SeaSlotPlankHeight);
@@ -225,6 +228,14 @@ namespace CatanRoguelike.Game
 
             LogChildRenderersOnce(root);
             return root;
+        }
+
+        private static Vector3 PierPlankStartInSea(Vector3 coast, Vector3 badge, float inset)
+        {
+            Vector3 towardSea = badge - coast;
+            if (towardSea.sqrMagnitude < 1e-8f)
+                return coast;
+            return coast + towardSea.normalized * inset;
         }
 
         private static Vector3 RimPointToward(Vector3 badgeCenter, Vector3 toward, float radius)
