@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace CatanRoguelike.Game
 {
-    /// <summary>Top-down hooded robber silhouette for colonist board markers.</summary>
+    /// <summary>Top-down hooded robber on a cream disc for colonist board markers.</summary>
     public static class ColonistRobberTopIconTextures
     {
         private const int Size = 64;
@@ -24,18 +24,17 @@ namespace CatanRoguelike.Game
             for (int i = 0; i < pixels.Length; i++)
                 pixels[i] = new Color32(0, 0, 0, 0);
 
+            var disc = new Color32(238, 232, 214, 255);
             var fill = new Color32(34, 36, 42, 255);
-            var outline = new Color32(228, 232, 238, 255);
+            var outline = new Color32(250, 252, 255, 255);
 
+            FillCircle(pixels, 32, 32, 28, disc);
             FillCircle(pixels, 32, 36, 20, outline);
             FillCircle(pixels, 32, 36, 17, fill);
             FillRect(pixels, 22, 14, 20, 18, fill);
             FillRect(pixels, 20, 12, 24, 4, outline);
             FillCircle(pixels, 32, 44, 9, outline);
             FillCircle(pixels, 32, 44, 7, fill);
-
-            RotatePixels90Clockwise(pixels);
-            RotatePixels90Clockwise(pixels);
 
             tex.SetPixels32(pixels);
             tex.Apply(false, false);
@@ -58,24 +57,6 @@ namespace CatanRoguelike.Game
                         px[y * Size + x] = c;
                 }
             }
-        }
-
-        private static void RotatePixels90Clockwise(Color32[] pixels)
-        {
-            var rotated = new Color32[Size * Size];
-            for (int y = 0; y < Size; y++)
-            {
-                for (int x = 0; x < Size; x++)
-                {
-                    int src = y * Size + x;
-                    int dstX = Size - 1 - y;
-                    int dstY = x;
-                    rotated[dstY * Size + dstX] = pixels[src];
-                }
-            }
-
-            for (int i = 0; i < pixels.Length; i++)
-                pixels[i] = rotated[i];
         }
 
         private static void FillRect(Color32[] px, int x, int y, int w, int h, Color32 c)

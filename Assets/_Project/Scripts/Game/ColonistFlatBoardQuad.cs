@@ -43,6 +43,22 @@ namespace CatanRoguelike.Game
             return quad;
         }
 
+        public static void AlignTextureUToWorldPositiveX(Transform quadTransform)
+        {
+            if (quadTransform == null)
+                return;
+
+            ApplyWorldFacing(quadTransform);
+            Vector3 textureU = GetTextureUWorldAxis(quadTransform);
+            textureU.y = 0f;
+            if (textureU.sqrMagnitude < 1e-6f)
+                return;
+
+            textureU.Normalize();
+            float yaw = Vector3.SignedAngle(textureU, Vector3.right, Vector3.up);
+            quadTransform.rotation = Quaternion.AngleAxis(yaw, Vector3.up) * quadTransform.rotation;
+        }
+
         public static void ApplyWorldFacing(Transform quadTransform)
         {
             if (quadTransform == null)
@@ -78,6 +94,12 @@ namespace CatanRoguelike.Game
         /// <summary>Visible board normal for a flat quad (faces +Y).</summary>
         public static Vector3 GetBoardFaceNormal(Transform quadTransform) =>
             quadTransform != null ? (-quadTransform.forward).normalized : Vector3.zero;
+
+        /// <summary>World direction corresponding to texture +U (left-to-right in glyph art).</summary>
+        public static Vector3 GetTextureUWorldAxis(Transform quadTransform) =>
+            quadTransform != null
+                ? quadTransform.TransformDirection(Vector3.right).normalized
+                : Vector3.zero;
 
         /// <summary>World direction corresponding to texture +V on a board-flat quad.</summary>
         public static Vector3 GetTextureVWorldAxis(Transform quadTransform) =>

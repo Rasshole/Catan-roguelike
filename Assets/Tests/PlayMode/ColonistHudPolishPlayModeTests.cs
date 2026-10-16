@@ -187,6 +187,12 @@ namespace CatanRoguelike.Tests.PlayMode
                 discDiameter * 0.55f,
                 $"Port rate label should span most of the badge (label={labelWidth:F3} disc={discDiameter:F3}).");
 
+            float uDot = Vector3.Dot(ColonistFlatBoardQuad.GetTextureUWorldAxis(label), Vector3.right);
+            Assert.Greater(
+                uDot,
+                0.85f,
+                $"Port rate label texture +U should align with world +X (dot={uDot:F3}).");
+
             var discBounds = discRenderer.bounds;
             var labelBounds = labelRenderer.bounds;
             Assert.LessOrEqual(labelBounds.max.x, discBounds.max.x + 0.03f);

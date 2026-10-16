@@ -523,7 +523,7 @@ namespace CatanRoguelike.Game
             if (icon == null)
                 return;
 
-            ColonistFlatBoardQuad.ApplyWorldFacing(icon);
+            ColonistFlatBoardQuad.AlignTextureUToWorldPositiveX(icon);
             ColonistFlatBoardQuad.ApplyWorldSize(
                 icon,
                 _robberMarker.transform,

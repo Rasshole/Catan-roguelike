@@ -90,16 +90,9 @@ namespace CatanRoguelike.Game
                 new Vector3(PostWidth, PostHeight, PostWidth),
                 isGeneric ? GenericPostColor : resourceColor);
 
-            if (!isGeneric)
-            {
-                CreatePart("ResourceFlag", root.transform,
-                    new Vector3(0f, PostHeight + FlagHeight * 0.5f, PierLength + PostWidth * 0.35f),
-                    new Vector3(FlagWidth, FlagHeight, FlagWidth * 0.5f),
-                    resourceColor);
-            }
-
             CreatePortRateBadge(
                 root.transform,
+                hexScale,
                 isGeneric,
                 specificResource,
                 PostHeight + 0.02f,
@@ -111,14 +104,16 @@ namespace CatanRoguelike.Game
 
         private static void CreatePortRateBadge(
             Transform parent,
+            float hexScale,
             bool isGeneric,
             ResourceType? specificResource,
             float localY,
             float localZ)
         {
+            float coastOffset = hexScale * 0.35f;
             var badgeRoot = new GameObject("PortRateBadge");
             badgeRoot.transform.SetParent(parent, false);
-            badgeRoot.transform.localPosition = new Vector3(0f, localY, localZ);
+            badgeRoot.transform.localPosition = new Vector3(0f, localY, localZ + coastOffset);
 
             var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             disc.name = "BadgeDisc";
@@ -133,33 +128,36 @@ namespace CatanRoguelike.Game
 
             float labelLocalY = BadgeDiscHeight + 0.006f;
             var labelTexture = ColonistPortRateLabelTextures.Get(isGeneric);
-            float labelWorldWidth = discDiameter * 0.7f;
+            float labelWorldWidth = discDiameter * 0.65f;
             float aspect = labelTexture.height / (float)labelTexture.width;
             float labelWorldHeight = labelWorldWidth * aspect;
-            float labelLiftZ = isGeneric ? 0f : discDiameter * 0.08f;
 
-            ColonistFlatBoardQuad.Create(
+            var labelGo = ColonistFlatBoardQuad.Create(
                 badgeRoot.transform,
                 "RateLabel",
-                new Vector3(0f, labelLocalY, labelLiftZ),
+                new Vector3(0f, labelLocalY, 0f),
                 labelWorldWidth,
                 labelWorldHeight,
                 labelTexture,
                 3210,
                 discRenderer);
+            ColonistFlatBoardQuad.AlignTextureUToWorldPositiveX(labelGo.transform);
 
             if (!isGeneric && specificResource.HasValue)
             {
-                float iconSize = discDiameter * 0.26f;
-                ColonistFlatBoardQuad.Create(
+                float iconSize = discDiameter * 0.24f;
+                float iconX = labelWorldWidth * 0.58f;
+                float iconZ = -discDiameter * 0.1f;
+                var iconGo = ColonistFlatBoardQuad.Create(
                     badgeRoot.transform,
                     "RateIcon",
-                    new Vector3(0f, labelLocalY, labelLiftZ - discDiameter * 0.22f),
+                    new Vector3(iconX, labelLocalY, iconZ),
                     iconSize,
                     iconSize,
                     ColonistResourceIconTextures.Get(specificResource.Value),
                     3205,
                     discRenderer);
+                ColonistFlatBoardQuad.AlignTextureUToWorldPositiveX(iconGo.transform);
             }
         }
 

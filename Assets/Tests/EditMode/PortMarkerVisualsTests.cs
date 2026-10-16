@@ -56,7 +56,7 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void Create_Specific_HasResourceFlag_WithDistinctColor()
+        public void Create_Specific_HasRateIcon_OnBadge()
         {
             var board = MapPresets.CreateBoard(MapSize.Small);
             var ports = PortAccess.DiscoverPorts(board);
@@ -83,14 +83,12 @@ namespace CatanRoguelike.Tests
                 specificPort.SpecificResource,
                 WoodColor);
 
-            var flag = specificMarker.transform.Find("ResourceFlag");
-            Assert.IsNotNull(flag);
-
-            var genericPlank = genericMarker.transform.Find("PierPlank").GetComponent<Renderer>();
-            var specificFlag = flag.GetComponent<Renderer>();
-            Assert.IsNotNull(genericPlank.sharedMaterial);
-            Assert.IsNotNull(specificFlag.sharedMaterial);
-            Assert.AreNotEqual(genericPlank.sharedMaterial.color, specificFlag.sharedMaterial.color);
+            var badge = specificMarker.transform.Find("PortRateBadge");
+            Assert.IsNotNull(badge);
+            Assert.IsNotNull(badge.Find("RateLabel"));
+            Assert.IsNotNull(badge.Find("RateIcon"));
+            Assert.IsNull(specificMarker.transform.Find("ResourceFlag"));
+            Assert.IsNull(genericMarker.transform.Find("PortRateBadge/RateIcon"));
 
             AssertMinWorldYAboveHexTop(specificMarker);
             AssertSharedMaterialsAssigned(specificMarker);

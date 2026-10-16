@@ -8,7 +8,8 @@ namespace CatanRoguelike.Game
     {
         private const int GlyphWidth = 5;
         private const int GlyphHeight = 7;
-        private const int PixelScale = 4;
+        private const int PixelScale = 5;
+        private const int StrokeExpand = 2;
         private const int CharGap = 2;
 
         private static readonly Dictionary<string, Texture2D> Cache = new();
@@ -131,15 +132,10 @@ namespace CatanRoguelike.Game
                 {
                     if (row[x] != '1')
                         continue;
-                    FillRect(
-                        pixels,
-                        texW,
-                        texH,
-                        originX + x * PixelScale,
-                        originY + (GlyphHeight - 1 - y) * PixelScale,
-                        PixelScale,
-                        PixelScale,
-                        ink);
+                    int px = originX + x * PixelScale - StrokeExpand;
+                    int py = originY + (GlyphHeight - 1 - y) * PixelScale - StrokeExpand;
+                    int size = PixelScale + StrokeExpand * 2;
+                    FillRect(pixels, texW, texH, px, py, size, size, ink);
                 }
             }
         }
