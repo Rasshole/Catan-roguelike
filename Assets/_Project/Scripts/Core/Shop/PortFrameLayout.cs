@@ -93,7 +93,7 @@ namespace CatanRoguelike.Core.Shop
 
             foreach (var hex in board.Tiles.Values)
             {
-                if (!hex.IsCoastal || hex.IsFishTile)
+                if (!IsLandTile(hex) || !hex.IsCoastal)
                     continue;
 
                 for (int c = 0; c < 6; c++)
@@ -137,8 +137,6 @@ namespace CatanRoguelike.Core.Shop
                     }
                 }
 
-                if (!added)
-                    break;
             }
 
             return FillRemainingSpaced(sorted, picked, count);
@@ -208,7 +206,7 @@ namespace CatanRoguelike.Core.Shop
             {
                 if (!board.Tiles.TryGetValue(hex, out var tile))
                     continue;
-                if (tile.IsFishTile)
+                if (!IsLandTile(tile))
                     continue;
                 if (tile.IsCoastal && tile.Resource == resource)
                     return true;
@@ -217,12 +215,14 @@ namespace CatanRoguelike.Core.Shop
             return false;
         }
 
+        private static bool IsLandTile(HexTileData tile) => !tile.IsFishTile || tile.IsDesert;
+
         private static bool IsBoardEdgeVertex(BoardState board, HexMath.Vertex vertex)
         {
             int onBoard = 0;
             foreach (var hex in VertexGraph.GetHexesForVertex(vertex))
             {
-                if (board.Tiles.ContainsKey(hex))
+                if (board.Tiles.TryGetValue(hex, out var tile) && IsLandTile(tile))
                     onBoard++;
             }
 

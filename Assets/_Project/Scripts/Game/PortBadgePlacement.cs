@@ -49,7 +49,7 @@ namespace CatanRoguelike.Game
             float step = hexInradius * OutwardStepInradiusFactor;
             for (int i = 0; i < MaxOutwardIterations; i++)
             {
-                if (!DiscIntersectsAnyLandHex(badgeCenter, discRadius, board, hexScale))
+                if (!DiscIntersectsBlockedHex(badgeCenter, discRadius, board, hexScale))
                 {
                     seaOutward = seaDir;
                     return true;
@@ -59,7 +59,7 @@ namespace CatanRoguelike.Game
             }
 
             seaOutward = seaDir;
-            return !DiscIntersectsAnyLandHex(badgeCenter, discRadius, board, hexScale);
+            return !DiscIntersectsBlockedHex(badgeCenter, discRadius, board, hexScale);
         }
 
         public static float ComputeMaxBadgeOuterDistanceFromCenter(
@@ -90,6 +90,13 @@ namespace CatanRoguelike.Game
             Vector2 discCenter,
             float discRadius,
             BoardState board,
+            float hexScale) =>
+            DiscIntersectsBlockedHex(discCenter, discRadius, board, hexScale);
+
+        public static bool DiscIntersectsBlockedHex(
+            Vector2 discCenter,
+            float discRadius,
+            BoardState board,
             float hexScale)
         {
             if (board == null)
@@ -97,9 +104,6 @@ namespace CatanRoguelike.Game
 
             foreach (var kvp in board.Tiles)
             {
-                if (kvp.Value.IsFishTile && !kvp.Value.IsDesert)
-                    continue;
-
                 if (DiscIntersectsHexPolygon(discCenter, discRadius, kvp.Key, hexScale))
                     return true;
             }

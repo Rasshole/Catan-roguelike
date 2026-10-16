@@ -43,7 +43,14 @@ namespace CatanRoguelike.Game
             {
                 var mat = renderer.sharedMaterial;
                 string shader = mat != null && mat.shader != null ? mat.shader.name : "null";
-                string tex = mat != null && mat.mainTexture != null ? mat.mainTexture.name : "null";
+                string tex = "null";
+                if (mat != null)
+                {
+                    if (mat.HasProperty("_MainTex") && mat.GetTexture("_MainTex") != null)
+                        tex = mat.GetTexture("_MainTex").name;
+                    else if (mat.mainTexture != null)
+                        tex = mat.mainTexture.name;
+                }
                 Color c = mat != null && mat.HasProperty("_Color") ? mat.GetColor("_Color") : Color.black;
                 sb.AppendLine(
                     $"  {renderer.gameObject.name} enabled={renderer.enabled} queue={mat?.renderQueue} " +

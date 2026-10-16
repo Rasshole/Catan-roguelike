@@ -18,6 +18,10 @@ namespace CatanRoguelike.Game
             return ColonistBoardTextureLoader.GetTerrainMaterial(ResourceToSlot(data.Resource));
         }
 
+        /// <summary>Unique material per hex so production dimming cannot mutate shared terrain caches.</summary>
+        public static Material GetTileMaterialInstance(HexTileData data) =>
+            new Material(GetTileMaterial(data));
+
         private static BoardTerrainSlot ResourceToSlot(ResourceType resource) => resource switch
         {
             ResourceType.Wood => BoardTerrainSlot.Wood,

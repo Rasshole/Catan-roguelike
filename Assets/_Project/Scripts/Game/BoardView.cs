@@ -42,6 +42,8 @@ namespace CatanRoguelike.Game
                 ? ComputeFarthestSandDistanceFromCenter(center, beachWidth)
                 : 0f;
             float badgeFromCenter = ComputeLivePortBadgeExtentFromCenter(center);
+            float fishFromCenter = ComputeSeaFishGroundExtentFromCenter(center);
+            badgeFromCenter = Mathf.Max(badgeFromCenter, fishFromCenter);
             if (badgeFromCenter <= 0f && _controller != null && _controller.State?.Board != null)
             {
                 badgeFromCenter = PortBadgePlacement.ComputeMaxBadgeOuterDistanceFromCenter(
@@ -102,6 +104,31 @@ namespace CatanRoguelike.Game
             return max;
         }
 
+        private float ComputeSeaFishGroundExtentFromCenter(Vector3 center)
+        {
+            if (boardRoot == null)
+                return 0f;
+
+            var centerXZ = new Vector2(center.x, center.z);
+            float max = 0f;
+            foreach (var ground in boardRoot.GetComponentsInChildren<Transform>(true))
+            {
+                if (ground.name != "SeaFishGround")
+                    continue;
+
+                var renderer = ground.GetComponent<Renderer>();
+                if (renderer == null)
+                    continue;
+
+                float radius = Mathf.Max(renderer.bounds.extents.x, renderer.bounds.extents.z);
+                var pos = renderer.bounds.center;
+                float dist = Vector2.Distance(centerXZ, new Vector2(pos.x, pos.z)) + radius;
+                max = Mathf.Max(max, dist);
+            }
+
+            return max;
+        }
+
         public Vector3 GetBoardWorldCenter()
         {
             if (_tiles.Count == 0)
@@ -130,7 +157,7 @@ namespace CatanRoguelike.Game
             float sampleY = 0f;
             foreach (var kvp in _tiles)
             {
-                if (kvp.Value.Data.IsFishTile)
+                if (IsSeaFishTile(kvp.Value.Data))
                     continue;
 
                 sampleY = GetHexTopWorldPoint(kvp.Value.transform).y;
@@ -149,7 +176,7 @@ namespace CatanRoguelike.Game
             {
                 foreach (var kvp in _tiles)
                 {
-                    if (kvp.Value.Data.IsFishTile)
+                    if (IsSeaFishTile(kvp.Value.Data))
                         continue;
 
                     var coord = kvp.Key;
@@ -171,6 +198,20 @@ namespace CatanRoguelike.Game
                     continue;
 
                 foreach (var renderer in badgeRoot.GetComponentsInChildren<Renderer>(true))
+                    ColonistBoardFraming.AppendBoundsCorners(renderer.bounds, samples);
+            }
+
+            foreach (var tile in _tiles.Values)
+            {
+                if (!IsSeaFishTile(tile.Data))
+                    continue;
+
+                var ground = tile.transform.Find("SeaFishGround");
+                if (ground == null)
+                    continue;
+
+                var renderer = ground.GetComponent<Renderer>();
+                if (renderer != null)
                     ColonistBoardFraming.AppendBoundsCorners(renderer.bounds, samples);
             }
         }
@@ -414,7 +455,7 @@ namespace CatanRoguelike.Game
 
                 renderer = go.AddComponent<MeshRenderer>();
                 renderer.sharedMaterial = ColonistPresentation.IsActive
-                    ? BoardTerrainMaterialSlots.GetTileMaterial(data)
+                    ? BoardTerrainMaterialSlots.GetTileMaterialInstance(data)
                     : BuiltInMaterials.Create(BoardResourceColors.GetTileFace(data));
 
                 var collider = go.AddComponent<MeshCollider>();
@@ -428,6 +469,8 @@ namespace CatanRoguelike.Game
                     ColonistHexTileIcon.Apply(go, data, hexScale);
                 if (data.IsDesert && !data.IsFishTile)
                     ColonistDesertDuneDecor.Apply(go, hexScale);
+                if (data.IsDesert && data.IsFishTile)
+                    ColonistDesertLakeVisual.Apply(go, hexScale);
                 if (data.IsFishTile)
                     ColonistFishTileVisual.Apply(go, data, hexScale);
             }

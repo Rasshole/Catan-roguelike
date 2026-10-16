@@ -1,5 +1,14 @@
 # Agent log
 
+## 2026-10-16 (UTC) — PR #109 v71 land dimming + ports (`HEAD` after `5a6c8e9`)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Black land — per-hex terrain material instance; colonist `SetDimmed` no-op; diag `HasProperty` | Done |
+| 2 | Ports — `PortFrameLayout` + spacing; badges avoid fish hexes | Done |
+| 3 | Framing — sea fish + badge extent in samples | Done |
+| 4 | Desert lake — ripple overlay on center fish desert | Done |
+
 ## 2026-10-16 (UTC) — PR #109 v70 terrain bisect (`HEAD` after `ed700da`)
 
 | # | Item | Status |

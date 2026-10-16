@@ -152,7 +152,8 @@ namespace CatanRoguelike.Game
         {
             Data = data;
             _renderer = renderer;
-            _baseColor = renderer.material.color;
+            var mat = renderer.sharedMaterial;
+            _baseColor = mat != null && mat.HasProperty("_Color") ? mat.GetColor("_Color") : Color.white;
         }
 
         public void Refresh(HexTileData data)
@@ -420,9 +421,14 @@ namespace CatanRoguelike.Game
 
         public void SetDimmed(bool dimmed)
         {
-            if (_renderer == null)
+            if (_renderer == null || ColonistPresentation.IsActive)
                 return;
-            _renderer.sharedMaterial.color = dimmed
+
+            var mat = _renderer.material;
+            if (mat == null || !mat.HasProperty("_Color"))
+                return;
+
+            mat.color = dimmed
                 ? Color.Lerp(_baseColor, Color.black, 0.45f)
                 : _baseColor;
         }
