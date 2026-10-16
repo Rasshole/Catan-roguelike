@@ -108,6 +108,34 @@ namespace CatanRoguelike.Game
             // Move camera opposite to the desired on-screen board shift (LookAt(+delta) inverts).
             transform.position -= worldShifted - worldAtBoard;
             transform.LookAt(lookTarget.position + Vector3.up * 0.5f);
+            ApplyVerticalBoardCentering(screenHeight);
+        }
+
+        private void ApplyVerticalBoardCentering(int screenHeight)
+        {
+            if (_camera == null || boardView == null || screenHeight <= 0)
+                return;
+
+            float boardRadius = boardView.GetBoardBoundingRadius();
+            if (boardRadius <= 0f)
+                return;
+
+            Vector3 center = lookTarget.position;
+            float topY = _camera.WorldToScreenPoint(center + Vector3.up * boardRadius).y;
+            float bottomY = _camera.WorldToScreenPoint(center - Vector3.up * (boardRadius * 0.35f)).y;
+            float midY = (topY + bottomY) * 0.5f;
+            float desiredMidY = screenHeight * 0.54f;
+            float deltaY = desiredMidY - midY;
+            if (Mathf.Abs(deltaY) <= 0.5f)
+                return;
+
+            Vector3 boardScreen = _camera.WorldToScreenPoint(center);
+            Vector3 worldAtMid = _camera.ScreenToWorldPoint(
+                new Vector3(boardScreen.x, midY, boardScreen.z));
+            Vector3 worldShifted = _camera.ScreenToWorldPoint(
+                new Vector3(boardScreen.x, midY + deltaY, boardScreen.z));
+            transform.position -= worldShifted - worldAtMid;
+            transform.LookAt(lookTarget.position + Vector3.up * 0.5f);
         }
     }
 }

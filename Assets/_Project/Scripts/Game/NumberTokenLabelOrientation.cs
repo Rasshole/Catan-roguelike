@@ -19,7 +19,18 @@ namespace CatanRoguelike.Game
                 return Quaternion.Euler(FlatPitchDegrees, 180f, 0f);
 
             float yaw = Mathf.Atan2(toCamera.x, toCamera.z) * Mathf.Rad2Deg;
-            return Quaternion.Euler(FlatPitchDegrees, yaw, 0f);
+            // TextMesh glyphs read correctly when yaw faces the camera from the chip's top side.
+            return Quaternion.Euler(FlatPitchDegrees, yaw + 180f, 0f);
+        }
+
+        public static void RefreshAllLabelsForCamera(Camera camera)
+        {
+            if (camera == null)
+                return;
+
+            var facings = Object.FindObjectsByType<FlatTokenLabelFacing>(FindObjectsSortMode.None);
+            for (int i = 0; i < facings.Length; i++)
+                facings[i].ApplyFacing(camera);
         }
     }
 
@@ -28,6 +39,13 @@ namespace CatanRoguelike.Game
         private void LateUpdate()
         {
             var camera = Camera.main;
+            if (camera == null)
+                return;
+            ApplyFacing(camera);
+        }
+
+        public void ApplyFacing(Camera camera)
+        {
             if (camera == null)
                 return;
 

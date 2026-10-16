@@ -52,20 +52,22 @@ namespace CatanRoguelike.Game
             if (camera == null)
                 throw new InvalidOperationException("Camera.main (TableCamera) is required for capture.");
 
-            RunHudController.CanvasCaptureRestore canvasRestore = default;
-            if (hud != null)
-                canvasRestore = hud.BeginCanvasCameraCapture(camera);
-
             var previousActive = RenderTexture.active;
             var previousTarget = camera.targetTexture;
 
             var renderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
             Texture2D texture = null;
+            RunHudController.CanvasCaptureRestore canvasRestore = default;
 
             try
             {
                 camera.targetTexture = renderTexture;
                 RenderTexture.active = renderTexture;
+
+                if (hud != null)
+                    canvasRestore = hud.BeginCanvasCameraCapture(camera);
+
+                NumberTokenLabelOrientation.RefreshAllLabelsForCamera(camera);
                 Canvas.ForceUpdateCanvases();
                 camera.Render();
 
@@ -76,13 +78,13 @@ namespace CatanRoguelike.Game
             }
             finally
             {
+                if (hud != null)
+                    hud.RestoreCanvasAfterCapture(canvasRestore);
+
                 camera.targetTexture = previousTarget;
                 RenderTexture.active = previousActive;
                 renderTexture.Release();
                 DestroyCaptureTexture(renderTexture);
-
-                if (hud != null)
-                    hud.RestoreCanvasAfterCapture(canvasRestore);
             }
         }
 

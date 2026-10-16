@@ -14,6 +14,7 @@ namespace CatanRoguelike.Tests.PlayMode
     {
         private const string ColonistScenePath = "Assets/_Project/Scenes/ColonistStylePrototype.unity";
         private const string ColonistSceneName = "ColonistStylePrototype";
+        private const int HudReadyMaxFrames = 120;
 
         [Timeout(90000)]
         [UnityTest]
@@ -47,17 +48,27 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsFalse(gameManager.Controller.State.IsSetupPhase,
                 "Harness should finish setup before capture.");
 
-            var hud = UnityEngine.Object.FindFirstObjectByType<RunHudController>();
-            Assert.IsNotNull(hud, "RunHudController should be present on the colonist prototype.");
-
-            for (int i = 0; i < 12; i++)
+            RunHudController hud = null;
+            for (int i = 0; i < HudReadyMaxFrames; i++)
+            {
+                hud = UnityEngine.Object.FindFirstObjectByType<RunHudController>();
+                if (hud != null && hud.IsHudCaptureReady())
+                    break;
                 yield return null;
-            yield return new WaitForEndOfFrame();
+            }
 
-            Texture2D capture = GameSceneCapture.CaptureMainCameraToTexture(hud);
+            Assert.IsNotNull(hud, "RunHudController should be present on the colonist prototype.");
+            Assert.IsTrue(hud.IsHudCaptureReady(), "HUD canvas should be built with graphics before capture.");
+
+            for (int i = 0; i < 4; i++)
+                yield return null;
+
+            Texture2D boardOnly = GameSceneCapture.CaptureMainCameraToTexture(null);
+            Texture2D withHud = GameSceneCapture.CaptureMainCameraToTexture(hud);
             try
             {
-                AssertTextureHasVisibleContent(capture);
+                AssertTextureHasVisibleContent(withHud);
+                AssertBottomBandShowsHud(boardOnly, withHud);
 
                 var envPath = Environment.GetEnvironmentVariable(GameSceneCapture.OutputPathEnvVar);
                 if (!string.IsNullOrWhiteSpace(envPath))
@@ -66,13 +77,15 @@ namespace CatanRoguelike.Tests.PlayMode
                     var directory = Path.GetDirectoryName(outputPath);
                     if (!string.IsNullOrEmpty(directory))
                         Directory.CreateDirectory(directory);
-                    File.WriteAllBytes(outputPath, capture.EncodeToPNG());
+                    File.WriteAllBytes(outputPath, withHud.EncodeToPNG());
                 }
             }
             finally
             {
-                if (capture != null)
-                    UnityEngine.Object.Destroy(capture);
+                if (boardOnly != null)
+                    UnityEngine.Object.Destroy(boardOnly);
+                if (withHud != null)
+                    UnityEngine.Object.Destroy(withHud);
             }
         }
 
@@ -100,6 +113,35 @@ namespace CatanRoguelike.Tests.PlayMode
 
             Assert.Greater(luminance, 0.05f * samples,
                 "Capture should contain non-black pixels (HUD + board).");
+        }
+
+        private static void AssertBottomBandShowsHud(Texture2D boardOnly, Texture2D withHud)
+        {
+            int w = withHud.width;
+            int h = withHud.height;
+            int bandStartY = (int)(h * 0.9f);
+            int differing = 0;
+            int samples = 0;
+
+            for (int x = 0; x < w; x += 32)
+            {
+                for (int y = bandStartY; y < h; y += 8)
+                {
+                    var a = boardOnly.GetPixel(x, y);
+                    var b = withHud.GetPixel(x, y);
+                    if (ColorDistance(a, b) > 0.04f)
+                        differing++;
+                    samples++;
+                }
+            }
+
+            Assert.Greater(differing, samples / 10,
+                "Bottom 10% of frame should differ when HUD is composited (hand/action bar).");
+        }
+
+        private static float ColorDistance(Color a, Color b)
+        {
+            return Mathf.Abs(a.r - b.r) + Mathf.Abs(a.g - b.g) + Mathf.Abs(a.b - b.b);
         }
     }
 }

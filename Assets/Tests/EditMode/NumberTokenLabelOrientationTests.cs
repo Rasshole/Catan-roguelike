@@ -62,8 +62,17 @@ namespace CatanRoguelike.Tests
             var orientedRotation = NumberTokenLabelOrientation.ComputeWorldRotation(LabelPosition, cameraPosition);
             var toCamera = PlanarToCamera(LabelPosition, cameraPosition);
 
-            Assert.That(Vector3.Dot(baseRotation * Vector3.up, toCamera), Is.LessThan(0f));
+            Assert.That(Vector3.Dot(baseRotation * Vector3.up, toCamera), Is.GreaterThan(0f));
             AssertLabelFacesCamera(orientedRotation, toCamera);
+        }
+
+        [Test]
+        public void ComputeWorldRotation_MatchesTableOrbitCamera_NotLegacyFlip()
+        {
+            var cameraPosition = new Vector3(0f, 6.5f, -7.5f);
+            var rotation = NumberTokenLabelOrientation.ComputeWorldRotation(LabelPosition, cameraPosition);
+            var toCamera = PlanarToCamera(LabelPosition, cameraPosition);
+            AssertLabelFacesCamera(rotation, toCamera);
         }
 
         private static Vector3 PlanarToCamera(Vector3 labelPosition, Vector3 cameraPosition)
@@ -78,7 +87,7 @@ namespace CatanRoguelike.Tests
             var labelUp = rotation * Vector3.up;
 
             Assert.That(Mathf.Abs(labelUp.y), Is.LessThan(0.01f));
-            Assert.That(Vector3.Dot(labelUp.normalized, planarToCamera), Is.GreaterThan(0.99f));
+            Assert.That(Vector3.Dot(labelUp.normalized, planarToCamera), Is.LessThan(-0.99f));
         }
     }
 }
