@@ -48,7 +48,8 @@ namespace CatanRoguelike.Core.Yield
                     used.Add(tile.NumberToken.Value);
             }
 
-            var available = BuildAvailablePool(used);
+            int tokenSlots = board.Tiles.Values.Count(t => !t.IsDesert);
+            var available = BuildAvailablePool(used, tokenSlots);
             if (available.Count < needing.Count)
                 throw new InvalidOperationException(
                     $"Not enough number tokens ({available.Count}) for {needing.Count} hexes.");
@@ -69,12 +70,20 @@ namespace CatanRoguelike.Core.Yield
             }
         }
 
-        private static List<int> BuildAvailablePool(IReadOnlyList<int> used)
+        /// <summary>Build token multiset large enough for <paramref name="tokenSlots"/> assignments.</summary>
+        public static List<int> BuildAvailablePool(IReadOnlyList<int> alreadyAssigned, int tokenSlots)
         {
-            var available = new List<int>(ClassicPool);
-            foreach (var token in used)
-                available.Remove(token);
-            return available;
+            var pool = new List<int>();
+            while (pool.Count < tokenSlots)
+                pool.AddRange(ClassicPool);
+
+            if (pool.Count > tokenSlots)
+                pool.RemoveRange(tokenSlots, pool.Count - tokenSlots);
+
+            foreach (var token in alreadyAssigned)
+                pool.Remove(token);
+
+            return pool;
         }
 
         private static int? PickTokenForTile(BoardState board, HexCoord coord, List<int> available)

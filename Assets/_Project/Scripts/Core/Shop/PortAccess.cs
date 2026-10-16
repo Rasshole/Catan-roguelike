@@ -31,7 +31,8 @@ namespace CatanRoguelike.Core.Shop
         public static List<PortDefinition> DiscoverPorts(BoardState board)
         {
             var edgeVertices = CollectBoardEdgeVertices(board);
-            var (specificTarget, genericTarget) = GetPortTargets(board.Tiles.Count);
+            int landTiles = board.Tiles.Values.Count(t => !t.IsFishTile);
+            var (specificTarget, genericTarget) = GetPortTargets(landTiles);
 
             var ports = new List<PortDefinition>();
             var used = new HashSet<HexMath.Vertex>();
@@ -70,6 +71,8 @@ namespace CatanRoguelike.Core.Shop
             7 => (3, 2),
             13 => (4, 3),
             19 => (5, 4),
+            30 => (7, 4),
+            37 => (7, 5),
             _ => (System.Math.Min(5, tileCount / 2), System.Math.Max(1, tileCount / 6))
         };
 
