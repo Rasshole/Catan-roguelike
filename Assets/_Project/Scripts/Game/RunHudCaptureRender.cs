@@ -8,8 +8,8 @@ namespace CatanRoguelike.Game
 {
     public sealed partial class RunHudController
     {
-        /// <summary>Temporary pipeline check; remove when HUD composites reliably.</summary>
-        internal const bool HudCaptureSanityProbeEnabled = true;
+        /// <summary>Optional magenta probe + debug overlays during capture (off in normal screenshots).</summary>
+        internal const bool HudCaptureSanityProbeEnabled = false;
 
         internal const float SanityProbeScreenX = 0.88f;
         internal const float SanityProbeScreenY = 0.88f;

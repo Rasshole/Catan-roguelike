@@ -196,8 +196,11 @@ namespace CatanRoguelike.Game
             canvasRect.sizeDelta = new Vector2(captureWidth, captureHeight);
             canvasRect.localScale = Vector3.one * WorldCaptureCanvasUnitScale;
 
-            restore.SanityProbeObject = CreateHudCaptureSanityProbe(uiGo.transform, captureWidth, captureHeight);
-            restore.BottomBandMarkerObject = CreateCaptureBottomBandMarker(canvasRect);
+            if (HudCaptureSanityProbeEnabled)
+            {
+                restore.SanityProbeObject = CreateHudCaptureSanityProbe(uiGo.transform, captureWidth, captureHeight);
+                restore.BottomBandMarkerObject = CreateCaptureBottomBandMarker(canvasRect);
+            }
 
             LayoutRebuilder.ForceRebuildLayoutImmediate(canvasRect);
             Canvas.ForceUpdateCanvases();

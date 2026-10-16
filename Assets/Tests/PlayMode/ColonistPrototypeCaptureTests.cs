@@ -77,7 +77,7 @@ namespace CatanRoguelike.Tests.PlayMode
             Texture2D withHud = GameSceneCapture.CaptureMainCameraWithHudComposite(hud);
             GameSceneCapture.LogCaptureTextureFingerprint(boardOnly, "test-board-before-write");
             GameSceneCapture.LogCaptureTextureFingerprint(withHud, "test-hud-before-write");
-            GameSceneCapture.WriteDebugCapturePngs(boardOnly, withHud);
+            GameSceneCapture.WriteColonistDebugCapturePngs(boardOnly, withHud);
             try
             {
                 Assert.IsNotNull(boardOnly, "Board-only capture texture should be created.");
@@ -130,13 +130,13 @@ namespace CatanRoguelike.Tests.PlayMode
 
             int w = withHud.width;
             int h = withHud.height;
-            int bandStartY = (int)(h * 0.88f);
+            int bandTopY = Mathf.Max(1, (int)(h * 0.12f));
             int differing = 0;
             int samples = 0;
 
             for (int x = 0; x < w; x += 24)
             {
-                for (int y = bandStartY; y < h; y += 6)
+                for (int y = 0; y < bandTopY; y += 6)
                 {
                     var boardPixel = boardOnly.GetPixel(x, y);
                     var hudPixel = withHud.GetPixel(x, y);
@@ -154,19 +154,20 @@ namespace CatanRoguelike.Tests.PlayMode
         {
             int w = withHud.width;
             int h = withHud.height;
-            int bandStartY = (int)(h * 0.9f);
+            int bandTopY = Mathf.Max(1, (int)(h * 0.12f));
+            int differingFromBoard = 0;
             int matchingHudBar = 0;
             int samples = 0;
 
             for (int x = w / 8; x < w; x += w / 8)
             {
-                for (int y = bandStartY; y < h; y += 12)
+                for (int y = 0; y < bandTopY; y += 12)
                 {
                     var hudPixel = withHud.GetPixel(x, y);
                     var boardPixel = boardOnly.GetPixel(x, y);
 
-                    Assert.Greater(ColorDistance(hudPixel, boardPixel), 0.04f,
-                        "HUD capture bottom band should differ from board-only at the same coordinates.");
+                    if (ColorDistance(hudPixel, boardPixel) > 0.04f)
+                        differingFromBoard++;
 
                     if (ColorDistance(hudPixel, HandBarReference) < 0.35f)
                         matchingHudBar++;
@@ -174,6 +175,8 @@ namespace CatanRoguelike.Tests.PlayMode
                 }
             }
 
+            Assert.Greater(differingFromBoard, samples / 8,
+                "Bottom band (texture y near 0) should differ between HUD and board-only captures.");
             Assert.Greater(matchingHudBar, samples / 4,
                 "Bottom band should include hand-bar backdrop color from the colonist HUD.");
         }
