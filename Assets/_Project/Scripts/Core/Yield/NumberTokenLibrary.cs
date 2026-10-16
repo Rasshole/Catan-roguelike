@@ -96,7 +96,9 @@ namespace CatanRoguelike.Core.Yield
         }
 
         private static int ComposeAttemptSeed(int? seed, int attempt, int tileCount) =>
-            unchecked((seed ?? 0x4B1D) ^ (attempt * 0x9E3779B9) ^ (tileCount * 0x85EBCA6B));
+            unchecked((seed ?? 0x4B1D)
+                ^ (attempt * unchecked((int)0x9E3779B9))
+                ^ (tileCount * unchecked((int)0x85EBCA6B)));
 
         private static bool TryAssignInOrder(BoardState board, IList<HexCoord> coords, int index, List<int> available)
         {
