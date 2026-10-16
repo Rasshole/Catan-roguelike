@@ -33,7 +33,7 @@ namespace CatanRoguelike.Game
                 return;
             }
 
-            pipScale = Mathf.Min(0.36f, maxRowLabel * 0.32f);
+            pipScale = Mathf.Min(0.34f, maxRowLabel * 0.30f);
             float maxCenterSpan = Mathf.Max(0.02f, maxRowLabel - pipScale);
             step = Mathf.Min(0.56f, maxCenterSpan / (pipCount - 1) / LabelOffsetScale);
         }

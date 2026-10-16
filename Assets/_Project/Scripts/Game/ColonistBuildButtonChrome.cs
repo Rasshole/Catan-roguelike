@@ -50,7 +50,7 @@ namespace CatanRoguelike.Game
             title.verticalOverflow = VerticalWrapMode.Truncate;
             var titleLayout = title.gameObject.AddComponent<LayoutElement>();
             titleLayout.flexibleWidth = 1f;
-            titleLayout.preferredWidth = 52f;
+            titleLayout.preferredWidth = 72f;
 
             var cost = RunHudUiFactory.CreateText(
                 button.transform,

@@ -80,6 +80,9 @@ namespace CatanRoguelike.Game
 
         public float TokenRimOuterWorldRadius => TokenFaceWorldRadius * RimOuterRadiusFactor;
 
+        public Vector3 RobberWorldPosition =>
+            _robberMarker != null ? _robberMarker.transform.position : transform.position;
+
         private static readonly Color FamineTint = new(0.55f, 0.35f, 0.15f);
         private static readonly Color GoldRushTint = new(0.95f, 0.75f, 0.1f);
         private static readonly Color GoodHarvestTint = new(0.3f, 0.75f, 0.3f);
@@ -97,10 +100,12 @@ namespace CatanRoguelike.Game
         private static bool _loggedTokenChipRimDiagnostics;
         private const float LabelLiftLocal = 0.20f;
         private const float MarkerLiftLocal = 0.24f;
-        private const float WorldRobberDiameter = 0.30f;
+        private const float WorldRobberBaseDiameter = 0.18f;
+        private const float WorldRobberHeadDiameter = 0.14f;
         private const float WorldStormExtent = 0.22f;
         private const float WorldStormHeight = 0.06f;
-        private static readonly Vector3 RobberLocalOffset = new(0.20f, 0f, 0.18f);
+        private static readonly Vector3 RobberLocalOffset = new(0.26f, 0f, -0.24f);
+        private static readonly Color RobberColor = new(0.28f, 0.28f, 0.32f, 1f);
         private static readonly Vector3 StormLocalOffset = new(-0.18f, 0f, -0.16f);
 
         public void Initialize(HexTileData data, Renderer renderer)
@@ -378,18 +383,40 @@ namespace CatanRoguelike.Game
                 return;
 
             var hexScale = transform.lossyScale;
-
-            _robberMarker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            _robberMarker.name = "Robber";
+            _robberMarker = new GameObject("Robber");
             _robberMarker.transform.SetParent(transform, false);
             _robberMarker.transform.localPosition = new Vector3(
                 RobberLocalOffset.x, HexPrismMesh.TopY + MarkerLiftLocal, RobberLocalOffset.z);
-            // Non-uniform hex lossyScale squashes uniform localScale on Y; compensate per axis.
-            _robberMarker.transform.localScale = new Vector3(
-                WorldRobberDiameter / hexScale.x,
-                WorldRobberDiameter / hexScale.y,
-                WorldRobberDiameter / hexScale.z);
-            _robberMarker.GetComponent<Renderer>().material.color = Color.black;
+
+            float baseY = 0.05f / Mathf.Max(hexScale.y, 0.001f);
+            float headY = 0.14f / Mathf.Max(hexScale.y, 0.001f);
+            CreateRobberPart(
+                "RobberBase",
+                PrimitiveType.Cylinder,
+                new Vector3(0f, baseY, 0f),
+                new Vector3(
+                    WorldRobberBaseDiameter / hexScale.x,
+                    0.08f / hexScale.y,
+                    WorldRobberBaseDiameter / hexScale.z));
+            CreateRobberPart(
+                "RobberHead",
+                PrimitiveType.Sphere,
+                new Vector3(0f, headY, 0f),
+                new Vector3(
+                    WorldRobberHeadDiameter / hexScale.x,
+                    WorldRobberHeadDiameter / hexScale.y,
+                    WorldRobberHeadDiameter / hexScale.z));
+        }
+
+        private void CreateRobberPart(string name, PrimitiveType primitive, Vector3 localPos, Vector3 localScale)
+        {
+            var part = GameObject.CreatePrimitive(primitive);
+            part.name = name;
+            part.transform.SetParent(_robberMarker.transform, false);
+            part.transform.localPosition = localPos;
+            part.transform.localScale = localScale;
+            part.GetComponent<Renderer>().sharedMaterial = BuiltInMaterials.Create(RobberColor);
+            Destroy(part.GetComponent<Collider>());
         }
 
         public void SetEventOverlay(EventTileOverlayKind kind)

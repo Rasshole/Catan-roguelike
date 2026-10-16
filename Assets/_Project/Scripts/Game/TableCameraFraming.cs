@@ -137,8 +137,8 @@ namespace CatanRoguelike.Game
         public static float ComputeColonistSandInnerRadius(float boardBoundingRadius) =>
             boardBoundingRadius;
 
-        public static float ComputeColonistSandOuterRadius(float boardBoundingRadius, float hexScale) =>
-            boardBoundingRadius + hexScale * 0.22f;
+        public static float ComputeColonistSandOuterRadius(float boardBoundingRadius, float hexScale, float beachWidth) =>
+            boardBoundingRadius + beachWidth;
 
         public struct ColonistSurfaceLayout
         {
@@ -154,7 +154,8 @@ namespace CatanRoguelike.Game
         public static ColonistSurfaceLayout ComputeColonistSurfaceLayout(
             float boardBoundingRadius,
             float hexPrismHeightScale,
-            float hexScale)
+            float hexScale,
+            float beachWidth)
         {
             float sandThin = WaterSurfaceThinY * 0.9f;
             const float gap = 0.01f;
@@ -168,7 +169,7 @@ namespace CatanRoguelike.Game
                 SandCenterY = sandCenterY,
                 SandTopY = sandCenterY + sandHalf,
                 SandInnerRadius = ComputeColonistSandInnerRadius(boardBoundingRadius),
-                SandOuterRadius = ComputeColonistSandOuterRadius(boardBoundingRadius, hexScale),
+                SandOuterRadius = ComputeColonistSandOuterRadius(boardBoundingRadius, hexScale, beachWidth),
                 SandThicknessY = sandThin
             };
         }

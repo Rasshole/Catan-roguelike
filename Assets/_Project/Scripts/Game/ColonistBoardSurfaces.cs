@@ -1,3 +1,4 @@
+using CatanRoguelike.Core.Map;
 using UnityEngine;
 
 namespace CatanRoguelike.Game
@@ -9,36 +10,35 @@ namespace CatanRoguelike.Game
 
         public static void CreateOceanAndCoast(
             Transform boardRoot,
+            BoardState board,
             float boardBoundingRadius,
             float hexPrismHeightScale,
             float hexScale)
         {
+            float beachWidth = hexScale * ColonistCoastSandMesh.BeachWidthFactor;
             var layout = TableCameraFraming.ComputeColonistSurfaceLayout(
                 boardBoundingRadius,
                 hexPrismHeightScale,
-                hexScale);
+                hexScale,
+                beachWidth);
 
             Debug.Log(
                 "ColonistBoardSurfaces: " +
                 $"hexBottomY={layout.HexBottomY:F4} " +
                 $"sandY={layout.SandCenterY:F4} sandTopY={layout.SandTopY:F4} " +
-                $"sandInnerR={layout.SandInnerRadius:F3} sandOuterR={layout.SandOuterRadius:F3} " +
+                $"sandOuterExtent={layout.SandOuterRadius:F3} beachWidth={beachWidth:F3} " +
                 $"hexPrismHeightScale={hexPrismHeightScale:F4}");
 
-            CreateSandCoastRing(
-                boardRoot,
-                layout.SandCenterY,
-                layout.SandInnerRadius,
-                layout.SandOuterRadius,
-                layout.SandThicknessY);
+            CreateSandCoastMesh(boardRoot, board, layout.SandCenterY, layout.SandThicknessY, hexScale, beachWidth);
         }
 
-        private static void CreateSandCoastRing(
+        private static void CreateSandCoastMesh(
             Transform parent,
+            BoardState board,
             float localY,
-            float innerRadius,
-            float outerRadius,
-            float thinY)
+            float thinY,
+            float hexScale,
+            float beachWidth)
         {
             var go = new GameObject("ColonistSandCoast");
             go.transform.SetParent(parent, false);
@@ -49,7 +49,7 @@ namespace CatanRoguelike.Game
             go.transform.localScale = new Vector3(1f, yScale, 1f);
 
             var meshFilter = go.AddComponent<MeshFilter>();
-            meshFilter.sharedMesh = ColonistAnnulusMesh.Create(innerRadius, outerRadius);
+            meshFilter.sharedMesh = ColonistCoastSandMesh.Create(board, hexScale, beachWidth);
             var renderer = go.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = BuiltInMaterials.Create(SandAlbedo);
         }

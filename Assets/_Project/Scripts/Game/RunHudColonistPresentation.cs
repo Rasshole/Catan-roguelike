@@ -16,8 +16,12 @@ namespace CatanRoguelike.Game
         private RectTransform _colonistRightRail;
         private Text _colonistHumanPanelText;
         private Text _colonistAiPanelText;
+        private Text _colonistTurnTimerText;
         private Text _colonistChatText;
         private GameObject _colonistTurnBanner;
+        private ColonistHudBankStrip.Widget _colonistBankStrip;
+        private GamePhase _turnCountdownLastPhase;
+        private float _turnCountdownSeconds = 90f;
 
         private void EnsureColonistCanvasBuilt()
         {
@@ -104,7 +108,7 @@ namespace CatanRoguelike.Game
             RunHudUiFactory.AddLayoutElement(cardGo, cardH).preferredWidth = cardW;
 
             var bg = cardGo.AddComponent<Image>();
-            bg.color = new Color(0.14f, 0.17f, 0.22f, 0.98f);
+            bg.color = BoardResourceColors.GetHudSwatch(resource);
 
             var iconGo = new GameObject("Icon");
             iconGo.transform.SetParent(cardGo.transform, false);
@@ -113,7 +117,8 @@ namespace CatanRoguelike.Game
             iconRect.anchorMax = new Vector2(0.5f, 0.55f);
             iconRect.sizeDelta = new Vector2(40f, 40f);
             var iconImg = iconGo.AddComponent<Image>();
-            iconImg.color = BoardResourceColors.GetHudSwatch(resource);
+            iconImg.sprite = ColonistHudResourceSprites.Get(resource);
+            iconImg.preserveAspect = true;
             _resourceSwatches.Add(iconImg);
 
             var badgeGo = new GameObject("Badge");
@@ -214,13 +219,16 @@ namespace CatanRoguelike.Game
                 _colonistRightRail,
                 "PlayerYou",
                 new Color(0.22f, 0.55f, 0.95f, 1f),
-                out _colonistHumanPanelText);
+                out _colonistHumanPanelText,
+                out _colonistTurnTimerText);
 
+            Text unusedTurnTimer;
             var aiPanel = BuildColonistPlayerPanel(
                 _colonistRightRail,
                 "PlayerAi",
                 new Color(0.92f, 0.32f, 0.28f, 1f),
-                out _colonistAiPanelText);
+                out _colonistAiPanelText,
+                out unusedTurnTimer);
 
             var logPanel = RunHudUiFactory.CreatePanel(
                 _colonistRightRail,
@@ -300,16 +308,9 @@ namespace CatanRoguelike.Game
                 Vector2.one,
                 Vector2.zero,
                 Vector2.zero);
-            RunHudUiFactory.AddLayoutElement(bankStrip.gameObject, 36f);
+            RunHudUiFactory.AddLayoutElement(bankStrip.gameObject, 44f);
             SetBankFlyTarget(bankStrip);
-            _bankStripText = RunHudUiFactory.CreateText(
-                bankStrip,
-                "Bank",
-                string.Empty,
-                11,
-                TextAnchor.MiddleLeft,
-                RunHudUiFactory.TextPrimary);
-            _bankStripText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            _colonistBankStrip = ColonistHudBankStrip.Build(bankStrip, 40f);
         }
 
         private void RefreshColonistPresentation(GameState state)
@@ -337,6 +338,10 @@ namespace CatanRoguelike.Game
                     $"LR {(longestRoad == PlayerId.Ai ? "✓" : "—")}  LA {(state.LargestArmyOwner == PlayerId.Ai ? "✓" : "—")}";
             }
 
+            if (_colonistBankStrip != null)
+                ColonistHudBankStrip.RefreshCounts(_colonistBankStrip, state.Bank);
+
+            RefreshColonistTurnTimer(state);
             RefreshColonistChrome(state);
         }
 
@@ -344,7 +349,8 @@ namespace CatanRoguelike.Game
             RectTransform parent,
             string name,
             Color avatarColor,
-            out Text bodyText)
+            out Text bodyText,
+            out Text turnTimerText)
         {
             var panel = RunHudUiFactory.CreatePanel(
                 parent,
@@ -387,7 +393,65 @@ namespace CatanRoguelike.Game
                 RunHudUiFactory.TextPrimary);
             bodyText.horizontalOverflow = HorizontalWrapMode.Wrap;
             bodyText.verticalOverflow = VerticalWrapMode.Overflow;
+
+            turnTimerText = null;
+            var timerGo = new GameObject("TurnTimer");
+            timerGo.transform.SetParent(row.transform, false);
+            RunHudUiFactory.AddLayoutElement(timerGo, 32f).preferredWidth = 52f;
+            turnTimerText = RunHudUiFactory.CreateText(
+                timerGo.transform,
+                "Timer",
+                string.Empty,
+                14,
+                TextAnchor.UpperRight,
+                RunHudUiFactory.TextPrimary,
+                FontStyle.Bold);
+            turnTimerText.alignment = TextAnchor.UpperRight;
+            if (name != "PlayerYou")
+            {
+                timerGo.SetActive(false);
+                turnTimerText = null;
+            }
+
             return panel;
+        }
+
+        private void RefreshColonistTurnTimer(GameState state)
+        {
+            if (_colonistTurnTimerText == null)
+                return;
+
+            if (_turnCountdownLastPhase != state.Phase)
+            {
+                if (state.Phase == GamePhase.DayPlayerActions)
+                    _turnCountdownSeconds = 90f;
+                _turnCountdownLastPhase = state.Phase;
+            }
+
+            if (state.Phase != GamePhase.DayPlayerActions || state.Winner.HasValue)
+            {
+                _colonistTurnTimerText.text = string.Empty;
+                return;
+            }
+
+            int minutes = Mathf.Max(0, (int)(_turnCountdownSeconds / 60f));
+            int seconds = Mathf.Max(0, (int)(_turnCountdownSeconds % 60f));
+            _colonistTurnTimerText.text = $"{minutes:00}:{seconds:00}";
+        }
+
+        private void TickColonistTurnTimer()
+        {
+            if (_colonistTurnTimerText == null || _controller == null)
+                return;
+
+            var state = _controller.State;
+            if (state == null || state.Phase != GamePhase.DayPlayerActions || state.Winner.HasValue)
+                return;
+
+            _turnCountdownSeconds = Mathf.Max(0f, _turnCountdownSeconds - Time.deltaTime);
+            int minutes = (int)(_turnCountdownSeconds / 60f);
+            int seconds = (int)(_turnCountdownSeconds % 60f);
+            _colonistTurnTimerText.text = $"{minutes:00}:{seconds:00}";
         }
 
         private void RefreshColonistResources(ResourceBundle bundle)

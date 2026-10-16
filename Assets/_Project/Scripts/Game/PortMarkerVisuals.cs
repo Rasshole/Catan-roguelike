@@ -10,16 +10,16 @@ namespace CatanRoguelike.Game
     /// </summary>
     public static class PortMarkerVisuals
     {
-        public const float BaseGapAboveHex = 0.02f;
+        public const float BaseGapAboveHex = 0.045f;
 
         private static readonly Color PierWoodColor = new(0.45f, 0.32f, 0.18f);
         private static readonly Color GenericPostColor = new(0.38f, 0.28f, 0.16f);
 
-        private const float PierLength = 0.36f;
-        private const float PierWidth = 0.18f;
-        private const float PierHeight = 0.07f;
-        private const float PostHeight = 0.2f;
-        private const float PostWidth = 0.08f;
+        private const float PierLength = 0.22f;
+        private const float PierWidth = 0.16f;
+        private const float PierHeight = 0.06f;
+        private const float PostHeight = 0.14f;
+        private const float PostWidth = 0.07f;
         private const float FlagHeight = 0.1f;
         private const float FlagWidth = 0.06f;
 
@@ -45,19 +45,19 @@ namespace CatanRoguelike.Game
             root.transform.rotation = Quaternion.LookRotation(outward, Vector3.up);
 
             CreatePart("PierPlank", root.transform,
-                new Vector3(0f, PierHeight * 0.5f, PierLength * 0.5f),
-                new Vector3(PierWidth, PierHeight, PierLength),
+                new Vector3(0f, PierHeight * 0.5f, PierLength * 0.35f),
+                new Vector3(PierWidth, PierHeight, PierLength * 0.7f),
                 PierWoodColor);
 
             CreatePart("PierPost", root.transform,
-                new Vector3(0f, PostHeight * 0.5f, PierLength + PostWidth * 0.5f),
+                new Vector3(0f, PostHeight * 0.5f, PierLength * 0.62f),
                 new Vector3(PostWidth, PostHeight, PostWidth),
                 isGeneric ? GenericPostColor : resourceColor);
 
             if (!isGeneric)
             {
                 CreatePart("ResourceFlag", root.transform,
-                    new Vector3(0f, PostHeight + FlagHeight * 0.5f, PierLength + PostWidth * 0.5f),
+                    new Vector3(0f, PostHeight + FlagHeight * 0.5f, PierLength * 0.62f),
                     new Vector3(FlagWidth, FlagHeight, FlagWidth * 0.5f),
                     resourceColor);
             }

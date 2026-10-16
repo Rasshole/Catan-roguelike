@@ -146,8 +146,8 @@ namespace CatanRoguelike.Game
                     out _buildRoadChip);
                 _buildSettlementButton = ColonistBuildButtonChrome.Create(
                     _actionBarBuildRoot,
-                    ColonistHudCopy.SettlementShort,
-                    ColonistBuildButtonChrome.IconTintFor(ColonistHudCopy.SettlementShort),
+                    ColonistHudCopy.Settlement,
+                    ColonistBuildButtonChrome.IconTintFor(ColonistHudCopy.Settlement),
                     out _buildSettlementChip);
                 _buildCityButton = ColonistBuildButtonChrome.Create(
                     _actionBarBuildRoot,
@@ -249,7 +249,7 @@ namespace CatanRoguelike.Game
 
             ConfigureBuildButton(
                 _buildSettlementButton,
-                compact ? ColonistHudCopy.SettlementShort : BuildCostFormatter.FormatButtonLabel(ColonistHudCopy.Settlement, settlementCost, settlementOk),
+                compact ? ColonistHudCopy.Settlement : BuildCostFormatter.FormatButtonLabel(ColonistHudCopy.Settlement, settlementCost, settlementOk),
                 BuildCostFormatter.FormatTooltip(settlementCost),
                 settlementOk,
                 () => _boardInput.SetBuildModeSettlement());

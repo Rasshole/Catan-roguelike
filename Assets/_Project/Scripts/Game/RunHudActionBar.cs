@@ -43,7 +43,7 @@ namespace CatanRoguelike.Game
             {
                 var buildLayout = _actionBarBuildRoot.GetComponent<LayoutElement>();
                 if (buildLayout != null)
-                    buildLayout.minWidth = 460f;
+                    buildLayout.minWidth = 500f;
             }
             _actionBarTradeRoot = CreateActionBarSlot("TradeSlot", flexibleWidth: 0f, minWidth: 96f);
             _actionBarCenterRoot = CreateActionBarSlot("DiceRollSlot", flexibleWidth: 0f, minWidth: 200f);
@@ -160,18 +160,16 @@ namespace CatanRoguelike.Game
 
         public void SetRollPromptActive(bool active)
         {
-            if (_rollButtonGlow != null)
-            {
-                var baseColor = RunHudUiFactory.ButtonFill;
-                _rollButtonGlow.color = active
-                    ? Color.Lerp(baseColor, new Color(1f, 0.9f, 0.35f, 1f), 0.45f)
-                    : baseColor;
-            }
+            SetRollPulseActive(active);
 
-            if (_rollButtonGlowRing != null)
-                _rollButtonGlowRing.color = active
-                    ? new Color(1f, 0.88f, 0.28f, 0.55f)
-                    : new Color(1f, 0.88f, 0.28f, 0f);
+            if (_rollButtonGlow != null && !active)
+                _rollButtonGlow.color = RunHudUiFactory.ButtonFill;
+
+            if (_rollButtonGlowRing != null && !active)
+            {
+                _rollButtonGlowRing.color = new Color(1f, 0.88f, 0.28f, 0f);
+                _rollButtonGlowRing.rectTransform.localScale = Vector3.one;
+            }
         }
     }
 }

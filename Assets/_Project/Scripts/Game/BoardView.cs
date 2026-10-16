@@ -37,7 +37,8 @@ namespace CatanRoguelike.Game
         public float GetColonistFramingExtentRadius()
         {
             float boardRadius = GetBoardBoundingRadius();
-            return TableCameraFraming.ComputeColonistSandOuterRadius(boardRadius, hexScale);
+            float beachWidth = hexScale * ColonistCoastSandMesh.BeachWidthFactor;
+            return TableCameraFraming.ComputeColonistSandOuterRadius(boardRadius, hexScale, beachWidth);
         }
 
         public Vector3 GetBoardWorldCenter()
@@ -157,7 +158,7 @@ namespace CatanRoguelike.Game
             if (ColonistPresentation.IsActive)
             {
                 float colonistHexHeight = tileHeight * 0.25f;
-                ColonistBoardSurfaces.CreateOceanAndCoast(boardRoot, boundingRadius, colonistHexHeight, hexScale);
+                ColonistBoardSurfaces.CreateOceanAndCoast(boardRoot, board, boundingRadius, colonistHexHeight, hexScale);
             }
             else
             {
