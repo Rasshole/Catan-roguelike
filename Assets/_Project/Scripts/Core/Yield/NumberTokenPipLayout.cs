@@ -8,13 +8,11 @@ namespace CatanRoguelike.Core.Yield
         public static int GetPipCount(int token) => NumberTokenLibrary.GetPipWeight(token);
 
         /// <summary>Normalized horizontal offsets (−0.5…0.5) for pip row layout.</summary>
-        public static float[] GetPipOffsetsX(int pipCount)
+        public static float[] GetPipOffsetsX(int pipCount, float step = 0.56f)
         {
             if (pipCount <= 0)
                 return Array.Empty<float>();
 
-            // Keep center spacing ≥ 1.6× pip diameter once mapped through label row scale in Game layer.
-            const float step = 0.56f;
             float span = (pipCount - 1) * step;
             var offsets = new float[pipCount];
             for (int i = 0; i < pipCount; i++)

@@ -8,8 +8,8 @@ namespace CatanRoguelike.Core.Yield
     {
         public static readonly Rgb ChipFaceStandard = new(0.92f, 0.86f, 0.72f);
         public static readonly Rgb ChipFaceRedAccent = new(0.94f, 0.84f, 0.72f);
-        public static readonly Rgb ChipRimStandard = new(0.48f, 0.38f, 0.24f);
-        public static readonly Rgb ChipRimRedAccent = new(0.78f, 0.18f, 0.12f);
+        public static readonly Rgb ChipRimStandard = new(0.36f, 0.26f, 0.14f);
+        public static readonly Rgb ChipRimRedAccent = new(0.58f, 0.12f, 0.08f);
         public static readonly Rgb LabelStandard = new(0.08f, 0.08f, 0.08f);
         public static readonly Rgb LabelRed = new(0.82f, 0.12f, 0.10f);
 

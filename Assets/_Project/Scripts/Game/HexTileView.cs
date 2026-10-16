@@ -62,6 +62,8 @@ namespace CatanRoguelike.Game
 
         public string TokenLabelText => _tokenLabel != null ? _tokenLabel.text : string.Empty;
 
+        public float TokenRimWorldRadius => WorldRimDiameter * 0.5f;
+
         private static readonly Color FamineTint = new(0.55f, 0.35f, 0.15f);
         private static readonly Color GoldRushTint = new(0.95f, 0.75f, 0.1f);
         private static readonly Color GoodHarvestTint = new(0.3f, 0.75f, 0.3f);
@@ -69,8 +71,9 @@ namespace CatanRoguelike.Game
         private static readonly Color StormMarkerColor = new(0.1f, 0.15f, 0.55f);
 
         // Target world-space chip size (visible disc on the hex top).
-        private const float WorldRimDiameter = 0.84f;
-        private const float WorldFaceDiameter = 0.44f;
+        private const float WorldRimDiameter = 0.72f;
+        private const float FaceToRimDiameterRatio = 0.85f;
+        private const float WorldFaceDiameter = WorldRimDiameter * FaceToRimDiameterRatio;
         private const float WorldChipThickness = 0.04f;
 
         // Hex prism mesh top is parent-local y=1; flat chips + label sit above that surface (top-down view).
@@ -137,7 +140,10 @@ namespace CatanRoguelike.Game
             _pipRoot.transform.SetParent(_tokenLabel.transform, false);
             _pipRoot.transform.localRotation = Quaternion.identity;
 
-            var offsets = NumberTokenPipLayout.GetPipOffsetsX(pipCount);
+            float labelScale = Mathf.Max(_tokenLabel.transform.lossyScale.x, 0.001f);
+            NumberTokenPipVisuals.ComputeRowLayout(
+                pipCount, WorldFaceDiameter, labelScale, out float pipScale, out float step);
+            var offsets = NumberTokenPipLayout.GetPipOffsetsX(pipCount, step);
             var labelRgb = NumberTokenVisualStyle.GetLabel(token);
             var pipColor = new Color(labelRgb.R, labelRgb.G, labelRgb.B);
 
@@ -146,7 +152,7 @@ namespace CatanRoguelike.Game
                 var pip = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 pip.name = $"Pip_{i}";
                 pip.transform.SetParent(_pipRoot.transform, false);
-                NumberTokenPipVisuals.PlacePipOnLabelRow(pip.transform, offsets[i], pipColor);
+                NumberTokenPipVisuals.PlacePipOnLabelRow(pip.transform, offsets[i], pipColor, pipScale);
                 Destroy(pip.GetComponent<Collider>());
                 _pipRenderers.Add(pip.GetComponent<Renderer>());
             }
@@ -208,8 +214,7 @@ namespace CatanRoguelike.Game
             _chipRimRenderer.transform.localScale = new Vector3(localRimDiameter, localRimHeight, localRimDiameter);
             _chipRimRenderer.transform.localPosition = Vector3.zero;
             _chipFaceRenderer.transform.localScale = new Vector3(localFaceDiameter, localFaceHeight, localFaceDiameter);
-            float faceLift = localFaceHeight * 0.15f;
-            _chipFaceRenderer.transform.localPosition = new Vector3(0f, localRimHeight + faceLift, 0f);
+            _chipFaceRenderer.transform.localPosition = new Vector3(0f, localRimHeight + localFaceHeight * 0.05f, 0f);
         }
 
         private Renderer CreateFlatChipDisc(string name, float diameter, float height, float localYOffset)

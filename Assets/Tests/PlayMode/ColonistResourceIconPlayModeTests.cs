@@ -55,6 +55,10 @@ namespace CatanRoguelike.Tests.PlayMode
                     BuiltInMaterials.IsUnlitMaterial(renderer.sharedMaterial),
                     $"ResourceIcon on {tile.Data.Coord} should use an unlit material.");
 
+                var iconTex = ColonistResourceIconTextures.Get(tile.Data.Resource);
+                Assert.IsTrue(TextureHasTransparentPixels(iconTex),
+                    $"Resource icon texture for {tile.Data.Resource} should include alpha.");
+
                 int layer = iconTransform.gameObject.layer;
                 Assert.IsTrue(
                     (camera.cullingMask & (1 << layer)) != 0,
@@ -73,6 +77,15 @@ namespace CatanRoguelike.Tests.PlayMode
                     hexTopY - 0.001f,
                     $"ResourceIcon should sit above hex top on {tile.Data.Coord}.");
 
+                Vector2 iconOffsetXz = new(
+                    iconTransform.position.x - tile.transform.position.x,
+                    iconTransform.position.z - tile.transform.position.z);
+                float iconRadius = Mathf.Max(renderer.bounds.extents.x, renderer.bounds.extents.z);
+                Assert.Greater(
+                    iconOffsetXz.magnitude,
+                    tile.TokenRimWorldRadius + iconRadius * 0.35f,
+                    $"ResourceIcon should not overlap token disc on {tile.Data.Coord}.");
+
                 Assert.IsTrue(
                     GeometryUtility.TestPlanesAABB(planes, renderer.bounds),
                     $"ResourceIcon on {tile.Data.Coord} should be inside the camera frustum.");
@@ -87,6 +100,25 @@ namespace CatanRoguelike.Tests.PlayMode
             }
 
             Assert.Greater(iconsChecked, 6, "Board should show resource icons on multiple non-desert hexes.");
+        }
+
+        private static bool TextureHasTransparentPixels(Texture2D texture)
+        {
+            if (texture == null)
+                return false;
+
+            var pixels = texture.GetPixels32();
+            bool hasOpaque = false;
+            bool hasTransparent = false;
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                if (pixels[i].a > 200)
+                    hasOpaque = true;
+                if (pixels[i].a < 20)
+                    hasTransparent = true;
+            }
+
+            return hasOpaque && hasTransparent;
         }
     }
 }

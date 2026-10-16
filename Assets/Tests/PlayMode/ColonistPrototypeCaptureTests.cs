@@ -127,6 +127,20 @@ namespace CatanRoguelike.Tests.PlayMode
                     GameSceneCapture.CaptureHeight);
                 ColonistBoardCaptureAssertions.AssertNumberTokenLabelsUprightForCamera(mainCamera);
 
+                var tokenTile = UnityEngine.Object.FindFirstObjectByType<HexTileView>();
+                foreach (var tile in UnityEngine.Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
+                {
+                    if (!tile.Data.IsDesert && tile.Data.NumberToken.HasValue)
+                    {
+                        tokenTile = tile;
+                        break;
+                    }
+                }
+
+                if (tokenTile != null && tokenTile.Data.NumberToken.HasValue)
+                    ColonistBoardCaptureAssertions.AssertTokenRimRingVisibleOnBoardCapture(
+                        boardOnly, mainCamera, tableCamera, tokenTile);
+
                 AssertTextureHasVisibleContent(withHud);
                 AssertBottomBandDiffersBoardOnlyVsHud(boardOnly, withHud);
                 AssertBottomBandShowsHudBarColor(withHud, boardOnly);

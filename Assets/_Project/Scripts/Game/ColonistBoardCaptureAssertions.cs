@@ -388,5 +388,41 @@ namespace CatanRoguelike.Game
 
         private static float ColorDistance(Color a, Color b) =>
             Mathf.Abs(a.r - b.r) + Mathf.Abs(a.g - b.g) + Mathf.Abs(a.b - b.b);
+
+        public static void AssertTokenRimRingVisibleOnBoardCapture(
+            Texture2D boardCapture,
+            Camera camera,
+            TableCamera tableCamera,
+            HexTileView tokenTile)
+        {
+            Assert.IsNotNull(boardCapture);
+            Assert.IsNotNull(camera);
+            Assert.IsNotNull(tableCamera);
+            Assert.IsNotNull(tokenTile);
+
+            int w = boardCapture.width;
+            int h = boardCapture.height;
+            Vector3 chipCenter = tokenTile.transform.position;
+            chipCenter.y = tokenTile.ChipTopWorldY - 0.01f;
+            var facePx = ColonistCaptureProjection.WorldToTexturePixel(chipCenter, camera, tableCamera, w, h);
+
+            float rimOffsetWorld = tokenTile.TokenRimWorldRadius * 0.88f;
+            var rimWorld = chipCenter + new Vector3(rimOffsetWorld, 0f, 0f);
+            var rimPx = ColonistCaptureProjection.WorldToTexturePixel(rimWorld, camera, tableCamera, w, h);
+
+            Color face = boardCapture.GetPixel(facePx.x, facePx.y);
+            Color rim = boardCapture.GetPixel(rimPx.x, rimPx.y);
+            float delta = ColorDistance(face, rim);
+            Assert.Greater(
+                delta,
+                0.06f,
+                $"Token rim pixel should differ from face (delta={delta:F3} face={face} rim={rim}).");
+            Assert.IsTrue(
+                MatchesTokenChipColor(face),
+                "Face sample should match token chip palette.");
+            Assert.IsTrue(
+                MatchesTokenChipColor(rim),
+                "Rim sample should match token chip palette.");
+        }
     }
 }

@@ -11,6 +11,7 @@ namespace CatanRoguelike.Game
     {
         public const string StandardShaderName = "Standard";
         public const string UnlitColorShaderName = "Unlit/Color";
+        public const string UnlitTransparentShaderName = "Unlit/Transparent";
 
         public static Shader Standard
         {
@@ -56,6 +57,34 @@ namespace CatanRoguelike.Game
             mat.SetInt("_ZWrite", zWrite ? 1 : 0);
             mat.renderQueue = zWrite ? 3500 : 3080;
             return mat;
+        }
+
+        public static Material CreateUnlitTransparent(Texture2D texture, bool zWrite = false)
+        {
+            var shader = Shader.Find(UnlitTransparentShaderName);
+            if (shader == null)
+                throw new System.InvalidOperationException("Unlit/Transparent shader not found.");
+
+            var mat = new Material(shader);
+            if (mat.HasProperty("_MainTex"))
+                mat.mainTexture = texture;
+            mat.SetInt("_ZWrite", zWrite ? 1 : 0);
+            mat.renderQueue = zWrite ? 3000 : 3085;
+            return mat;
+        }
+
+        public static bool TryGetMainTextureName(Material material, out string textureName)
+        {
+            textureName = "null";
+            if (material == null || material.shader == null || !material.HasProperty("_MainTex"))
+                return false;
+
+            var tex = material.mainTexture;
+            if (tex == null)
+                return false;
+
+            textureName = tex.name;
+            return true;
         }
 
         public static bool IsUnlitMaterial(Material material) =>
