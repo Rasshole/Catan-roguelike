@@ -25,10 +25,10 @@ namespace CatanRoguelike.Game
             float fromHeight = diameter * screenHeight / (2f * usableHeight);
             float fromWidth = diameter * screenWidth / (2f * usableWidth * Mathf.Max(0.01f, cameraAspect));
             string bindingAxis = fromHeight >= fromWidth ? "height" : "width";
-            float fitOrtho = fromHeight;
+            float fitOrtho = Mathf.Max(fromHeight, fromWidth);
             Debug.Log(
                 $"ColonistBoardFraming ortho bindingAxis={bindingAxis} fromHeight={fromHeight:F4} " +
-                $"fromWidth={fromWidth:F4} chosen=height ortho={fitOrtho * FramingFitSlackMultiplier:F4}");
+                $"fromWidth={fromWidth:F4} ortho={fitOrtho * FramingFitSlackMultiplier:F4}");
             return fitOrtho * FramingFitSlackMultiplier;
         }
 
@@ -158,6 +158,34 @@ namespace CatanRoguelike.Game
         {
             var viewport = camera.WorldToViewportPoint(world);
             return new Vector2(viewport.x * layoutWidth, viewport.y * layoutHeight);
+        }
+
+        public static bool IsBoundsInsidePlayArea(
+            Camera camera,
+            Bounds bounds,
+            int layoutWidth,
+            int layoutHeight,
+            float marginPixels = PlayAreaMarginPixels)
+        {
+            Vector3 center = bounds.center;
+            Vector3 extents = bounds.extents;
+            Vector3[] offsets =
+            {
+                new Vector3(extents.x, extents.y, extents.z),
+                new Vector3(extents.x, extents.y, -extents.z),
+                new Vector3(extents.x, -extents.y, extents.z),
+                new Vector3(extents.x, -extents.y, -extents.z),
+                new Vector3(-extents.x, extents.y, extents.z),
+                new Vector3(-extents.x, extents.y, -extents.z),
+                new Vector3(-extents.x, -extents.y, extents.z),
+                new Vector3(-extents.x, -extents.y, -extents.z)
+            };
+
+            var screenPoints = new Vector2[offsets.Length];
+            for (int i = 0; i < offsets.Length; i++)
+                screenPoints[i] = WorldToLayoutPixels(camera, center + offsets[i], layoutWidth, layoutHeight);
+
+            return ArePointsInsidePlayArea(screenPoints, layoutWidth, layoutHeight, marginPixels);
         }
     }
 }

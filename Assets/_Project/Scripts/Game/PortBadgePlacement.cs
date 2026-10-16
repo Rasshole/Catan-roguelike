@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Shop;
 using UnityEngine;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
@@ -11,9 +12,10 @@ namespace CatanRoguelike.Game
     public static class PortBadgePlacement
     {
         public const float SeaClearanceBeyondDisc = 0.05f;
-        private const float HexInradiusPushFactor = 0.15f;
-        private const float OutwardStepInradiusFactor = 0.12f;
-        private const int MaxOutwardIterations = 48;
+        private const float HexInradiusPushFactor = 0.12f;
+        private const float OutwardStepInradiusFactor = 0.06f;
+        private const int MaxOutwardIterations = 32;
+        public const float BadgeStackFramingPadFactor = 1.1f;
 
         public static bool TryComputeBadgeCenter(
             BoardState board,
@@ -58,6 +60,30 @@ namespace CatanRoguelike.Game
 
             seaOutward = seaDir;
             return !DiscIntersectsAnyLandHex(badgeCenter, discRadius, board, hexScale);
+        }
+
+        public static float ComputeMaxBadgeOuterDistanceFromCenter(
+            BoardState board,
+            float hexScale,
+            float discRadius,
+            Vector3 boardCenterWorld)
+        {
+            if (board == null)
+                return 0f;
+
+            var center = new Vector2(boardCenterWorld.x, boardCenterWorld.z);
+            float stackPad = discRadius * BadgeStackFramingPadFactor;
+            float max = 0f;
+            foreach (var port in PortAccess.DiscoverPorts(board))
+            {
+                if (!TryComputeBadgeCenter(board, port.Vertex, hexScale, discRadius, out Vector2 badgeCenter, out _))
+                    continue;
+
+                float dist = Vector2.Distance(center, badgeCenter) + discRadius + stackPad;
+                max = Mathf.Max(max, dist);
+            }
+
+            return max;
         }
 
         public static bool DiscIntersectsAnyLandHex(

@@ -33,12 +33,71 @@ namespace CatanRoguelike.Game
             return 0f;
         }
 
-        /// <summary>Hex cluster + colonist sand coast outer radius (world units).</summary>
+        /// <summary>Radius from board center that includes sand ring and port badges (world units).</summary>
         public float GetColonistFramingExtentRadius()
         {
-            float boardRadius = GetBoardBoundingRadius();
             float beachWidth = hexScale * ColonistCoastSandMesh.BeachWidthFactor;
-            return TableCameraFraming.ComputeColonistSandOuterRadius(boardRadius, hexScale, beachWidth);
+            Vector3 center = GetBoardWorldCenter();
+            float sandFromCenter = ComputeFarthestSandDistanceFromCenter(center, beachWidth);
+            float badgeFromCenter = ComputeLivePortBadgeExtentFromCenter(center);
+            if (badgeFromCenter <= 0f && _controller != null && _controller.State?.Board != null)
+            {
+                badgeFromCenter = PortBadgePlacement.ComputeMaxBadgeOuterDistanceFromCenter(
+                    _controller.State.Board,
+                    hexScale,
+                    PortMarkerVisuals.BadgeDiscWorldRadius,
+                    center);
+            }
+
+            if (sandFromCenter <= 0f && badgeFromCenter <= 0f)
+            {
+                float boardRadius = GetBoardBoundingRadius();
+                return TableCameraFraming.ComputeColonistSandOuterRadius(boardRadius, hexScale, beachWidth);
+            }
+
+            return Mathf.Max(sandFromCenter, badgeFromCenter);
+        }
+
+        private float ComputeFarthestSandDistanceFromCenter(Vector3 center, float beachWidth)
+        {
+            if (_tiles.Count == 0)
+                return 0f;
+
+            var centerXZ = new Vector2(center.x, center.z);
+            float max = 0f;
+            foreach (var coord in _tiles.Keys)
+            {
+                for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
+                {
+                    var (x, z) = HexMath.VertexToWorldPosition(coord, corner, hexScale);
+                    float dist = Vector2.Distance(centerXZ, new Vector2(x, z)) + beachWidth;
+                    max = Mathf.Max(max, dist);
+                }
+            }
+
+            return max;
+        }
+
+        private float ComputeLivePortBadgeExtentFromCenter(Vector3 center)
+        {
+            if (boardRoot == null)
+                return 0f;
+
+            var centerXZ = new Vector2(center.x, center.z);
+            float max = 0f;
+            foreach (var disc in boardRoot.GetComponentsInChildren<Transform>(true))
+            {
+                if (disc.name != "BadgeDisc")
+                    continue;
+
+                float radius = disc.lossyScale.x * 0.5f;
+                var pos = disc.position;
+                float dist = Vector2.Distance(centerXZ, new Vector2(pos.x, pos.z))
+                    + radius * (1f + PortBadgePlacement.BadgeStackFramingPadFactor);
+                max = Mathf.Max(max, dist);
+            }
+
+            return max;
         }
 
         public Vector3 GetBoardWorldCenter()
