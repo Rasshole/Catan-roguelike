@@ -76,6 +76,21 @@ namespace CatanRoguelike.Game
             ResourceType? specificResource,
             Color resourceColor)
         {
+            if (ColonistPresentation.IsActive
+                && board != null
+                && board.TryGetSeaSlotForPort(vertex, out HexCoord seaCoord))
+            {
+                return CreateSeaSlotPort(
+                    parent,
+                    vertex,
+                    seaCoord,
+                    hexScale,
+                    hexTopY,
+                    isGeneric,
+                    specificResource,
+                    resourceColor);
+            }
+
             var (vertexX, vertexZ) = HexMath.VertexToWorldPosition(vertex, hexScale);
             var (hexX, hexZ) = HexMath.ToWorldPosition(vertex.Hex, hexScale);
             Vector3 vertexPos = new Vector3(vertexX, hexTopY + BaseGapAboveHex, vertexZ);
@@ -141,6 +156,52 @@ namespace CatanRoguelike.Game
                 specificResource,
                 PostHeight + 0.02f,
                 badgeLocalZ);
+
+            LogChildRenderersOnce(root);
+            return root;
+        }
+
+        private static GameObject CreateSeaSlotPort(
+            Transform parent,
+            Vertex vertex,
+            HexCoord seaCoord,
+            float hexScale,
+            float hexTopY,
+            bool isGeneric,
+            ResourceType? specificResource,
+            Color resourceColor)
+        {
+            var (seaX, seaZ) = HexMath.ToWorldPosition(seaCoord, hexScale);
+            var (vertexX, vertexZ) = HexMath.VertexToWorldPosition(vertex, hexScale);
+            Vector3 seaWorld = new Vector3(seaX, hexTopY + BaseGapAboveHex, seaZ);
+            Vector3 vertexWorld = new Vector3(vertexX, hexTopY + BaseGapAboveHex, vertexZ);
+            Vector3 pierDir = vertexWorld - seaWorld;
+            float pierLen = Mathf.Clamp(pierDir.magnitude, PierLength * 0.5f, hexScale * HexMath.OuterRadius * 1.02f);
+            if (pierDir.sqrMagnitude > 1e-6f)
+                pierDir.Normalize();
+            else
+                pierDir = Vector3.forward;
+
+            var root = new GameObject(isGeneric ? "Port_Generic" : $"Port_{specificResource}");
+            root.transform.SetParent(parent, false);
+            root.transform.SetPositionAndRotation(seaWorld, Quaternion.LookRotation(pierDir, Vector3.up));
+
+            CreatePart("PierPlank", root.transform,
+                new Vector3(0f, PierHeight * 0.5f, pierLen * 0.5f),
+                new Vector3(PierWidth, PierHeight, pierLen),
+                PierWoodColor);
+
+            CreatePart("PierPost", root.transform,
+                new Vector3(0f, PostHeight * 0.5f, pierLen - PostWidth * 0.25f),
+                new Vector3(PostWidth, PostHeight, PostWidth),
+                isGeneric ? GenericPostColor : resourceColor);
+
+            CreatePortRateBadge(
+                root.transform,
+                isGeneric,
+                specificResource,
+                PostHeight + 0.02f,
+                0f);
 
             LogChildRenderersOnce(root);
             return root;

@@ -249,6 +249,16 @@ namespace CatanRoguelike.Core.Save
             foreach (var tile in board.SeaFishGrounds.Values)
                 data.SeaFishGrounds.Add(ToHexTileSaveData(tile));
 
+            foreach (var kvp in board.PortVertexToSeaSlot)
+            {
+                data.PortSeaSlots.Add(new PortSeaSlotSaveData
+                {
+                    Vertex = ToVertexSaveData(kvp.Key),
+                    SeaQ = kvp.Value.Q,
+                    SeaR = kvp.Value.R
+                });
+            }
+
             foreach (var kv in board.Roads)
             {
                 data.Roads.Add(new RoadSaveData
@@ -302,6 +312,7 @@ namespace CatanRoguelike.Core.Save
         {
             board.Tiles.Clear();
             board.SeaFishGrounds.Clear();
+            board.PortVertexToSeaSlot.Clear();
             board.Roads.Clear();
             board.VertexBuildings.Clear();
             board.DisabledRoads.Clear();
@@ -457,6 +468,10 @@ namespace CatanRoguelike.Core.Save
 
             foreach (var tileData in data.SeaFishGrounds ?? new List<HexTileSaveData>())
                 board.SeaFishGrounds[new HexCoord(tileData.Q, tileData.R)] = FromHexTileSaveData(tileData);
+
+            board.PortVertexToSeaSlot.Clear();
+            foreach (var slot in data.PortSeaSlots ?? new List<PortSeaSlotSaveData>())
+                board.PortVertexToSeaSlot[ToVertex(slot.Vertex)] = new HexCoord(slot.SeaQ, slot.SeaR);
         }
     }
 }

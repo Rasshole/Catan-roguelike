@@ -53,8 +53,8 @@ namespace CatanRoguelike.Game
             Vector2 vertexPos = new Vector2(vx, vz);
 
             if (useColonistShortPier
-                && SeaFishHarborLayout.TryComputeShortPierBadgeCenter(
-                    board, portVertex, hexScale, discRadius, out MapPlaneXz shortCenter))
+                && SeaFrameSlotLayout.TryGetBadgeCenter(
+                    board, portVertex, hexScale, out MapPlaneXz shortCenter))
             {
                 badgeCenter = new Vector2(shortCenter.X, shortCenter.Z);
                 seaOutward = ComputeSeawardDirection(board, portVertex, hexScale, vertexPos);
@@ -149,7 +149,7 @@ namespace CatanRoguelike.Game
             foreach (var kvp in board.SeaFishGrounds)
             {
                 float radius = discRadius + SeaFishGroundClearance;
-                if (SeaFishHarborLayout.DiscIntersectsHexPolygon(
+                if (SeaFrameSlotLayout.DiscIntersectsHexPolygon(
                         new MapPlaneXz(discCenter.x, discCenter.y), radius, kvp.Key, hexScale))
                     return true;
             }

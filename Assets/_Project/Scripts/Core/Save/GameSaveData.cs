@@ -74,10 +74,18 @@ namespace CatanRoguelike.Core.Save
         public PlayerId Owner { get; set; }
     }
 
+    public sealed class PortSeaSlotSaveData
+    {
+        public VertexSaveData Vertex { get; set; }
+        public int SeaQ { get; set; }
+        public int SeaR { get; set; }
+    }
+
     public sealed class BoardSaveData
     {
         public List<HexTileSaveData> Tiles { get; set; } = new();
         public List<HexTileSaveData> SeaFishGrounds { get; set; } = new();
+        public List<PortSeaSlotSaveData> PortSeaSlots { get; set; } = new();
         public List<RoadSaveData> Roads { get; set; } = new();
         public List<VertexBuildingSaveData> VertexBuildings { get; set; } = new();
         public List<EdgeSaveData> DisabledRoads { get; set; } = new();

@@ -430,9 +430,9 @@ namespace CatanRoguelike.Game
         }
 
         private static bool MatchesDesertLakeAccent(Color c) =>
-            c.r >= 0.28f && c.r <= 0.48f
-            && c.g >= 0.48f && c.g <= 0.68f
-            && c.b >= 0.52f && c.b <= 0.72f
+            c.r >= 0.30f && c.r <= 0.42f
+            && c.g >= 0.48f && c.g <= 0.58f
+            && c.b >= 0.52f && c.b <= 0.65f
             && c.g > c.r + 0.08f;
 
         private static bool MatchesSkyColor(Color c) =>

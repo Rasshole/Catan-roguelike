@@ -441,8 +441,16 @@ namespace CatanRoguelike.Game
                 _robberMarker.SetActive(visible);
         }
 
-        private Vector3 GetRobberLocalOffset() =>
-            Data != null && Data.IsDesert ? Vector3.zero : RobberLocalOffset;
+        private Vector3 GetRobberLocalOffset()
+        {
+            if (Data == null)
+                return RobberLocalOffset;
+            if (Data.IsDesert && Data.IsFishTile && ColonistPresentation.IsActive)
+                return new Vector3(0.38f, 0f, -0.30f);
+            if (Data.IsDesert)
+                return Vector3.zero;
+            return RobberLocalOffset;
+        }
 
         private void EnsureRobberMarker()
         {

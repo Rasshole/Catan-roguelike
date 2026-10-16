@@ -449,9 +449,18 @@ namespace CatanRoguelike.Game
             go.transform.localScale = new Vector3(1f, height, 1f);
 
             Renderer renderer;
+            const float seaFishInset = 0.88f;
             if (ColonistPresentation.IsActive && IsSeaFishTile(data))
             {
-                renderer = ColonistSeaFishHexVisual.Apply(go, data, hexScale, height);
+                var mesh = HexPrismMesh.Create(data.Coord, hexScale);
+                var meshFilter = go.AddComponent<MeshFilter>();
+                meshFilter.sharedMesh = mesh;
+                renderer = go.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial = ColonistBoardTextureLoader.CreateSeaFishGroundMaterial();
+                renderer.sharedMaterial.renderQueue = 1985;
+                go.transform.localScale = new Vector3(seaFishInset, height, seaFishInset);
+                var collider = go.AddComponent<MeshCollider>();
+                collider.sharedMesh = mesh;
             }
             else
             {
@@ -473,7 +482,7 @@ namespace CatanRoguelike.Game
             {
                 if (!data.IsDesert && !IsSeaFishTile(data))
                     ColonistHexTileIcon.Apply(go, data, hexScale);
-                if (data.IsDesert && !data.IsFishTile)
+                if (data.IsDesert)
                     ColonistDesertDuneDecor.Apply(go, hexScale);
                 if (data.IsDesert && data.IsFishTile)
                     ColonistDesertLakeVisual.Apply(go, hexScale);

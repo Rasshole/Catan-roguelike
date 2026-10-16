@@ -14,6 +14,9 @@ namespace CatanRoguelike.Core.Map
         /// <summary>Coastal sea fishing grounds (Fishermen); not counted in map hex size.</summary>
         public Dictionary<HexCoord, HexTileData> SeaFishGrounds { get; } = new();
 
+        /// <summary>Sea-ring hex occupied by each port badge (canonical port vertex → sea coord).</summary>
+        public Dictionary<HexMath.Vertex, HexCoord> PortVertexToSeaSlot { get; } = new();
+
         public Dictionary<HexMath.Edge, PlayerId> Roads { get; } = new();
         public Dictionary<HexMath.Vertex, (BuildingType type, PlayerId owner)> VertexBuildings { get; } = new();
         public HashSet<HexMath.Edge> DisabledRoads { get; } = new();
@@ -34,6 +37,12 @@ namespace CatanRoguelike.Core.Map
             if (Tiles.TryGetValue(coord, out tile))
                 return true;
             return SeaFishGrounds.TryGetValue(coord, out tile);
+        }
+
+        public bool TryGetSeaSlotForPort(HexMath.Vertex portVertex, out HexCoord seaCoord)
+        {
+            portVertex = VertexGraph.Canonicalize(portVertex);
+            return PortVertexToSeaSlot.TryGetValue(portVertex, out seaCoord);
         }
 
         public void PlaceRobber(HexCoord coord)

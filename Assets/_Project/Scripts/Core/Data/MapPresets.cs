@@ -262,6 +262,9 @@ namespace CatanRoguelike.Core.Data
 
             NumberTokenLibrary.AssignMissingTokens(board, seed);
 
+            var ports = PortAccess.DiscoverPorts(board);
+            SeaFrameSlotLayout.AssignPortSeaSlots(board, ports);
+
             return added;
         }
 
@@ -296,8 +299,13 @@ namespace CatanRoguelike.Core.Data
 
             NumberTokenLibrary.AssignMissingTokens(board, seed);
 
+            var ports = PortAccess.DiscoverPorts(board);
+            SeaFrameSlotLayout.AssignPortSeaSlots(board, ports);
             if (options.FishermenOfCatan)
-                AppendFishermenFishTiles(board, seed);
+            {
+                SeaFrameSlotLayout.AssignFishSeaGrounds(board, seed);
+                ApplyDesertFishingLake(board);
+            }
 
             return board;
         }
@@ -322,14 +330,6 @@ namespace CatanRoguelike.Core.Data
 
             center.IsDesert = true;
             center.NumberToken = null;
-        }
-
-        /// <summary>Sea fishing grounds outside the coast (stored in <see cref="BoardState.SeaFishGrounds"/>).</summary>
-        public static void AppendFishermenFishTiles(BoardState board, int? seed = null)
-        {
-            var ports = PortAccess.DiscoverPorts(board);
-            SeaFishHarborLayout.PlaceSeaFishGrounds(board, ports, seed);
-            ApplyDesertFishingLake(board);
         }
 
         private static void ApplyDesertFishingLake(BoardState board)

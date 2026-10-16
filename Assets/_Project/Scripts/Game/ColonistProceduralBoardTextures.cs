@@ -16,7 +16,10 @@ namespace CatanRoguelike.Game
                 name = $"Procedural_{slot}"
             };
 
-            var baseColor = BoostBaseColor(ColonistBoardTextureLoader.GetFallbackColorForSlot(slot), slot);
+            var fallback = ColonistBoardTextureLoader.GetFallbackColorForSlot(slot);
+            if (slot == BoardTerrainSlot.Ore)
+                fallback = new Color(0.49f, 0.50f, 0.53f);
+            var baseColor = BoostBaseColor(fallback, slot);
             var pixels = new Color32[Size * Size];
             var rng = new System.Random((int)slot * 7919 + 42);
             float strokeAngle = (float)rng.NextDouble() * Mathf.PI * 2f;
@@ -63,14 +66,14 @@ namespace CatanRoguelike.Game
             float satBoost = slot switch
             {
                 BoardTerrainSlot.Sheep => 1.20f,
-                BoardTerrainSlot.Ore => 1.28f,
+                BoardTerrainSlot.Ore => 1.05f,
                 BoardTerrainSlot.Wood => 1.08f,
                 BoardTerrainSlot.Brick => 1.06f,
                 BoardTerrainSlot.Wheat => 1.04f,
                 _ => 1f
             };
             s = Mathf.Clamp01(s * satBoost);
-            v = Mathf.Clamp(v, slot == BoardTerrainSlot.Ore ? 0.56f : 0.52f, slot == BoardTerrainSlot.Ore ? 0.78f : 0.92f);
+            v = Mathf.Clamp(v, slot == BoardTerrainSlot.Ore ? 0.42f : 0.52f, slot == BoardTerrainSlot.Ore ? 0.62f : 0.92f);
             return Color.HSVToRGB(h, s, v);
         }
 
