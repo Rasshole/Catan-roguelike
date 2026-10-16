@@ -9,16 +9,24 @@ namespace CatanRoguelike.Game
     public static class ColonistResourceIconTextures
     {
         private const int Size = 64;
-        private static readonly Dictionary<ResourceType, Texture2D> Cache = new();
+        private static readonly Dictionary<ResourceType, Texture2D> BoardCache = new();
+        private static readonly Dictionary<ResourceType, Texture2D> HudCache = new();
 
-        public static Texture2D Get(ResourceType resource)
+        public static Texture2D Get(ResourceType resource) => GetTexture(BoardCache, resource, forHud: false);
+
+        public static Texture2D GetForHud(ResourceType resource) => GetTexture(HudCache, resource, forHud: true);
+
+        private static Texture2D GetTexture(
+            Dictionary<ResourceType, Texture2D> cache,
+            ResourceType resource,
+            bool forHud)
         {
-            if (Cache.TryGetValue(resource, out var cached) && cached != null)
+            if (cache.TryGetValue(resource, out var cached) && cached != null)
                 return cached;
 
             var tex = new Texture2D(Size, Size, TextureFormat.RGBA32, false)
             {
-                name = $"ColonistIcon_{resource}",
+                name = forHud ? $"ColonistHudIcon_{resource}" : $"ColonistIcon_{resource}",
                 filterMode = FilterMode.Bilinear,
                 wrapMode = TextureWrapMode.Clamp
             };
@@ -37,7 +45,10 @@ namespace CatanRoguelike.Game
             switch (resource)
             {
                 case ResourceType.Wood:
-                    DrawLogStack(pixels, ink);
+                    if (forHud)
+                        DrawLogStack(pixels, ink);
+                    else
+                        DrawTree(pixels, ink);
                     break;
                 case ResourceType.Brick:
                     DrawBrickStack(pixels, ink);
@@ -58,10 +69,15 @@ namespace CatanRoguelike.Game
 
             if (resource == ResourceType.Wheat)
                 RotatePixels90Clockwise(pixels);
+            if (resource == ResourceType.Wood && !forHud)
+            {
+                RotatePixels90Clockwise(pixels);
+                RotatePixels180(pixels);
+            }
 
             tex.SetPixels32(pixels);
             tex.Apply(false, false);
-            Cache[resource] = tex;
+            cache[resource] = tex;
             return tex;
         }
 
@@ -94,6 +110,14 @@ namespace CatanRoguelike.Game
 
             for (int i = 0; i < pixels.Length; i++)
                 pixels[i] = rotated[i];
+        }
+
+        private static void DrawTree(Color32[] px, Color32 c)
+        {
+            FillRect(px, 29, 10, 6, 16, c);
+            DrawFilledTriangle(px, 32, 50, 14, 34, 50, 34, c);
+            DrawFilledTriangle(px, 32, 46, 16, 30, 46, 30, c);
+            DrawFilledTriangle(px, 32, 40, 18, 26, 40, 26, c);
         }
 
         private static void DrawLogStack(Color32[] px, Color32 c)

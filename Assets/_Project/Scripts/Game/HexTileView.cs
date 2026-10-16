@@ -117,12 +117,14 @@ namespace CatanRoguelike.Game
         private const float LabelLiftLocal = 0.20f;
         private const float MarkerLiftLocal = 0.24f;
         private const float WorldRobberFootprint = 0.34f;
-        private const float WorldRobberBaseHeight = 0.06f;
-        private const float WorldRobberBodyHeight = 0.12f;
+        private const float WorldRobberBaseHeight = 0.08f;
+        private const float WorldRobberBodyHeight = 0.14f;
         private const float WorldRobberShoulderDiameter = 0.38f;
-        private const float WorldRobberShoulderHeight = 0.08f;
-        private const float WorldRobberHeadDiameter = 0.12f;
+        private const float WorldRobberShoulderHeight = 0.10f;
+        private const float WorldRobberHeadDiameter = 0.10f;
+        private const float WorldRobberTopIconDiameter = 0.40f;
         private const string RobberShoulderPartName = "RobberShoulder";
+        private const string RobberTopIconPartName = "RobberTopIcon";
         private const float WorldStormExtent = 0.22f;
         private const float WorldStormHeight = 0.06f;
         private static readonly Vector3 RobberLocalOffset = new(0.30f, 0f, -0.30f);
@@ -404,7 +406,9 @@ namespace CatanRoguelike.Game
         {
             PurgeLegacyRobberVisuals();
 
-            if (_robberMarker != null && _robberMarker.transform.Find(RobberShoulderPartName) != null)
+            if (_robberMarker != null
+                && _robberMarker.transform.Find(RobberShoulderPartName) != null
+                && _robberMarker.transform.Find(RobberTopIconPartName) != null)
                 return;
 
             if (_robberMarker != null)
@@ -422,41 +426,58 @@ namespace CatanRoguelike.Game
             float sx = Mathf.Max(lossy.x, 0.001f);
             float sy = Mathf.Max(lossy.y, 0.001f);
             float sz = Mathf.Max(lossy.z, 0.001f);
-            float y = 0f;
-            float baseCenterY = y + (WorldRobberBaseHeight * 0.5f) / sy;
-            y += WorldRobberBaseHeight;
-            float bodyCenterY = y + (WorldRobberBodyHeight * 0.5f) / sy;
-            y += WorldRobberBodyHeight;
-            float shoulderCenterY = y + (WorldRobberShoulderHeight * 0.5f) / sy;
-            y += WorldRobberShoulderHeight;
-            float headCenterY = y + (WorldRobberHeadDiameter * 0.5f) / sy;
+            float stackLocalY = 0f;
 
-            CreateRobberPart(
+            stackLocalY = AddRobberCylinder(
                 "RobberBase",
-                PrimitiveType.Cylinder,
-                new Vector3(0f, baseCenterY, 0f),
-                new Vector3(WorldRobberFootprint / sx, WorldRobberBaseHeight / sy, WorldRobberFootprint / sz));
-            CreateRobberPart(
+                stackLocalY,
+                WorldRobberFootprint,
+                WorldRobberFootprint,
+                WorldRobberBaseHeight,
+                sx,
+                sy,
+                sz);
+            stackLocalY = AddRobberCylinder(
                 "RobberBody",
-                PrimitiveType.Cylinder,
-                new Vector3(0f, bodyCenterY, 0f),
-                new Vector3((WorldRobberFootprint * 0.68f) / sx, WorldRobberBodyHeight / sy, (WorldRobberFootprint * 0.68f) / sz));
-            CreateRobberPart(
+                stackLocalY,
+                WorldRobberFootprint * 0.68f,
+                WorldRobberFootprint * 0.68f,
+                WorldRobberBodyHeight,
+                sx,
+                sy,
+                sz);
+            stackLocalY = AddRobberCylinder(
                 RobberShoulderPartName,
-                PrimitiveType.Cylinder,
-                new Vector3(0f, shoulderCenterY, 0f),
-                new Vector3(
-                    WorldRobberShoulderDiameter / sx,
-                    WorldRobberShoulderHeight / sy,
-                    WorldRobberShoulderDiameter / sz));
-            CreateRobberPart(
+                stackLocalY,
+                WorldRobberShoulderDiameter,
+                WorldRobberShoulderDiameter,
+                WorldRobberShoulderHeight,
+                sx,
+                sy,
+                sz);
+            stackLocalY = AddRobberCylinder(
                 "RobberHead",
-                PrimitiveType.Sphere,
-                new Vector3(0f, headCenterY, 0f),
-                new Vector3(
-                    WorldRobberHeadDiameter / sx,
-                    WorldRobberHeadDiameter / sy,
-                    WorldRobberHeadDiameter / sz));
+                stackLocalY,
+                WorldRobberHeadDiameter,
+                WorldRobberHeadDiameter,
+                WorldRobberHeadDiameter,
+                sx,
+                sy,
+                sz,
+                PrimitiveType.Sphere);
+
+            float iconLocalY = stackLocalY + 0.01f / sy;
+            var iconGo = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            iconGo.name = RobberTopIconPartName;
+            iconGo.transform.SetParent(_robberMarker.transform, false);
+            iconGo.transform.localPosition = new Vector3(0f, iconLocalY, 0f);
+            iconGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            float iconLocalDiameter = WorldRobberTopIconDiameter / sx;
+            iconGo.transform.localScale = new Vector3(iconLocalDiameter, iconLocalDiameter, 1f);
+            var iconRenderer = iconGo.GetComponent<Renderer>();
+            iconRenderer.sharedMaterial = BuiltInMaterials.CreateUnlitTransparent(ColonistRobberTopIconTextures.Get());
+            iconRenderer.sharedMaterial.renderQueue = 3250;
+            Destroy(iconGo.GetComponent<Collider>());
 
             Debug.Log(
                 $"HexTileView RobberPawn tile={Data.Coord} boundsY={RobberWorldBounds.size.y:F3} " +
@@ -478,6 +499,27 @@ namespace CatanRoguelike.Game
                     || (name.Contains("Robber") && name != "RobberPawn"))
                     Destroy(child.gameObject);
             }
+        }
+
+        private float AddRobberCylinder(
+            string name,
+            float stackLocalY,
+            float worldWidthX,
+            float worldWidthZ,
+            float worldHeight,
+            float sx,
+            float sy,
+            float sz,
+            PrimitiveType primitive = PrimitiveType.Cylinder)
+        {
+            float localHeight = worldHeight / sy;
+            float centerY = stackLocalY + localHeight * 0.5f;
+            CreateRobberPart(
+                name,
+                primitive,
+                new Vector3(0f, centerY, 0f),
+                new Vector3(worldWidthX / sx, worldHeight / sy, worldWidthZ / sz));
+            return stackLocalY + localHeight;
         }
 
         private void CreateRobberPart(string name, PrimitiveType primitive, Vector3 localPos, Vector3 localScale)
