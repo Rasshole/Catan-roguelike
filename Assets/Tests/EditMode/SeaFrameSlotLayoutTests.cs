@@ -117,6 +117,24 @@ namespace CatanRoguelike.Tests.EditMode
         }
 
         [Test]
+        public void FishShoals_AttachToLandSeaEdges()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
+            var land = new HashSet<HexCoord>(board.Tiles.Keys);
+
+            foreach (var sea in board.SeaFishGrounds.Keys)
+            {
+                Assert.IsTrue(
+                    SeaFrameSlotLayout.TryGetFishShoalPlacement(board, sea, HexScale, out FishShoalPlacement p),
+                    $"Sea fish slot {sea} should resolve to a coastal shoal.");
+
+                Assert.IsFalse(land.Contains(sea), $"Fish slot {sea} must not be a land hex.");
+                float edgeLen = (p.CoastVertexA - p.CoastVertexB).Magnitude;
+                Assert.Greater(edgeLen, HexScale * 0.5f, "Shoal base should span a land coast edge.");
+            }
+        }
+
+        [Test]
         public void FishGrounds_AreSpreadAroundTheSeaRing()
         {
             var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
@@ -135,8 +153,9 @@ namespace CatanRoguelike.Tests.EditMode
             var angles = new List<float>();
             foreach (var coord in board.SeaFishGrounds.Keys)
             {
-                var (x, z) = HexMath.ToWorldPosition(coord, 1f);
-                angles.Add((float)System.Math.Atan2(z - center.Z, x - center.X));
+                if (!SeaFrameSlotLayout.TryGetFishShoalPlacement(board, coord, HexScale, out FishShoalPlacement p))
+                    continue;
+                angles.Add((float)System.Math.Atan2(p.TokenCenter.Z - center.Z, p.TokenCenter.X - center.X));
             }
 
             angles.Sort();

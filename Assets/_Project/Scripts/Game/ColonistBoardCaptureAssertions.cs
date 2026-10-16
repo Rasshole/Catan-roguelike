@@ -783,10 +783,12 @@ namespace CatanRoguelike.Game
                     fishGrounds++;
 
                 bool hasVisual = tile.transform.Find("FishGroundIcon") != null
+                    || tile.transform.Find("ShoalMesh") != null
+                    || tile.name.StartsWith(ColonistCoastalFishShoalVisual.ShoalRootName)
                     || tile.transform.Find("SeaFishGround") != null;
                 Assert.IsTrue(
                     hasVisual,
-                    $"Fish tile at {tile.Data.Coord} should spawn sea ground or fish icon.");
+                    $"Fish tile at {tile.Data.Coord} should spawn coastal shoal or fish icon.");
             }
 
             Assert.IsTrue(sawDesertLake, "Desert center should become a fishing lake when Fishermen is enabled.");

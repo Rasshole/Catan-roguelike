@@ -20,8 +20,8 @@ namespace CatanRoguelike.Game
 
         private const float PierLength = 0.36f;
         private const float PierWidth = 0.16f;
-        private const float SeaSlotPlankWidth = 0.11f;
-        private const float SeaSlotPlankHeight = 0.10f;
+        private const float SeaSlotPlankWidth = 0.09f;
+        private const float SeaSlotPlankHeight = 0.09f;
         private const float PierHeight = 0.06f;
         private const float PostHeight = 0.11f;
         private const float PostWidth = 0.07f;

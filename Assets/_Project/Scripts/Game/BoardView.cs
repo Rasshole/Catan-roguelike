@@ -14,8 +14,6 @@ namespace CatanRoguelike.Game
 {
     public sealed class BoardView : MonoBehaviour
     {
-        public const float SeaFishGroundInset = 0.88f;
-
         [SerializeField] private float hexScale = 1.2f;
         [SerializeField] private float tileHeight = 0.15f;
         [SerializeField] private Transform boardRoot;
@@ -113,15 +111,15 @@ namespace CatanRoguelike.Game
                 return 0f;
 
             var centerXZ = new Vector2(center.x, center.z);
-            float fishScale = hexScale * SeaFishGroundInset;
             float max = 0f;
-            foreach (var coord in board.SeaFishGrounds.Keys)
+            foreach (var sea in board.SeaFishGrounds.Keys)
             {
-                for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
-                {
-                    var (x, z) = HexMath.VertexToWorldPosition(coord, corner, fishScale);
-                    max = Mathf.Max(max, Vector2.Distance(centerXZ, new Vector2(x, z)));
-                }
+                if (!SeaFrameSlotLayout.TryGetFishShoalPlacement(board, sea, hexScale, out FishShoalPlacement p))
+                    continue;
+
+                max = Mathf.Max(max, Vector2.Distance(centerXZ, new Vector2(p.CoastVertexA.X, p.CoastVertexA.Z)));
+                max = Mathf.Max(max, Vector2.Distance(centerXZ, new Vector2(p.CoastVertexB.X, p.CoastVertexB.Z)));
+                max = Mathf.Max(max, Vector2.Distance(centerXZ, new Vector2(p.SeaTip.X, p.SeaTip.Z)));
             }
 
             return max;
@@ -226,19 +224,10 @@ namespace CatanRoguelike.Game
             if (board == null || board.SeaFishGrounds.Count == 0)
                 return;
 
-            float fishScale = hexScale * SeaFishGroundInset;
-            foreach (var coord in board.SeaFishGrounds.Keys)
-            {
-                float y = sampleY;
-                if (_tiles.TryGetValue(coord, out var view))
-                    y = GetHexTopWorldPoint(view.transform).y;
-
-                for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
-                {
-                    var (x, z) = HexMath.VertexToWorldPosition(coord, corner, fishScale);
-                    samples.Add(new Vector3(x, y, z));
-                }
-            }
+            var xz = new List<MapPlaneXz>(board.SeaFishGrounds.Count * 3);
+            SeaFrameSlotLayout.AppendFishShoalFramingSamples(board, hexScale, xz);
+            foreach (var p in xz)
+                samples.Add(new Vector3(p.X, sampleY, p.Z));
         }
 
         /// <summary>World point on the top of the reference hex for capture colour sampling.</summary>
@@ -291,6 +280,7 @@ namespace CatanRoguelike.Game
         }
 
         private readonly Dictionary<HexCoord, HexTileView> _tiles = new();
+        private readonly Dictionary<HexCoord, HexTileView> _fishShoalViews = new();
         private readonly HashSet<HexCoord> _boardTileCoords = new();
         private GameController _controller;
         private int _lastBuildingVisualCount;
@@ -320,6 +310,7 @@ namespace CatanRoguelike.Game
             }
 
             _tiles.Clear();
+            _fishShoalViews.Clear();
             _boardTileCoords.Clear();
             ColonistPortBadgeSizing.ResetBoardSession();
         }
@@ -355,11 +346,7 @@ namespace CatanRoguelike.Game
                 _tiles[kvp.Key] = tile;
             }
 
-            foreach (var kvp in board.SeaFishGrounds)
-            {
-                var tile = CreateHexTile(kvp.Value);
-                _tiles[kvp.Key] = tile;
-            }
+            BuildCoastalFishShoals(board);
 
             if (ColonistPresentation.IsActive)
             {
@@ -369,6 +356,44 @@ namespace CatanRoguelike.Game
 
             CreateTableSurface(board);
             CreatePortMarkers(board);
+        }
+
+        private void BuildCoastalFishShoals(BoardState board)
+        {
+            if (!ColonistPresentation.IsActive || board == null)
+                return;
+
+            foreach (var kvp in board.SeaFishGrounds)
+            {
+                if (!SeaFrameSlotLayout.TryGetFishShoalPlacement(
+                        board, kvp.Key, hexScale, out FishShoalPlacement placement))
+                    continue;
+
+                float topY = ResolveCoastalFishShoalTopY(board, kvp.Key, placement);
+                var view = ColonistCoastalFishShoalVisual.Build(
+                    boardRoot, kvp.Value, placement, hexScale, topY);
+                _fishShoalViews[kvp.Key] = view;
+            }
+        }
+
+        private float ResolveCoastalFishShoalTopY(
+            BoardState board,
+            HexCoord seaCoord,
+            FishShoalPlacement placement)
+        {
+            foreach (var kvp in _tiles)
+            {
+                for (int d = 0; d < 6; d++)
+                {
+                    if (HexMath.GetNeighbor(kvp.Key, d) != seaCoord)
+                        continue;
+
+                    return GetHexTopWorldPoint(kvp.Value.transform).y;
+                }
+            }
+
+            float height = ColonistPresentation.IsActive ? tileHeight * 0.25f : tileHeight;
+            return height * HexPrismMesh.TopY;
         }
 
         private void CreateTableSurface(BoardState board)
@@ -492,19 +517,6 @@ namespace CatanRoguelike.Game
             go.transform.localScale = new Vector3(1f, height, 1f);
 
             Renderer renderer;
-            if (ColonistPresentation.IsActive && IsSeaFishTile(data))
-            {
-                var mesh = HexPrismMesh.Create(data.Coord, hexScale);
-                var meshFilter = go.AddComponent<MeshFilter>();
-                meshFilter.sharedMesh = mesh;
-                renderer = go.AddComponent<MeshRenderer>();
-                renderer.sharedMaterial = ColonistBoardTextureLoader.CreateSeaFishGroundMaterial();
-                renderer.sharedMaterial.renderQueue = 1985;
-                go.transform.localScale = new Vector3(SeaFishGroundInset, height, SeaFishGroundInset);
-                var collider = go.AddComponent<MeshCollider>();
-                collider.sharedMesh = mesh;
-            }
-            else
             {
                 var mesh = HexPrismMesh.Create(data.Coord, hexScale);
                 var meshFilter = go.AddComponent<MeshFilter>();
@@ -553,7 +565,7 @@ namespace CatanRoguelike.Game
 
             foreach (var kvp in state.Board.SeaFishGrounds)
             {
-                if (_tiles.TryGetValue(kvp.Key, out var view))
+                if (_fishShoalViews.TryGetValue(kvp.Key, out var view))
                 {
                     view.Refresh(kvp.Value);
                     view.RefreshNumberToken(kvp.Value);

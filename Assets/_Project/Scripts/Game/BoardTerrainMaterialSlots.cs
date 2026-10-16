@@ -42,6 +42,7 @@ namespace CatanRoguelike.Game
         Ore,
         Desert,
         SeaLake,
-        CoastSand
+        CoastSand,
+        FishShoal
     }
 }

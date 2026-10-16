@@ -15,7 +15,9 @@ namespace CatanRoguelike.Core.Map
     {
         private const int HexCornerCount = 6;
         public const float DefaultBadgeDiscRadius = 0.42f;
-        public const float BadgeLandPolygonClearance = 0.05f;
+        public const float BadgeLandPolygonClearance = 0.03f;
+        private const float FishShoalSeaDepthFactor = 0.32f;
+        private const float FishShoalTokenInsetFactor = 0.14f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 
         public static void AssignPortSeaSlots(BoardState board, IReadOnlyList<PortDefinition> ports)
@@ -177,31 +179,92 @@ namespace CatanRoguelike.Core.Map
             if (!board.PortVertexToSeaSlot.TryGetValue(portVertex, out HexCoord sea))
                 return false;
 
-            var (sx, sz) = HexMath.ToWorldPosition(sea, hexScale);
-            var seaCenter = new MapPlaneXz(sx, sz);
-            MapPlaneXz boardCenter = ComputeBoardCenter(board);
-            MapPlaneXz outward = (seaCenter - boardCenter).Normalized;
-            if (outward.SqrMagnitude < 1e-6f
-                && TryGetHarborCoastEdge(board, portVertex, sea, hexScale, out MapPlaneXz coastMid, out _, out _))
+            if (!TryGetHarborCoastEdge(board, portVertex, sea, hexScale, out MapPlaneXz coastMid, out _, out _))
             {
-                outward = (seaCenter - coastMid).Normalized;
+                var (x, z) = HexMath.ToWorldPosition(sea, hexScale);
+                center = new MapPlaneXz(x, z);
+                return true;
             }
 
-            center = seaCenter;
-            if (DiscClearOfAllLandHexes(board, center, badgeRadius, BadgeLandPolygonClearance, hexScale))
-                return true;
-
-            const float pushStep = 0.02f;
-            const float maxPush = 2.5f;
-            for (float push = pushStep; push <= maxPush; push += pushStep)
+            var (sx, sz) = HexMath.ToWorldPosition(sea, hexScale);
+            var seaCenter = new MapPlaneXz(sx, sz);
+            MapPlaneXz outward = (seaCenter - coastMid).Normalized;
+            if (outward.SqrMagnitude < 1e-6f)
             {
-                center = seaCenter + outward * push;
+                MapPlaneXz boardCenter = ComputeBoardCenter(board);
+                outward = (seaCenter - boardCenter).Normalized;
+            }
+
+            const float pushStep = 0.01f;
+            float minPush = badgeRadius + BadgeLandPolygonClearance;
+            float maxPush = badgeRadius + 0.32f;
+            for (float push = minPush; push <= maxPush; push += pushStep)
+            {
+                center = coastMid + outward * push;
                 if (DiscClearOfAllLandHexes(board, center, badgeRadius, BadgeLandPolygonClearance, hexScale))
                     return true;
             }
 
-            center = seaCenter + outward * maxPush;
+            center = coastMid + outward * maxPush;
             return true;
+        }
+
+        public static bool TryGetFishShoalPlacement(
+            BoardState board,
+            HexCoord seaCoord,
+            float hexScale,
+            out FishShoalPlacement placement)
+        {
+            placement = default;
+            var land = new HashSet<HexCoord>(board.Tiles.Keys);
+            var (seaX, seaZ) = HexMath.ToWorldPosition(seaCoord, hexScale);
+            var seaCenter = new MapPlaneXz(seaX, seaZ);
+
+            foreach (var hex in land)
+            {
+                for (int d = 0; d < 6; d++)
+                {
+                    if (HexMath.GetNeighbor(hex, d) != seaCoord)
+                        continue;
+
+                    var edge = HexMath.GetEdgeFacing(hex, d);
+                    var (mx, mz) = HexMath.EdgeMidpoint(edge, hexScale);
+                    var (ax, az) = HexMath.VertexToWorldPosition(edge.A, hexScale);
+                    var (bx, bz) = HexMath.VertexToWorldPosition(edge.B, hexScale);
+                    var coastMid = new MapPlaneXz(mx, mz);
+                    MapPlaneXz outward = (seaCenter - coastMid).Normalized;
+                    float depth = hexScale * FishShoalSeaDepthFactor;
+                    float tokenInset = hexScale * FishShoalTokenInsetFactor;
+                    placement = new FishShoalPlacement(
+                        new MapPlaneXz(ax, az),
+                        new MapPlaneXz(bx, bz),
+                        coastMid + outward * depth,
+                        coastMid + outward * tokenInset,
+                        outward);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static void AppendFishShoalFramingSamples(
+            BoardState board,
+            float hexScale,
+            IList<MapPlaneXz> xzSamples)
+        {
+            if (board == null || xzSamples == null)
+                return;
+
+            foreach (var sea in board.SeaFishGrounds.Keys)
+            {
+                if (!TryGetFishShoalPlacement(board, sea, hexScale, out FishShoalPlacement p))
+                    continue;
+
+                xzSamples.Add(p.CoastVertexA);
+                xzSamples.Add(p.CoastVertexB);
+                xzSamples.Add(p.SeaTip);
+            }
         }
 
         /// <summary>Minimum XZ distance from <paramref name="point"/> to any land hex edge (0 if inside a land hex).</summary>

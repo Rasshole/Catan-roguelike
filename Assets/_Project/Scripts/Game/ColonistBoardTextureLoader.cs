@@ -76,6 +76,7 @@ namespace CatanRoguelike.Game
             BoardTerrainSlot.Desert => BoardResourceColors.GetTileFace(new HexTileData(default, Core.ResourceType.Wood) { IsDesert = true }),
             BoardTerrainSlot.SeaLake => new Color(0.55f, 0.78f, 0.92f),
             BoardTerrainSlot.CoastSand => new Color(0.94f, 0.88f, 0.72f),
+            BoardTerrainSlot.FishShoal => new Color(0.42f, 0.62f, 0.56f),
             _ => Color.gray
         };
     }
