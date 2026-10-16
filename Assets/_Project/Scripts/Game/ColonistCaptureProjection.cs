@@ -61,6 +61,19 @@ namespace CatanRoguelike.Game
             return ViewportToTexturePixel(viewport, textureWidth, textureHeight);
         }
 
+        /// <summary>Vertical screen span of an axis-aligned world bounds at capture resolution.</summary>
+        public static float MeasureBoundsVerticalScreenPixels(
+            Bounds worldBounds,
+            Camera camera,
+            TableCamera tableCamera,
+            int textureWidth,
+            int textureHeight)
+        {
+            var top = WorldToTexturePixel(worldBounds.max, camera, tableCamera, textureWidth, textureHeight);
+            var bottom = WorldToTexturePixel(worldBounds.min, camera, tableCamera, textureWidth, textureHeight);
+            return Mathf.Abs(top.y - bottom.y);
+        }
+
         /// <summary>Axis-aligned screen width/height of the rendered hex top ring (pointy-top ≈ 1.1–1.2).</summary>
         public static float MeasureHexTopScreenAspectRatio(
             Transform hexTileRoot,

@@ -22,6 +22,8 @@ namespace CatanRoguelike.Game
         private const float PostWidth = 0.07f;
         private const float FlagHeight = 0.1f;
         private const float FlagWidth = 0.06f;
+        private const float BadgeDiscRadius = 0.22f;
+        private const float BadgeDiscHeight = 0.012f;
 
         public static GameObject Create(
             Transform parent,
@@ -87,36 +89,54 @@ namespace CatanRoguelike.Game
             disc.name = "BadgeDisc";
             disc.transform.SetParent(badgeRoot.transform, false);
             disc.transform.localPosition = Vector3.zero;
-            disc.transform.localScale = new Vector3(0.16f, 0.01f, 0.16f);
+            float discDiameter = BadgeDiscRadius * 2f;
+            disc.transform.localScale = new Vector3(discDiameter, BadgeDiscHeight, discDiameter);
             disc.GetComponent<Renderer>().sharedMaterial = BuiltInMaterials.CreateUnlit(new Color(0.95f, 0.95f, 0.93f, 1f));
-            Object.Destroy(disc.GetComponent<Collider>());
+            DestroyCollider(disc.GetComponent<Collider>());
 
+            float labelX = isGeneric ? 0f : -0.05f;
             var labelGo = new GameObject("RateLabel");
             labelGo.transform.SetParent(badgeRoot.transform, false);
-            labelGo.transform.localPosition = new Vector3(0f, 0.02f, 0f);
+            labelGo.transform.localPosition = new Vector3(labelX, BadgeDiscHeight + 0.004f, 0f);
             labelGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            labelGo.transform.localScale = Vector3.one * 0.06f;
+            labelGo.transform.localScale = Vector3.one * 0.11f;
             var text = labelGo.AddComponent<TextMesh>();
             text.text = isGeneric ? "3:1" : "2:1";
-            text.fontSize = 48;
+            text.fontSize = 64;
             text.anchor = TextAnchor.MiddleCenter;
             text.alignment = TextAlignment.Center;
             text.color = new Color(0.12f, 0.14f, 0.18f, 1f);
-            text.characterSize = 0.12f;
+            text.characterSize = 0.14f;
+            text.fontStyle = FontStyle.Bold;
 
             if (!isGeneric && specificResource.HasValue)
             {
                 var iconGo = GameObject.CreatePrimitive(PrimitiveType.Quad);
                 iconGo.name = "RateIcon";
                 iconGo.transform.SetParent(badgeRoot.transform, false);
-                iconGo.transform.localPosition = new Vector3(0.05f, 0.021f, 0f);
+                iconGo.transform.localPosition = new Vector3(0.07f, BadgeDiscHeight + 0.004f, 0f);
                 iconGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                iconGo.transform.localScale = Vector3.one * 0.05f;
+                iconGo.transform.localScale = Vector3.one * 0.11f;
                 var renderer = iconGo.GetComponent<Renderer>();
                 renderer.sharedMaterial = BuiltInMaterials.CreateUnlitTransparent(
                     ColonistResourceIconTextures.Get(specificResource.Value));
-                Object.Destroy(iconGo.GetComponent<Collider>());
+                DestroyCollider(iconGo.GetComponent<Collider>());
             }
+        }
+
+        private static void DestroyCollider(Collider collider)
+        {
+            if (collider == null)
+                return;
+
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                Object.DestroyImmediate(collider);
+                return;
+            }
+#endif
+            Object.Destroy(collider);
         }
 
         private static void CreatePart(
@@ -135,7 +155,7 @@ namespace CatanRoguelike.Game
             var renderer = part.GetComponent<Renderer>();
             renderer.sharedMaterial = BuiltInMaterials.Create(color);
 
-            Object.DestroyImmediate(part.GetComponent<Collider>());
+            DestroyCollider(part.GetComponent<Collider>());
         }
     }
 }

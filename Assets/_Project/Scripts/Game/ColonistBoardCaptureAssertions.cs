@@ -389,6 +389,40 @@ namespace CatanRoguelike.Game
         private static float ColorDistance(Color a, Color b) =>
             Mathf.Abs(a.r - b.r) + Mathf.Abs(a.g - b.g) + Mathf.Abs(a.b - b.b);
 
+        public static void AssertRobberPawnReadableOnBoardCapture(
+            Camera camera,
+            TableCamera tableCamera,
+            int textureWidth,
+            int textureHeight,
+            float minScreenHeightPixels = 25f)
+        {
+            Assert.IsNotNull(camera);
+            Assert.IsNotNull(tableCamera);
+
+            HexTileView robberTile = null;
+            foreach (var tile in Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
+            {
+                if (tile.Data.HasRobber)
+                {
+                    robberTile = tile;
+                    break;
+                }
+            }
+
+            Assert.IsNotNull(robberTile, "Board should have a robber tile for capture assertion.");
+            Assert.IsNotNull(robberTile.transform.Find("RobberPawn"), "Robber hex should use RobberPawn root.");
+
+            float screenHeight = ColonistCaptureProjection.MeasureBoundsVerticalScreenPixels(
+                robberTile.RobberWorldBounds,
+                camera,
+                tableCamera,
+                textureWidth,
+                textureHeight);
+            Assert.IsTrue(
+                screenHeight > minScreenHeightPixels,
+                $"Robber pawn should be readable on capture (screenHeight={screenHeight:F1}px bounds={robberTile.RobberWorldBounds.size}).");
+        }
+
         public static void AssertTokenRimRingVisibleOnBoardCapture(
             Texture2D boardCapture,
             Camera camera,

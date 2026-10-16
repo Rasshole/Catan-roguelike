@@ -116,10 +116,13 @@ namespace CatanRoguelike.Game
         private static bool _loggedTokenChipRimDiagnostics;
         private const float LabelLiftLocal = 0.20f;
         private const float MarkerLiftLocal = 0.24f;
-        private const float WorldRobberFootprint = 0.26f;
-        private const float WorldRobberBaseHeight = 0.12f;
-        private const float WorldRobberBodyHeight = 0.16f;
-        private const float WorldRobberHeadDiameter = 0.18f;
+        private const float WorldRobberFootprint = 0.34f;
+        private const float WorldRobberBaseHeight = 0.06f;
+        private const float WorldRobberBodyHeight = 0.12f;
+        private const float WorldRobberShoulderDiameter = 0.38f;
+        private const float WorldRobberShoulderHeight = 0.08f;
+        private const float WorldRobberHeadDiameter = 0.12f;
+        private const string RobberShoulderPartName = "RobberShoulder";
         private const float WorldStormExtent = 0.22f;
         private const float WorldStormHeight = 0.06f;
         private static readonly Vector3 RobberLocalOffset = new(0.30f, 0f, -0.30f);
@@ -136,6 +139,8 @@ namespace CatanRoguelike.Game
         public void Refresh(HexTileData data)
         {
             Data = data;
+            if (data.HasRobber)
+                EnsureRobberMarker();
             if (_robberMarker != null)
                 _robberMarker.SetActive(data.HasRobber);
             RefreshNumberToken(data);
@@ -397,7 +402,9 @@ namespace CatanRoguelike.Game
 
         private void EnsureRobberMarker()
         {
-            if (_robberMarker != null && _robberMarker.transform.childCount >= 3)
+            PurgeLegacyRobberVisuals();
+
+            if (_robberMarker != null && _robberMarker.transform.Find(RobberShoulderPartName) != null)
                 return;
 
             if (_robberMarker != null)
@@ -415,9 +422,15 @@ namespace CatanRoguelike.Game
             float sx = Mathf.Max(lossy.x, 0.001f);
             float sy = Mathf.Max(lossy.y, 0.001f);
             float sz = Mathf.Max(lossy.z, 0.001f);
-            float baseCenterY = (WorldRobberBaseHeight * 0.5f) / sy;
-            float bodyCenterY = (WorldRobberBaseHeight + WorldRobberBodyHeight * 0.5f) / sy;
-            float headCenterY = (WorldRobberBaseHeight + WorldRobberBodyHeight + WorldRobberHeadDiameter * 0.5f) / sy;
+            float y = 0f;
+            float baseCenterY = y + (WorldRobberBaseHeight * 0.5f) / sy;
+            y += WorldRobberBaseHeight;
+            float bodyCenterY = y + (WorldRobberBodyHeight * 0.5f) / sy;
+            y += WorldRobberBodyHeight;
+            float shoulderCenterY = y + (WorldRobberShoulderHeight * 0.5f) / sy;
+            y += WorldRobberShoulderHeight;
+            float headCenterY = y + (WorldRobberHeadDiameter * 0.5f) / sy;
+
             CreateRobberPart(
                 "RobberBase",
                 PrimitiveType.Cylinder,
@@ -427,7 +440,15 @@ namespace CatanRoguelike.Game
                 "RobberBody",
                 PrimitiveType.Cylinder,
                 new Vector3(0f, bodyCenterY, 0f),
-                new Vector3((WorldRobberFootprint * 0.72f) / sx, WorldRobberBodyHeight / sy, (WorldRobberFootprint * 0.72f) / sz));
+                new Vector3((WorldRobberFootprint * 0.68f) / sx, WorldRobberBodyHeight / sy, (WorldRobberFootprint * 0.68f) / sz));
+            CreateRobberPart(
+                RobberShoulderPartName,
+                PrimitiveType.Cylinder,
+                new Vector3(0f, shoulderCenterY, 0f),
+                new Vector3(
+                    WorldRobberShoulderDiameter / sx,
+                    WorldRobberShoulderHeight / sy,
+                    WorldRobberShoulderDiameter / sz));
             CreateRobberPart(
                 "RobberHead",
                 PrimitiveType.Sphere,
@@ -440,6 +461,23 @@ namespace CatanRoguelike.Game
             Debug.Log(
                 $"HexTileView RobberPawn tile={Data.Coord} boundsY={RobberWorldBounds.size.y:F3} " +
                 $"footprint={RobberWorldBounds.size.x:F3} pos={RobberWorldPosition}");
+        }
+
+        private void PurgeLegacyRobberVisuals()
+        {
+            for (int i = transform.childCount - 1; i >= 0; i--)
+            {
+                var child = transform.GetChild(i);
+                if (child == null || (_robberMarker != null && child == _robberMarker.transform))
+                    continue;
+
+                string name = child.name;
+                if (name.Contains("RobberMarker")
+                    || name.Contains("Thief")
+                    || name.Contains("thief")
+                    || (name.Contains("Robber") && name != "RobberPawn"))
+                    Destroy(child.gameObject);
+            }
         }
 
         private void CreateRobberPart(string name, PrimitiveType primitive, Vector3 localPos, Vector3 localScale)

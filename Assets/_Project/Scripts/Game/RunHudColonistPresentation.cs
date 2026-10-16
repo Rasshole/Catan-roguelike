@@ -147,7 +147,8 @@ namespace CatanRoguelike.Game
                 ResourceDisplayNames.GetEnglish(resource),
                 11,
                 TextAnchor.LowerCenter,
-                RunHudUiFactory.TextMuted);
+                new Color(0.12f, 0.14f, 0.18f, 1f),
+                FontStyle.Bold);
             var nameRect = name.rectTransform;
             nameRect.anchorMin = new Vector2(0f, 0f);
             nameRect.anchorMax = new Vector2(1f, 0f);

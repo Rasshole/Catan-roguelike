@@ -85,10 +85,12 @@ namespace CatanRoguelike.Tests.PlayMode
 
                 var robber = tile.transform.Find("RobberPawn");
                 Assert.IsNotNull(robber, "Robber hex should use RobberPawn root.");
-                Assert.Greater(tile.RobberWorldBounds.size.y, 0.3f,
+                Assert.Greater(tile.RobberWorldBounds.size.y, 0.32f,
                     $"Robber pawn should be readable height (y={tile.RobberWorldBounds.size.y:F3}).");
-                Assert.Greater(tile.RobberWorldBounds.size.x, 0.2f,
+                Assert.Greater(tile.RobberWorldBounds.size.x, 0.28f,
                     $"Robber pawn should be readable width (x={tile.RobberWorldBounds.size.x:F3}).");
+                Assert.IsNotNull(tile.transform.Find("RobberPawn/RobberShoulder"),
+                    "Robber pawn should include a wide shoulder readable from top-down.");
 
                 if (tile.Data.NumberToken.HasValue)
                 {

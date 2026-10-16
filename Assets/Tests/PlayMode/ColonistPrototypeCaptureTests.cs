@@ -84,6 +84,9 @@ namespace CatanRoguelike.Tests.PlayMode
             for (int i = 0; i < 4; i++)
                 yield return null;
 
+            var boardViewForDiag = UnityEngine.Object.FindFirstObjectByType<BoardView>();
+            ColonistRobberCaptureDiagnostics.LogRobberHexSceneRenderers(boardViewForDiag);
+
             Texture2D boardOnly = GameSceneCapture.CaptureBoardOnlyTexture(
                 GameSceneCapture.CaptureWidth,
                 GameSceneCapture.CaptureHeight);
@@ -140,6 +143,12 @@ namespace CatanRoguelike.Tests.PlayMode
                 if (tokenTile != null && tokenTile.Data.NumberToken.HasValue)
                     ColonistBoardCaptureAssertions.AssertTokenRimRingVisibleOnBoardCapture(
                         boardOnly, mainCamera, tableCamera, tokenTile);
+
+                ColonistBoardCaptureAssertions.AssertRobberPawnReadableOnBoardCapture(
+                    mainCamera,
+                    tableCamera,
+                    GameSceneCapture.CaptureWidth,
+                    GameSceneCapture.CaptureHeight);
 
                 AssertTextureHasVisibleContent(withHud);
                 AssertBottomBandDiffersBoardOnlyVsHud(boardOnly, withHud);

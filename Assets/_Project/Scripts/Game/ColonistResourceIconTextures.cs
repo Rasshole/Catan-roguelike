@@ -37,7 +37,7 @@ namespace CatanRoguelike.Game
             switch (resource)
             {
                 case ResourceType.Wood:
-                    DrawTree(pixels, ink);
+                    DrawLogStack(pixels, ink);
                     break;
                 case ResourceType.Brick:
                     DrawBrickStack(pixels, ink);
@@ -56,10 +56,8 @@ namespace CatanRoguelike.Game
                     break;
             }
 
-            if (resource == ResourceType.Wood || resource == ResourceType.Wheat)
+            if (resource == ResourceType.Wheat)
                 RotatePixels90Clockwise(pixels);
-            if (resource == ResourceType.Wood)
-                RotatePixels180(pixels);
 
             tex.SetPixels32(pixels);
             tex.Apply(false, false);
@@ -98,13 +96,23 @@ namespace CatanRoguelike.Game
                 pixels[i] = rotated[i];
         }
 
-        private static void DrawTree(Color32[] px, Color32 c)
+        private static void DrawLogStack(Color32[] px, Color32 c)
         {
-            FillRect(px, 29, 10, 6, 16, c);
-            DrawFilledTriangle(px, 32, 50, 14, 34, 50, 34, c);
-            DrawFilledTriangle(px, 32, 46, 16, 30, 46, 30, c);
-            DrawFilledTriangle(px, 32, 40, 18, 26, 40, 26, c);
+            var ring = Darken(c, 0.72f);
+            FillRect(px, 12, 22, 40, 9, c);
+            FillCircle(px, 12, 26, 5, ring);
+            FillRect(px, 10, 34, 42, 9, c);
+            FillCircle(px, 10, 38, 5, ring);
+            FillRect(px, 14, 46, 38, 9, c);
+            FillCircle(px, 52, 50, 5, ring);
         }
+
+        private static Color32 Darken(Color32 c, float factor) =>
+            new Color32(
+                (byte)(c.r * factor),
+                (byte)(c.g * factor),
+                (byte)(c.b * factor),
+                c.a);
 
         private static void DrawFilledTriangle(Color32[] px, int x0, int y0, int x1, int y1, int x2, int y2, Color32 c)
         {
