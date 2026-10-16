@@ -17,15 +17,15 @@ namespace CatanRoguelike.Game
         public static float GetHandRowBottomInset() => Margin;
 
         public static float GetActionBarBottomInset() =>
-            Margin + GetBottomHandHeight() + Margin * 0.5f;
+            Margin + GetBottomHandHeight() + (ColonistPresentation.IsActive ? Margin * 0.25f : Margin * 0.5f);
 
         public static float GetBottomHandHeight() =>
-            ColonistPresentation.IsActive ? 118f : BottomHandHeight;
+            ColonistPresentation.IsActive ? 96f : BottomHandHeight;
 
         public const float ColonistResourceHandWidth = 500f;
 
         public static float GetBottomActionBarHeight() =>
-            ColonistPresentation.IsActive ? 84f : BottomActionBarHeight;
+            ColonistPresentation.IsActive ? 68f : BottomActionBarHeight;
 
         public static float GetContentLeftInset() =>
             ColonistPresentation.IsActive ? Margin : Margin + SidePanelWidth + Margin;

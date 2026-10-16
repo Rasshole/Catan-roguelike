@@ -44,6 +44,21 @@ namespace CatanRoguelike.Tests.PlayMode
                 int token = tile.Data.NumberToken.Value;
                 Assert.IsTrue(tile.ChipUsesUnlitMaterial, $"Token {token} chip should use unlit material.");
                 Assert.IsTrue(tile.IsChipFlat, $"Token {token} chip should be flat (d={tile.ChipWorldDiameter:F3} h={tile.ChipWorldHeight:F3}).");
+
+                var faceRenderer = tile.TokenFaceRenderer;
+                var rimRenderer = tile.TokenRimRenderer;
+                Assert.IsNotNull(faceRenderer, $"Token {token} should have a face renderer.");
+                Assert.IsNotNull(rimRenderer, $"Token {token} should have a rim renderer.");
+                Assert.IsTrue(faceRenderer.enabled && rimRenderer.enabled, $"Token {token} chip renderers should be enabled.");
+                float hexTop = tile.HexTopWorldY;
+                Assert.GreaterOrEqual(faceRenderer.bounds.min.y, hexTop - 0.002f,
+                    $"Token {token} face should sit on/above hex top (faceMinY={faceRenderer.bounds.min.y:F4} hexTop={hexTop:F4}).");
+                Assert.GreaterOrEqual(rimRenderer.bounds.min.y, hexTop - 0.002f,
+                    $"Token {token} rim should sit on/above hex top (rimMinY={rimRenderer.bounds.min.y:F4} hexTop={hexTop:F4}).");
+                float faceWidth = Mathf.Max(faceRenderer.bounds.size.x, faceRenderer.bounds.size.z);
+                float rimWidth = Mathf.Max(rimRenderer.bounds.size.x, rimRenderer.bounds.size.z);
+                Assert.Greater(rimWidth, faceWidth * 1.05f,
+                    $"Token {token} rim should be wider than face (rim={rimWidth:F3} face={faceWidth:F3}).");
                 Assert.Greater(tile.LabelWorldY, tile.ChipTopWorldY + 0.001f,
                     $"Label should sit above chip top for token {token}.");
                 Assert.IsFalse(string.IsNullOrEmpty(tile.TokenLabelText),

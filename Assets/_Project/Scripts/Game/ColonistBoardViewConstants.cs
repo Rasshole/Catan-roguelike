@@ -6,6 +6,6 @@ namespace CatanRoguelike.Game
         public const float CameraYawDegrees = 90f;
 
         /// <summary>Extra play-area height reserved so the hex cluster clears the action bar.</summary>
-        public const float BoardBottomBreathingRoomPixels = 40f;
+        public const float BoardBottomBreathingRoomPixels = 20f;
     }
 }

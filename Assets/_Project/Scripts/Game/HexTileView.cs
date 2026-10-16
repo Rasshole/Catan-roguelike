@@ -23,14 +23,26 @@ namespace CatanRoguelike.Game
 
         public int PipChildCount => _pipRoot != null ? _pipRoot.transform.childCount : 0;
 
+        public float HexTopWorldY => transform.position.y + transform.lossyScale.y * HexPrismMesh.TopY;
+
         public float ChipTopWorldY
         {
             get
             {
-                var lossy = transform.lossyScale;
-                return transform.position.y + lossy.y * (ChipElevationY + WorldChipThickness);
+                if (_chipRimRenderer != null)
+                    return _chipRimRenderer.bounds.max.y;
+                if (_chipFaceRenderer != null)
+                    return _chipFaceRenderer.bounds.max.y;
+                return HexTopWorldY + WorldChipThickness;
             }
         }
+
+        public Vector3 GetChipFaceWorldCenter() =>
+            _chipFaceRenderer != null ? _chipFaceRenderer.bounds.center : transform.position;
+
+        public Renderer TokenFaceRenderer => _chipFaceRenderer;
+
+        public Renderer TokenRimRenderer => _chipRimRenderer;
 
         public float LabelWorldY => _tokenLabel != null ? _tokenLabel.transform.position.y : transform.position.y;
 
@@ -79,12 +91,11 @@ namespace CatanRoguelike.Game
         private const float RimOuterRadiusFactor = 1.18f;
         private const float WorldChipThickness = 0.04f;
 
-        // Hex prism mesh top is parent-local y=1; flat chips + label sit above that surface (top-down view).
-        private const float ChipElevationY = 1.06f;
-        private const float LabelElevationY = 1.24f;
-
-        // Robber/storm sit above chip+label; compensate scale like EnsureTokenChip.
-        private const float MarkerElevationY = 1.28f;
+        // Tile-local Y offsets from hex prism top (TopY = 1).
+        private const float ChipBaseLiftLocal = 0.02f;
+        private const float RimExtraLiftLocal = 0.03f;
+        private const float LabelLiftLocal = 0.20f;
+        private const float MarkerLiftLocal = 0.24f;
         private const float WorldRobberDiameter = 0.30f;
         private const float WorldStormExtent = 0.22f;
         private const float WorldStormHeight = 0.06f;
@@ -121,6 +132,7 @@ namespace CatanRoguelike.Game
             SetTokenVisible(true);
             ApplyTokenChipStyle(token);
             UpdateTokenChipGeometry();
+            SyncLabelElevationAboveChip();
 
             _tokenLabel.text = token.ToString();
             var labelRgb = NumberTokenVisualStyle.GetLabel(token);
@@ -188,7 +200,6 @@ namespace CatanRoguelike.Game
 
             _tokenChip = new GameObject("NumberTokenChip");
             _tokenChip.transform.SetParent(transform, false);
-            _tokenChip.transform.localPosition = new Vector3(0f, ChipElevationY, 0f);
 
             // BoardView scales hex cylinders non-uniformly (wide XZ, short Y). Child localScale is
             // multiplied by that lossyScale, so divide target world sizes to keep a visible cream disc.
@@ -197,8 +208,20 @@ namespace CatanRoguelike.Game
             float localFaceHeight = WorldChipThickness / (ThinDiskMesh.MeshHeight * hexScale.y);
             float localRimHeight = WorldChipThickness * 0.55f / (ThinDiskMesh.MeshHeight * hexScale.y);
 
-            _chipFaceRenderer = CreateFlatChipDisc("Face", localFaceDiameter, localFaceHeight, 0f);
+            _chipFaceRenderer = CreateFlatChipDisc("Face", localFaceDiameter, localFaceHeight, localFaceHeight);
             _chipRimRenderer = CreateRimAnnulus("Rim", localFaceDiameter, localRimHeight, localFaceHeight);
+            UpdateTokenChipGeometry();
+        }
+
+        private void SyncLabelElevationAboveChip()
+        {
+            if (_tokenLabel == null)
+                return;
+
+            float labelWorldY = ChipTopWorldY + 0.012f;
+            var local = transform.InverseTransformPoint(
+                new Vector3(transform.position.x, labelWorldY, transform.position.z));
+            _tokenLabel.transform.localPosition = new Vector3(0f, local.y, 0f);
         }
 
         private void UpdateTokenChipGeometry()
@@ -211,17 +234,20 @@ namespace CatanRoguelike.Game
             float localFaceHeight = WorldChipThickness / (ThinDiskMesh.MeshHeight * hexScale.y);
             float localRimHeight = WorldChipThickness * 0.55f / (ThinDiskMesh.MeshHeight * hexScale.y);
 
+            _tokenChip.transform.localPosition = new Vector3(0f, HexPrismMesh.TopY + ChipBaseLiftLocal, 0f);
             _chipFaceRenderer.transform.localScale = new Vector3(localFaceDiameter, localFaceHeight, localFaceDiameter);
-            _chipFaceRenderer.transform.localPosition = Vector3.zero;
+            _chipFaceRenderer.transform.localPosition = new Vector3(0f, localFaceHeight, 0f);
+            float rimLocalY = localFaceHeight * 2f + RimExtraLiftLocal;
             _chipRimRenderer.transform.localScale = new Vector3(localFaceDiameter, localRimHeight, localFaceDiameter);
-            _chipRimRenderer.transform.localPosition = new Vector3(0f, localFaceHeight * ThinDiskMesh.MeshHeight + localRimHeight * 0.1f, 0f);
+            _chipRimRenderer.transform.localPosition = new Vector3(0f, rimLocalY, 0f);
         }
 
         private Renderer CreateRimAnnulus(string name, float faceDiameter, float height, float faceHeight)
         {
             var ring = new GameObject(name);
             ring.transform.SetParent(_tokenChip.transform, false);
-            ring.transform.localPosition = new Vector3(0f, faceHeight * ThinDiskMesh.MeshHeight + height * 0.1f, 0f);
+            float rimLocalY = faceHeight * 2f + RimExtraLiftLocal;
+            ring.transform.localPosition = new Vector3(0f, rimLocalY, 0f);
             ring.transform.localScale = new Vector3(faceDiameter, height, faceDiameter);
 
             var meshFilter = ring.AddComponent<MeshFilter>();
@@ -268,7 +294,7 @@ namespace CatanRoguelike.Game
 
             var labelGo = new GameObject("NumberToken");
             labelGo.transform.SetParent(transform, false);
-            labelGo.transform.localPosition = new Vector3(0f, LabelElevationY, 0f);
+            labelGo.transform.localPosition = new Vector3(0f, HexPrismMesh.TopY + LabelLiftLocal, 0f);
             labelGo.transform.localScale = Vector3.one * 0.08f;
 
             _tokenLabel = labelGo.AddComponent<TextMesh>();
@@ -332,7 +358,7 @@ namespace CatanRoguelike.Game
             _robberMarker.name = "Robber";
             _robberMarker.transform.SetParent(transform, false);
             _robberMarker.transform.localPosition = new Vector3(
-                RobberLocalOffset.x, MarkerElevationY, RobberLocalOffset.z);
+                RobberLocalOffset.x, HexPrismMesh.TopY + MarkerLiftLocal, RobberLocalOffset.z);
             // Non-uniform hex lossyScale squashes uniform localScale on Y; compensate per axis.
             _robberMarker.transform.localScale = new Vector3(
                 WorldRobberDiameter / hexScale.x,
@@ -393,7 +419,7 @@ namespace CatanRoguelike.Game
             _stormMarker.name = "StormMarker";
             _stormMarker.transform.SetParent(transform, false);
             _stormMarker.transform.localPosition = new Vector3(
-                StormLocalOffset.x, MarkerElevationY, StormLocalOffset.z);
+                StormLocalOffset.x, HexPrismMesh.TopY + MarkerLiftLocal, StormLocalOffset.z);
             _stormMarker.transform.localScale = new Vector3(localExtent, localHeight, localExtent);
             _stormMarker.GetComponent<Renderer>().material.color = StormMarkerColor;
         }

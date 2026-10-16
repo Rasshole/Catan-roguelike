@@ -404,14 +404,27 @@ namespace CatanRoguelike.Game
             int w = boardCapture.width;
             int h = boardCapture.height;
             int token = tokenTile.Data.NumberToken.Value;
-            Vector3 chipCenter = tokenTile.transform.position;
-            chipCenter.y = tokenTile.ChipTopWorldY - 0.005f;
+            Vector3 center = tokenTile.GetChipFaceWorldCenter();
+            Vector3 flatRight = camera.transform.right;
+            flatRight.y = 0f;
+            if (flatRight.sqrMagnitude < 1e-6f)
+                flatRight = Vector3.right;
+            flatRight.Normalize();
 
             float faceR = tokenTile.TokenFaceWorldRadius;
-            var faceWorld = chipCenter + new Vector3(faceR * 0.5f, 0f, 0f);
-            var rimWorld = chipCenter + new Vector3(faceR * 1.09f, 0f, 0f);
+            var faceWorld = center + flatRight * (faceR * 0.35f);
+            var rimWorld = center + flatRight * (faceR * 1.09f);
             var facePx = ColonistCaptureProjection.WorldToTexturePixel(faceWorld, camera, tableCamera, w, h);
             var rimPx = ColonistCaptureProjection.WorldToTexturePixel(rimWorld, camera, tableCamera, w, h);
+            float pixelSeparation = Vector2.Distance(
+                new Vector2(facePx.x, facePx.y),
+                new Vector2(rimPx.x, rimPx.y));
+            var centerPx = ColonistCaptureProjection.WorldToTexturePixel(center, camera, tableCamera, w, h);
+            var rimRadiusPx = ColonistCaptureProjection.WorldToTexturePixel(
+                center + flatRight * faceR * 1.09f, camera, tableCamera, w, h);
+            float rimRadiusPixels = Vector2.Distance(
+                new Vector2(centerPx.x, centerPx.y),
+                new Vector2(rimRadiusPx.x, rimRadiusPx.y));
 
             Color face = boardCapture.GetPixel(facePx.x, facePx.y);
             Color rim = boardCapture.GetPixel(rimPx.x, rimPx.y);
@@ -419,7 +432,11 @@ namespace CatanRoguelike.Game
             Assert.IsTrue(
                 delta > 0.06f,
                 $"Token rim pixel should differ from face (delta={delta:F3} face={face} rim={rim} " +
-                $"faceWorld={faceWorld} rimWorld={rimWorld} faceTex=({facePx.x},{facePx.y}) rimTex=({rimPx.x},{rimPx.y})).");
+                $"faceWorld={faceWorld} rimWorld={rimWorld} faceTex=({facePx.x},{facePx.y}) rimTex=({rimPx.x},{rimPx.y}) " +
+                $"pixelSep={pixelSeparation:F1} rimRadiusPx~{rimRadiusPixels:F1})).");
+            Assert.IsTrue(
+                pixelSeparation > rimRadiusPixels * 0.35f,
+                $"Rim sample should be outward on screen (pixelSep={pixelSeparation:F1} rimRadiusPx~{rimRadiusPixels:F1}).");
             Assert.IsTrue(
                 MatchesTokenFaceColor(face, token),
                 $"Face sample should match token face palette (rgb=({face.r:F3},{face.g:F3},{face.b:F3}) token={token} " +

@@ -113,10 +113,17 @@ namespace CatanRoguelike.Game
 
         private static void DrawSheepBlob(Color32[] px, Color32 c)
         {
-            FillCircle(px, 32, 36, 18, c);
-            FillCircle(px, 22, 34, 8, c);
-            FillCircle(px, 42, 34, 8, c);
-            FillCircle(px, 44, 40, 6, c);
+            var wool = new Color32(245, 245, 250, 255);
+            var dark = new Color32(38, 34, 40, 255);
+            FillCircle(px, 32, 38, 17, wool);
+            FillCircle(px, 22, 36, 9, wool);
+            FillCircle(px, 44, 36, 9, wool);
+            FillCircle(px, 18, 32, 7, wool);
+            FillCircle(px, 48, 32, 7, wool);
+            FillCircle(px, 40, 44, 7, dark);
+            FillRect(px, 36, 48, 4, 8, dark);
+            FillRect(px, 42, 48, 4, 8, dark);
+            FillCircle(px, 44, 42, 4, dark);
         }
 
         private static void DrawOreRock(Color32[] px, Color32 c)
