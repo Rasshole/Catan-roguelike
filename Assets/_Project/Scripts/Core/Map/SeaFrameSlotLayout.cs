@@ -19,9 +19,9 @@ namespace CatanRoguelike.Core.Map
         /// <summary>Extra radius so clearance matches drawn hex outline + badge rim (world units).</summary>
         public const float BadgeRenderedLandInset = 0.055f;
         public const float FishShoalLandClearance = 0.05f;
-        private const float FishChevronCoastArmFactor = 0.36f;
-        private const float FishChevronSeaDepthFactor = 0.62f;
-        private const float FishChevronTokenDepthFactor = 0.40f;
+        private const float FishChevronCoastArmFactor = 0.82f;
+        private const float FishChevronSeaDepthFactor = 1.02f;
+        private const float FishChevronTokenDepthFactor = 0.36f;
         private const float BadgeClearanceEpsilon = 0.004f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 

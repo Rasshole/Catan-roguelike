@@ -8,8 +8,9 @@ namespace CatanRoguelike.Game
     public static class ColonistHexTileNatureDecor
     {
         private const string ModelRoot = "Art/Models/Nature";
-        private const float PropScaleFactor = 0.3f;
+        private const float PropScaleFactor = 0.25f;
         private const float LiftAboveTop = 0.04f;
+        private const float MinRadiusFromTokenFactor = 0.48f;
 
         public static void Apply(GameObject hexRoot, HexTileData data, float hexScale)
         {
@@ -30,8 +31,18 @@ namespace CatanRoguelike.Game
             var propsRoot = new GameObject("TileNatureProps");
             propsRoot.transform.SetParent(hexRoot.transform, false);
 
-            int count = data.Resource == ResourceType.Wood ? 3 : 2;
-            float radius = hexScale * 0.38f;
+            int count = data.Resource switch
+            {
+                ResourceType.Wood => 2,
+                ResourceType.Stone => 2,
+                ResourceType.Wheat => 2,
+                _ => 0
+            };
+
+            if (count == 0)
+                return;
+
+            float minRadius = MinRadiusFromTokenFactor * hexScale;
             float scale = PropScaleFactor * hexScale;
             int seed = data.Coord.Q * 73 + data.Coord.R * 41;
 
@@ -39,21 +50,44 @@ namespace CatanRoguelike.Game
             {
                 float angle = (seed + i * 137) % 360;
                 float rad = angle * Mathf.Deg2Rad;
-                float r = radius * (0.85f + (i % 3) * 0.08f);
+                float r = minRadius + hexScale * (0.08f + i * 0.06f);
                 var prop = Object.Instantiate(prefab, propsRoot.transform, false);
                 prop.name = $"NatureProp_{i}";
                 prop.transform.localPosition = new Vector3(
                     Mathf.Cos(rad) * r,
                     HexPrismMesh.TopY + LiftAboveTop,
                     Mathf.Sin(rad) * r);
-                prop.transform.localRotation = Quaternion.Euler(0f, angle + 18f, 0f);
+                prop.transform.localRotation = Quaternion.Euler(0f, angle + 22f, 0f);
                 prop.transform.localScale = Vector3.one * scale;
 
                 foreach (var collider in prop.GetComponentsInChildren<Collider>())
                     ColonistSceneDestroy.SafeDestroy(collider);
 
-                foreach (var renderer in prop.GetComponentsInChildren<Renderer>())
-                    ColonistNaturePropMaterials.ApplyToRenderer(renderer, data.Resource);
+                PruneAndStyleRenderers(prop, data.Resource, hexScale);
+            }
+        }
+
+        private static void PruneAndStyleRenderers(GameObject prop, ResourceType resource, float hexScale)
+        {
+            float maxExtent = hexScale * 0.85f;
+            foreach (var renderer in prop.GetComponentsInChildren<Renderer>())
+            {
+                string n = renderer.gameObject.name.ToLowerInvariant();
+                if (resource == ResourceType.Wood && (n.Contains("rock") || n.Contains("stone")))
+                {
+                    renderer.enabled = false;
+                    continue;
+                }
+
+                var bounds = renderer.bounds;
+                float size = bounds.size.magnitude;
+                if (size > maxExtent * 3f || bounds.extents.y > hexScale * 0.9f)
+                {
+                    renderer.enabled = false;
+                    continue;
+                }
+
+                ColonistNaturePropMaterials.ApplyToRenderer(renderer, resource);
             }
         }
 

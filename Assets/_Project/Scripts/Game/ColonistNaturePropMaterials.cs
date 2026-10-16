@@ -9,6 +9,7 @@ namespace CatanRoguelike.Game
         private static Material _treeLeaves;
         private static Material _rock;
         private static Material _flower;
+        private static Material _grass;
 
         public static void ApplyToRenderer(Renderer renderer, ResourceType resource)
         {
@@ -31,19 +32,27 @@ namespace CatanRoguelike.Game
         }
 
         private static Material TreeBark() =>
-            _treeBark ??= BuiltInMaterials.Create(LoadTex("Art/Models/Nature/Textures/NormalTree_Bark"), new Color(0.55f, 0.38f, 0.22f));
+            _treeBark ??= OpaqueColor(new Color(0.42f, 0.28f, 0.16f));
 
         private static Material TreeLeaves() =>
-            _treeLeaves ??= BuiltInMaterials.Create(LoadTex("Art/Models/Nature/Textures/NormalTree_Leaves"), new Color(0.32f, 0.72f, 0.34f));
+            _treeLeaves ??= OpaqueColor(new Color(0.22f, 0.58f, 0.26f));
 
         private static Material Rock() =>
-            _rock ??= BuiltInMaterials.Create(LoadTex("Art/Models/Nature/Textures/Rocks"), new Color(0.62f, 0.64f, 0.68f));
+            _rock ??= OpaqueColor(new Color(0.55f, 0.57f, 0.60f));
 
         private static Material Flower() =>
-            _flower ??= BuiltInMaterials.Create(LoadTex("Art/Models/Nature/Textures/Flowers"), new Color(0.95f, 0.82f, 0.28f));
+            _flower ??= OpaqueColor(new Color(0.92f, 0.78f, 0.22f));
 
         private static Material Grass() =>
-            BuiltInMaterials.Create(LoadTex("Art/Models/Nature/Textures/Grass"), new Color(0.45f, 0.78f, 0.32f));
+            _grass ??= OpaqueColor(new Color(0.40f, 0.72f, 0.30f));
+
+        private static Material OpaqueColor(Color color)
+        {
+            var tex = LoadTex("Art/Models/Nature/Textures/NormalTree_Leaves");
+            if (tex != null)
+                return BuiltInMaterials.Create(tex, color);
+            return BuiltInMaterials.CreateOpaque(color);
+        }
 
         private static Texture2D LoadTex(string path) => Resources.Load<Texture2D>(path);
     }
