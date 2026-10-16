@@ -61,6 +61,8 @@ namespace CatanRoguelike.Game
         {
             if (texture == null)
                 return "null";
+            if (!texture.isReadable)
+                return $"{texture.name} {texture.width}x{texture.height} (not readable)";
             var center = texture.GetPixel(texture.width / 2, texture.height / 2);
             return $"{texture.name} {texture.width}x{texture.height} center=({center.r:F3},{center.g:F3},{center.b:F3})";
         }

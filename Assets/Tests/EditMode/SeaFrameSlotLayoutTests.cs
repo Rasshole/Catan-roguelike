@@ -135,6 +135,30 @@ namespace CatanRoguelike.Tests.EditMode
         }
 
         [Test]
+        public void FishShoals_StayClearOfLandPolygons()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
+            float clearance = SeaFrameSlotLayout.FishShoalLandClearance;
+
+            foreach (var sea in board.SeaFishGrounds.Keys)
+            {
+                Assert.IsTrue(
+                    SeaFrameSlotLayout.TryGetFishShoalPlacement(board, sea, HexScale, out FishShoalPlacement p),
+                    $"Fish shoal placement for {sea}.");
+
+                var points = new[] { p.CoastVertexA, p.CoastVertexB, p.SeaTip, p.TokenCenter };
+                foreach (var point in points)
+                {
+                    float minDist = SeaFrameSlotLayout.MinDistanceToLandHexPolygons(board, point, HexScale);
+                    Assert.Greater(
+                        minDist,
+                        clearance,
+                        $"Fish shoal point {point} at sea {sea} should stay off land (minDist={minDist:F3}).");
+                }
+            }
+        }
+
+        [Test]
         public void FishGrounds_AreSpreadAroundTheSeaRing()
         {
             var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));

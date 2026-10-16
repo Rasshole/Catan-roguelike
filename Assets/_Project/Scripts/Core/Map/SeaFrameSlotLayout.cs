@@ -16,8 +16,12 @@ namespace CatanRoguelike.Core.Map
         private const int HexCornerCount = 6;
         public const float DefaultBadgeDiscRadius = 0.42f;
         public const float BadgeLandPolygonClearance = 0.03f;
-        private const float FishShoalSeaDepthFactor = 0.32f;
-        private const float FishShoalTokenInsetFactor = 0.14f;
+        public const float FishShoalLandClearance = 0.05f;
+        private const float FishShoalCoastInsetFactor = 0.11f;
+        private const float FishShoalSeaDepthFactor = 0.26f;
+        private const float FishShoalBaseHalfWidthFactor = 0.36f;
+        private const float FishShoalTokenDepthFactor = 0.62f;
+        private const float BadgeClearanceEpsilon = 0.004f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 
         public static void AssignPortSeaSlots(BoardState board, IReadOnlyList<PortDefinition> ports)
@@ -195,9 +199,9 @@ namespace CatanRoguelike.Core.Map
                 outward = (seaCenter - boardCenter).Normalized;
             }
 
-            const float pushStep = 0.01f;
+            const float pushStep = 0.008f;
             float minPush = badgeRadius + BadgeLandPolygonClearance;
-            float maxPush = badgeRadius + 0.32f;
+            float maxPush = badgeRadius + 1.1f;
             for (float push = minPush; push <= maxPush; push += pushStep)
             {
                 center = coastMid + outward * push;
@@ -206,7 +210,7 @@ namespace CatanRoguelike.Core.Map
             }
 
             center = coastMid + outward * maxPush;
-            return true;
+            return DiscClearOfAllLandHexes(board, center, badgeRadius, BadgeLandPolygonClearance, hexScale);
         }
 
         public static bool TryGetFishShoalPlacement(
@@ -229,18 +233,21 @@ namespace CatanRoguelike.Core.Map
 
                     var edge = HexMath.GetEdgeFacing(hex, d);
                     var (mx, mz) = HexMath.EdgeMidpoint(edge, hexScale);
-                    var (ax, az) = HexMath.VertexToWorldPosition(edge.A, hexScale);
-                    var (bx, bz) = HexMath.VertexToWorldPosition(edge.B, hexScale);
                     var coastMid = new MapPlaneXz(mx, mz);
                     MapPlaneXz outward = (seaCenter - coastMid).Normalized;
+                    var (ax, az) = HexMath.VertexToWorldPosition(edge.A, hexScale);
+                    var (bx, bz) = HexMath.VertexToWorldPosition(edge.B, hexScale);
+                    MapPlaneXz edgeVec = new MapPlaneXz(bx - ax, bz - az);
+                    float edgeLen = edgeVec.Magnitude;
+                    MapPlaneXz edgeDir = edgeLen > 1e-5f ? edgeVec / edgeLen : outward;
+                    float inset = hexScale * FishShoalCoastInsetFactor;
+                    float halfW = hexScale * FishShoalBaseHalfWidthFactor;
                     float depth = hexScale * FishShoalSeaDepthFactor;
-                    float tokenInset = hexScale * FishShoalTokenInsetFactor;
-                    placement = new FishShoalPlacement(
-                        new MapPlaneXz(ax, az),
-                        new MapPlaneXz(bx, bz),
-                        coastMid + outward * depth,
-                        coastMid + outward * tokenInset,
-                        outward);
+                    var baseA = coastMid + edgeDir * halfW + outward * inset;
+                    var baseB = coastMid - edgeDir * halfW + outward * inset;
+                    var seaTip = coastMid + outward * (inset + depth);
+                    var tokenCenter = coastMid + outward * (inset + depth * FishShoalTokenDepthFactor);
+                    placement = new FishShoalPlacement(baseA, baseB, seaTip, tokenCenter, outward);
                     return true;
                 }
             }
@@ -312,7 +319,7 @@ namespace CatanRoguelike.Core.Map
             float polygonClearance,
             float hexScale)
         {
-            float probeRadius = badgeRadius + polygonClearance;
+            float probeRadius = badgeRadius + polygonClearance + BadgeClearanceEpsilon;
             foreach (var landCoord in board.Tiles.Keys)
             {
                 if (DiscIntersectsHexPolygon(center, probeRadius, landCoord, hexScale))

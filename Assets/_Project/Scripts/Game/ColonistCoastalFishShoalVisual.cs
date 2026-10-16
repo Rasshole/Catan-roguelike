@@ -29,8 +29,10 @@ namespace CatanRoguelike.Game
             var meshFilter = meshGo.AddComponent<MeshFilter>();
             meshFilter.sharedMesh = mesh;
             var renderer = meshGo.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = ColonistBoardTextureLoader.GetTerrainMaterial(BoardTerrainSlot.FishShoal);
+            var shoalMat = ColonistBoardTextureLoader.GetTerrainMaterial(BoardTerrainSlot.FishShoal);
+            renderer.sharedMaterial = shoalMat;
             renderer.sharedMaterial.renderQueue = 1990;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
             var view = root.AddComponent<HexTileView>();
             view.Initialize(data, renderer);
