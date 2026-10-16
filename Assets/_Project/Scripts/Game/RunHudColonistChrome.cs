@@ -251,7 +251,7 @@ namespace CatanRoguelike.Game
             uiCamera.aspect = captureWidth / (float)captureHeight;
             uiCamera.depth = mainCamera.depth + 1f;
             uiCamera.cullingMask = 1 << HudCaptureUiLayer;
-            uiCamera.clearFlags = CameraClearFlags.Nothing;
+            uiCamera.clearFlags = CameraClearFlags.Depth;
             uiCamera.enabled = true;
             uiCamera.pixelRect = mainCamera.pixelRect;
         }

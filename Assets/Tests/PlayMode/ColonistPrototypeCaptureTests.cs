@@ -71,8 +71,10 @@ namespace CatanRoguelike.Tests.PlayMode
             for (int i = 0; i < 4; i++)
                 yield return null;
 
-            Texture2D boardOnly = GameSceneCapture.CaptureMainCameraToTexture(null);
-            Texture2D withHud = GameSceneCapture.CaptureMainCameraToTexture(hud);
+            Texture2D boardOnly = GameSceneCapture.CaptureBoardOnlyTexture(
+                GameSceneCapture.CaptureWidth,
+                GameSceneCapture.CaptureHeight);
+            Texture2D withHud = GameSceneCapture.CaptureMainCameraWithHudComposite(hud);
             GameSceneCapture.WriteDebugCapturePngs(boardOnly, withHud);
             try
             {

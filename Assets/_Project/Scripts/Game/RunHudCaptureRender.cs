@@ -38,8 +38,17 @@ namespace CatanRoguelike.Game
 
         internal void RenderHudCaptureUiCamera(CanvasCaptureRestore restore, RenderTexture target)
         {
-            if (!restore.Active || restore.UiCamera == null || target == null)
-                return;
+            if (target == null)
+                throw new InvalidOperationException(
+                    $"{GameSceneCapture.HudCompositePipelineMarker} RenderHudCaptureUiCamera: target RT is null.");
+            if (!restore.Active || restore.UiCamera == null)
+            {
+                throw new InvalidOperationException(
+                    $"{GameSceneCapture.HudCompositePipelineMarker} RenderHudCaptureUiCamera: " +
+                    $"inactive session (active={restore.Active} uiCamera={(restore.UiCamera != null)}).");
+            }
+
+            Debug.Log($"{GameSceneCapture.HudCompositePipelineMarker} RenderHudCaptureUiCamera enter");
 
             var uiCamera = restore.UiCamera;
             uiCamera.enabled = true;
@@ -54,6 +63,7 @@ namespace CatanRoguelike.Game
             LayoutRebuilder.ForceRebuildLayoutImmediate(_canvas.GetComponent<RectTransform>());
             Canvas.ForceUpdateCanvases();
             uiCamera.Render();
+            Debug.Log($"{GameSceneCapture.HudCompositePipelineMarker} RenderHudCaptureUiCamera exit");
         }
 
         internal static bool TrySampleRenderTargetPixel(
@@ -95,7 +105,7 @@ namespace CatanRoguelike.Game
             var probeGo = GameObject.CreatePrimitive(PrimitiveType.Quad);
             probeGo.name = "HudCaptureSanityProbe";
             probeGo.layer = HudCaptureUiLayer;
-            Object.Destroy(probeGo.GetComponent<Collider>());
+            DestroyCaptureComponent(probeGo.GetComponent<Collider>());
 
             var renderer = probeGo.GetComponent<MeshRenderer>();
             var shader = Shader.Find("Unlit/Color");
@@ -129,6 +139,17 @@ namespace CatanRoguelike.Game
                 Object.Destroy(go);
             else
                 Object.DestroyImmediate(go);
+        }
+
+        internal static void DestroyCaptureComponent(Component component)
+        {
+            if (component == null)
+                return;
+
+            if (Application.isPlaying)
+                Object.Destroy(component);
+            else
+                Object.DestroyImmediate(component);
         }
     }
 }

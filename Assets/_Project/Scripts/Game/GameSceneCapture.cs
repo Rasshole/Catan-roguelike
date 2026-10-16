@@ -9,6 +9,8 @@ namespace CatanRoguelike.Game
     /// </summary>
     public static class GameSceneCapture
     {
+        public const string HudCompositePipelineMarker = "CATAN_HUD_CAPTURE_PIPELINE_V8";
+
         public const string DefaultOutputPath = "/workspace/game-view.png";
         public const string OutputPathEnvVar = "GAME_VIEW_SHOT";
         public const int CaptureWidth = 1920;
@@ -25,7 +27,9 @@ namespace CatanRoguelike.Game
 
         public static void CaptureMainCameraToPng(string path, RunHudController prepareHudForCapture)
         {
-            var texture = CaptureMainCameraToTexture(prepareHudForCapture);
+            var texture = prepareHudForCapture != null
+                ? CaptureMainCameraWithHudComposite(prepareHudForCapture)
+                : CaptureMainCameraToTexture(null);
             try
             {
                 var directory = Path.GetDirectoryName(path);
@@ -39,14 +43,94 @@ namespace CatanRoguelike.Game
             }
         }
 
-        /// <summary>Renders <see cref="Camera.main"/> (with optional HUD canvas) to a new RGB texture.</summary>
+        /// <summary>Board only (no HUD composite pipeline).</summary>
         public static Texture2D CaptureMainCameraToTexture(RunHudController hud) =>
-            CaptureMainCameraToTexture(hud, CaptureWidth, CaptureHeight);
+            hud == null
+                ? CaptureMainCameraToTexture(null, CaptureWidth, CaptureHeight)
+                : CaptureMainCameraWithHudComposite(hud);
 
-        public static Texture2D CaptureMainCameraToTexture(
-            RunHudController hud,
-            int width,
-            int height)
+        public static Texture2D CaptureMainCameraToTexture(RunHudController hud, int width, int height) =>
+            hud == null
+                ? CaptureBoardOnlyTexture(width, height)
+                : CaptureMainCameraWithHudComposite(hud, width, height);
+
+        /// <summary>
+        /// PlayMode / editor HUD screenshot path: world-space canvas + UI camera + sanity probe.
+        /// </summary>
+        public static Texture2D CaptureMainCameraWithHudComposite(RunHudController hud) =>
+            CaptureMainCameraWithHudComposite(hud, CaptureWidth, CaptureHeight);
+
+        public static Texture2D CaptureMainCameraWithHudComposite(RunHudController hud, int width, int height)
+        {
+            if (hud == null)
+                throw new ArgumentNullException(nameof(hud));
+
+            Debug.Log($"{HudCompositePipelineMarker} CaptureMainCameraWithHudComposite enter ({width}x{height})");
+
+            var camera = Camera.main;
+            if (camera == null)
+                throw new InvalidOperationException("Camera.main (TableCamera) is required for capture.");
+
+            if (!hud.IsHudCaptureReady())
+                throw new InvalidOperationException(
+                    $"{HudCompositePipelineMarker} HUD is not capture-ready (canvas inactive or no graphics).");
+
+            var previousActive = RenderTexture.active;
+            var previousTarget = camera.targetTexture;
+            var previousPixelRect = camera.pixelRect;
+            var previousCullingMask = camera.cullingMask;
+
+            var renderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
+            Texture2D texture = null;
+            RunHudController.CanvasCaptureRestore canvasRestore = default;
+
+            try
+            {
+                camera.pixelRect = new Rect(0f, 0f, width, height);
+                camera.targetTexture = renderTexture;
+                RenderTexture.active = renderTexture;
+                camera.cullingMask = previousCullingMask & ~(1 << RunHudController.HudCaptureUiLayer);
+
+                canvasRestore = hud.BeginCanvasCameraCapture(camera, width, height);
+                if (!canvasRestore.Active || canvasRestore.UiCamera == null)
+                {
+                    throw new InvalidOperationException(
+                        $"{HudCompositePipelineMarker} BeginCanvasCameraCapture failed " +
+                        $"(active={canvasRestore.Active} uiCamera={(canvasRestore.UiCamera != null)}).");
+                }
+
+                hud.GetCaptureDiagnostics(camera).LogToConsole(HudCompositePipelineMarker);
+
+                NumberTokenLabelOrientation.RefreshAllLabelsForCamera(camera);
+                Canvas.ForceUpdateCanvases();
+                camera.Render();
+
+                Debug.Log($"{HudCompositePipelineMarker} main camera rendered; compositing HUD via RenderHudCaptureUiCamera");
+                hud.RenderHudCaptureUiCamera(canvasRestore, renderTexture);
+                AssertHudCaptureSanityProbeVisible(renderTexture, width, height);
+                Debug.Log($"{HudCompositePipelineMarker} sanity probe passed");
+
+                RenderTexture.active = renderTexture;
+                texture = new Texture2D(width, height, TextureFormat.RGB24, false);
+                texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+                texture.Apply();
+                Debug.Log($"{HudCompositePipelineMarker} CaptureMainCameraWithHudComposite exit");
+                return texture;
+            }
+            finally
+            {
+                hud.RestoreCanvasAfterCapture(canvasRestore);
+
+                camera.cullingMask = previousCullingMask;
+                camera.targetTexture = previousTarget;
+                camera.pixelRect = previousPixelRect;
+                RenderTexture.active = previousActive;
+                renderTexture.Release();
+                DestroyCaptureTexture(renderTexture);
+            }
+        }
+
+        public static Texture2D CaptureBoardOnlyTexture(int width, int height)
         {
             var camera = Camera.main;
             if (camera == null)
@@ -58,8 +142,6 @@ namespace CatanRoguelike.Game
 
             var renderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
             Texture2D texture = null;
-            RunHudController.CanvasCaptureRestore canvasRestore = default;
-            var previousCullingMask = camera.cullingMask;
 
             try
             {
@@ -67,22 +149,9 @@ namespace CatanRoguelike.Game
                 camera.targetTexture = renderTexture;
                 RenderTexture.active = renderTexture;
 
-                if (hud != null)
-                {
-                    camera.cullingMask = previousCullingMask & ~(1 << RunHudController.HudCaptureUiLayer);
-                    canvasRestore = hud.BeginCanvasCameraCapture(camera, width, height);
-                    hud.GetCaptureDiagnostics(camera).LogToConsole("GameSceneCapture");
-                }
-
                 NumberTokenLabelOrientation.RefreshAllLabelsForCamera(camera);
                 Canvas.ForceUpdateCanvases();
                 camera.Render();
-
-                if (hud != null && canvasRestore.Active)
-                {
-                    hud.RenderHudCaptureUiCamera(canvasRestore, renderTexture);
-                    AssertHudCaptureSanityProbeVisible(renderTexture, width, height);
-                }
 
                 RenderTexture.active = renderTexture;
                 texture = new Texture2D(width, height, TextureFormat.RGB24, false);
@@ -92,10 +161,6 @@ namespace CatanRoguelike.Game
             }
             finally
             {
-                if (hud != null)
-                    hud.RestoreCanvasAfterCapture(canvasRestore);
-
-                camera.cullingMask = previousCullingMask;
                 camera.targetTexture = previousTarget;
                 camera.pixelRect = previousPixelRect;
                 RenderTexture.active = previousActive;
@@ -108,6 +173,8 @@ namespace CatanRoguelike.Game
         public static void WriteDebugCapturePngs(Texture2D boardOnly, Texture2D hudComposite)
         {
             var outputPath = ResolveOutputPath();
+            Debug.Log($"{HudCompositePipelineMarker} WriteDebugCapturePngs path={outputPath}");
+
             var directory = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(directory))
                 Directory.CreateDirectory(directory);
@@ -116,32 +183,38 @@ namespace CatanRoguelike.Game
             {
                 var boardPath = outputPath + ".board.png";
                 File.WriteAllBytes(boardPath, boardOnly.EncodeToPNG());
-                Debug.Log($"GameSceneCapture: wrote board-only debug PNG to {boardPath}");
+                Debug.Log($"{HudCompositePipelineMarker} wrote board-only PNG to {boardPath}");
             }
 
             if (hudComposite != null)
             {
                 File.WriteAllBytes(outputPath, hudComposite.EncodeToPNG());
-                Debug.Log($"GameSceneCapture: wrote HUD-composited PNG to {outputPath}");
+                Debug.Log($"{HudCompositePipelineMarker} wrote HUD-composited PNG to {outputPath}");
             }
         }
 
         private static void AssertHudCaptureSanityProbeVisible(RenderTexture target, int width, int height)
         {
             if (!RunHudController.HudCaptureSanityProbeEnabled)
-                return;
+            {
+                throw new InvalidOperationException(
+                    $"{HudCompositePipelineMarker} sanity probe disabled but required for HUD capture.");
+            }
 
             int x = Mathf.Clamp((int)(width * RunHudController.SanityProbeScreenX), 0, width - 1);
             int y = Mathf.Clamp((int)(height * RunHudController.SanityProbeScreenY), 0, height - 1);
 
             if (!RunHudController.TrySampleRenderTargetPixel(target, x, y, out var pixel))
-                throw new InvalidOperationException("HudCapture sanity probe: failed to read capture RT.");
+            {
+                throw new InvalidOperationException(
+                    $"{HudCompositePipelineMarker} sanity probe: failed to read capture RT at ({x},{y}).");
+            }
 
             if (!RunHudController.ColorLooksMagenta(pixel))
             {
                 throw new InvalidOperationException(
-                    $"HudCapture sanity probe: expected magenta at ({x},{y}) but got r={pixel.r:F3} g={pixel.g:F3} b={pixel.b:F3}. " +
-                    "UI camera / targetTexture / layer pipeline is not compositing into the RT.");
+                    $"{HudCompositePipelineMarker} sanity probe: expected magenta at ({x},{y}) " +
+                    $"but got r={pixel.r:F3} g={pixel.g:F3} b={pixel.b:F3}.");
             }
         }
 
