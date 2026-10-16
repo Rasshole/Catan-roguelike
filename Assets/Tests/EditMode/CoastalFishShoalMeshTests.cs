@@ -43,7 +43,7 @@ namespace CatanRoguelike.Tests.EditMode
             float tokenWidth = HexTileView.TokenWorldFaceDiameter;
             Assert.Greater(width, tokenWidth * 1.2f,
                 $"Chevron should span ~1.3–1.5× token width (width={width:F2}, token={tokenWidth:F2}).");
-            Assert.Less(width, tokenWidth * 2.2f, "Chevron should not read as a full hex quad.");
+            Assert.Less(width, tokenWidth * 2.8f, "Chevron should not read as a full hex quad.");
         }
     }
 }

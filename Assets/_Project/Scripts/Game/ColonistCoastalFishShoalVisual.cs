@@ -10,9 +10,11 @@ namespace CatanRoguelike.Game
 
         /// <summary>Physical fishermen tile blue (unlit chevron fill).</summary>
         public static readonly Color ChevronWaterBlue = new(0.58f, 0.78f, 0.91f, 1f);
+        public static readonly Color ChevronOutlineBlue = new(0.40f, 0.58f, 0.74f, 1f);
 
         private const string FishIconResourcePath = "Art/Board/FishIcon";
         private static Material _chevronMaterial;
+        private static Material _outlineMaterial;
 
         public static HexTileView Build(
             Transform boardRoot,
@@ -29,6 +31,16 @@ namespace CatanRoguelike.Game
                 placement.TokenCenter.Z);
             root.transform.localScale = new Vector3(1f, hexHeightScale, 1f);
 
+            var outlineGo = new GameObject("ShoalOutline");
+            outlineGo.transform.SetParent(root.transform, false);
+            var outlineMesh = CoastalFishShoalMesh.CreateOutlineLocal(placement, placement.TokenCenter, hexScale);
+            outlineGo.AddComponent<MeshFilter>().sharedMesh = outlineMesh;
+            var outlineRenderer = outlineGo.AddComponent<MeshRenderer>();
+            outlineRenderer.sharedMaterial = OutlineMaterial();
+            outlineRenderer.sharedMaterial.renderQueue = 2001;
+            outlineRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            outlineRenderer.receiveShadows = false;
+
             var meshGo = new GameObject("ShoalMesh");
             meshGo.transform.SetParent(root.transform, false);
             var mesh = CoastalFishShoalMesh.CreateLocal(placement, placement.TokenCenter, hexScale);
@@ -40,7 +52,7 @@ namespace CatanRoguelike.Game
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
 
-            AddFishIconQuads(root.transform, placement, renderer);
+            AddFishIconQuads(boardRoot, placement, hexHeightScale);
 
             var view = root.AddComponent<HexTileView>();
             view.Initialize(data, renderer);
@@ -53,56 +65,67 @@ namespace CatanRoguelike.Game
             if (_chevronMaterial != null)
                 return _chevronMaterial;
 
-            _chevronMaterial = BuiltInMaterials.CreateUnlit(ChevronWaterBlue, zWrite: true);
-            _chevronMaterial.SetInt("_Cull", (int)CullMode.Off);
+            _chevronMaterial = CreateDoubleSidedUnlit(ChevronWaterBlue);
             _chevronMaterial.renderQueue = 2002;
             return _chevronMaterial;
         }
 
+        private static Material OutlineMaterial()
+        {
+            if (_outlineMaterial != null)
+                return _outlineMaterial;
+
+            _outlineMaterial = CreateDoubleSidedUnlit(ChevronOutlineBlue);
+            _outlineMaterial.renderQueue = 2001;
+            return _outlineMaterial;
+        }
+
+        private static Material CreateDoubleSidedUnlit(Color color)
+        {
+            var mat = BuiltInMaterials.CreateUnlit(color, zWrite: true);
+            mat.SetInt("_Cull", (int)CullMode.Off);
+            return mat;
+        }
+
         private static void AddFishIconQuads(
-            Transform root,
+            Transform boardRoot,
             FishShoalPlacement placement,
-            Renderer chevronRenderer)
+            float hexHeightScale)
         {
             var texture = Resources.Load<Texture2D>(FishIconResourcePath);
-            if (texture == null)
+            if (texture == null || boardRoot == null)
                 return;
 
-            // Fish art fills ~70% x 30% of the PNG; size the quad so the visible fish body is ~0.3 hex long.
-            float iconWidth = HexTileView.TokenWorldFaceDiameter * 0.72f;
-            float iconHeight = iconWidth;
-            // The shoal root is Y-scaled by hex height; quads parented to it got skewed (thin slivers).
-            // Use an un-scaled container so the fish keep their aspect.
-            float rootYScale = Mathf.Max(1e-4f, root.localScale.y);
-            var iconRoot = new GameObject("FishIcons").transform;
-            iconRoot.SetParent(root, false);
-            iconRoot.localScale = new Vector3(1f, 1f / rootYScale, 1f);
-            float y = CoastalFishShoalMesh.TopLocalY * rootYScale + 0.01f;
+            float iconSize = HexTileView.TokenWorldFaceDiameter * 0.44f;
+            float boardY = boardRoot.position.y + hexHeightScale * CoastalFishShoalMesh.TopLocalY + 0.03f;
 
-            // Fish sit in the seaward band either side of the token (outside the token disc).
-            var armMidLeft = placement.CoastArmLeft + (placement.SeaFlatLeft - placement.CoastArmLeft) * 0.62f;
-            var armMidRight = placement.CoastArmRight + (placement.SeaFlatRight - placement.CoastArmRight) * 0.62f;
+            var armMidLeft = placement.CoastArmLeft + (placement.SeaFlatLeft - placement.CoastArmLeft) * 0.55f;
+            var armMidRight = placement.CoastArmRight + (placement.SeaFlatRight - placement.CoastArmRight) * 0.55f;
             var centers = new[] { armMidLeft, armMidRight };
 
             for (int i = 0; i < centers.Length; i++)
             {
                 var xz = centers[i];
-                var local = new Vector3(
-                    xz.X - placement.TokenCenter.X,
-                    y,
-                    xz.Z - placement.TokenCenter.Z);
-                ColonistFlatBoardQuad.Create(
-                    iconRoot,
-                    $"FishIcon_{i}",
-                    local,
-                    iconWidth,
-                    iconHeight,
+                var boardLocal = boardRoot.InverseTransformPoint(new Vector3(xz.X, boardY, xz.Z));
+                var icon = ColonistFlatBoardQuad.Create(
+                    boardRoot,
+                    $"FishIcon_{placement.TokenCenter.X:F0}_{placement.TokenCenter.Z:F0}_{i}",
+                    boardLocal,
+                    iconSize,
+                    iconSize,
                     texture,
                     renderQueue: 2003,
-                    placeAbove: chevronRenderer,
-                    clearanceAbove: 0.002f,
+                    placeAbove: null,
+                    clearanceAbove: 0f,
                     zWrite: false,
-                    alignment: ColonistFlatBoardQuad.AlignmentMode.BoardPitchOnly);
+                    alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);
+
+                float swimYaw = Mathf.Atan2(placement.Outward.X, placement.Outward.Z) * Mathf.Rad2Deg;
+                float side = i == 0 ? -22f : 22f;
+                icon.transform.rotation = Quaternion.Euler(
+                    ColonistFlatBoardQuad.BoardPitchDegrees,
+                    swimYaw + 180f + side,
+                    0f);
             }
         }
     }

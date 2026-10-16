@@ -19,9 +19,10 @@ namespace CatanRoguelike.Core.Map
         /// <summary>Extra radius so clearance matches drawn hex outline + badge rim (world units).</summary>
         public const float BadgeRenderedLandInset = 0.055f;
         public const float FishShoalLandClearance = 0.05f;
-        private const float FishChevronCoastArmFactor = 0.50f;
-        private const float FishChevronSeaDepthFactor = 0.62f;
-        private const float FishChevronTokenDepthFactor = 0.36f;
+        private const float FishChevronCoastArmFactor = 0.86f;
+        private const float FishChevronSeaDepthFactor = 1.22f;
+        private const float FishChevronTokenDepthFactor = 0.42f;
+        private const float FishChevronSeawardShiftFactor = 0.11f;
         private const float BadgeClearanceEpsilon = 0.004f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 
@@ -264,11 +265,15 @@ namespace CatanRoguelike.Core.Map
                 var coastArmRight = inlandTip + (outerRightXz - inlandTip).Normalized * arm;
 
                 MapPlaneXz outward = (seaCenter - inlandTip).Normalized;
+                float shift = FishChevronSeawardShiftFactor * hexScale;
+                coastArmLeft += outward * shift;
+                coastArmRight += outward * shift;
+
                 float depth = FishChevronSeaDepthFactor * hexScale;
                 var seaFlatLeft = coastArmLeft + outward * depth;
                 var seaFlatRight = coastArmRight + outward * depth;
                 float tokenDepth = FishChevronTokenDepthFactor * hexScale;
-                var tokenCenter = inlandTip + outward * tokenDepth;
+                var tokenCenter = inlandTip + outward * (tokenDepth + shift * 0.65f);
 
                 placement = new FishShoalPlacement(
                     inlandTip,
