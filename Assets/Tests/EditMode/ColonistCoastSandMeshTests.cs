@@ -10,6 +10,29 @@ namespace CatanRoguelike.Tests
 {
     public class ColonistCoastSandMeshTests
     {
+        [TestCase(MapSize.Small)]
+        [TestCase(MapSize.Large)]
+        public void BuildLandOutline_SmallAndLarge_ReturnsClosedLoop(MapSize size)
+        {
+            var board = MapPresets.CreateBoard(size);
+            float hexScale = 1.2f;
+            Assert.IsTrue(
+                ColonistCoastSandMesh.TryBuildLandOutlinePolygon(board, hexScale, 0f, out var outline),
+                $"Land outline walk should succeed on {size}.");
+            Assert.Greater(outline.Count, 6, $"Outline should have multiple vertices on {size} (got {outline.Count}).");
+
+            int coastalEdges = ColonistCoastSandMesh.CountCoastalEdges(board);
+            Assert.AreEqual(
+                coastalEdges,
+                outline.Count,
+                $"Outline vertex count should match coastal edge count on {size}.");
+
+            float beachWidth = hexScale * ColonistCoastSandMesh.BeachWidthFactor;
+            var mesh = ColonistCoastSandMesh.Create(board, hexScale, beachWidth);
+            Assert.Greater(mesh.vertexCount, 6, $"Sand mesh should be non-empty on {size}.");
+            Assert.AreEqual(outline.Count, ColonistCoastSandMesh.LastBuiltQuadCount);
+        }
+
         [Test]
         public void Create_ProducesCoastalTrianglesForSmallBoard()
         {

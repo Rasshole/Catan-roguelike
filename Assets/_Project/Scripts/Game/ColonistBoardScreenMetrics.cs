@@ -18,6 +18,22 @@ namespace CatanRoguelike.Game
             return Mathf.Max(size.x, size.y);
         }
 
+        /// <summary>Projected chip diameter using rim bounds (falls back to face × rim factor).</summary>
+        public static float MeasureNumberTokenScreenDiameter(HexTileView tile, Camera camera)
+        {
+            if (tile == null || camera == null)
+                return 0f;
+
+            float rim = tile.TokenRimRenderer != null
+                ? MeasureScreenDiameter(tile.TokenRimRenderer, camera)
+                : 0f;
+            float face = tile.TokenFaceRenderer != null
+                ? MeasureScreenDiameter(tile.TokenFaceRenderer, camera)
+                : 0f;
+            float faceScaled = face * HexTileView.RimOuterRadiusFactor;
+            return Mathf.Max(rim, faceScaled, face);
+        }
+
         public static float MeasureProjectedRadiusFromCenter(
             Renderer renderer,
             Camera camera,

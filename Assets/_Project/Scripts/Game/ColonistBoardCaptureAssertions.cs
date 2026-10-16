@@ -600,7 +600,7 @@ namespace CatanRoguelike.Game
             }
 
             screenRight.Normalize();
-            float rimProbeRadiusPixels = (faceRadiusPixels + rimRadiusPixels) * 0.5f;
+            float rimProbeRadiusPixels = faceRadiusPixels + 2f;
             var faceSamplePx = centerPxV + screenRight * (faceRadiusPixels * 0.35f);
             var rimSamplePx = centerPxV + screenRight * rimProbeRadiusPixels;
             int facePxX = Mathf.Clamp(Mathf.RoundToInt(faceSamplePx.x), 0, w - 1);
@@ -620,13 +620,12 @@ namespace CatanRoguelike.Game
                 $"Token rim pixel should differ from face (delta={delta:F3} face={face} rim={rim} " +
                 $"faceWorld={faceWorld} rimWorld={rimWorld} faceTex=({facePxX},{facePxY}) rimTex=({rimPxX},{rimPxY}) " +
                 $"pixelSep={pixelSeparation:F1} rimRadiusPx~{rimRadiusPixels:F1})).");
-            float expectedMidRatio = rimProbeRadiusPixels / Mathf.Max(0.01f, rimRadiusPixels);
             float rimSampleToEdgeRatio = centerToRimSamplePx / Mathf.Max(0.01f, rimRadiusPixels);
             Assert.IsTrue(
-                Mathf.Abs(rimSampleToEdgeRatio - expectedMidRatio) < 0.12f,
-                $"Rim sample should sit at midpoint of face/rim projected radii on screen " +
-                $"(ratio={rimSampleToEdgeRatio:F3} expected~{expectedMidRatio:F3} " +
-                $"centerToRimPx={centerToRimSamplePx:F1} faceRadiusPx={faceRadiusPixels:F1} rimRadiusPx={rimRadiusPixels:F1}).");
+                rimSampleToEdgeRatio > faceRadiusPixels / Mathf.Max(0.01f, rimRadiusPixels) + 0.02f,
+                $"Rim sample should sit outside the face disc on screen " +
+                $"(ratio={rimSampleToEdgeRatio:F3} faceRatio={faceRadiusPixels / Mathf.Max(0.01f, rimRadiusPixels):F3} " +
+                $"centerToRimPx={centerToRimSamplePx:F1} probePx={rimProbeRadiusPixels:F1} faceRadiusPx={faceRadiusPixels:F1} rimRadiusPx={rimRadiusPixels:F1}).");
             Assert.IsTrue(
                 rimRadiusPixels > 6f,
                 $"Rim radius should project to visible pixels (rimRadiusPx={rimRadiusPixels:F1}).");

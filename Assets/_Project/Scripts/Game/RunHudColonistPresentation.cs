@@ -171,7 +171,7 @@ namespace CatanRoguelike.Game
                 "YourTurnBanner",
                 new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f),
-                new Vector2(-150f, -(top + 48f)),
+                new Vector2(-150f, -(top + RunHudLayout.ColonistYourTurnBannerHeight)),
                 new Vector2(150f, -top));
             banner.pivot = new Vector2(0.5f, 1f);
             banner.anchoredPosition = new Vector2((left - right) * 0.5f, -top);

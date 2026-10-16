@@ -5,8 +5,6 @@ namespace CatanRoguelike.Game
     /// <summary>Shared colonist play-area rect for HUD, camera framing, and capture tests.</summary>
     public static class ColonistPlayAreaLayout
     {
-        public const float TurnBannerReserve = 36f;
-
         public struct Rect
         {
             public float Left;
@@ -29,7 +27,9 @@ namespace CatanRoguelike.Game
                 screenWidth,
                 screenHeight);
             float top = ColonistUiScale.ScaleReferencePixels(
-                RunHudLayout.Margin + TurnBannerReserve, screenWidth, screenHeight);
+                RunHudLayout.Margin + RunHudLayout.ColonistYourTurnBannerHeight + RunHudLayout.Margin * 0.25f,
+                screenWidth,
+                screenHeight);
             float breathing = ColonistUiScale.ScaleReferencePixels(
                 ColonistBoardViewConstants.BoardBottomBreathingRoomPixels, screenWidth, screenHeight);
             float playWidth = Mathf.Max(64f, screenWidth - left - right);

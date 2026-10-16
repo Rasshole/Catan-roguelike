@@ -6,6 +6,8 @@ namespace CatanRoguelike.Game
     public static class RunHudLayout
     {
         public const float Margin = 10f;
+        /// <summary>Height of the colonist "Your turn" banner below the top margin (matches RunHud UI).</summary>
+        public const float ColonistYourTurnBannerHeight = 48f;
         public const float SidePanelWidth = 232f;
         public const float RightChromePanelWidth = 300f;
         public const float BottomHandHeight = 168f;
