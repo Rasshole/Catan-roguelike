@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.IO;
 using CatanRoguelike.Core.Turn;
@@ -74,6 +73,7 @@ namespace CatanRoguelike.Tests.PlayMode
 
             Texture2D boardOnly = GameSceneCapture.CaptureMainCameraToTexture(null);
             Texture2D withHud = GameSceneCapture.CaptureMainCameraToTexture(hud);
+            GameSceneCapture.WriteDebugCapturePngs(boardOnly, withHud);
             try
             {
                 Assert.IsNotNull(boardOnly, "Board-only capture texture should be created.");
@@ -83,22 +83,6 @@ namespace CatanRoguelike.Tests.PlayMode
                 AssertTextureHasVisibleContent(withHud);
                 AssertBottomBandDiffersBoardOnlyVsHud(boardOnly, withHud);
                 AssertBottomBandShowsHudBarColor(withHud, boardOnly);
-
-                var envPath = Environment.GetEnvironmentVariable(GameSceneCapture.OutputPathEnvVar);
-                if (!string.IsNullOrWhiteSpace(envPath))
-                {
-                    var outputPath = envPath.Trim();
-                    var directory = Path.GetDirectoryName(outputPath);
-                    if (!string.IsNullOrEmpty(directory))
-                        Directory.CreateDirectory(directory);
-
-                    var boardPath = outputPath + ".board.png";
-                    File.WriteAllBytes(boardPath, boardOnly.EncodeToPNG());
-                    File.WriteAllBytes(outputPath, withHud.EncodeToPNG());
-                    Debug.Log(
-                        $"ColonistPrototypeCapture: wrote HUD PNG to {outputPath} " +
-                        $"and board-only debug PNG to {boardPath}");
-                }
             }
             finally
             {

@@ -73,12 +73,17 @@ namespace CatanRoguelike.Tests
 
                 var canvas = hudGo.GetComponentInChildren<Canvas>();
                 Assert.IsNotNull(canvas, "RunHud should build a canvas during Initialize.");
-                Assert.AreEqual(RenderMode.ScreenSpaceCamera, canvas.renderMode);
+                Assert.AreEqual(RenderMode.WorldSpace, canvas.renderMode);
                 Assert.IsNotNull(canvas.worldCamera);
                 Assert.AreEqual("HudCaptureUiCamera", canvas.worldCamera.name);
                 Assert.AreNotEqual(camera, canvas.worldCamera);
-                Assert.AreEqual(camera.nearClipPlane + 0.1f, canvas.planeDistance, 0.001f);
+                Assert.IsTrue(canvas.worldCamera.orthographic);
+                float expectedOrtho = GameSceneCapture.CaptureHeight * RunHudController.WorldCaptureCanvasUnitScale * 0.5f;
+                Assert.AreEqual(expectedOrtho, canvas.worldCamera.orthographicSize, 0.0001f);
                 Assert.AreEqual(RunHudController.HudCaptureUiLayer, canvas.gameObject.layer);
+                var canvasRect = canvas.GetComponent<RectTransform>();
+                Assert.AreEqual(GameSceneCapture.CaptureWidth, canvasRect.sizeDelta.x, 0.01f);
+                Assert.AreEqual(GameSceneCapture.CaptureHeight, canvasRect.sizeDelta.y, 0.01f);
             }
             finally
             {

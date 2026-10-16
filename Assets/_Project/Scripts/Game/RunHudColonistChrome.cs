@@ -122,6 +122,11 @@ namespace CatanRoguelike.Game
             }
         }
 
+        /// <summary>World-space HUD plane scale so a {width}x{height} canvas fills the capture ortho frustum.</summary>
+        public const float WorldCaptureCanvasUnitScale = 0.001f;
+
+        public const float WorldCaptureCanvasDistance = 1f;
+
         public struct CanvasCaptureRestore
         {
             internal bool Active;
@@ -131,12 +136,21 @@ namespace CatanRoguelike.Game
             internal bool CanvasWasActiveSelf;
             internal Camera UiCamera;
             internal GameObject UiCameraObject;
+            internal Transform CanvasParent;
+            internal int CanvasSiblingIndex;
+            internal Vector3 CanvasLocalPosition;
+            internal Quaternion CanvasLocalRotation;
+            internal Vector3 CanvasLocalScale;
+            internal Vector2 CanvasSizeDelta;
         }
 
         /// <summary>
-        /// Routes HUD through a stacked UI camera (UI layer only) into the same RT as <paramref name="mainCamera"/>.
+        /// Capture-only: world-space HUD + stacked orthographic UI camera (manual Render works in batchmode).
         /// </summary>
-        public CanvasCaptureRestore BeginCanvasCameraCapture(Camera mainCamera)
+        public CanvasCaptureRestore BeginCanvasCameraCapture(Camera mainCamera) =>
+            BeginCanvasCameraCapture(mainCamera, GameSceneCapture.CaptureWidth, GameSceneCapture.CaptureHeight);
+
+        public CanvasCaptureRestore BeginCanvasCameraCapture(Camera mainCamera, int captureWidth, int captureHeight)
         {
             var restore = new CanvasCaptureRestore();
             if (_canvas == null || mainCamera == null)
@@ -150,25 +164,35 @@ namespace CatanRoguelike.Game
             if (!_canvas.gameObject.activeSelf)
                 _canvas.gameObject.SetActive(true);
 
+            var canvasRect = _canvas.GetComponent<RectTransform>();
+            restore.CanvasParent = canvasRect.parent;
+            restore.CanvasSiblingIndex = canvasRect.GetSiblingIndex();
+            restore.CanvasLocalPosition = canvasRect.localPosition;
+            restore.CanvasLocalRotation = canvasRect.localRotation;
+            restore.CanvasLocalScale = canvasRect.localScale;
+            restore.CanvasSizeDelta = canvasRect.sizeDelta;
+
             SetLayerRecursively(_canvas.gameObject, HudCaptureUiLayer);
 
             var uiGo = new GameObject("HudCaptureUiCamera");
-            uiGo.transform.SetParent(mainCamera.transform, false);
             var uiCamera = uiGo.AddComponent<Camera>();
-            CopyCameraLensForHudStack(mainCamera, uiCamera);
-            uiCamera.depth = mainCamera.depth + 1f;
-            uiCamera.clearFlags = CameraClearFlags.Depth;
-            uiCamera.cullingMask = 1 << HudCaptureUiLayer;
-            uiCamera.targetTexture = mainCamera.targetTexture;
-            uiCamera.pixelRect = mainCamera.pixelRect;
+            ConfigureWorldCaptureUiCamera(uiCamera, mainCamera, captureWidth, captureHeight);
 
             restore.UiCamera = uiCamera;
             restore.UiCameraObject = uiGo;
 
-            _canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            _canvas.renderMode = RenderMode.WorldSpace;
             _canvas.worldCamera = uiCamera;
-            _canvas.planeDistance = uiCamera.nearClipPlane + 0.1f;
+
+            canvasRect.SetParent(uiGo.transform, false);
+            canvasRect.localRotation = Quaternion.identity;
+            // Camera sits at −Z and looks toward the canvas plane at world origin.
+            canvasRect.localPosition = new Vector3(0f, 0f, WorldCaptureCanvasDistance);
+            canvasRect.sizeDelta = new Vector2(captureWidth, captureHeight);
+            canvasRect.localScale = Vector3.one * WorldCaptureCanvasUnitScale;
+
             Canvas.ForceUpdateCanvases();
+            LogUiCaptureCamera(uiCamera);
             return restore;
         }
 
@@ -176,6 +200,18 @@ namespace CatanRoguelike.Game
         {
             if (!restore.Active || _canvas == null)
                 return;
+
+            var canvasRect = _canvas.GetComponent<RectTransform>();
+            if (restore.CanvasParent != null)
+            {
+                canvasRect.SetParent(restore.CanvasParent, false);
+                canvasRect.SetSiblingIndex(restore.CanvasSiblingIndex);
+            }
+
+            canvasRect.localPosition = restore.CanvasLocalPosition;
+            canvasRect.localRotation = restore.CanvasLocalRotation;
+            canvasRect.localScale = restore.CanvasLocalScale;
+            canvasRect.sizeDelta = restore.CanvasSizeDelta;
 
             _canvas.renderMode = restore.RenderMode;
             _canvas.worldCamera = restore.WorldCamera;
@@ -197,15 +233,36 @@ namespace CatanRoguelike.Game
             Canvas.ForceUpdateCanvases();
         }
 
-        private static void CopyCameraLensForHudStack(Camera source, Camera dest)
+        private static void ConfigureWorldCaptureUiCamera(
+            Camera uiCamera,
+            Camera mainCamera,
+            int captureWidth,
+            int captureHeight)
         {
-            dest.orthographic = source.orthographic;
-            dest.fieldOfView = source.fieldOfView;
-            dest.orthographicSize = source.orthographicSize;
-            dest.nearClipPlane = source.nearClipPlane;
-            dest.farClipPlane = source.farClipPlane;
-            dest.rect = source.rect;
-            dest.aspect = source.aspect;
+            uiCamera.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            uiCamera.orthographic = true;
+            uiCamera.orthographicSize = captureHeight * WorldCaptureCanvasUnitScale * 0.5f;
+            uiCamera.nearClipPlane = 0.1f;
+            uiCamera.farClipPlane = 10f;
+            uiCamera.aspect = captureWidth / (float)captureHeight;
+            uiCamera.depth = mainCamera.depth + 1f;
+            uiCamera.clearFlags = CameraClearFlags.Depth;
+            uiCamera.cullingMask = 1 << HudCaptureUiLayer;
+            uiCamera.targetTexture = mainCamera.targetTexture;
+            uiCamera.pixelRect = mainCamera.pixelRect;
+        }
+
+        internal static void LogUiCaptureCamera(Camera uiCamera)
+        {
+            if (uiCamera == null)
+                return;
+
+            Debug.Log(
+                "HudCaptureUiCamera: " +
+                $"ortho={uiCamera.orthographic} orthoSize={uiCamera.orthographicSize:F4} " +
+                $"near={uiCamera.nearClipPlane:F3} far={uiCamera.farClipPlane:F1} " +
+                $"cullingMask=0x{uiCamera.cullingMask:X8} clearFlags={uiCamera.clearFlags} " +
+                $"targetTexture={(uiCamera.targetTexture != null ? uiCamera.targetTexture.name : "null")}");
         }
 
         public void PrepareCanvasForCameraCapture(Camera camera) =>

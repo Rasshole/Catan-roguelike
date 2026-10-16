@@ -59,6 +59,7 @@ namespace CatanRoguelike.Game
             var renderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
             Texture2D texture = null;
             RunHudController.CanvasCaptureRestore canvasRestore = default;
+            var previousCullingMask = camera.cullingMask;
 
             try
             {
@@ -68,7 +69,8 @@ namespace CatanRoguelike.Game
 
                 if (hud != null)
                 {
-                    canvasRestore = hud.BeginCanvasCameraCapture(camera);
+                    camera.cullingMask = previousCullingMask & ~(1 << RunHudController.HudCaptureUiLayer);
+                    canvasRestore = hud.BeginCanvasCameraCapture(camera, width, height);
                     hud.GetCaptureDiagnostics(camera).LogToConsole("GameSceneCapture");
                 }
 
@@ -90,11 +92,34 @@ namespace CatanRoguelike.Game
                 if (hud != null)
                     hud.RestoreCanvasAfterCapture(canvasRestore);
 
+                camera.cullingMask = previousCullingMask;
                 camera.targetTexture = previousTarget;
                 camera.pixelRect = previousPixelRect;
                 RenderTexture.active = previousActive;
                 renderTexture.Release();
                 DestroyCaptureTexture(renderTexture);
+            }
+        }
+
+        /// <summary>Writes HUD PNG to <see cref="ResolveOutputPath"/> and board-only to path + ".board.png".</summary>
+        public static void WriteDebugCapturePngs(Texture2D boardOnly, Texture2D hudComposite)
+        {
+            var outputPath = ResolveOutputPath();
+            var directory = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            if (boardOnly != null)
+            {
+                var boardPath = outputPath + ".board.png";
+                File.WriteAllBytes(boardPath, boardOnly.EncodeToPNG());
+                Debug.Log($"GameSceneCapture: wrote board-only debug PNG to {boardPath}");
+            }
+
+            if (hudComposite != null)
+            {
+                File.WriteAllBytes(outputPath, hudComposite.EncodeToPNG());
+                Debug.Log($"GameSceneCapture: wrote HUD-composited PNG to {outputPath}");
             }
         }
 
