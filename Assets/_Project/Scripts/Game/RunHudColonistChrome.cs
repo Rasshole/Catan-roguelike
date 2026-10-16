@@ -122,14 +122,44 @@ namespace CatanRoguelike.Game
             }
         }
 
-        public void PrepareCanvasForCameraCapture(Camera camera)
+        public readonly struct CanvasCaptureRestore
         {
+            internal bool Active;
+            internal RenderMode RenderMode;
+            internal Camera WorldCamera;
+            internal float PlaneDistance;
+        }
+
+        public CanvasCaptureRestore BeginCanvasCameraCapture(Camera camera)
+        {
+            var restore = new CanvasCaptureRestore();
             if (_canvas == null || camera == null)
-                return;
+                return restore;
+
+            restore.Active = true;
+            restore.RenderMode = _canvas.renderMode;
+            restore.WorldCamera = _canvas.worldCamera;
+            restore.PlaneDistance = _canvas.planeDistance;
+
             _canvas.renderMode = RenderMode.ScreenSpaceCamera;
             _canvas.worldCamera = camera;
-            _canvas.planeDistance = 1.2f;
+            _canvas.planeDistance = 1f;
+            Canvas.ForceUpdateCanvases();
+            return restore;
+        }
+
+        public void RestoreCanvasAfterCapture(CanvasCaptureRestore restore)
+        {
+            if (!restore.Active || _canvas == null)
+                return;
+
+            _canvas.renderMode = restore.RenderMode;
+            _canvas.worldCamera = restore.WorldCamera;
+            _canvas.planeDistance = restore.PlaneDistance;
             Canvas.ForceUpdateCanvases();
         }
+
+        public void PrepareCanvasForCameraCapture(Camera camera) =>
+            BeginCanvasCameraCapture(camera);
     }
 }

@@ -25,24 +25,42 @@ namespace CatanRoguelike.Game
 
         public static void CaptureMainCameraToPng(string path, RunHudController prepareHudForCapture)
         {
+            var texture = CaptureMainCameraToTexture(prepareHudForCapture);
+            try
+            {
+                var directory = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(directory))
+                    Directory.CreateDirectory(directory);
+                File.WriteAllBytes(path, texture.EncodeToPNG());
+            }
+            finally
+            {
+                DestroyCaptureTexture(texture);
+            }
+        }
+
+        /// <summary>Renders <see cref="Camera.main"/> (with optional HUD canvas) to a new RGB texture.</summary>
+        public static Texture2D CaptureMainCameraToTexture(RunHudController hud) =>
+            CaptureMainCameraToTexture(hud, CaptureWidth, CaptureHeight);
+
+        public static Texture2D CaptureMainCameraToTexture(
+            RunHudController hud,
+            int width,
+            int height)
+        {
             var camera = Camera.main;
             if (camera == null)
                 throw new InvalidOperationException("Camera.main (TableCamera) is required for capture.");
 
-            prepareHudForCapture?.PrepareCanvasForCameraCapture(camera);
-
-            var directory = Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(directory))
-                Directory.CreateDirectory(directory);
+            RunHudController.CanvasCaptureRestore canvasRestore = default;
+            if (hud != null)
+                canvasRestore = hud.BeginCanvasCameraCapture(camera);
 
             var previousActive = RenderTexture.active;
             var previousTarget = camera.targetTexture;
 
-            var renderTexture = new RenderTexture(
-                CaptureWidth,
-                CaptureHeight,
-                24,
-                RenderTextureFormat.ARGB32);
+            var renderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
+            Texture2D texture = null;
 
             try
             {
@@ -51,25 +69,32 @@ namespace CatanRoguelike.Game
                 Canvas.ForceUpdateCanvases();
                 camera.Render();
 
-                var texture = new Texture2D(CaptureWidth, CaptureHeight, TextureFormat.RGB24, false);
-                try
-                {
-                    texture.ReadPixels(new Rect(0, 0, CaptureWidth, CaptureHeight), 0, 0);
-                    texture.Apply();
-                    File.WriteAllBytes(path, texture.EncodeToPNG());
-                }
-                finally
-                {
-                    UnityEngine.Object.DestroyImmediate(texture);
-                }
+                texture = new Texture2D(width, height, TextureFormat.RGB24, false);
+                texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+                texture.Apply();
+                return texture;
             }
             finally
             {
                 camera.targetTexture = previousTarget;
                 RenderTexture.active = previousActive;
                 renderTexture.Release();
-                UnityEngine.Object.DestroyImmediate(renderTexture);
+                DestroyCaptureTexture(renderTexture);
+
+                if (hud != null)
+                    hud.RestoreCanvasAfterCapture(canvasRestore);
             }
+        }
+
+        private static void DestroyCaptureTexture(Texture texture)
+        {
+            if (texture == null)
+                return;
+
+            if (Application.isPlaying)
+                UnityEngine.Object.Destroy(texture);
+            else
+                UnityEngine.Object.DestroyImmediate(texture);
         }
     }
 }

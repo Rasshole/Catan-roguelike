@@ -14,8 +14,6 @@ namespace CatanRoguelike.Tests.PlayMode
     {
         private const string ColonistScenePath = "Assets/_Project/Scenes/ColonistStylePrototype.unity";
         private const string ColonistSceneName = "ColonistStylePrototype";
-        private const int CaptureWidth = 1920;
-        private const int CaptureHeight = 1080;
 
         [Timeout(90000)]
         [UnityTest]
@@ -28,7 +26,7 @@ namespace CatanRoguelike.Tests.PlayMode
                     "Run Catan Roguelike → Build Colonist Style Prototype Scene.");
             }
 
-            Screen.SetResolution(CaptureWidth, CaptureHeight, false);
+            Screen.SetResolution(GameSceneCapture.CaptureWidth, GameSceneCapture.CaptureHeight, false);
             yield return null;
 
             var loadOp = SceneManager.LoadSceneAsync(ColonistSceneName, LoadSceneMode.Single);
@@ -48,17 +46,18 @@ namespace CatanRoguelike.Tests.PlayMode
 
             Assert.IsFalse(gameManager.Controller.State.IsSetupPhase,
                 "Harness should finish setup before capture.");
-            Assert.IsNotNull(UnityEngine.Object.FindFirstObjectByType<RunHudController>(),
-                "RunHudController should be present on the colonist prototype.");
+
+            var hud = UnityEngine.Object.FindFirstObjectByType<RunHudController>();
+            Assert.IsNotNull(hud, "RunHudController should be present on the colonist prototype.");
 
             for (int i = 0; i < 12; i++)
                 yield return null;
             yield return new WaitForEndOfFrame();
 
-            Texture2D screenshot = ScreenCapture.CaptureScreenshotAsTexture();
+            Texture2D capture = GameSceneCapture.CaptureMainCameraToTexture(hud);
             try
             {
-                AssertTextureHasVisibleContent(screenshot);
+                AssertTextureHasVisibleContent(capture);
 
                 var envPath = Environment.GetEnvironmentVariable(GameSceneCapture.OutputPathEnvVar);
                 if (!string.IsNullOrWhiteSpace(envPath))
@@ -67,21 +66,21 @@ namespace CatanRoguelike.Tests.PlayMode
                     var directory = Path.GetDirectoryName(outputPath);
                     if (!string.IsNullOrEmpty(directory))
                         Directory.CreateDirectory(directory);
-                    File.WriteAllBytes(outputPath, screenshot.EncodeToPNG());
+                    File.WriteAllBytes(outputPath, capture.EncodeToPNG());
                 }
             }
             finally
             {
-                if (screenshot != null)
-                    UnityEngine.Object.Destroy(screenshot);
+                if (capture != null)
+                    UnityEngine.Object.Destroy(capture);
             }
         }
 
         private static void AssertTextureHasVisibleContent(Texture2D texture)
         {
-            Assert.IsNotNull(texture, "Screenshot texture should be created.");
-            Assert.Greater(texture.width, 0);
-            Assert.Greater(texture.height, 0);
+            Assert.IsNotNull(texture, "Capture texture should be created.");
+            Assert.AreEqual(GameSceneCapture.CaptureWidth, texture.width);
+            Assert.AreEqual(GameSceneCapture.CaptureHeight, texture.height);
 
             float luminance = 0f;
             int samples = 0;
@@ -100,7 +99,7 @@ namespace CatanRoguelike.Tests.PlayMode
             }
 
             Assert.Greater(luminance, 0.05f * samples,
-                "Screenshot should contain non-black pixels (HUD + board).");
+                "Capture should contain non-black pixels (HUD + board).");
         }
     }
 }

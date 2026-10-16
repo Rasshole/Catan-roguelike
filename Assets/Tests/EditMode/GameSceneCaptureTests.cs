@@ -75,7 +75,7 @@ namespace CatanRoguelike.Tests
                 Assert.IsNotNull(canvas, "RunHud should build a canvas during Initialize.");
                 Assert.AreEqual(RenderMode.ScreenSpaceCamera, canvas.renderMode);
                 Assert.AreEqual(camera, canvas.worldCamera);
-                Assert.AreEqual(1.2f, canvas.planeDistance, 0.001f);
+                Assert.AreEqual(1f, canvas.planeDistance, 0.001f);
             }
             finally
             {
