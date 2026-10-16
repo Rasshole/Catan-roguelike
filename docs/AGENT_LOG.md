@@ -1,5 +1,14 @@
 # Agent log
 
+## 2026-10-16 (UTC) — PR #109 v72 hex UVs (`1e36030`)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Black land — `HexPrismMesh` top-down UVs; EditMode uv count test | Done |
+| 2 | Diagnostics — no `mainTexture` on Unlit | Done |
+| 3 | Medium 4 specifics — `EnsureSpecificTargets` + small-map dupes | Done |
+| 4 | Ports vs fish — badge uses `TryComputeBadgeCenter`; extra fish clearance | Done |
+
 ## 2026-10-16 (UTC) — PR #109 v71 land dimming + ports (`HEAD` after `5a6c8e9`)
 
 | # | Item | Status |
