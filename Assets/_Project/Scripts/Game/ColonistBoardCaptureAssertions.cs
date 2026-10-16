@@ -600,9 +600,9 @@ namespace CatanRoguelike.Game
             }
 
             screenRight.Normalize();
-            const float rimSampleRadiusFraction = 0.9f;
+            float rimProbeRadiusPixels = (faceRadiusPixels + rimRadiusPixels) * 0.5f;
             var faceSamplePx = centerPxV + screenRight * (faceRadiusPixels * 0.35f);
-            var rimSamplePx = centerPxV + screenRight * (rimRadiusPixels * rimSampleRadiusFraction);
+            var rimSamplePx = centerPxV + screenRight * rimProbeRadiusPixels;
             int facePxX = Mathf.Clamp(Mathf.RoundToInt(faceSamplePx.x), 0, w - 1);
             int facePxY = Mathf.Clamp(Mathf.RoundToInt(faceSamplePx.y), 0, h - 1);
             int rimPxX = Mathf.Clamp(Mathf.RoundToInt(rimSamplePx.x), 0, w - 1);
@@ -620,11 +620,13 @@ namespace CatanRoguelike.Game
                 $"Token rim pixel should differ from face (delta={delta:F3} face={face} rim={rim} " +
                 $"faceWorld={faceWorld} rimWorld={rimWorld} faceTex=({facePxX},{facePxY}) rimTex=({rimPxX},{rimPxY}) " +
                 $"pixelSep={pixelSeparation:F1} rimRadiusPx~{rimRadiusPixels:F1})).");
+            float expectedMidRatio = rimProbeRadiusPixels / Mathf.Max(0.01f, rimRadiusPixels);
             float rimSampleToEdgeRatio = centerToRimSamplePx / Mathf.Max(0.01f, rimRadiusPixels);
             Assert.IsTrue(
-                Mathf.Abs(rimSampleToEdgeRatio - rimSampleRadiusFraction) < 0.12f,
-                $"Rim sample should sit ~{rimSampleRadiusFraction:P0} of projected rim radius on screen " +
-                $"(ratio={rimSampleToEdgeRatio:F3} centerToRimPx={centerToRimSamplePx:F1} rimRadiusPx={rimRadiusPixels:F1}).");
+                Mathf.Abs(rimSampleToEdgeRatio - expectedMidRatio) < 0.12f,
+                $"Rim sample should sit at midpoint of face/rim projected radii on screen " +
+                $"(ratio={rimSampleToEdgeRatio:F3} expected~{expectedMidRatio:F3} " +
+                $"centerToRimPx={centerToRimSamplePx:F1} faceRadiusPx={faceRadiusPixels:F1} rimRadiusPx={rimRadiusPixels:F1}).");
             Assert.IsTrue(
                 rimRadiusPixels > 6f,
                 $"Rim radius should project to visible pixels (rimRadiusPx={rimRadiusPixels:F1}).");
@@ -640,7 +642,7 @@ namespace CatanRoguelike.Game
                 Debug.LogWarning(
                     $"TokenRimSample token={token} rgb=({rim.r:F3},{rim.g:F3},{rim.b:F3}) " +
                     $"centerPx=({centerPx.x},{centerPx.y}) rimSamplePx=({rimSamplePx.x:F1},{rimSamplePx.y:F1}) " +
-                    $"rimRadiusPx={rimRadiusPixels:F1} fraction={rimSampleRadiusFraction:F2} " +
+                    $"rimRadiusPx={rimRadiusPixels:F1} probePx={rimProbeRadiusPixels:F1} " +
                     $"faceRadiusPx={faceRadiusPixels:F1}");
             }
 

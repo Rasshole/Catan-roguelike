@@ -51,10 +51,20 @@ namespace CatanRoguelike.Game
                 };
             }
 
-            Vector3 contentCenter = ComputeBoundsCenter(worldSamples);
+            Vector3 refPoint = ComputeBoundsCenter(worldSamples);
             var rotation = Quaternion.Euler(90f, ColonistBoardViewConstants.CameraYawDegrees, 0f);
             GetBoardPlaneAxes(rotation, out Vector3 camRight, out Vector3 camUp);
-            ComputeCameraPlaneExtents(worldSamples, contentCenter, camRight, camUp, out float halfWidthWorld, out float halfHeightWorld);
+            ComputeCameraPlaneExtents(
+                worldSamples,
+                refPoint,
+                camRight,
+                camUp,
+                out float halfWidthWorld,
+                out float halfHeightWorld,
+                out float midR,
+                out float midU);
+            Vector3 contentCenter = refPoint + camRight * midR + camUp * midU;
+            contentCenter.y = refPoint.y;
 
             var play = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
             float usableWidth = Mathf.Max(8f, play.PlayWidth * (1f - PlayAreaFitMarginFraction * 2f));
@@ -131,6 +141,16 @@ namespace CatanRoguelike.Game
 
             for (int i = 0; i < offsets.Length; i++)
                 samples.Add(center + offsets[i]);
+        }
+
+        public static void LogCaptureFramingState(Camera camera, int screenWidth, int screenHeight)
+        {
+            var play = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
+            float ortho = camera != null ? camera.orthographicSize : 0f;
+            Debug.LogWarning(
+                $"ColonistBoardFraming capture layout={screenWidth}x{screenHeight} " +
+                $"play=({play.Left:F1},{play.Bottom:F1}) size={play.PlayWidth:F0}x{play.PlayHeight:F0} " +
+                $"topInset={play.Top:F1} ortho={ortho:F4} camPos={camera?.transform.position}");
         }
 
         public static void LogPlayAreaFitDiagnostics(
@@ -367,11 +387,13 @@ namespace CatanRoguelike.Game
 
         private static void ComputeCameraPlaneExtents(
             IReadOnlyList<Vector3> worldSamples,
-            Vector3 contentCenter,
+            Vector3 refPoint,
             Vector3 camRight,
             Vector3 camUp,
             out float halfWidthWorld,
-            out float halfHeightWorld)
+            out float halfHeightWorld,
+            out float midR,
+            out float midU)
         {
             float minR = float.PositiveInfinity;
             float maxR = float.NegativeInfinity;
@@ -379,7 +401,7 @@ namespace CatanRoguelike.Game
             float maxU = float.NegativeInfinity;
             foreach (var point in worldSamples)
             {
-                Vector3 delta = point - contentCenter;
+                Vector3 delta = point - refPoint;
                 delta.y = 0f;
                 float r = Vector3.Dot(delta, camRight);
                 float u = Vector3.Dot(delta, camUp);
@@ -391,6 +413,8 @@ namespace CatanRoguelike.Game
 
             halfWidthWorld = Mathf.Max((maxR - minR) * 0.5f, 0.01f);
             halfHeightWorld = Mathf.Max((maxU - minU) * 0.5f, 0.01f);
+            midR = (maxR + minR) * 0.5f;
+            midU = (maxU + minU) * 0.5f;
         }
     }
 }

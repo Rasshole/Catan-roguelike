@@ -82,6 +82,11 @@ namespace CatanRoguelike.Game
 
         public float TokenRimOuterWorldRadius => TokenFaceWorldRadius * RimOuterRadiusFactor;
 
+        public float MeasuredTokenRimWorldDiameter =>
+            _chipRimRenderer != null
+                ? Mathf.Max(_chipRimRenderer.bounds.size.x, _chipRimRenderer.bounds.size.z)
+                : TokenRimWorldDiameter;
+
         public Vector3 RobberWorldPosition =>
             _robberMarker != null ? _robberMarker.transform.position : transform.position;
 
@@ -111,11 +116,12 @@ namespace CatanRoguelike.Game
         public const float TokenWorldFaceDiameter = 0.62f;
         /// <summary>Port rate badge disc diameter as a fraction of the number token face diameter.</summary>
         public const float PortBadgeDiameterFraction = 0.9f;
+        public static float TokenRimWorldDiameter => TokenWorldFaceDiameter * RimOuterRadiusFactor;
         public static float PortBadgeDiscWorldRadius =>
-            TokenWorldFaceDiameter * 0.5f * PortBadgeDiameterFraction;
+            TokenRimWorldDiameter * 0.5f * PortBadgeDiameterFraction;
 
         private const float WorldFaceDiameter = TokenWorldFaceDiameter;
-        private const float RimOuterRadiusFactor = 1.18f;
+        public const float RimOuterRadiusFactor = 1.18f;
         private const float WorldChipThickness = 0.04f;
 
         // Tile-local Y offsets from hex prism top (TopY = 1).

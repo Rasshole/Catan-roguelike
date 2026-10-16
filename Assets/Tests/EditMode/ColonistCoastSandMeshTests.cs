@@ -43,7 +43,8 @@ namespace CatanRoguelike.Tests
 
             int edges = ColonistCoastSandMesh.CountCoastalEdges(board);
             Assert.Greater(edges, 0);
-            Assert.AreEqual(edges, ColonistCoastSandMesh.LastBuiltQuadCount);
+            Assert.AreEqual(edges, ColonistCoastSandMesh.LastBuiltQuadCount,
+                "Continuous sand ring should have one quad per coastal edge.");
 
             AssertUniformEdgeWidths(board, hexScale, beachWidth);
             AssertMeshCoastalMidpointWidths(mesh, board, hexScale, beachWidth);

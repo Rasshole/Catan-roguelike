@@ -14,7 +14,7 @@ namespace CatanRoguelike.Tests
         [Test]
         public void PortBadges_DiscDiameterTracksConfiguredTokenFraction()
         {
-            float expectedRadius = HexTileView.TokenWorldFaceDiameter * 0.5f * HexTileView.PortBadgeDiameterFraction;
+            float expectedRadius = HexTileView.TokenRimWorldDiameter * 0.5f * HexTileView.PortBadgeDiameterFraction;
             Assert.AreEqual(expectedRadius, PortMarkerVisuals.BadgeDiscWorldRadius, 0.0001f);
             Assert.AreEqual(
                 ColonistBoardScreenMetrics.PortBadgeTargetTokenScreenDiameterRatio,

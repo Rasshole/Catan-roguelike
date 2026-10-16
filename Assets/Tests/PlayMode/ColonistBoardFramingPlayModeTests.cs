@@ -57,6 +57,7 @@ namespace CatanRoguelike.Tests.PlayMode
             tableCamera.ApplyCapturePose(layoutW, layoutH);
             camera.pixelRect = new Rect(0f, 0f, layoutW, layoutH);
             yield return null;
+            ColonistBoardFraming.LogCaptureFramingState(camera, layoutW, layoutH);
 
             var samples = new List<Vector3>(512);
             boardView.FillColonistFramingSamples(samples);
