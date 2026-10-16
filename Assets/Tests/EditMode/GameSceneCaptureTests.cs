@@ -106,12 +106,26 @@ namespace CatanRoguelike.Tests
                 tableCamera.ApplyPoseForCapture(GameSceneCapture.CaptureWidth, GameSceneCapture.CaptureHeight);
 
                 Assert.AreNotEqual(SceneDefaultCameraPosition, cameraGo.transform.position);
-                Assert.Greater(cameraGo.transform.position.y, SceneDefaultCameraPosition.y + 1f);
+                Vector3 boardCenter = GetTableLookPoint(tableCamera);
+                Vector3 toBoard = (boardCenter - cameraGo.transform.position).normalized;
+                float facingBoard = Vector3.Dot(cameraGo.transform.forward, toBoard);
+                Assert.Greater(facingBoard, 0.5f, "Capture pose should face the board center.");
+                Assert.Less(cameraGo.transform.position.z, boardCenter.z + 0.01f,
+                    "Table camera should sit on the −Z side (same as Play Mode default orbit).");
             }
             finally
             {
                 UnityEngine.Object.DestroyImmediate(root);
             }
+        }
+
+        private static Vector3 GetTableLookPoint(TableCamera tableCamera)
+        {
+            var field = typeof(TableCamera).GetField("lookTarget", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(field);
+            var lookTarget = field.GetValue(tableCamera) as Transform;
+            Vector3 center = lookTarget != null ? lookTarget.position : Vector3.zero;
+            return center + Vector3.up * 0.5f;
         }
 
         private static void SetPrivateField(object target, string fieldName, object value)

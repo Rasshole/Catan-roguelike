@@ -123,10 +123,22 @@ namespace CatanRoguelike.Game
 
         private void HandleStateChanged(GameState state)
         {
-            boardView.Refresh(state);
-            ui.Refresh(state);
+            if (boardView != null)
+                boardView.Refresh(state);
+            if (ui != null)
+                ui.Refresh(state);
             if (_runHud != null)
                 _runHud.Refresh(state);
+        }
+
+        /// <summary>PlayMode/capture: ensure uGUI run HUD is built and synced to current state.</summary>
+        public void EnsureRunHudReady()
+        {
+            EnsureRunHud();
+            if (_runHud == null || Controller == null || Meta == null)
+                return;
+            _runHud.Initialize(Controller, Meta, boardInput);
+            _runHud.Refresh(Controller.State);
         }
 
         private void HandleBoardRebuilt()

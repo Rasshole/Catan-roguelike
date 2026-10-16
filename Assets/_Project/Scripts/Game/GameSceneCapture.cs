@@ -54,6 +54,7 @@ namespace CatanRoguelike.Game
 
             var previousActive = RenderTexture.active;
             var previousTarget = camera.targetTexture;
+            var previousPixelRect = camera.pixelRect;
 
             var renderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
             Texture2D texture = null;
@@ -61,6 +62,7 @@ namespace CatanRoguelike.Game
 
             try
             {
+                camera.pixelRect = new Rect(0f, 0f, width, height);
                 camera.targetTexture = renderTexture;
                 RenderTexture.active = renderTexture;
 

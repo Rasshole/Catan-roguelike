@@ -12,7 +12,7 @@ namespace CatanRoguelike.Game
     {
         public const float DistanceToRadiusRatio = 2.0f;
         public const float HeightToDistanceRatio = 7f / 8f;
-        public const float DefaultMarginFactor = 0.94f;
+        public const float DefaultMarginFactor = 0.86f;
         public const float MinOrbitDistance = 2.4f;
 
         /// <summary>World thickness of the decorative table disk under the hex cluster.</summary>
@@ -27,7 +27,7 @@ namespace CatanRoguelike.Game
         public const float TableSurfaceLocalY = -0.08f;
 
         /// <summary>Multiplier on the wood disk world radius for the sea ring (not camera framing).</summary>
-        public const float WaterSurfacePadFactor = 1.38f;
+        public const float WaterSurfacePadFactor = 1.30f;
 
         /// <summary>Maximum sea ring radius as a multiple of the wood disk world radius.</summary>
         public const float MaxWaterToWoodRadiusRatio = 1.75f;
@@ -39,7 +39,7 @@ namespace CatanRoguelike.Game
         public const float WaterSurfaceLocalY = -0.09f;
 
         /// <summary>Multiplier on the sea disk world radius for the felt tablecloth (not camera framing).</summary>
-        public const float FeltSurfacePadFactor = 1.28f;
+        public const float FeltSurfacePadFactor = 1.18f;
 
         /// <summary>Maximum felt disk radius as a multiple of the sea disk world radius.</summary>
         public const float MaxFeltToWaterRadiusRatio = 1.6f;

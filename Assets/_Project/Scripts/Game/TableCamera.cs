@@ -10,7 +10,10 @@ namespace CatanRoguelike.Game
         [SerializeField] private float orbitSpeed = 40f;
         [SerializeField] private bool frameBoardRightOfHud = true;
 
-        private float _angle;
+        /// <summary>Default orbit yaw (0 = camera on −Z, same as Play Mode start).</summary>
+        public const float DefaultOrbitYawDegrees = 0f;
+
+        private float _angle = DefaultOrbitYawDegrees;
         private Camera _camera;
 
         private void Awake()
@@ -35,9 +38,23 @@ namespace CatanRoguelike.Game
         {
             EnsureCameraAndBoardView();
             EnsureLookTarget();
-            ApplyOrbitPose();
-            if (frameBoardRightOfHud && _camera != null)
-                ApplyBoardFramingOffset(screenWidth, screenHeight);
+
+            var previousPixelRect = _camera != null ? _camera.pixelRect : default;
+            if (_camera != null && screenWidth > 0 && screenHeight > 0)
+                _camera.pixelRect = new Rect(0f, 0f, screenWidth, screenHeight);
+
+            try
+            {
+                _angle = DefaultOrbitYawDegrees;
+                ApplyOrbitPose();
+                if (frameBoardRightOfHud && _camera != null)
+                    ApplyBoardFramingOffset(screenWidth, screenHeight);
+            }
+            finally
+            {
+                if (_camera != null)
+                    _camera.pixelRect = previousPixelRect;
+            }
         }
 
 #endif

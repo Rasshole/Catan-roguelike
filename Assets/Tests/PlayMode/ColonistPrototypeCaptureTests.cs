@@ -45,20 +45,26 @@ namespace CatanRoguelike.Tests.PlayMode
             if (gameManager.Controller.State.Phase == GamePhase.RunSelectMap)
                 GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
 
+            gameManager.EnsureRunHudReady();
+
             Assert.IsFalse(gameManager.Controller.State.IsSetupPhase,
                 "Harness should finish setup before capture.");
 
             RunHudController hud = null;
             for (int i = 0; i < HudReadyMaxFrames; i++)
             {
-                hud = UnityEngine.Object.FindFirstObjectByType<RunHudController>();
+                hud = gameManager.GetComponent<RunHudController>();
                 if (hud != null && hud.IsHudCaptureReady())
                     break;
+                gameManager.EnsureRunHudReady();
                 yield return null;
             }
 
             Assert.IsNotNull(hud, "RunHudController should be present on the colonist prototype.");
-            Assert.IsTrue(hud.IsHudCaptureReady(), "HUD canvas should be built with graphics before capture.");
+            int graphicCount = hud != null ? hud.CountHudGraphics() : 0;
+            Debug.Log($"Colonist capture HUD graphics count: {graphicCount}");
+            Assert.IsTrue(hud.IsHudCaptureReady(),
+                $"HUD canvas should be built with graphics before capture (found {graphicCount}).");
 
             for (int i = 0; i < 4; i++)
                 yield return null;

@@ -60,8 +60,10 @@ namespace CatanRoguelike.Game
 
         public void Refresh(GameState state)
         {
-            if (_canvas == null || state == null)
+            if (state == null)
                 return;
+
+            EnsureCanvasBuilt();
 
             bool inRun = !PlaceholderHudLayout.IsPreGamePhase(state.Phase);
             _canvas.gameObject.SetActive(inRun);
