@@ -85,9 +85,48 @@ namespace CatanRoguelike.Game
 
         private static void DrawTree(Color32[] px, Color32 c)
         {
-            FillCircle(px, 32, 44, 16, c);
-            FillRect(px, 28, 18, 8, 22, c);
+            FillRect(px, 29, 10, 6, 16, c);
+            DrawFilledTriangle(px, 32, 50, 14, 34, 50, 34, c);
+            DrawFilledTriangle(px, 32, 46, 16, 30, 46, 30, c);
+            DrawFilledTriangle(px, 32, 40, 18, 26, 40, 26, c);
         }
+
+        private static void DrawFilledTriangle(Color32[] px, int x0, int y0, int x1, int y1, int x2, int y2, Color32 c)
+        {
+            int minY = Mathf.Min(y0, Mathf.Min(y1, y2));
+            int maxY = Mathf.Max(y0, Mathf.Max(y1, y2));
+            int minX = Mathf.Min(x0, Mathf.Min(x1, x2));
+            int maxX = Mathf.Max(x0, Mathf.Max(x1, x2));
+            for (int y = minY; y <= maxY; y++)
+            {
+                for (int x = minX; x <= maxX; x++)
+                {
+                    if (PointInTriangle(x, y, x0, y0, x1, y1, x2, y2))
+                        px[y * Size + x] = c;
+                }
+            }
+        }
+
+        private static bool PointInTriangle(
+            int px,
+            int py,
+            int x0,
+            int y0,
+            int x1,
+            int y1,
+            int x2,
+            int y2)
+        {
+            float d1 = TriangleEdgeSign(px, py, x0, y0, x1, y1);
+            float d2 = TriangleEdgeSign(px, py, x1, y1, x2, y2);
+            float d3 = TriangleEdgeSign(px, py, x2, y2, x0, y0);
+            bool hasNeg = d1 < 0f || d2 < 0f || d3 < 0f;
+            bool hasPos = d1 > 0f || d2 > 0f || d3 > 0f;
+            return !(hasNeg && hasPos);
+        }
+
+        private static float TriangleEdgeSign(int px, int py, int x0, int y0, int x1, int y1) =>
+            (px - x1) * (y0 - y1) - (x0 - x1) * (py - y1);
 
         private static void DrawBrickStack(Color32[] px, Color32 c)
         {

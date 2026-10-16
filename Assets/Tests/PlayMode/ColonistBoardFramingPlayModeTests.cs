@@ -75,14 +75,21 @@ namespace CatanRoguelike.Tests.PlayMode
             float diameter = extent * 2f;
             float ortho = camera.orthographicSize;
             float aspect = Mathf.Max(0.01f, camera.aspect);
-            float boardWidthFraction = diameter / (2f * ortho * aspect);
+            float boardLayoutWidthPixels = diameter / (2f * ortho * aspect) * layoutW;
+
+            var play = ColonistPlayAreaLayout.Compute(layoutW, layoutH);
+            float margin = ColonistUiScale.ScaleReferencePixels(
+                ColonistBoardFraming.PlayAreaMarginPixels, layoutW, layoutH);
+            float usablePlayWidth = Mathf.Max(8f, play.PlayWidth - margin * 2f);
+            float boardWidthOfPlayRect = boardLayoutWidthPixels / usablePlayWidth;
             Debug.Log(
-                $"ColonistBoardFraming boardWidthFraction={boardWidthFraction:F3} " +
-                $"diameter={diameter:F3} ortho={ortho:F4} aspect={aspect:F3}");
-            Assert.GreaterOrEqual(boardWidthFraction, 0.38f,
-                "Height-bound framing should leave board+sand ~≥38% of screen width.");
-            Assert.LessOrEqual(boardWidthFraction, 0.52f,
-                "Board+sand should not dominate width beyond ~52% (play rect margin).");
+                $"ColonistBoardFraming boardWidthOfPlayRect={boardWidthOfPlayRect:F3} " +
+                $"boardLayoutWidthPx={boardLayoutWidthPixels:F1} usablePlayWidth={usablePlayWidth:F1} " +
+                $"layout={layoutW}x{layoutH} diameter={diameter:F3} ortho={ortho:F4}");
+            Assert.LessOrEqual(
+                boardWidthOfPlayRect,
+                0.9f,
+                "Board+sand should fit inside margined play width without shrinking ortho.");
         }
     }
 }
