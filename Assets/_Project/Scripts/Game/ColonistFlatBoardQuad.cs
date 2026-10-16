@@ -111,7 +111,10 @@ namespace CatanRoguelike.Game
                 ? quadTransform.lossyScale.x * DefaultMeshExtent
                 : 0f;
 
-        public static void PlaceWorldYAbove(Transform quadTransform, Renderer referenceBelow, float clearance)
+        public static void PlaceWorldYAbove(
+            Transform quadTransform,
+            Renderer referenceBelow,
+            float clearance = DefaultClearanceAboveReference)
         {
             if (quadTransform == null || referenceBelow == null)
                 return;
