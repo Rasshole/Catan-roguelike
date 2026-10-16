@@ -108,7 +108,13 @@ namespace CatanRoguelike.Game
         private static readonly Color StormMarkerColor = new(0.1f, 0.15f, 0.55f);
 
         // Target world-space chip size (visible disc on the hex top).
-        private const float WorldFaceDiameter = 0.62f;
+        public const float TokenWorldFaceDiameter = 0.62f;
+        /// <summary>Port rate badge disc diameter as a fraction of the number token face diameter.</summary>
+        public const float PortBadgeDiameterFraction = 0.8f;
+        public static float PortBadgeDiscWorldRadius =>
+            TokenWorldFaceDiameter * 0.5f * PortBadgeDiameterFraction;
+
+        private const float WorldFaceDiameter = TokenWorldFaceDiameter;
         private const float RimOuterRadiusFactor = 1.18f;
         private const float WorldChipThickness = 0.04f;
 
@@ -146,7 +152,13 @@ namespace CatanRoguelike.Game
             if (data.HasRobber)
                 EnsureRobberMarker();
             if (_robberMarker != null)
+            {
                 _robberMarker.SetActive(data.HasRobber);
+                var robberOffset = GetRobberLocalOffset();
+                _robberMarker.transform.localPosition = new Vector3(
+                    robberOffset.x, HexPrismMesh.TopY + MarkerLiftLocal, robberOffset.z);
+            }
+
             RefreshNumberToken(data);
         }
 
@@ -372,6 +384,9 @@ namespace CatanRoguelike.Game
                 _robberMarker.SetActive(visible);
         }
 
+        private Vector3 GetRobberLocalOffset() =>
+            Data != null && Data.IsDesert ? Vector3.zero : RobberLocalOffset;
+
         private void EnsureRobberMarker()
         {
             PurgeLegacyRobberVisuals();
@@ -397,8 +412,9 @@ namespace CatanRoguelike.Game
                 : 1f;
             _robberMarker = new GameObject("RobberPawn");
             _robberMarker.transform.SetParent(transform, false);
+            var robberOffset = GetRobberLocalOffset();
             _robberMarker.transform.localPosition = new Vector3(
-                RobberLocalOffset.x, HexPrismMesh.TopY + MarkerLiftLocal, RobberLocalOffset.z);
+                robberOffset.x, HexPrismMesh.TopY + MarkerLiftLocal, robberOffset.z);
 
             float sx = Mathf.Max(lossy.x, 0.001f);
             float sy = Mathf.Max(lossy.y, 0.001f);

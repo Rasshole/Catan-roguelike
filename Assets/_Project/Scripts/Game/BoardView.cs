@@ -118,32 +118,38 @@ namespace CatanRoguelike.Game
                 return;
 
             float beachWidth = hexScale * ColonistCoastSandMesh.BeachWidthFactor;
-            Vector3 boardCenter = GetBoardWorldCenter();
+            float sampleY = 0f;
             foreach (var kvp in _tiles)
             {
                 if (kvp.Value.Data.IsFishTile)
                     continue;
 
-                var coord = kvp.Key;
-                var tileRoot = kvp.Value.transform;
-                float sampleY = GetHexTopWorldPoint(tileRoot).y;
-                var tilePos = tileRoot.position;
-                float cx = tilePos.x;
-                float cz = tilePos.z;
+                sampleY = GetHexTopWorldPoint(kvp.Value.transform).y;
+                break;
+            }
 
-                for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
+            if (_controller?.State?.Board != null)
+            {
+                ColonistCoastSandMesh.AppendOuterFramingSamples(
+                    _controller.State.Board,
+                    hexScale,
+                    beachWidth,
+                    sampleY,
+                    samples);
+            }
+            else
+            {
+                foreach (var kvp in _tiles)
                 {
-                    var (x, z) = HexMath.VertexToWorldPosition(coord, corner, hexScale);
-                    samples.Add(new Vector3(x, sampleY, z));
+                    if (kvp.Value.Data.IsFishTile)
+                        continue;
 
-                    var outward = new Vector2(x - boardCenter.x, z - boardCenter.z);
-                    if (outward.sqrMagnitude > 1e-8f)
+                    var coord = kvp.Key;
+                    float y = GetHexTopWorldPoint(kvp.Value.transform).y;
+                    for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
                     {
-                        outward.Normalize();
-                        samples.Add(new Vector3(
-                            x + outward.x * beachWidth,
-                            sampleY,
-                            z + outward.y * beachWidth));
+                        var (x, z) = HexMath.VertexToWorldPosition(coord, corner, hexScale);
+                        samples.Add(new Vector3(x, y, z));
                     }
                 }
             }
