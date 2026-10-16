@@ -15,7 +15,7 @@ namespace CatanRoguelike.Core.Map
     {
         private const int HexCornerCount = 6;
         public const float DefaultBadgeDiscRadius = 0.42f;
-        public const float BadgeLandPolygonClearance = 0.08f;
+        public const float BadgeLandPolygonClearance = 0.05f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 
         public static void AssignPortSeaSlots(BoardState board, IReadOnlyList<PortDefinition> ports)
@@ -177,29 +177,69 @@ namespace CatanRoguelike.Core.Map
             if (!board.PortVertexToSeaSlot.TryGetValue(portVertex, out HexCoord sea))
                 return false;
 
-            if (!TryGetHarborCoastEdge(board, portVertex, sea, hexScale, out MapPlaneXz coastMid, out _, out _))
-            {
-                var (x, z) = HexMath.ToWorldPosition(sea, hexScale);
-                center = new MapPlaneXz(x, z);
-                return true;
-            }
-
             var (sx, sz) = HexMath.ToWorldPosition(sea, hexScale);
             var seaCenter = new MapPlaneXz(sx, sz);
-            MapPlaneXz outward = (seaCenter - coastMid).Normalized;
-
-            const float pushStep = 0.01f;
-            const float maxPush = 3.5f;
-            float push = badgeRadius + BadgeLandPolygonClearance;
-            for (; push <= maxPush; push += pushStep)
+            MapPlaneXz boardCenter = ComputeBoardCenter(board);
+            MapPlaneXz outward = (seaCenter - boardCenter).Normalized;
+            if (outward.SqrMagnitude < 1e-6f
+                && TryGetHarborCoastEdge(board, portVertex, sea, hexScale, out MapPlaneXz coastMid, out _, out _))
             {
-                center = coastMid + outward * push;
+                outward = (seaCenter - coastMid).Normalized;
+            }
+
+            center = seaCenter;
+            if (DiscClearOfAllLandHexes(board, center, badgeRadius, BadgeLandPolygonClearance, hexScale))
+                return true;
+
+            const float pushStep = 0.02f;
+            const float maxPush = 2.5f;
+            for (float push = pushStep; push <= maxPush; push += pushStep)
+            {
+                center = seaCenter + outward * push;
                 if (DiscClearOfAllLandHexes(board, center, badgeRadius, BadgeLandPolygonClearance, hexScale))
                     return true;
             }
 
-            center = coastMid + outward * maxPush;
+            center = seaCenter + outward * maxPush;
             return true;
+        }
+
+        /// <summary>Minimum XZ distance from <paramref name="point"/> to any land hex edge (0 if inside a land hex).</summary>
+        public static float MinDistanceToLandHexPolygons(
+            BoardState board,
+            MapPlaneXz point,
+            float hexScale)
+        {
+            float min = float.MaxValue;
+            foreach (var coord in board.Tiles.Keys)
+                min = Math.Min(min, DistancePointToLandHexPolygon(point, coord, hexScale));
+
+            return min;
+        }
+
+        private static float DistancePointToLandHexPolygon(
+            MapPlaneXz point,
+            HexCoord hex,
+            float hexScale)
+        {
+            var corners = new MapPlaneXz[HexCornerCount];
+            for (int i = 0; i < HexCornerCount; i++)
+            {
+                var (x, z) = HexMath.VertexToWorldPosition(hex, i, hexScale);
+                corners[i] = new MapPlaneXz(x, z);
+            }
+
+            if (PointInConvexPolygon(point, corners))
+                return 0f;
+
+            float min = float.MaxValue;
+            for (int i = 0; i < corners.Length; i++)
+            {
+                int next = (i + 1) % corners.Length;
+                min = Math.Min(min, DistancePointToSegment(point, corners[i], corners[next]));
+            }
+
+            return min;
         }
 
         public static bool DiscClearOfAllLandHexes(

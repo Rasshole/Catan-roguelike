@@ -20,8 +20,8 @@ namespace CatanRoguelike.Game
 
         private const float PierLength = 0.36f;
         private const float PierWidth = 0.16f;
-        private const float SeaSlotPlankWidth = 0.06f;
-        private const float SeaSlotPlankHeight = 0.08f;
+        private const float SeaSlotPlankWidth = 0.11f;
+        private const float SeaSlotPlankHeight = 0.10f;
         private const float PierHeight = 0.06f;
         private const float PostHeight = 0.11f;
         private const float PostWidth = 0.07f;
@@ -30,8 +30,8 @@ namespace CatanRoguelike.Game
         public const float BadgeDiscSizeScale = 1.4f;
         public static float BadgeDiscWorldRadius => ColonistPortBadgeSizing.ActiveDiscWorldRadius;
         private const float BadgeDiscHeight = 0.012f * BadgeDiscSizeScale;
-        public const float BadgeLabelWidthFractionGeneric = 0.65f;
-        public const float BadgeLabelWidthFractionSpecific = 0.45f;
+        public const float BadgeLabelWidthFractionGeneric = 0.78f;
+        public const float BadgeLabelWidthFractionSpecific = 0.58f;
         /// <summary>World quad edge length; reads ~40% of disc diameter on screen under the colonist camera.</summary>
         public const float BadgeRateIconDiameterFraction = 0.62f;
         private const float BadgeStackGapFraction = 0.05f;

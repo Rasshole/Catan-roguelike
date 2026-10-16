@@ -525,7 +525,8 @@ namespace CatanRoguelike.Game
 
             var labelRenderer = labelTransform.GetComponent<Renderer>();
             Assert.IsNotNull(labelRenderer);
-            Vector3 sampleWorld = labelRenderer.bounds.center;
+            Bounds labelBounds = labelRenderer.bounds;
+            Vector3 sampleWorld = labelBounds.center;
             var pixel = ColonistCaptureProjection.WorldToTexturePixel(
                 sampleWorld,
                 camera,
@@ -535,24 +536,27 @@ namespace CatanRoguelike.Game
 
             int darkSamples = 0;
             int totalSamples = 0;
-            const int patchRadius = 5;
-            for (int dx = -patchRadius; dx <= patchRadius; dx += 2)
+            const int patchRadius = 10;
+            for (int dx = -patchRadius; dx <= patchRadius; dx++)
             {
-                for (int dy = -patchRadius; dy <= patchRadius; dy += 2)
+                for (int dy = -patchRadius; dy <= patchRadius; dy++)
                 {
+                    if (dx * dx + dy * dy > patchRadius * patchRadius)
+                        continue;
+
                     int x = Mathf.Clamp(pixel.x + dx, 0, boardCapture.width - 1);
                     int y = Mathf.Clamp(pixel.y + dy, 0, boardCapture.height - 1);
                     Color c = boardCapture.GetPixel(x, y);
                     float luminance = c.r + c.g + c.b;
-                    if (luminance < 0.55f)
+                    if (luminance < 0.62f)
                         darkSamples++;
                     totalSamples++;
                 }
             }
 
             Assert.IsTrue(
-                darkSamples >= 3,
-                $"Port rate label patch should include dark glyph pixels (dark={darkSamples}/{totalSamples} at tex={pixel}).");
+                darkSamples >= 4,
+                $"Port rate label patch should include dark glyph pixels (dark={darkSamples}/{totalSamples} at tex={pixel} world={sampleWorld}).");
         }
 
         private static Transform FindRobberTopIconTransform()

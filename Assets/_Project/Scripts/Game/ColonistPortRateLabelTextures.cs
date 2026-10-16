@@ -8,8 +8,8 @@ namespace CatanRoguelike.Game
     {
         private const int GlyphWidth = 5;
         private const int GlyphHeight = 7;
-        private const int PixelScale = 5;
-        private const int StrokeExpand = 2;
+        private const int PixelScale = 7;
+        private const int StrokeExpand = 3;
         private const int CharGap = 2;
 
         private static readonly Dictionary<string, Texture2D> Cache = new();

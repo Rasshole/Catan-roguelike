@@ -1,5 +1,6 @@
 using System.Collections;
 using System.IO;
+using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Game;
 using NUnit.Framework;
@@ -356,11 +357,14 @@ namespace CatanRoguelike.Tests.PlayMode
                     continue;
 
                 Vector3 worldCenter = renderer.bounds.center;
-                var center = new Vector2(worldCenter.x, worldCenter.z);
+                var center = new MapPlaneXz(worldCenter.x, worldCenter.z);
                 float radius = renderer.transform.lossyScale.x * 0.5f;
-                Assert.IsFalse(
-                    PortBadgePlacement.DiscIntersectsAnyLandHex(center, radius, board, hexScale),
-                    $"Port badge disc at {center} should not overlap land hexes (r={radius:F3}).");
+                float minDist = SeaFrameSlotLayout.MinDistanceToLandHexPolygons(board, center, hexScale);
+                float required = radius + SeaFrameSlotLayout.BadgeLandPolygonClearance;
+                Assert.Greater(
+                    minDist,
+                    required,
+                    $"Port badge disc at {center} should clear all land hex polygons (r={radius:F3} minDist={minDist:F3}).");
                 checkedDiscs++;
             }
 

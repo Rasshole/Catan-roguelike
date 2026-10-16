@@ -66,6 +66,30 @@ namespace CatanRoguelike.Tests.EditMode
         }
 
         [Test]
+        public void PortBadgeCenters_MaintainLandPolygonClearance()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
+            var ports = PortAccess.DiscoverPorts(board);
+            float radius = SeaFrameSlotLayout.DefaultBadgeDiscRadius;
+            float requiredGap = radius + SeaFrameSlotLayout.BadgeLandPolygonClearance;
+
+            foreach (var port in ports)
+            {
+                Assert.IsTrue(
+                    SeaFrameSlotLayout.TryGetBadgeCenter(
+                        board, port.Vertex, HexScale, radius, out MapPlaneXz center),
+                    $"Badge center should resolve for port {port.Vertex}.");
+
+                float minDist = SeaFrameSlotLayout.MinDistanceToLandHexPolygons(board, center, HexScale);
+                Assert.Greater(
+                    minDist,
+                    requiredGap,
+                    $"Port {port.Vertex} badge disc clearance to land should exceed r+{SeaFrameSlotLayout.BadgeLandPolygonClearance} " +
+                    $"(minDist={minDist:F3} required>{requiredGap:F3} center={center}).");
+            }
+        }
+
+        [Test]
         public void PortBadgeCenters_SitInSeaSlots_NotOnLand()
         {
             var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
