@@ -12,6 +12,8 @@ namespace CatanRoguelike.Game
         private RectTransform _actionBarEndRoot;
         private Text _diceWidgetValue;
         private Image _rollButtonGlow;
+        private Button _rollPinned;
+        private Button _endTurnPinned;
 
         private void BuildActionBarChrome(Transform root)
         {

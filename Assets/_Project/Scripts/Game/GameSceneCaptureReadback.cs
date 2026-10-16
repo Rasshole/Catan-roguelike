@@ -38,28 +38,13 @@ namespace CatanRoguelike.Game
                 return;
             }
 
-            int probeX = Mathf.Clamp(
-                (int)(texture.width * RunHudController.SanityProbeScreenX),
-                0,
-                texture.width - 1);
-            int probeY = Mathf.Clamp(
-                (int)(texture.height * RunHudController.SanityProbeScreenY),
-                0,
-                texture.height - 1);
-            var probePixel = texture.GetPixel(probeX, probeY);
-
-            int bandY = Mathf.Clamp((int)(texture.height * 0.05f), 0, texture.height - 1);
-            var bandPixel = texture.GetPixel(texture.width / 2, bandY);
-
             string pixelHash = ComputeTexturePixelHashHex(texture);
             double sampleSum = SampleLuminanceSum(texture, 24);
 
             Debug.Log(
                 $"{HudCompositePipelineMarker} fingerprint {stage}: " +
                 $"id={texture.GetInstanceID()} {texture.width}x{texture.height} " +
-                $"hash={pixelHash} sampleSum={sampleSum:F2} " +
-                $"probe@({probeX},{probeY})={FormatColor(probePixel)} " +
-                $"band@({texture.width / 2},{bandY})={FormatColor(bandPixel)}");
+                $"hash={pixelHash} sampleSum={sampleSum:F2}");
         }
 
         public static string ComputeTexturePixelHashHex(Texture2D texture)
