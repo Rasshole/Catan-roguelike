@@ -29,7 +29,7 @@ namespace CatanRoguelike.Game
         private int _selectedHexIndex;
         private int _selectedRoadIndex;
         private bool _showUnlockPanel;
-        private bool _fishermenMapToggle;
+        private bool _fishermenMapToggle = true;
         private bool _runRewardGranted;
         private int _lastRunStarsEarned;
 
@@ -38,6 +38,7 @@ namespace CatanRoguelike.Game
             _controller = controller;
             _meta = meta;
             _boardInput = boardInput;
+            _fishermenMapToggle = controller.FishermenMapOption;
             _runRewardGranted = false;
         }
 

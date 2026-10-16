@@ -16,9 +16,15 @@ namespace CatanRoguelike.Game
                 name = $"Procedural_{slot}"
             };
 
-            var baseColor = ColonistBoardTextureLoader.GetFallbackColorForSlot(slot);
+            var baseColor = BoostBaseColor(ColonistBoardTextureLoader.GetFallbackColorForSlot(slot), slot);
             var pixels = new Color32[Size * Size];
             var rng = new System.Random((int)slot * 7919 + 42);
+            float strokeAngle = (float)rng.NextDouble() * Mathf.PI * 2f;
+            float strokePhase = (float)rng.NextDouble() * 12f;
+            float noisePhaseU = (float)rng.NextDouble() * 64f;
+            float noisePhaseV = (float)rng.NextDouble() * 64f;
+            float cosA = Mathf.Cos(strokeAngle);
+            float sinA = Mathf.Sin(strokeAngle);
 
             for (int y = 0; y < Size; y++)
             {
@@ -26,13 +32,22 @@ namespace CatanRoguelike.Game
                 {
                     float u = x / (float)Size;
                     float v = y / (float)Size;
-                    float n = Mathf.PerlinNoise(u * 6f + slot.GetHashCode() * 0.01f, v * 6f) * 0.12f;
-                    float streak = Mathf.Sin((u + v) * 18f) * 0.04f;
-                    float brush = ((float)rng.NextDouble() - 0.5f) * 0.06f;
+                    float ru = u - 0.5f;
+                    float rv = v - 0.5f;
+                    float su = ru * cosA - rv * sinA + 0.5f;
+                    float sv = ru * sinA + rv * cosA + 0.5f;
+
+                    float n = Mathf.PerlinNoise(su * 5.5f + noisePhaseU, sv * 5.5f + noisePhaseV);
+                    float streak = Mathf.Sin((su + sv) * 14f + strokePhase) * 0.5f + 0.5f;
+                    float micro = ((float)rng.NextDouble() - 0.5f) * 0.04f;
+
+                    float valueMul = 1f + (n - 0.5f) * 0.14f + (streak - 0.5f) * 0.08f + micro;
+                    valueMul = Mathf.Clamp(valueMul, 0.90f, 1.10f);
+
                     var c = baseColor;
-                    c.r = Mathf.Clamp01(c.r + n + streak + brush);
-                    c.g = Mathf.Clamp01(c.g + n * 0.8f + brush);
-                    c.b = Mathf.Clamp01(c.b + n * 0.6f - streak * 0.5f);
+                    c.r = Mathf.Clamp01(c.r * valueMul);
+                    c.g = Mathf.Clamp01(c.g * valueMul);
+                    c.b = Mathf.Clamp01(c.b * valueMul);
                     pixels[y * Size + x] = c;
                 }
             }
@@ -40,6 +55,23 @@ namespace CatanRoguelike.Game
             tex.SetPixels32(pixels);
             tex.Apply();
             return tex;
+        }
+
+        private static Color BoostBaseColor(Color c, BoardTerrainSlot slot)
+        {
+            Color.RGBToHSV(c, out float h, out float s, out float v);
+            float satBoost = slot switch
+            {
+                BoardTerrainSlot.Sheep => 1.22f,
+                BoardTerrainSlot.Ore => 1.18f,
+                BoardTerrainSlot.Wood => 1.08f,
+                BoardTerrainSlot.Brick => 1.06f,
+                BoardTerrainSlot.Wheat => 1.04f,
+                _ => 1f
+            };
+            s = Mathf.Clamp01(s * satBoost);
+            v = Mathf.Clamp(v, slot == BoardTerrainSlot.Ore ? 0.48f : 0.52f, 0.92f);
+            return Color.HSVToRGB(h, s, v);
         }
 
         public static Texture2D CreateRippleMask()

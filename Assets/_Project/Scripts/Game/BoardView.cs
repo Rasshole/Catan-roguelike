@@ -295,6 +295,8 @@ namespace CatanRoguelike.Game
 
         private void BuildBoard(BoardState board)
         {
+            if (board != null && ColonistPresentation.IsActive)
+                SeaFishPortRelocator.Resolve(board, hexScale);
             if (boardRoot == null) boardRoot = transform;
 
             DisableLegacySceneTable();

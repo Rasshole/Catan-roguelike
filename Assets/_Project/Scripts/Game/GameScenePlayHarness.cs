@@ -23,7 +23,7 @@ namespace CatanRoguelike.Game
         public static void CompleteRunSelect(
             GameController controller,
             MetaProgression meta,
-            bool fishermenOfCatan = false)
+            bool fishermenOfCatan = true)
         {
             EnsureHarnessMapUnlocked(meta);
             controller.FishermenMapOption = fishermenOfCatan;
@@ -66,7 +66,7 @@ namespace CatanRoguelike.Game
         public static void CompleteRunSelectAndSetup(
             GameController controller,
             MetaProgression meta,
-            bool fishermenOfCatan = false)
+            bool fishermenOfCatan = true)
         {
             CompleteRunSelect(controller, meta, fishermenOfCatan);
             CompleteSetup(controller);

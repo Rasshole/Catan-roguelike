@@ -453,8 +453,8 @@ namespace CatanRoguelike.Game
             || MatchesPalette(c, BoardResourcePalette.Wood, 0.18f)
             || MatchesPalette(c, BoardResourcePalette.Brick, 0.18f)
             || MatchesPalette(c, BoardResourcePalette.Wheat, 0.18f)
-            || MatchesPalette(c, BoardResourcePalette.Sheep, 0.18f)
-            || MatchesPalette(c, BoardResourcePalette.Stone, 0.18f)
+            || MatchesPalette(c, BoardResourcePalette.Sheep, 0.22f)
+            || MatchesPalette(c, BoardResourcePalette.Stone, 0.22f)
             || MatchesLitResourceHex(c);
 
         private static bool MatchesLitResourceHex(Color c) =>

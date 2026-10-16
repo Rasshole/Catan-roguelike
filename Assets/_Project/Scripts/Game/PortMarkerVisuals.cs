@@ -114,8 +114,14 @@ namespace CatanRoguelike.Game
             float badgeLocalZ = Mathf.Max(
                 badgeLocal.z,
                 BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc);
+            if (ColonistPresentation.IsActive)
+            {
+                float maxBadgeZ = PierLength + BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc + 0.05f;
+                badgeLocalZ = Mathf.Min(badgeLocalZ, maxBadgeZ);
+            }
+
             float pierLen = ColonistPresentation.IsActive
-                ? Mathf.Min(PierLength, badgeLocalZ)
+                ? PierLength
                 : Mathf.Max(PierWidth * 2f, badgeLocalZ);
 
             CreatePart("PierPlank", root.transform,

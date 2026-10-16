@@ -49,7 +49,7 @@ namespace CatanRoguelike.Core
         private bool _metaStartCardGranted;
 
         /// <summary>When true, new maps include Seafarers fish hexes and fish spend rules.</summary>
-        public bool FishermenMapOption { get; set; }
+        public bool FishermenMapOption { get; set; } = true;
 
         public GameController(int? seed = null, MapSize mapSize = MapSize.Small, MetaProgression meta = null)
         {
