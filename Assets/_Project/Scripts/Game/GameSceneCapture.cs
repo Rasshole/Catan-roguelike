@@ -194,12 +194,12 @@ namespace CatanRoguelike.Game
             if (hudComposite != null)
             {
                 LogCaptureTextureFingerprint(hudComposite, "encode-hud");
+                string hudHash = ComputeTexturePixelHashHex(hudComposite);
                 var png = hudComposite.EncodeToPNG();
-                string md5 = Convert.ToHexString(System.Security.Cryptography.MD5.HashData(png)).ToLowerInvariant();
                 File.WriteAllBytes(outputPath, png);
                 Debug.Log(
                     $"{HudCompositePipelineMarker} wrote HUD-composited PNG to {outputPath} " +
-                    $"textureId={hudComposite.GetInstanceID()} md5={md5} bytes={png.Length}");
+                    $"textureId={hudComposite.GetInstanceID()} hash={hudHash} bytes={png.Length}");
             }
         }
 

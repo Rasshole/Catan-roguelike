@@ -51,25 +51,45 @@ namespace CatanRoguelike.Game
             int bandY = Mathf.Clamp((int)(texture.height * 0.05f), 0, texture.height - 1);
             var bandPixel = texture.GetPixel(texture.width / 2, bandY);
 
-            string md5 = ComputePngMd5Hex(texture);
+            string pixelHash = ComputeTexturePixelHashHex(texture);
             double sampleSum = SampleLuminanceSum(texture, 24);
 
             Debug.Log(
                 $"{HudCompositePipelineMarker} fingerprint {stage}: " +
                 $"id={texture.GetInstanceID()} {texture.width}x{texture.height} " +
-                $"md5={md5} sampleSum={sampleSum:F2} " +
+                $"hash={pixelHash} sampleSum={sampleSum:F2} " +
                 $"probe@({probeX},{probeY})={FormatColor(probePixel)} " +
                 $"band@({texture.width / 2},{bandY})={FormatColor(bandPixel)}");
         }
 
-        public static string ComputePngMd5Hex(Texture2D texture)
+        public static string ComputeTexturePixelHashHex(Texture2D texture)
         {
             if (texture == null)
                 return "null";
 
-            var png = texture.EncodeToPNG();
-            return Convert.ToHexString(MD5.HashData(png)).ToLowerInvariant();
+            var raw = texture.GetRawTextureData();
+            return ComputeFnv1a32Hex(raw);
         }
+
+        public static uint ComputeFnv1a32(byte[] data)
+        {
+            const uint offsetBasis = 2166136261u;
+            const uint prime = 16777619u;
+            uint hash = offsetBasis;
+            if (data == null)
+                return hash;
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                hash ^= data[i];
+                hash *= prime;
+            }
+
+            return hash;
+        }
+
+        public static string ComputeFnv1a32Hex(byte[] data) =>
+            ComputeFnv1a32(data).ToString("x8");
 
         private static double SampleLuminanceSum(Texture2D texture, int step)
         {
