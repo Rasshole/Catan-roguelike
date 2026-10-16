@@ -601,6 +601,9 @@ namespace CatanRoguelike.Game
                     _actionButtons.Add(cancel);
                 }
             }
+
+            if (ColonistPresentation.IsActive)
+                EnsureColonistTradeButton();
         }
 
         private void AddBuildModeButton(string label, UnityEngine.Events.UnityAction action)

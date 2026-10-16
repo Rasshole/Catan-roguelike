@@ -105,10 +105,13 @@ namespace CatanRoguelike.Game
                     BoardSurfaceMaterial.Create());
             }
 
+            var waterScale = TableCameraFraming.ComputeWaterDiskScale(boundingRadius);
+            if (ColonistPresentation.IsActive)
+                waterScale *= 1.22f;
             CreateTableDisk(
                 "WaterSurface",
-                ColonistPresentation.IsActive ? -0.12f : TableCameraFraming.WaterSurfaceLocalY,
-                TableCameraFraming.ComputeWaterDiskScale(boundingRadius),
+                ColonistPresentation.IsActive ? -0.14f : TableCameraFraming.WaterSurfaceLocalY,
+                waterScale,
                 BoardWaterMaterial.Create());
 
             if (!ColonistPresentation.IsActive)
@@ -187,7 +190,10 @@ namespace CatanRoguelike.Game
             var collider = go.AddComponent<MeshCollider>();
             collider.sharedMesh = mesh;
 
-            HexCartoonTileDecor.Apply(go, data.Coord, hexScale, data);
+            if (ColonistPresentation.IsActive)
+                ColonistHexTileIcon.Apply(go, data);
+            else
+                HexCartoonTileDecor.Apply(go, data.Coord, hexScale, data);
 
             var view = go.AddComponent<HexTileView>();
             view.Initialize(data, renderer);

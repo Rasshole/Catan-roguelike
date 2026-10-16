@@ -17,8 +17,6 @@ namespace CatanRoguelike.Game
         private Text _colonistHumanPanelText;
         private Text _colonistAiPanelText;
         private Text _colonistChatText;
-        private Text _colonistDevCountText;
-        private RectTransform _colonistDevCardSlot;
 
         private void EnsureColonistCanvasBuilt()
         {
@@ -44,11 +42,12 @@ namespace CatanRoguelike.Game
             float actionBottom = RunHudLayout.GetActionBarBottomInset();
             float left = RunHudLayout.GetContentLeftInset();
             float right = RunHudLayout.GetContentRightInset();
+            float handHeight = RunHudLayout.GetBottomHandHeight();
 
             if (_handPanel != null)
             {
                 _handPanel.offsetMin = new Vector2(left, handBottom);
-                _handPanel.offsetMax = new Vector2(-right, handBottom + RunHudLayout.GetBottomHandHeight());
+                _handPanel.offsetMax = new Vector2(left + RunHudLayout.ColonistResourceHandWidth, handBottom + handHeight);
             }
 
             if (_actionBar != null)
@@ -61,18 +60,20 @@ namespace CatanRoguelike.Game
         private void BuildColonistBottomHand(Transform root)
         {
             float bottom = RunHudLayout.GetHandRowBottomInset();
+            float left = RunHudLayout.GetContentLeftInset();
+            float handHeight = RunHudLayout.GetBottomHandHeight();
             _handPanel = RunHudUiFactory.CreatePanel(
                 root,
                 "ResourceHand",
                 new Vector2(0f, 0f),
-                new Vector2(1f, 0f),
-                new Vector2(RunHudLayout.GetContentLeftInset(), bottom),
-                new Vector2(-RunHudLayout.GetContentRightInset(), bottom + RunHudLayout.GetBottomHandHeight()));
+                new Vector2(0f, 0f),
+                new Vector2(left, bottom),
+                new Vector2(left + RunHudLayout.ColonistResourceHandWidth, bottom + handHeight));
             _handPanel.GetComponent<Image>().color = RunHudUiFactory.HandBackdrop;
 
             var layout = _handPanel.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(12, 12, 10, 10);
-            layout.spacing = 12f;
+            layout.padding = new RectOffset(8, 8, 6, 6);
+            layout.spacing = 8f;
             layout.childAlignment = TextAnchor.MiddleLeft;
             layout.childForceExpandHeight = true;
             layout.childControlHeight = true;
@@ -87,66 +88,47 @@ namespace CatanRoguelike.Game
                 _handCardObjects.Add(card);
             }
 
-            var devSlot = new GameObject("DevCardSlot");
-            devSlot.transform.SetParent(_handPanel, false);
-            _colonistDevCardSlot = devSlot.AddComponent<RectTransform>();
-            RunHudUiFactory.AddLayoutElement(devSlot, RunHudLayout.CardHeight - 8f).preferredWidth = 88f;
-            var devBg = devSlot.AddComponent<Image>();
-            devBg.color = new Color(0.14f, 0.16f, 0.22f, 0.95f);
-            RunHudUiFactory.CreateText(
-                devSlot.transform,
-                "Label",
-                ColonistHudCopy.DevCards,
-                12,
-                TextAnchor.UpperCenter,
-                RunHudUiFactory.TextMuted);
-            _colonistDevCountText = RunHudUiFactory.CreateText(
-                devSlot.transform,
-                "Count",
-                "0",
-                28,
-                TextAnchor.MiddleCenter,
-                RunHudUiFactory.TextPrimary,
-                FontStyle.Bold);
-
             _handRow = _handPanel;
         }
 
         private GameObject CreateColonistResourceCard(Transform parent, ResourceType resource)
         {
+            const float cardW = 72f;
+            const float cardH = 96f;
+
             var cardGo = new GameObject($"ResCard_{resource}");
             cardGo.transform.SetParent(parent, false);
-            var rect = cardGo.AddComponent<RectTransform>();
-            RunHudUiFactory.AddLayoutElement(cardGo, RunHudLayout.CardHeight - 8f).preferredWidth = 100f;
+            cardGo.AddComponent<RectTransform>();
+            RunHudUiFactory.AddLayoutElement(cardGo, cardH).preferredWidth = cardW;
 
             var bg = cardGo.AddComponent<Image>();
-            bg.color = new Color(0.12f, 0.14f, 0.18f, 0.96f);
+            bg.color = new Color(0.14f, 0.17f, 0.22f, 0.98f);
 
-            var stripe = new GameObject("Stripe");
-            stripe.transform.SetParent(cardGo.transform, false);
-            var stripeRect = stripe.AddComponent<RectTransform>();
-            stripeRect.anchorMin = new Vector2(0f, 1f);
-            stripeRect.anchorMax = new Vector2(1f, 1f);
-            stripeRect.pivot = new Vector2(0.5f, 1f);
-            stripeRect.sizeDelta = new Vector2(0f, 36f);
-            var stripeImg = stripe.AddComponent<Image>();
-            stripeImg.color = BoardResourceColors.GetHudSwatch(resource);
-            _resourceSwatches.Add(stripeImg);
+            var iconGo = new GameObject("Icon");
+            iconGo.transform.SetParent(cardGo.transform, false);
+            var iconRect = iconGo.AddComponent<RectTransform>();
+            iconRect.anchorMin = new Vector2(0.5f, 0.55f);
+            iconRect.anchorMax = new Vector2(0.5f, 0.55f);
+            iconRect.sizeDelta = new Vector2(40f, 40f);
+            var iconImg = iconGo.AddComponent<Image>();
+            iconImg.color = BoardResourceColors.GetHudSwatch(resource);
+            _resourceSwatches.Add(iconImg);
 
-            RunHudUiFactory.CreateText(
-                cardGo.transform,
-                "Name",
-                ResourceDisplayNames.GetEnglish(resource),
-                13,
-                TextAnchor.UpperLeft,
-                RunHudUiFactory.TextPrimary,
-                FontStyle.Bold);
+            var badgeGo = new GameObject("Badge");
+            badgeGo.transform.SetParent(cardGo.transform, false);
+            var badgeRect = badgeGo.AddComponent<RectTransform>();
+            badgeRect.anchorMin = new Vector2(1f, 1f);
+            badgeRect.anchorMax = new Vector2(1f, 1f);
+            badgeRect.pivot = new Vector2(1f, 1f);
+            badgeRect.anchoredPosition = new Vector2(-4f, -4f);
+            badgeRect.sizeDelta = new Vector2(28f, 24f);
+            badgeGo.AddComponent<Image>().color = new Color(0.08f, 0.10f, 0.14f, 0.92f);
 
             var count = RunHudUiFactory.CreateText(
-                cardGo.transform,
+                badgeGo.transform,
                 "Count",
                 "0",
-                32,
+                16,
                 TextAnchor.MiddleCenter,
                 RunHudUiFactory.TextPrimary,
                 FontStyle.Bold);
@@ -202,16 +184,33 @@ namespace CatanRoguelike.Game
                 TextAnchor.UpperLeft,
                 RunHudUiFactory.TextMuted,
                 FontStyle.Bold);
+            var logScrollGo = new GameObject("LogScroll");
+            logScrollGo.transform.SetParent(logPanel, false);
+            var logScrollRect = logScrollGo.AddComponent<RectTransform>();
+            logScrollRect.anchorMin = Vector2.zero;
+            logScrollRect.anchorMax = Vector2.one;
+            logScrollRect.offsetMin = new Vector2(0f, 0f);
+            logScrollRect.offsetMax = new Vector2(0f, -22f);
+            var scroll = logScrollGo.AddComponent<ScrollRect>();
+            scroll.horizontal = false;
+            var viewport = new GameObject("Viewport");
+            viewport.transform.SetParent(logScrollGo.transform, false);
+            var viewportRect = viewport.AddComponent<RectTransform>();
+            viewportRect.anchorMin = Vector2.zero;
+            viewportRect.anchorMax = Vector2.one;
+            viewportRect.offsetMin = Vector2.zero;
+            viewportRect.offsetMax = Vector2.zero;
+            viewport.AddComponent<Mask>().showMaskGraphic = false;
             _gameLogText = RunHudUiFactory.CreateText(
-                logPanel,
+                viewport.transform,
                 "Log",
                 string.Empty,
-                13,
+                12,
                 TextAnchor.UpperLeft,
                 RunHudUiFactory.TextMuted);
-            var logBody = _gameLogText.rectTransform;
-            logBody.offsetMin = new Vector2(0f, 0f);
-            logBody.offsetMax = new Vector2(0f, -22f);
+            _gameLogText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            scroll.content = _gameLogText.rectTransform;
+            scroll.viewport = viewportRect;
 
             var chatPanel = RunHudUiFactory.CreatePanel(
                 _colonistRightRail,
@@ -253,18 +252,16 @@ namespace CatanRoguelike.Game
                 bankStrip,
                 "Bank",
                 string.Empty,
-                12,
+                11,
                 TextAnchor.MiddleLeft,
                 RunHudUiFactory.TextPrimary);
+            _bankStripText.horizontalOverflow = HorizontalWrapMode.Overflow;
         }
 
         private void RefreshColonistPresentation(GameState state)
         {
             ApplyColonistHandAndBarInsets();
             PlaceholderHudLayout.SetActivePanelWidth(0f);
-
-            if (_colonistDevCountText != null)
-                _colonistDevCountText.text = state.PlayerHand.Count.ToString();
 
             var longestRoad = RouteCalculator.GetLongestRoadOwner(state.Board);
 
@@ -335,9 +332,11 @@ namespace CatanRoguelike.Game
                 bodyGo.transform,
                 "Text",
                 string.Empty,
-                14,
+                12,
                 TextAnchor.UpperLeft,
                 RunHudUiFactory.TextPrimary);
+            bodyText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            bodyText.verticalOverflow = VerticalWrapMode.Overflow;
             return panel;
         }
 

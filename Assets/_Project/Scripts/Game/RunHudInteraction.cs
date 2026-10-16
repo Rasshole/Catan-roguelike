@@ -22,8 +22,41 @@ namespace CatanRoguelike.Game
 
         public void SetDiceOverlay(string text)
         {
+            if (ColonistPresentation.IsActive && _colonistDieFaceA != null && _colonistDieFaceB != null)
+            {
+                if (string.IsNullOrEmpty(text))
+                {
+                    if (_controller != null)
+                        RefreshColonistDiceFaces(_controller.State);
+                    return;
+                }
+
+                if (TryParseDiePair(text, out int a, out int b))
+                {
+                    _colonistDieFaceA.text = a.ToString();
+                    _colonistDieFaceB.text = b.ToString();
+                }
+
+                return;
+            }
+
             if (_diceWidgetValue != null && !string.IsNullOrEmpty(text))
                 _diceWidgetValue.text = text;
+        }
+
+        private static bool TryParseDiePair(string text, out int a, out int b)
+        {
+            a = b = 0;
+            if (string.IsNullOrEmpty(text))
+                return false;
+
+            int plus = text.IndexOf('+');
+            if (plus > 0 && plus < text.Length - 1
+                && int.TryParse(text.Substring(0, plus).Trim(), out a)
+                && int.TryParse(text.Substring(plus + 1).Split(' ')[0].Trim(), out b))
+                return true;
+
+            return false;
         }
 
         public void BeginResourceAnimationLock() => _resourceAnimLock = true;
@@ -109,7 +142,9 @@ namespace CatanRoguelike.Game
             _buildSettlementButton = CreateBuildButton(ColonistHudCopy.Settlement, out _buildSettlementChip);
             _buildCityButton = CreateBuildButton(ColonistHudCopy.City, out _buildCityChip);
             Text devChip;
-            _buildDevButton = CreateBuildButton(ColonistHudCopy.DevCard, out devChip);
+            _buildDevButton = CreateBuildButton(
+                ColonistPresentation.IsActive ? "Dev" : ColonistHudCopy.DevCard,
+                out devChip);
             _buildDevButton.interactable = false;
             var devTip = _buildDevButton.gameObject.AddComponent<RunHudCostTooltip>();
             devTip.SetTooltip(ColonistPresentation.IsActive
@@ -124,6 +159,8 @@ namespace CatanRoguelike.Game
         private Button CreateBuildButton(string title, out Text chipText)
         {
             var button = RunHudUiFactory.CreateButton(_actionBarBuildRoot, title, RunHudUiFactory.ButtonSecondary);
+            if (ColonistPresentation.IsActive)
+                RunHudUiFactory.AddLayoutElement(button.gameObject, 48f).preferredWidth = 84f;
             button.gameObject.AddComponent<RunHudCostTooltip>();
 
             var chipGo = new GameObject("Chip");
@@ -178,23 +215,24 @@ namespace CatanRoguelike.Game
                     devChip.text = state.PlayerHand.Count.ToString();
             }
 
+            bool compact = ColonistPresentation.IsActive;
             ConfigureBuildButton(
                 _buildRoadButton,
-                BuildCostFormatter.FormatButtonLabel(ColonistHudCopy.Road, roadCost, roadOk),
+                compact ? ColonistHudCopy.Road : BuildCostFormatter.FormatButtonLabel(ColonistHudCopy.Road, roadCost, roadOk),
                 BuildCostFormatter.FormatTooltip(roadCost),
                 roadOk,
                 () => _boardInput.SetBuildModeRoad());
 
             ConfigureBuildButton(
                 _buildSettlementButton,
-                BuildCostFormatter.FormatButtonLabel(ColonistHudCopy.Settlement, settlementCost, settlementOk),
+                compact ? ColonistHudCopy.Settlement : BuildCostFormatter.FormatButtonLabel(ColonistHudCopy.Settlement, settlementCost, settlementOk),
                 BuildCostFormatter.FormatTooltip(settlementCost),
                 settlementOk,
                 () => _boardInput.SetBuildModeSettlement());
 
             ConfigureBuildButton(
                 _buildCityButton,
-                BuildCostFormatter.FormatButtonLabel(ColonistHudCopy.City, cityCost, cityOk),
+                compact ? ColonistHudCopy.City : BuildCostFormatter.FormatButtonLabel(ColonistHudCopy.City, cityCost, cityOk),
                 BuildCostFormatter.FormatTooltip(cityCost),
                 cityOk,
                 () => _boardInput.SetBuildModeCity());

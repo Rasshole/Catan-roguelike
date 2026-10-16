@@ -129,29 +129,33 @@ namespace CatanRoguelike.Game
                 boardRadius = 4f;
 
             _camera.orthographic = true;
-            _camera.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            _camera.transform.position = lookTarget.position + Vector3.up * 24f;
+            transform.rotation = Quaternion.Euler(90f, 0f, 0f);
 
-            float margin = TableCameraFraming.DefaultMarginFactor;
-            float hudBottom = (RunHudLayout.GetBottomHandHeight() + RunHudLayout.GetBottomActionBarHeight()
-                + RunHudLayout.Margin * 3f) / Mathf.Max(1f, screenHeight);
-            float hudRight = (RunHudLayout.RightChromePanelWidth + RunHudLayout.Margin * 2f)
-                / Mathf.Max(1f, screenWidth);
+            float left = RunHudLayout.GetContentLeftInset();
+            float right = RunHudLayout.GetContentRightInset();
+            float bottom = RunHudLayout.GetBottomHandHeight()
+                + RunHudLayout.GetBottomActionBarHeight()
+                + RunHudLayout.Margin * 2f;
+            float top = RunHudLayout.Margin;
 
-            float usableHeight = 1f - hudBottom;
-            float usableWidth = 1f - hudRight;
-            float sizeFromHeight = (boardRadius * 2f * margin) / Mathf.Max(0.35f, usableHeight);
-            float sizeFromWidth = (boardRadius * 2f * margin) / Mathf.Max(0.35f, usableWidth);
-            _camera.orthographicSize = Mathf.Max(sizeFromHeight, sizeFromWidth) * 0.55f;
+            float playWidth = Mathf.Max(64f, screenWidth - left - right);
+            float playHeight = Mathf.Max(64f, screenHeight - bottom - top);
+            float pad = 1.06f;
+            float orthoFromHeight = boardRadius * pad * screenHeight / (playHeight * 0.94f);
+            float orthoFromWidth = boardRadius * pad * screenHeight / (playWidth * 0.94f * _camera.aspect);
+            _camera.orthographicSize = Mathf.Max(orthoFromHeight, orthoFromWidth);
 
-            float offsetX = screenWidth * hudRight * 0.5f;
-            float offsetY = screenHeight * hudBottom * 0.35f;
-            Vector3 boardScreen = _camera.WorldToScreenPoint(lookTarget.position);
-            Vector3 worldAtBoard = _camera.ScreenToWorldPoint(
-                new Vector3(boardScreen.x, boardScreen.y, boardScreen.z));
-            Vector3 worldShifted = _camera.ScreenToWorldPoint(
-                new Vector3(boardScreen.x - offsetX, boardScreen.y + offsetY, boardScreen.z));
-            transform.position += worldAtBoard - worldShifted;
+            float worldPerPixel = (2f * _camera.orthographicSize) / screenHeight;
+            float desiredScreenX = left + playWidth * 0.5f;
+            float desiredScreenY = bottom + playHeight * 0.5f;
+            float deltaScreenX = desiredScreenX - screenWidth * 0.5f;
+            float deltaScreenY = desiredScreenY - screenHeight * 0.5f;
+
+            Vector3 center = lookTarget.position;
+            transform.position = new Vector3(
+                center.x - deltaScreenX * worldPerPixel,
+                center.y + 28f,
+                center.z - deltaScreenY * worldPerPixel);
         }
 
         private void ApplyOrbitPose()

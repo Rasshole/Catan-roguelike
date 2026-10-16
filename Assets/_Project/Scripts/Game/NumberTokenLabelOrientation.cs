@@ -12,8 +12,15 @@ namespace CatanRoguelike.Game
         private const float MinPlanarDistanceSq = 1e-6f;
         private const float MinReadableAlignment = 0.99f;
 
+        /// <summary>Upright digits on a flat colonist.io top-down board (chip lies in XZ).</summary>
+        public static Quaternion ComputeColonistTopDownRotation() =>
+            Quaternion.Euler(FlatPitchDegrees, 0f, 0f);
+
         public static Quaternion ComputeWorldRotation(Vector3 labelWorldPosition, Vector3 cameraWorldPosition)
         {
+            if (ColonistPresentation.IsActive)
+                return ComputeColonistTopDownRotation();
+
             var toCamera = cameraWorldPosition - labelWorldPosition;
             toCamera.y = 0f;
             if (toCamera.sqrMagnitude < MinPlanarDistanceSq)

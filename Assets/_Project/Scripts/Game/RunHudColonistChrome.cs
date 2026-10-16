@@ -78,8 +78,7 @@ namespace CatanRoguelike.Game
             if (_bankStripText != null)
             {
                 var bank = state.Bank;
-                _bankStripText.text =
-                    $"Bank  T{bank.Wood} M{bank.Brick} K{bank.Wheat} U{bank.Sheep} S{bank.Stone}";
+                _bankStripText.text = ColonistBankDisplay.FormatStrip(bank);
             }
 
             if (_opponentPanelText != null)

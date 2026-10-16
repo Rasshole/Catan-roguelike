@@ -18,7 +18,9 @@ namespace CatanRoguelike.Game
             Margin + GetBottomHandHeight() + Margin * 0.5f;
 
         public static float GetBottomHandHeight() =>
-            ColonistPresentation.IsActive ? 172f : BottomHandHeight;
+            ColonistPresentation.IsActive ? 118f : BottomHandHeight;
+
+        public const float ColonistResourceHandWidth = 500f;
 
         public static float GetBottomActionBarHeight() =>
             ColonistPresentation.IsActive ? 84f : BottomActionBarHeight;

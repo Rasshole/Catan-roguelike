@@ -38,20 +38,16 @@ namespace CatanRoguelike.Game
             rootLayout.childControlHeight = true;
 
             _actionBarBuildRoot = CreateActionBarSlot("BuildSlot", flexibleWidth: 1f);
-            _actionBarCenterRoot = CreateActionBarSlot("DiceRollSlot", flexibleWidth: 0f, minWidth: 220f);
+            _actionBarTradeRoot = CreateActionBarSlot("TradeSlot", flexibleWidth: 0f, minWidth: 96f);
+            _actionBarCenterRoot = CreateActionBarSlot("DiceRollSlot", flexibleWidth: 0f, minWidth: 200f);
             float endTurnMinWidth = ColonistPresentation.IsActive ? 200f : 148f;
             _actionBarEndRoot = CreateActionBarSlot("EndTurnSlot", flexibleWidth: 0f, minWidth: endTurnMinWidth);
 
             BuildDiceAndRollCluster(_actionBarCenterRoot);
             BuildEndTurnButton(_actionBarEndRoot);
 
-            if (ColonistPresentation.IsActive && _openTradeDialogButton == null)
-            {
-                var tradeBtn = RunHudUiFactory.CreateButton(_actionBarBuildRoot, ColonistHudCopy.Trade, RunHudUiFactory.ButtonSecondary);
-                RunHudUiFactory.AddLayoutElement(tradeBtn.gameObject, 48f).preferredWidth = 96f;
-                tradeBtn.onClick.AddListener(() => SetTradeDialogVisible(true));
-                _openTradeDialogButton = tradeBtn;
-            }
+            if (ColonistPresentation.IsActive)
+                EnsureColonistTradeButton();
         }
 
         private RectTransform CreateActionBarSlot(string name, float flexibleWidth, float minWidth = 0f)
@@ -73,23 +69,27 @@ namespace CatanRoguelike.Game
 
         private void BuildDiceAndRollCluster(RectTransform parent)
         {
-            var diceGo = new GameObject("DiceWidget");
-            diceGo.layer = parent.gameObject.layer;
-            diceGo.transform.SetParent(parent, false);
-            var diceRect = diceGo.AddComponent<RectTransform>();
-            diceRect.sizeDelta = new Vector2(88f, 48f);
-            RunHudUiFactory.AddLayoutElement(diceGo, 48f).preferredWidth = 88f;
-            var diceBg = diceGo.AddComponent<Image>();
-            diceBg.color = new Color(0.12f, 0.16f, 0.22f, 1f);
-
-            _diceWidgetValue = RunHudUiFactory.CreateText(
-                diceGo.transform,
-                "Dice",
-                "—",
-                28,
-                TextAnchor.MiddleCenter,
-                RunHudUiFactory.TextPrimary,
-                FontStyle.Bold);
+            if (ColonistPresentation.IsActive)
+            {
+                BuildColonistDieFace(parent, "DieA", out _colonistDieFaceA);
+                BuildColonistDieFace(parent, "DieB", out _colonistDieFaceB);
+            }
+            else
+            {
+                var diceGo = new GameObject("DiceWidget");
+                diceGo.layer = parent.gameObject.layer;
+                diceGo.transform.SetParent(parent, false);
+                RunHudUiFactory.AddLayoutElement(diceGo, 48f).preferredWidth = 88f;
+                diceGo.AddComponent<Image>().color = new Color(0.12f, 0.16f, 0.22f, 1f);
+                _diceWidgetValue = RunHudUiFactory.CreateText(
+                    diceGo.transform,
+                    "Dice",
+                    "—",
+                    28,
+                    TextAnchor.MiddleCenter,
+                    RunHudUiFactory.TextPrimary,
+                    FontStyle.Bold);
+            }
 
             _rollPinned = RunHudUiFactory.CreateButton(parent, ColonistHudCopy.Roll, RunHudUiFactory.ButtonFill);
             RunHudUiFactory.AddLayoutElement(_rollPinned.gameObject, 48f).preferredWidth = 96f;
@@ -118,6 +118,12 @@ namespace CatanRoguelike.Game
 
         private void RefreshDiceWidget(GameState state)
         {
+            if (ColonistPresentation.IsActive)
+            {
+                RefreshColonistDiceFaces(state);
+                return;
+            }
+
             if (_diceWidgetValue == null)
                 return;
 
