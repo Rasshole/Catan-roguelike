@@ -133,8 +133,12 @@ namespace CatanRoguelike.Game
 
         private void EnsureBuildButtons()
         {
-            if (_buildRoadButton != null)
+            if (_buildRoadButton != null && _buildRoadButton)
                 return;
+
+            _buildRoadButton = null;
+            _buildSettlementButton = null;
+            _buildCityButton = null;
 
             RunHudCostTooltip.EnsureShared(_canvas.transform);
             if (ColonistPresentation.IsActive)
@@ -279,11 +283,20 @@ namespace CatanRoguelike.Game
             if (button == null)
                 return;
 
-            foreach (var text in button.GetComponentsInChildren<Text>())
+            var model = button.GetComponent<ColonistBuildButtonLabel>();
+            if (model != null)
+                model.SetTitle(label);
+            else
             {
-                if (text.gameObject.name == "Label" || text.gameObject.name == "Title")
-                    text.text = label;
+                foreach (var text in button.GetComponentsInChildren<Text>())
+                {
+                    if (text.gameObject.name == "Label" || text.gameObject.name == "Title")
+                        text.text = label;
+                }
             }
+
+            if (button == _buildSettlementButton)
+                ColonistActionBarLabels.SetSettlementTitle(label);
 
             var tip = button.GetComponent<RunHudCostTooltip>();
             if (tip != null)

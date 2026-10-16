@@ -118,9 +118,7 @@ namespace CatanRoguelike.Game
             iconRect.offsetMin = Vector2.zero;
             iconRect.offsetMax = Vector2.zero;
             var iconImg = iconGo.AddComponent<Image>();
-            iconImg.sprite = ColonistHudResourceSprites.Get(resource);
-            iconImg.preserveAspect = true;
-            iconImg.color = Color.white;
+            ColonistHudIconGraphic.ApplyCardIcon(iconImg, ColonistHudResourceSprites.Get(resource));
             _resourceSwatches.Add(iconImg);
 
             var badgeGo = new GameObject("Badge");

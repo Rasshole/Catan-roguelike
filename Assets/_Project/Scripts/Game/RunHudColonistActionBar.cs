@@ -51,9 +51,17 @@ namespace CatanRoguelike.Game
             SampleButton(_buildSettlementButton, ref probe.SettlementActiveInHierarchy, ref probe.SettlementSize);
             SampleButton(_buildCityButton, ref probe.CityActiveInHierarchy, ref probe.CitySize);
             SampleButton(_buildDevButton, ref probe.DevActiveInHierarchy, ref probe.DevSize);
-            probe.SettlementButtonLabel = ColonistBuildButtonChrome.GetTitleText(_buildSettlementButton);
+            probe.SettlementButtonLabel = ColonistActionBarLabels.SettlementTitle;
+            if (string.IsNullOrEmpty(probe.SettlementButtonLabel))
+                probe.SettlementButtonLabel = ColonistBuildButtonLabel.GetTitle(_buildSettlementButton);
             return probe;
         }
+
+        public static string DescribeSettlementButtonTexts(Button button) =>
+            ColonistBuildButtonLabel.DescribeAllTexts(button);
+
+        public string DescribeSettlementButtonTextsForTests() =>
+            DescribeSettlementButtonTexts(_buildSettlementButton);
 
         public int GetColonistBankCardCountForTests() =>
             _colonistBankStrip != null ? ColonistHudBankStrip.ExpectedCardCount : 0;

@@ -13,6 +13,13 @@ namespace CatanRoguelike.Game
             foreach (Transform child in button.transform)
                 Object.Destroy(child.gameObject);
 
+            var labelModel = button.gameObject.GetComponent<ColonistBuildButtonLabel>();
+            if (labelModel == null)
+                labelModel = button.gameObject.AddComponent<ColonistBuildButtonLabel>();
+            labelModel.SetTitle(shortTitle);
+            if (shortTitle == ColonistHudCopy.Settlement)
+                ColonistActionBarLabels.SetSettlementTitle(shortTitle);
+
             var layout = button.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(4, 4, 4, 4);
             layout.spacing = 2f;
@@ -31,6 +38,7 @@ namespace CatanRoguelike.Game
             titleRowLayout.childForceExpandHeight = false;
             titleRowLayout.childControlWidth = true;
             titleRowLayout.childControlHeight = true;
+            titleRowLayout.padding = new RectOffset(0, 26, 0, 0);
             RunHudUiFactory.AddLayoutElement(titleRow, 22f);
 
             var iconGo = new GameObject("Icon");
@@ -68,8 +76,8 @@ namespace CatanRoguelike.Game
             chipRect.anchorMin = new Vector2(1f, 1f);
             chipRect.anchorMax = new Vector2(1f, 1f);
             chipRect.pivot = new Vector2(1f, 1f);
-            chipRect.anchoredPosition = new Vector2(-3f, -3f);
-            chipRect.sizeDelta = new Vector2(24f, 18f);
+            chipRect.anchoredPosition = new Vector2(-2f, -2f);
+            chipRect.sizeDelta = new Vector2(22f, 18f);
             chipGo.AddComponent<Image>().color = new Color(0.1f, 0.12f, 0.16f, 0.9f);
             chipGo.AddComponent<LayoutElement>().ignoreLayout = true;
             pieceCountChip = RunHudUiFactory.CreateText(
@@ -82,8 +90,10 @@ namespace CatanRoguelike.Game
                 FontStyle.Bold);
             pieceCountChip.raycastTarget = false;
 
-            float buttonWidth = shortTitle == ColonistHudCopy.Settlement ? 108f : 94f;
+            float buttonWidth = shortTitle == ColonistHudCopy.Settlement ? 116f : 94f;
             RunHudUiFactory.AddLayoutElement(button.gameObject, 56f).preferredWidth = buttonWidth;
+
+            labelModel.SetTitle(shortTitle);
             return button;
         }
 
@@ -91,6 +101,10 @@ namespace CatanRoguelike.Game
         {
             if (button == null)
                 return string.Empty;
+
+            var fromModel = ColonistBuildButtonLabel.GetTitle(button);
+            if (!string.IsNullOrEmpty(fromModel))
+                return fromModel;
 
             var title = button.transform.Find("TitleRow/Title")?.GetComponent<Text>();
             if (title != null && !string.IsNullOrEmpty(title.text))
@@ -110,9 +124,18 @@ namespace CatanRoguelike.Game
             if (button == null)
                 return;
 
-            var title = button.transform.Find("TitleRow/Title")?.GetComponent<Text>();
-            if (title != null)
-                title.text = shortTitle;
+            var model = button.GetComponent<ColonistBuildButtonLabel>();
+            if (model != null)
+                model.SetTitle(shortTitle);
+            else
+            {
+                var title = button.transform.Find("TitleRow/Title")?.GetComponent<Text>();
+                if (title != null)
+                    title.text = shortTitle;
+            }
+
+            if (shortTitle == ColonistHudCopy.Settlement)
+                ColonistActionBarLabels.SetSettlementTitle(shortTitle);
         }
 
         public static void SetCost(Button button, ResourceBundle cost, bool canAfford)

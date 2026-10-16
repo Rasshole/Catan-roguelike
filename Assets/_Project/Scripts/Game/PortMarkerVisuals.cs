@@ -62,7 +62,61 @@ namespace CatanRoguelike.Game
                     resourceColor);
             }
 
+            CreatePortRateBadge(
+                root.transform,
+                isGeneric,
+                specificResource,
+                PostHeight + 0.02f,
+                PierLength + PostWidth * 0.35f);
+
             return root;
+        }
+
+        private static void CreatePortRateBadge(
+            Transform parent,
+            bool isGeneric,
+            ResourceType? specificResource,
+            float localY,
+            float localZ)
+        {
+            var badgeRoot = new GameObject("PortRateBadge");
+            badgeRoot.transform.SetParent(parent, false);
+            badgeRoot.transform.localPosition = new Vector3(0f, localY, localZ);
+
+            var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            disc.name = "BadgeDisc";
+            disc.transform.SetParent(badgeRoot.transform, false);
+            disc.transform.localPosition = Vector3.zero;
+            disc.transform.localScale = new Vector3(0.16f, 0.01f, 0.16f);
+            disc.GetComponent<Renderer>().sharedMaterial = BuiltInMaterials.CreateUnlit(new Color(0.95f, 0.95f, 0.93f, 1f));
+            Object.Destroy(disc.GetComponent<Collider>());
+
+            var labelGo = new GameObject("RateLabel");
+            labelGo.transform.SetParent(badgeRoot.transform, false);
+            labelGo.transform.localPosition = new Vector3(0f, 0.02f, 0f);
+            labelGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            labelGo.transform.localScale = Vector3.one * 0.06f;
+            var text = labelGo.AddComponent<TextMesh>();
+            text.text = isGeneric ? "3:1" : "2:1";
+            text.fontSize = 48;
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.color = new Color(0.12f, 0.14f, 0.18f, 1f);
+            text.characterSize = 0.12f;
+
+            if (!isGeneric && specificResource.HasValue)
+            {
+                var iconGo = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                iconGo.name = "RateIcon";
+                iconGo.transform.SetParent(badgeRoot.transform, false);
+                iconGo.transform.localPosition = new Vector3(0.05f, 0.021f, 0f);
+                iconGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                iconGo.transform.localScale = Vector3.one * 0.05f;
+                var renderer = iconGo.GetComponent<Renderer>();
+                renderer.sharedMaterial = BuiltInMaterials.CreateUnlitTransparent(
+                    ColonistResourceIconTextures.Get(specificResource.Value));
+                Object.Destroy(iconGo.GetComponent<Collider>());
+            }
         }
 
         private static void CreatePart(

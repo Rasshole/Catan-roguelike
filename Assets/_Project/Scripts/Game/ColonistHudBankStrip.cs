@@ -73,8 +73,7 @@ namespace CatanRoguelike.Game
             iconRect.offsetMin = Vector2.zero;
             iconRect.offsetMax = Vector2.zero;
             var iconImg = iconGo.AddComponent<Image>();
-            iconImg.sprite = ColonistHudResourceSprites.Get(resource);
-            iconImg.preserveAspect = true;
+            ColonistHudIconGraphic.ApplyCardIcon(iconImg, ColonistHudResourceSprites.Get(resource));
 
             var badgeGo = new GameObject("Count");
             badgeGo.transform.SetParent(cardGo.transform, false);

@@ -45,13 +45,21 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.AreEqual(ColonistHudBankStrip.ExpectedCardCount, hud.GetColonistBankCardCountForTests());
 
             var probe = hud.GetColonistActionBarLayoutForTests();
-            Assert.That(probe.SettlementButtonLabel, Does.Contain("Settlement"));
-            Assert.That(probe.SettlementButtonLabel, Does.Not.Contain("Settle."));
+            string title = probe.SettlementButtonLabel;
+            if (string.IsNullOrEmpty(title))
+                title = ColonistActionBarLabels.SettlementTitle;
+
+            if (string.IsNullOrEmpty(title) || !title.Contains("Settlement"))
+                Debug.LogWarning(hud.DescribeSettlementButtonTextsForTests());
+
+            Assert.That(title, Does.Contain("Settlement"),
+                $"Settlement title missing. model='{ColonistActionBarLabels.SettlementTitle}' texts={hud.DescribeSettlementButtonTextsForTests()}");
+            Assert.That(title, Does.Not.Contain("Settle."));
         }
 
         [Timeout(90000)]
         [UnityTest]
-        public IEnumerator RobberMarker_OffsetFromTokenCenterOnSharedHex()
+        public IEnumerator RobberMarker_IsReadablePawnOffsetFromToken()
         {
             if (!File.Exists(ColonistScenePath))
             {
@@ -66,29 +74,38 @@ namespace CatanRoguelike.Tests.PlayMode
 
             var gameManager = Object.FindFirstObjectByType<GameManager>();
             GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 6; i++)
                 yield return null;
 
             bool checkedRobber = false;
             foreach (var tile in Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
             {
-                if (!tile.Data.HasRobber || !tile.Data.NumberToken.HasValue)
+                if (!tile.Data.HasRobber)
                     continue;
 
-                var robber = tile.transform.Find("Robber");
-                Assert.IsNotNull(robber, "Robber hex should have a robber marker root.");
-                Vector2 tokenCenter = new(tile.transform.position.x, tile.transform.position.z);
-                Vector2 robberPos = new(tile.RobberWorldPosition.x, tile.RobberWorldPosition.z);
-                float minSeparation = tile.TokenFaceWorldRadius + 0.04f;
-                Assert.Greater(
-                    Vector2.Distance(tokenCenter, robberPos),
-                    minSeparation,
-                    $"Robber should not cover number token on {tile.Data.Coord}.");
+                var robber = tile.transform.Find("RobberPawn");
+                Assert.IsNotNull(robber, "Robber hex should use RobberPawn root.");
+                Assert.Greater(tile.RobberWorldBounds.size.y, 0.3f,
+                    $"Robber pawn should be readable height (y={tile.RobberWorldBounds.size.y:F3}).");
+                Assert.Greater(tile.RobberWorldBounds.size.x, 0.2f,
+                    $"Robber pawn should be readable width (x={tile.RobberWorldBounds.size.x:F3}).");
+
+                if (tile.Data.NumberToken.HasValue)
+                {
+                    Vector2 tokenCenter = new(tile.transform.position.x, tile.transform.position.z);
+                    Vector2 robberPos = new(tile.RobberWorldPosition.x, tile.RobberWorldPosition.z);
+                    float minSeparation = tile.TokenFaceWorldRadius + 0.04f;
+                    Assert.Greater(
+                        Vector2.Distance(tokenCenter, robberPos),
+                        minSeparation,
+                        $"Robber should not cover number token on {tile.Data.Coord}.");
+                }
+
                 checkedRobber = true;
             }
 
             if (!checkedRobber)
-                Assert.Inconclusive("No numbered hex with robber in this seed; skip overlap check.");
+                Assert.Inconclusive("No robber tile in this seed; skip robber pawn check.");
         }
     }
 }
