@@ -145,26 +145,31 @@ namespace CatanRoguelike.Game
 
             if (!isGeneric && specificResource.HasValue)
             {
-                float iconSize = discDiameter * 0.40f;
-                var labelRenderer = labelGo.GetComponent<Renderer>();
-                Vector3 right = ColonistFlatBoardQuad.GetColonistCameraRightOnBoard();
+                float iconWorldSize = labelWorldHeight;
+                float stackGap = discDiameter * 0.06f;
                 Vector3 upBoard = ColonistFlatBoardQuad.GetColonistCameraUpOnBoard();
-                Vector3 iconWorld = labelRenderer.bounds.center
-                    + right * (labelWorldWidth * 0.34f + iconSize * 0.55f)
-                    + upBoard * (iconSize * 0.40f);
-                iconWorld.y = labelRenderer.bounds.max.y + 0.008f;
-                Vector3 iconLocal = badgeRoot.transform.InverseTransformPoint(iconWorld);
+                Vector3 upLocal = badgeRoot.transform.InverseTransformDirection(upBoard);
+                if (upLocal.sqrMagnitude > 1e-6f)
+                    upLocal.Normalize();
 
-                ColonistFlatBoardQuad.Create(
+                Vector3 labelLocal = new Vector3(0f, labelLocalY, 0f) - upLocal * (iconWorldSize * 0.5f + stackGap * 0.5f);
+                labelGo.transform.localPosition = labelLocal;
+
+                var iconGo = ColonistFlatBoardQuad.Create(
                     badgeRoot.transform,
                     "RateIcon",
-                    iconLocal,
-                    iconSize,
-                    iconSize,
+                    labelLocal + upLocal * (iconWorldSize + stackGap),
+                    iconWorldSize,
+                    iconWorldSize,
                     ColonistResourceIconTextures.Get(specificResource.Value),
                     3220,
                     discRenderer,
                     alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);
+                ColonistFlatBoardQuad.ApplyWorldSize(
+                    iconGo.transform,
+                    badgeRoot.transform,
+                    iconWorldSize,
+                    iconWorldSize);
             }
         }
 

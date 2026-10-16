@@ -209,6 +209,30 @@ namespace CatanRoguelike.Tests.PlayMode
                 labelBounds.min.y,
                 discBounds.max.y - 0.02f,
                 "Port rate label should render above the badge disc.");
+
+            Transform rateIcon = badge.Find("RateIcon");
+            if (rateIcon == null)
+                rateIcon = badge.Find("RateLabel/RateIcon");
+            if (rateIcon != null)
+            {
+                var iconRenderer = rateIcon.GetComponent<Renderer>();
+                Assert.IsNotNull(iconRenderer);
+                Vector2 labelScreen = ColonistFlatBoardQuad.MeasureScreenPixelSize(labelRenderer, camera);
+                Vector2 iconScreen = ColonistFlatBoardQuad.MeasureScreenPixelSize(iconRenderer, camera);
+                Assert.Greater(
+                    iconScreen.y,
+                    labelScreen.y * 0.65f,
+                    $"2:1 port icon should be readable on screen (iconH={iconScreen.y:F1} labelH={labelScreen.y:F1}).");
+                Assert.Greater(iconScreen.y, 10f, $"2:1 port icon screen height should not be a sliver (h={iconScreen.y:F1}px).");
+
+                Vector3 iconScreenCenter = camera.WorldToScreenPoint(iconRenderer.bounds.center);
+                Vector3 discScreenCenter = camera.WorldToScreenPoint(discRenderer.bounds.center);
+                Vector2 discScreenSize = ColonistFlatBoardQuad.MeasureScreenPixelSize(discRenderer, camera);
+                Assert.Less(Mathf.Abs(iconScreenCenter.x - discScreenCenter.x), discScreenSize.x * 0.45f,
+                    "2:1 port icon should stay centered on the badge in screen space.");
+                Assert.Less(Mathf.Abs(iconScreenCenter.y - discScreenCenter.y), discScreenSize.y * 0.55f,
+                    "2:1 port icon should stay inside the badge in screen space.");
+            }
         }
     }
 }

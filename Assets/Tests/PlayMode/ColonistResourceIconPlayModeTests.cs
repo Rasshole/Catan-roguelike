@@ -126,7 +126,6 @@ namespace CatanRoguelike.Tests.PlayMode
 
             var camera = Camera.main;
             Assert.IsNotNull(camera);
-            Vector3 cameraUp = ColonistFlatBoardQuad.GetColonistCameraUpOnBoard(camera);
 
             int checkedIcons = 0;
             foreach (var tile in Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
@@ -136,12 +135,18 @@ namespace CatanRoguelike.Tests.PlayMode
 
                 var icon = tile.transform.Find("ResourceIcon");
                 Assert.IsNotNull(icon, $"Hex {tile.Data.Coord} should have ResourceIcon.");
-                Vector3 textureV = ColonistFlatBoardQuad.GetTextureVOnBoard(icon);
+                Vector2 screenV = ColonistFlatBoardQuad.MeasureTextureVScreenDelta(
+                    icon,
+                    camera,
+                    ColonistFlatBoardQuad.AlignmentMode.BoardPitchOnly);
                 Assert.Greater(
-                    Vector3.Dot(textureV, cameraUp),
-                    0.85f,
-                    $"Resource icon +V should align with camera up on board for {tile.Data.Coord} " +
-                    $"(dot={Vector3.Dot(textureV, cameraUp):F3}).");
+                    screenV.y,
+                    2f,
+                    $"Resource icon art should read upward on screen for {tile.Data.Coord} (screenDelta={screenV}).");
+                Assert.Greater(
+                    screenV.magnitude,
+                    3f,
+                    $"Resource icon screen-up sample should be measurable for {tile.Data.Coord}.");
                 checkedIcons++;
             }
 

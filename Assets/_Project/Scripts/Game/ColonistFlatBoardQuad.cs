@@ -159,6 +159,71 @@ namespace CatanRoguelike.Game
         public static Vector3 GetTextureVOnBoard(Transform quadTransform) =>
             ProjectOnBoardXZ(GetTextureVWorldAxis(quadTransform));
 
+        /// <summary>
+        /// World axis that reads as texture +V for board icons (pitch-only art is rotated 90° in UV space).
+        /// </summary>
+        public static Vector3 GetEffectiveTextureVWorldAxis(Transform quadTransform, AlignmentMode alignment)
+        {
+            if (quadTransform == null)
+                return Vector3.forward;
+            return alignment == AlignmentMode.BoardPitchOnly
+                ? quadTransform.TransformDirection(Vector3.right).normalized
+                : GetTextureVWorldAxis(quadTransform);
+        }
+
+        public static Vector2 MeasureTextureVScreenDelta(
+            Transform quadTransform,
+            Camera camera,
+            AlignmentMode alignment,
+            float worldOffset = 0.08f)
+        {
+            if (quadTransform == null || camera == null)
+                return Vector2.zero;
+
+            var renderer = quadTransform.GetComponent<Renderer>();
+            Vector3 center = renderer != null ? renderer.bounds.center : quadTransform.position;
+            Vector3 vWorld = GetEffectiveTextureVWorldAxis(quadTransform, alignment);
+            Vector3 screenCenter = camera.WorldToScreenPoint(center);
+            Vector3 screenV = camera.WorldToScreenPoint(center + vWorld * worldOffset);
+            return new Vector2(screenV.x - screenCenter.x, screenV.y - screenCenter.y);
+        }
+
+        public static Vector2 MeasureScreenPixelSize(Renderer renderer, Camera camera)
+        {
+            if (renderer == null || camera == null)
+                return Vector2.zero;
+
+            Bounds bounds = renderer.bounds;
+            Vector3 center = bounds.center;
+            Vector3 extents = bounds.extents;
+            Vector3[] offsets =
+            {
+                new Vector3(extents.x, extents.y, extents.z),
+                new Vector3(extents.x, extents.y, -extents.z),
+                new Vector3(extents.x, -extents.y, extents.z),
+                new Vector3(extents.x, -extents.y, -extents.z),
+                new Vector3(-extents.x, extents.y, extents.z),
+                new Vector3(-extents.x, extents.y, -extents.z),
+                new Vector3(-extents.x, -extents.y, extents.z),
+                new Vector3(-extents.x, -extents.y, -extents.z)
+            };
+
+            float minX = float.PositiveInfinity;
+            float maxX = float.NegativeInfinity;
+            float minY = float.PositiveInfinity;
+            float maxY = float.NegativeInfinity;
+            foreach (var offset in offsets)
+            {
+                Vector3 screen = camera.WorldToScreenPoint(center + offset);
+                minX = Mathf.Min(minX, screen.x);
+                maxX = Mathf.Max(maxX, screen.x);
+                minY = Mathf.Min(minY, screen.y);
+                maxY = Mathf.Max(maxY, screen.y);
+            }
+
+            return new Vector2(maxX - minX, maxY - minY);
+        }
+
         public static void LogDiagnostics(string tag, Transform quadTransform, Renderer referenceBelow = null)
         {
             if (quadTransform == null)
