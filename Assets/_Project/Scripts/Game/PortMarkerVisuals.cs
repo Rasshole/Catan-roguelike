@@ -116,14 +116,12 @@ namespace CatanRoguelike.Game
                 badgeLocal.z,
                 BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc);
 
-            float pierLen = Mathf.Max(PierLength, badgeLocalZ * 0.92f);
+            float pierLen = Mathf.Max(PierWidth * 2f, badgeLocalZ);
 
             CreatePart("PierPlank", root.transform,
                 new Vector3(0f, PierHeight * 0.5f, pierLen * 0.5f),
                 new Vector3(PierWidth, PierHeight, pierLen),
                 PierWoodColor);
-
-            TryCreateCoastPierArm(root.transform, vertex, board, hexScale, vertexPos.y, pierLen);
 
             CreatePart("PierPost", root.transform,
                 new Vector3(0f, PostHeight * 0.5f, badgeLocalZ - PostWidth * 0.25f),
@@ -139,48 +137,6 @@ namespace CatanRoguelike.Game
 
             LogChildRenderersOnce(root);
             return root;
-        }
-
-        private static void TryCreateCoastPierArm(
-            Transform root,
-            Vertex portVertex,
-            BoardState board,
-            float hexScale,
-            float worldY,
-            float pierLen)
-        {
-            if (board == null)
-                return;
-
-            portVertex = VertexGraph.Canonicalize(portVertex);
-            foreach (var adjacent in VertexGraph.GetAdjacentVertices(portVertex))
-            {
-                var edge = VertexGraph.GetEdgeBetween(portVertex, adjacent);
-                if (PortBadgePlacement.GetHexesForEdgeCount(board, edge) != 1)
-                    continue;
-
-                var (nx, nz) = HexMath.VertexToWorldPosition(adjacent, hexScale);
-                Vector3 neighborLocal = root.InverseTransformPoint(new Vector3(nx, worldY, nz));
-                if (neighborLocal.sqrMagnitude < 1e-4f)
-                    continue;
-
-                Vector3 along = new Vector3(neighborLocal.x, 0f, neighborLocal.z);
-                float armLength = along.magnitude;
-                if (armLength < PierWidth * 0.5f)
-                    continue;
-
-                Vector3 armCenter = along * 0.5f;
-                armCenter.y = PierHeight * 0.5f;
-                var armRotation = Quaternion.LookRotation(along / armLength, Vector3.up);
-                CreatePart(
-                    "PierCoastArm",
-                    root,
-                    armCenter,
-                    new Vector3(PierWidth * 0.85f, PierHeight, armLength),
-                    PierWoodColor,
-                    armRotation);
-                return;
-            }
         }
 
         private static void CreatePortRateBadge(

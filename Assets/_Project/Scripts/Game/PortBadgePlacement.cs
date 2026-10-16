@@ -7,10 +7,13 @@ using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
 namespace CatanRoguelike.Game
 {
-    /// <summary>Places port rate badges in open water off the coast edge (XZ).</summary>
+    /// <summary>Places port rate badges in open water off the coast (XZ).</summary>
     public static class PortBadgePlacement
     {
         public const float SeaClearanceBeyondDisc = 0.05f;
+        private const float HexInradiusPushFactor = 0.15f;
+        private const float OutwardStepInradiusFactor = 0.12f;
+        private const int MaxOutwardIterations = 48;
 
         public static bool TryComputeBadgeCenter(
             BoardState board,
@@ -22,20 +25,39 @@ namespace CatanRoguelike.Game
         {
             badgeCenter = default;
             seaOutward = default;
-            if (board == null)
+            if (board == null || board.Tiles.Count == 0)
                 return false;
 
             portVertex = VertexGraph.Canonicalize(portVertex);
-            if (!TryGetLandCentroid(board, portVertex, hexScale, out Vector2 landCentroid))
+            var (vx, vz) = HexMath.VertexToWorldPosition(portVertex, hexScale);
+            Vector2 vertexPos = new Vector2(vx, vz);
+
+            if (!TouchesLand(board, portVertex))
                 return false;
 
-            if (!TryGetCoastEdgeFrame(board, portVertex, hexScale, landCentroid, out Vector2 edgeMid, out Vector2 seaDir))
+            Vector2 coastAnchor = GetCoastAnchor(board, portVertex, hexScale, vertexPos);
+            Vector2 seaDir = ComputeSeawardDirection(board, portVertex, hexScale, vertexPos);
+            if (seaDir.sqrMagnitude < 1e-8f)
                 return false;
 
-            float push = discRadius + SeaClearanceBeyondDisc;
-            badgeCenter = edgeMid + seaDir * push;
+            float hexInradius = hexScale * HexMath.InnerRadius;
+            float initialPush = discRadius + SeaClearanceBeyondDisc + hexInradius * HexInradiusPushFactor;
+            badgeCenter = coastAnchor + seaDir * initialPush;
+
+            float step = hexInradius * OutwardStepInradiusFactor;
+            for (int i = 0; i < MaxOutwardIterations; i++)
+            {
+                if (!DiscIntersectsAnyLandHex(badgeCenter, discRadius, board, hexScale))
+                {
+                    seaOutward = seaDir;
+                    return true;
+                }
+
+                badgeCenter += seaDir * step;
+            }
+
             seaOutward = seaDir;
-            return true;
+            return !DiscIntersectsAnyLandHex(badgeCenter, discRadius, board, hexScale);
         }
 
         public static bool DiscIntersectsAnyLandHex(
@@ -88,101 +110,85 @@ namespace CatanRoguelike.Game
             }
         }
 
-        private static bool TryGetLandCentroid(
+        private static bool TouchesLand(BoardState board, Vertex portVertex)
+        {
+            foreach (var hex in VertexGraph.GetHexesForVertex(portVertex))
+            {
+                if (board.Tiles.ContainsKey(hex))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static Vector2 GetCoastAnchor(
             BoardState board,
             Vertex portVertex,
             float hexScale,
-            out Vector2 centroid)
+            Vector2 vertexPos)
         {
-            centroid = default;
+            Vector2 midSum = vertexPos;
+            int midCount = 1;
+            foreach (var adjacent in VertexGraph.GetAdjacentVertices(portVertex))
+            {
+                var edge = VertexGraph.GetEdgeBetween(portVertex, adjacent);
+                if (CountHexesForEdge(board, edge) != 1)
+                    continue;
+
+                var (mx, mz) = HexMath.EdgeMidpoint(edge, hexScale);
+                midSum += new Vector2(mx, mz);
+                midCount++;
+            }
+
+            return midSum / midCount;
+        }
+
+        private static Vector2 ComputeSeawardDirection(
+            BoardState board,
+            Vertex portVertex,
+            float hexScale,
+            Vector2 vertexPos)
+        {
+            Vector2 boardCenter = ComputeBoardCenter(board, hexScale);
+            Vector2 fromCenter = vertexPos - boardCenter;
+            if (fromCenter.sqrMagnitude > 1e-8f)
+                return fromCenter.normalized;
+
+            Vector2 awayFromLand = Vector2.zero;
             int count = 0;
-            Vector2 sum = Vector2.zero;
             foreach (var hex in VertexGraph.GetHexesForVertex(portVertex))
             {
                 if (!board.Tiles.ContainsKey(hex))
                     continue;
+                var (hx, hz) = HexMath.ToWorldPosition(hex, hexScale);
+                Vector2 toVertex = vertexPos - new Vector2(hx, hz);
+                if (toVertex.sqrMagnitude < 1e-8f)
+                    continue;
+                awayFromLand += toVertex.normalized;
+                count++;
+            }
+
+            if (count > 0 && awayFromLand.sqrMagnitude > 1e-8f)
+                return awayFromLand.normalized;
+
+            return Vector2.up;
+        }
+
+        private static Vector2 ComputeBoardCenter(BoardState board, float hexScale)
+        {
+            Vector2 sum = Vector2.zero;
+            int count = 0;
+            foreach (var hex in board.Tiles.Keys)
+            {
                 var (x, z) = HexMath.ToWorldPosition(hex, hexScale);
                 sum += new Vector2(x, z);
                 count++;
             }
 
-            if (count == 0)
-                return false;
-
-            centroid = sum / count;
-            return true;
+            return count > 0 ? sum / count : Vector2.zero;
         }
 
-        private static bool TryGetCoastEdgeFrame(
-            BoardState board,
-            Vertex portVertex,
-            float hexScale,
-            Vector2 landCentroid,
-            out Vector2 edgeMid,
-            out Vector2 seaDir)
-        {
-            edgeMid = default;
-            seaDir = default;
-            Vector2 midSum = Vector2.zero;
-            Vector2 seaSum = Vector2.zero;
-            int count = 0;
-
-            foreach (var adjacent in VertexGraph.GetAdjacentVertices(portVertex))
-            {
-                if (!IsBoardEdgeVertex(board, adjacent))
-                    continue;
-
-                var edge = VertexGraph.GetEdgeBetween(portVertex, adjacent);
-                if (GetHexesForEdge(board, edge).Count != 1)
-                    continue;
-
-                var (mx, mz) = HexMath.EdgeMidpoint(edge, hexScale);
-                Vector2 mid = new Vector2(mx, mz);
-                Vector2 toSea = mid - landCentroid;
-                if (toSea.sqrMagnitude < 1e-8f)
-                    continue;
-
-                var (ax, az) = HexMath.VertexToWorldPosition(edge.A, hexScale);
-                var (bx, bz) = HexMath.VertexToWorldPosition(edge.B, hexScale);
-                Vector2 along = new Vector2(bx - ax, bz - az);
-                if (along.sqrMagnitude < 1e-8f)
-                    continue;
-                along.Normalize();
-                Vector2 perpA = new Vector2(-along.y, along.x);
-                Vector2 perpB = -perpA;
-                Vector2 sea = Vector2.Dot(perpA, toSea) >= Vector2.Dot(perpB, toSea) ? perpA : perpB;
-                if (Vector2.Dot(sea, toSea) < 0f)
-                    sea = -sea;
-
-                midSum += mid;
-                seaSum += sea;
-                count++;
-            }
-
-            if (count == 0)
-                return false;
-
-            edgeMid = midSum / count;
-            seaDir = seaSum.normalized;
-            if (seaDir.sqrMagnitude < 1e-8f)
-                return false;
-
-            return true;
-        }
-
-        private static bool IsBoardEdgeVertex(BoardState board, Vertex vertex)
-        {
-            int onBoard = 0;
-            foreach (var hex in VertexGraph.GetHexesForVertex(vertex))
-            {
-                if (board.Tiles.ContainsKey(hex))
-                    onBoard++;
-            }
-
-            return onBoard > 0 && onBoard <= 2;
-        }
-
-        public static int GetHexesForEdgeCount(BoardState board, Edge edge)
+        private static int CountHexesForEdge(BoardState board, Edge edge)
         {
             var edgeCanon = new Edge(VertexGraph.Canonicalize(edge.A), VertexGraph.Canonicalize(edge.B));
             int count = 0;
@@ -197,23 +203,6 @@ namespace CatanRoguelike.Game
             }
 
             return count;
-        }
-
-        private static List<HexCoord> GetHexesForEdge(BoardState board, Edge edge)
-        {
-            var edgeCanon = new Edge(VertexGraph.Canonicalize(edge.A), VertexGraph.Canonicalize(edge.B));
-            var hexes = new List<HexCoord>(2);
-            foreach (var kv in board.Tiles)
-            {
-                var hex = kv.Key;
-                for (int i = 0; i < 6; i++)
-                {
-                    if (HexMath.GetEdge(hex, i).Equals(edgeCanon))
-                        hexes.Add(hex);
-                }
-            }
-
-            return hexes;
         }
 
         private static bool PointInConvexPolygon(Vector2 point, Vector2[] polygon)
