@@ -34,6 +34,8 @@ namespace CatanRoguelike.Game
             FillCircle(pixels, 32, 44, 9, outline);
             FillCircle(pixels, 32, 44, 7, fill);
 
+            RotatePixels90Clockwise(pixels);
+
             tex.SetPixels32(pixels);
             tex.Apply(false, false);
             _cached = tex;
@@ -55,6 +57,24 @@ namespace CatanRoguelike.Game
                         px[y * Size + x] = c;
                 }
             }
+        }
+
+        private static void RotatePixels90Clockwise(Color32[] pixels)
+        {
+            var rotated = new Color32[Size * Size];
+            for (int y = 0; y < Size; y++)
+            {
+                for (int x = 0; x < Size; x++)
+                {
+                    int src = y * Size + x;
+                    int dstX = Size - 1 - y;
+                    int dstY = x;
+                    rotated[dstY * Size + dstX] = pixels[src];
+                }
+            }
+
+            for (int i = 0; i < pixels.Length; i++)
+                pixels[i] = rotated[i];
         }
 
         private static void FillRect(Color32[] px, int x, int y, int w, int h, Color32 c)

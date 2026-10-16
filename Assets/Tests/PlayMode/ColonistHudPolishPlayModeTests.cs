@@ -98,11 +98,15 @@ namespace CatanRoguelike.Tests.PlayMode
                 {
                     Vector2 tokenCenter = new(tile.transform.position.x, tile.transform.position.z);
                     Vector2 robberPos = new(tile.RobberWorldPosition.x, tile.RobberWorldPosition.z);
-                    float minSeparation = tile.TokenFaceWorldRadius + 0.04f;
+                    float pawnRadius = Mathf.Max(
+                        tile.RobberWorldBounds.extents.x,
+                        tile.RobberWorldBounds.extents.z);
+                    float minSeparation = tile.TokenRimOuterWorldRadius + pawnRadius + 0.03f;
                     Assert.Greater(
                         Vector2.Distance(tokenCenter, robberPos),
                         minSeparation,
-                        $"Robber should not cover number token on {tile.Data.Coord}.");
+                        $"Robber should not overlap token rim on {tile.Data.Coord} " +
+                        $"(dist={Vector2.Distance(tokenCenter, robberPos):F3} min={minSeparation:F3}).");
                 }
 
                 checkedRobber = true;
@@ -132,35 +136,54 @@ namespace CatanRoguelike.Tests.PlayMode
             for (int i = 0; i < 4; i++)
                 yield return null;
 
+            Transform portRoot = null;
             Transform badge = null;
             foreach (var renderer in Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
             {
                 if (renderer == null || renderer.gameObject.name != "BadgeDisc")
                     continue;
                 badge = renderer.transform.parent;
+                portRoot = badge.parent;
                 break;
             }
 
             Assert.IsNotNull(badge, "Expected at least one port rate badge in the colonist scene.");
+            if (portRoot != null)
+                PortMarkerVisuals.LogChildRenderersOnce(portRoot.gameObject);
+
             var disc = badge.Find("BadgeDisc");
             var label = badge.Find("RateLabel");
             Assert.IsNotNull(disc, "Port badge should include BadgeDisc.");
-            Assert.IsNotNull(label, "Port badge should include RateLabel TextMesh.");
+            Assert.IsNotNull(label, "Port badge should include RateLabel quad.");
 
             var discRenderer = disc.GetComponent<Renderer>();
             var labelRenderer = label.GetComponent<Renderer>();
             Assert.IsNotNull(discRenderer);
             Assert.IsNotNull(labelRenderer);
+            Assert.IsNull(label.GetComponent<TextMesh>(), "Port rate label should not use TextMesh.");
 
-            float discDiameter = Mathf.Max(discRenderer.bounds.size.x, discRenderer.bounds.size.z);
-            float labelWidth = labelRenderer.bounds.size.x;
+            var labelMat = labelRenderer.sharedMaterial;
+            Assert.IsNotNull(labelMat);
+            var labelTexture = labelMat.mainTexture as Texture2D;
+            Assert.IsNotNull(labelTexture, "Port rate label material should reference a texture.");
+            Assert.IsTrue(
+                ColonistPortRateLabelTextures.HasOpaquePixels(labelTexture),
+                "Port rate label texture should contain opaque glyph pixels.");
+
+            var camera = Camera.main;
+            Assert.IsNotNull(camera);
+            float faceDot = Vector3.Dot(label.transform.up.normalized, camera.transform.up.normalized);
+            Assert.Greater(faceDot, 0.85f, $"Port rate label should face the table camera (dot={faceDot:F3}).");
+
+            var discBounds = discRenderer.bounds;
+            var labelBounds = labelRenderer.bounds;
+            Assert.LessOrEqual(labelBounds.max.x, discBounds.max.x + 0.03f);
+            Assert.GreaterOrEqual(labelBounds.min.x, discBounds.min.x - 0.03f);
+            Assert.LessOrEqual(labelBounds.max.z, discBounds.max.z + 0.03f);
+            Assert.GreaterOrEqual(labelBounds.min.z, discBounds.min.z - 0.03f);
             Assert.Greater(
-                labelWidth,
-                discDiameter * 0.5f,
-                $"Port rate label should span badge (labelWidth={labelWidth:F3} discDiameter={discDiameter:F3}).");
-            Assert.Greater(
-                labelRenderer.bounds.min.y,
-                discRenderer.bounds.max.y - 0.02f,
+                labelBounds.min.y,
+                discBounds.max.y - 0.02f,
                 "Port rate label should render above the badge disc.");
         }
     }

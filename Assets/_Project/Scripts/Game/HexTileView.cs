@@ -127,7 +127,7 @@ namespace CatanRoguelike.Game
         private const string RobberTopIconPartName = "RobberTopIcon";
         private const float WorldStormExtent = 0.22f;
         private const float WorldStormHeight = 0.06f;
-        private static readonly Vector3 RobberLocalOffset = new(0.30f, 0f, -0.30f);
+        private static readonly Vector3 RobberLocalOffset = new(0.46f, 0f, -0.46f);
         private static readonly Color RobberColor = new(0.28f, 0.28f, 0.32f, 1f);
         private static readonly Vector3 StormLocalOffset = new(-0.18f, 0f, -0.16f);
 
@@ -409,7 +409,10 @@ namespace CatanRoguelike.Game
             if (_robberMarker != null
                 && _robberMarker.transform.Find(RobberShoulderPartName) != null
                 && _robberMarker.transform.Find(RobberTopIconPartName) != null)
+            {
+                ApplyRobberTopIconFacing(_robberMarker.transform.Find(RobberTopIconPartName));
                 return;
+            }
 
             if (_robberMarker != null)
             {
@@ -471,13 +474,13 @@ namespace CatanRoguelike.Game
             iconGo.name = RobberTopIconPartName;
             iconGo.transform.SetParent(_robberMarker.transform, false);
             iconGo.transform.localPosition = new Vector3(0f, iconLocalY, 0f);
-            iconGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             float iconLocalDiameter = WorldRobberTopIconDiameter / sx;
             iconGo.transform.localScale = new Vector3(iconLocalDiameter, iconLocalDiameter, 1f);
             var iconRenderer = iconGo.GetComponent<Renderer>();
             iconRenderer.sharedMaterial = BuiltInMaterials.CreateUnlitTransparent(ColonistRobberTopIconTextures.Get());
             iconRenderer.sharedMaterial.renderQueue = 3250;
             Destroy(iconGo.GetComponent<Collider>());
+            ApplyRobberTopIconFacing(iconGo.transform);
 
             Debug.Log(
                 $"HexTileView RobberPawn tile={Data.Coord} boundsY={RobberWorldBounds.size.y:F3} " +
@@ -499,6 +502,13 @@ namespace CatanRoguelike.Game
                     || (name.Contains("Robber") && name != "RobberPawn"))
                     Destroy(child.gameObject);
             }
+        }
+
+        private static void ApplyRobberTopIconFacing(Transform iconTransform)
+        {
+            if (iconTransform == null)
+                return;
+            iconTransform.rotation = NumberTokenLabelOrientation.ComputeColonistTopDownRotation(Camera.main);
         }
 
         private float AddRobberCylinder(
