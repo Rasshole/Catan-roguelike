@@ -3,8 +3,6 @@ using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Game;
 using NUnit.Framework;
-using UnityEngine;
-
 namespace CatanRoguelike.Tests.EditMode
 {
     public class SeaFishHarborLayoutTests
@@ -22,7 +20,7 @@ namespace CatanRoguelike.Tests.EditMode
             {
                 Assert.IsTrue(
                     SeaFishHarborLayout.TryComputeShortPierBadgeCenter(
-                        board, port.Vertex, HexScale, radius, out Vector2 center),
+                        board, port.Vertex, HexScale, radius, out MapPlaneXz center),
                     $"Short pier badge should resolve for {port.Vertex}.");
 
                 foreach (var kvp in board.SeaFishGrounds)

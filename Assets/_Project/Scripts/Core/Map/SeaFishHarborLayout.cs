@@ -1,8 +1,8 @@
+using System;
 using System.Collections.Generic;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Shop;
-using UnityEngine;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
@@ -35,8 +35,8 @@ namespace CatanRoguelike.Core.Map
 
             var land = new HashSet<HexCoord>(board.Tiles.Keys);
             var candidates = CollectSeaCandidates(land);
-            var rng = seed.HasValue ? new System.Random(seed.Value ^ 0xF15E) : new System.Random();
-            int fishCount = System.Math.Min(6, candidates.Count);
+            var rng = seed.HasValue ? new Random(seed.Value ^ 0xF15E) : new Random();
+            int fishCount = Math.Min(6, candidates.Count);
             var fishValues = new[] { 1, 1, 2, 2, 3, 0 };
 
             for (int i = 0; i < fishCount; i++)
@@ -96,7 +96,7 @@ namespace CatanRoguelike.Core.Map
 
             foreach (var port in ports)
             {
-                if (!TryComputeShortPierBadgeCenter(board, port.Vertex, hexScale, discRadius, out Vector2 center))
+                if (!TryComputeShortPierBadgeCenter(board, port.Vertex, hexScale, discRadius, out MapPlaneXz center))
                     continue;
 
                 float checkRadius = discRadius + SeaFishGroundClearance;
@@ -112,29 +112,29 @@ namespace CatanRoguelike.Core.Map
             Vertex portVertex,
             float hexScale,
             float discRadius,
-            out Vector2 badgeCenter)
+            out MapPlaneXz badgeCenter)
         {
-            badgeCenter = default;
+            badgeCenter = MapPlaneXz.Zero;
             if (board == null || board.Tiles.Count == 0)
                 return false;
 
             portVertex = VertexGraph.Canonicalize(portVertex);
             var (vx, vz) = HexMath.VertexToWorldPosition(portVertex, hexScale);
-            Vector2 vertexPos = new Vector2(vx, vz);
+            var vertexPos = new MapPlaneXz(vx, vz);
 
             if (!TouchesLand(board, portVertex))
                 return false;
 
-            Vector2 coastAnchor = GetCoastAnchor(board, portVertex, hexScale, vertexPos);
-            Vector2 seaDir = ComputeSeawardDirection(board, portVertex, hexScale, vertexPos);
-            if (seaDir.sqrMagnitude < 1e-8f)
+            MapPlaneXz coastAnchor = GetCoastAnchor(board, portVertex, hexScale, vertexPos);
+            MapPlaneXz seaDir = ComputeSeawardDirection(board, portVertex, hexScale, vertexPos);
+            if (seaDir.SqrMagnitude < 1e-8f)
                 return false;
 
             float hexInradius = hexScale * HexMath.InnerRadius;
             float pierEnd = ShortPierLength + discRadius + SeaClearanceBeyondDisc;
             float initialPush = discRadius + SeaClearanceBeyondDisc + hexInradius * HexInradiusPushFactor;
-            float outward = Mathf.Max(initialPush, pierEnd);
-            outward = Mathf.Min(outward, pierEnd + hexInradius * 0.08f);
+            float outward = Math.Max(initialPush, pierEnd);
+            outward = Math.Min(outward, pierEnd + hexInradius * 0.08f);
             badgeCenter = coastAnchor + seaDir * outward;
 
             if (DiscIntersectsLandHex(badgeCenter, discRadius, board, hexScale))
@@ -147,7 +147,7 @@ namespace CatanRoguelike.Core.Map
         }
 
         private static bool DiscIntersectsLandHex(
-            Vector2 discCenter,
+            MapPlaneXz discCenter,
             float discRadius,
             BoardState board,
             float hexScale)
@@ -162,16 +162,16 @@ namespace CatanRoguelike.Core.Map
         }
 
         public static bool DiscIntersectsHexPolygon(
-            Vector2 discCenter,
+            MapPlaneXz discCenter,
             float discRadius,
             HexCoord hex,
             float hexScale)
         {
-            var corners = new Vector2[HexCornerCount];
+            var corners = new MapPlaneXz[HexCornerCount];
             for (int i = 0; i < HexCornerCount; i++)
             {
                 var (x, z) = HexMath.VertexToWorldPosition(hex, i, hexScale);
-                corners[i] = new Vector2(x, z);
+                corners[i] = new MapPlaneXz(x, z);
             }
 
             if (PointInConvexPolygon(discCenter, corners))
@@ -182,7 +182,7 @@ namespace CatanRoguelike.Core.Map
                 int next = (i + 1) % corners.Length;
                 if (DistancePointToSegment(discCenter, corners[i], corners[next]) < discRadius)
                     return true;
-                if ((corners[i] - discCenter).sqrMagnitude < discRadius * discRadius)
+                if ((corners[i] - discCenter).SqrMagnitude < discRadius * discRadius)
                     return true;
             }
 
@@ -221,13 +221,13 @@ namespace CatanRoguelike.Core.Map
             return false;
         }
 
-        private static Vector2 GetCoastAnchor(
+        private static MapPlaneXz GetCoastAnchor(
             BoardState board,
             Vertex portVertex,
             float hexScale,
-            Vector2 vertexPos)
+            MapPlaneXz vertexPos)
         {
-            Vector2 midSum = vertexPos;
+            MapPlaneXz midSum = vertexPos;
             int midCount = 1;
             foreach (var adjacent in VertexGraph.GetAdjacentVertices(portVertex))
             {
@@ -236,56 +236,56 @@ namespace CatanRoguelike.Core.Map
                     continue;
 
                 var (mx, mz) = HexMath.EdgeMidpoint(edge, hexScale);
-                midSum += new Vector2(mx, mz);
+                midSum += new MapPlaneXz(mx, mz);
                 midCount++;
             }
 
             return midSum / midCount;
         }
 
-        private static Vector2 ComputeSeawardDirection(
+        private static MapPlaneXz ComputeSeawardDirection(
             BoardState board,
             Vertex portVertex,
             float hexScale,
-            Vector2 vertexPos)
+            MapPlaneXz vertexPos)
         {
-            Vector2 boardCenter = ComputeBoardCenter(board, hexScale);
-            Vector2 fromCenter = vertexPos - boardCenter;
-            if (fromCenter.sqrMagnitude > 1e-8f)
-                return fromCenter.normalized;
+            MapPlaneXz boardCenter = ComputeBoardCenter(board, hexScale);
+            MapPlaneXz fromCenter = vertexPos - boardCenter;
+            if (fromCenter.SqrMagnitude > 1e-8f)
+                return fromCenter.Normalized;
 
-            Vector2 awayFromLand = Vector2.zero;
+            MapPlaneXz awayFromLand = MapPlaneXz.Zero;
             int count = 0;
             foreach (var hex in VertexGraph.GetHexesForVertex(portVertex))
             {
                 if (!board.Tiles.ContainsKey(hex))
                     continue;
                 var (hx, hz) = HexMath.ToWorldPosition(hex, hexScale);
-                Vector2 toVertex = vertexPos - new Vector2(hx, hz);
-                if (toVertex.sqrMagnitude < 1e-8f)
+                MapPlaneXz toVertex = vertexPos - new MapPlaneXz(hx, hz);
+                if (toVertex.SqrMagnitude < 1e-8f)
                     continue;
-                awayFromLand += toVertex.normalized;
+                awayFromLand += toVertex.Normalized;
                 count++;
             }
 
-            if (count > 0 && awayFromLand.sqrMagnitude > 1e-8f)
-                return awayFromLand.normalized;
+            if (count > 0 && awayFromLand.SqrMagnitude > 1e-8f)
+                return awayFromLand.Normalized;
 
-            return Vector2.up;
+            return MapPlaneXz.UnitZ;
         }
 
-        private static Vector2 ComputeBoardCenter(BoardState board, float hexScale)
+        private static MapPlaneXz ComputeBoardCenter(BoardState board, float hexScale)
         {
-            Vector2 sum = Vector2.zero;
+            MapPlaneXz sum = MapPlaneXz.Zero;
             int count = 0;
             foreach (var kvp in board.Tiles)
             {
                 var (x, z) = HexMath.ToWorldPosition(kvp.Key, hexScale);
-                sum += new Vector2(x, z);
+                sum += new MapPlaneXz(x, z);
                 count++;
             }
 
-            return count > 0 ? sum / count : Vector2.zero;
+            return count > 0 ? sum / count : MapPlaneXz.Zero;
         }
 
         private static int CountHexesForEdge(BoardState board, Edge edge)
@@ -305,14 +305,14 @@ namespace CatanRoguelike.Core.Map
             return count;
         }
 
-        private static bool PointInConvexPolygon(Vector2 point, Vector2[] polygon)
+        private static bool PointInConvexPolygon(MapPlaneXz point, MapPlaneXz[] polygon)
         {
             bool? sign = null;
             for (int i = 0; i < polygon.Length; i++)
             {
                 int next = (i + 1) % polygon.Length;
                 float cross = Cross(polygon[next] - polygon[i], point - polygon[i]);
-                if (Mathf.Abs(cross) < 1e-6f)
+                if (Math.Abs(cross) < 1e-6f)
                     continue;
                 bool positive = cross > 0f;
                 sign ??= positive;
@@ -323,18 +323,18 @@ namespace CatanRoguelike.Core.Map
             return true;
         }
 
-        private static float Cross(Vector2 a, Vector2 b) => a.x * b.y - a.y * b.x;
+        private static float Cross(MapPlaneXz a, MapPlaneXz b) => a.X * b.Z - a.Z * b.X;
 
-        private static float DistancePointToSegment(Vector2 point, Vector2 a, Vector2 b)
+        private static float DistancePointToSegment(MapPlaneXz point, MapPlaneXz a, MapPlaneXz b)
         {
-            Vector2 ab = b - a;
-            float lenSq = ab.sqrMagnitude;
+            MapPlaneXz ab = b - a;
+            float lenSq = ab.SqrMagnitude;
             if (lenSq < 1e-8f)
-                return (point - a).magnitude;
+                return (point - a).Magnitude;
 
-            float t = Mathf.Clamp01(Vector2.Dot(point - a, ab) / lenSq);
-            Vector2 closest = a + ab * t;
-            return (point - closest).magnitude;
+            float t = MapPlaneXz.Clamp01(MapPlaneXz.Dot(point - a, ab) / lenSq);
+            MapPlaneXz closest = a + ab * t;
+            return (point - closest).Magnitude;
         }
     }
 }
