@@ -1,3 +1,4 @@
+using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Game;
 using NUnit.Framework;
