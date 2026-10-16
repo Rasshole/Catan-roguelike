@@ -122,7 +122,7 @@ namespace CatanRoguelike.Game
             }
         }
 
-        public readonly struct CanvasCaptureRestore
+        public struct CanvasCaptureRestore
         {
             internal bool Active;
             internal RenderMode RenderMode;
