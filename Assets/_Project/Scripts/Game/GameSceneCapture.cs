@@ -78,8 +78,11 @@ namespace CatanRoguelike.Game
                 Canvas.ForceUpdateCanvases();
                 camera.Render();
 
-                if (canvasRestore.Active && canvasRestore.UiCamera != null)
-                    canvasRestore.UiCamera.Render();
+                if (hud != null && canvasRestore.Active)
+                {
+                    hud.RenderHudCaptureUiCamera(canvasRestore, renderTexture);
+                    AssertHudCaptureSanityProbeVisible(renderTexture, width, height);
+                }
 
                 RenderTexture.active = renderTexture;
                 texture = new Texture2D(width, height, TextureFormat.RGB24, false);
@@ -120,6 +123,25 @@ namespace CatanRoguelike.Game
             {
                 File.WriteAllBytes(outputPath, hudComposite.EncodeToPNG());
                 Debug.Log($"GameSceneCapture: wrote HUD-composited PNG to {outputPath}");
+            }
+        }
+
+        private static void AssertHudCaptureSanityProbeVisible(RenderTexture target, int width, int height)
+        {
+            if (!RunHudController.HudCaptureSanityProbeEnabled)
+                return;
+
+            int x = Mathf.Clamp((int)(width * RunHudController.SanityProbeScreenX), 0, width - 1);
+            int y = Mathf.Clamp((int)(height * RunHudController.SanityProbeScreenY), 0, height - 1);
+
+            if (!RunHudController.TrySampleRenderTargetPixel(target, x, y, out var pixel))
+                throw new InvalidOperationException("HudCapture sanity probe: failed to read capture RT.");
+
+            if (!RunHudController.ColorLooksMagenta(pixel))
+            {
+                throw new InvalidOperationException(
+                    $"HudCapture sanity probe: expected magenta at ({x},{y}) but got r={pixel.r:F3} g={pixel.g:F3} b={pixel.b:F3}. " +
+                    "UI camera / targetTexture / layer pipeline is not compositing into the RT.");
             }
         }
 

@@ -67,6 +67,7 @@ namespace CatanRoguelike.Game
 
             var promptGo = new GameObject("RollPrompt");
             promptGo.transform.SetParent(canvasRoot, false);
+            promptGo.layer = canvasRoot.gameObject.layer;
             var rect = promptGo.AddComponent<RectTransform>();
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
@@ -142,6 +143,7 @@ namespace CatanRoguelike.Game
             internal Quaternion CanvasLocalRotation;
             internal Vector3 CanvasLocalScale;
             internal Vector2 CanvasSizeDelta;
+            internal GameObject SanityProbeObject;
         }
 
         /// <summary>
@@ -183,6 +185,8 @@ namespace CatanRoguelike.Game
 
             _canvas.renderMode = RenderMode.WorldSpace;
             _canvas.worldCamera = uiCamera;
+            _canvas.overrideSorting = true;
+            _canvas.sortingOrder = 100;
 
             canvasRect.SetParent(uiGo.transform, false);
             canvasRect.localRotation = Quaternion.identity;
@@ -191,8 +195,10 @@ namespace CatanRoguelike.Game
             canvasRect.sizeDelta = new Vector2(captureWidth, captureHeight);
             canvasRect.localScale = Vector3.one * WorldCaptureCanvasUnitScale;
 
+            restore.SanityProbeObject = CreateHudCaptureSanityProbe(uiGo.transform, captureWidth, captureHeight);
+
+            LayoutRebuilder.ForceRebuildLayoutImmediate(canvasRect);
             Canvas.ForceUpdateCanvases();
-            LogUiCaptureCamera(uiCamera);
             return restore;
         }
 
@@ -220,15 +226,11 @@ namespace CatanRoguelike.Game
             if (!restore.CanvasWasActiveSelf)
                 _canvas.gameObject.SetActive(false);
 
-            SetLayerRecursively(_canvas.gameObject, 0);
+            DestroyCaptureObject(restore.SanityProbeObject);
+            restore.SanityProbeObject = null;
 
             if (restore.UiCameraObject != null)
-            {
-                if (Application.isPlaying)
-                    Destroy(restore.UiCameraObject);
-                else
-                    DestroyImmediate(restore.UiCameraObject);
-            }
+                DestroyCaptureObject(restore.UiCameraObject);
 
             Canvas.ForceUpdateCanvases();
         }
@@ -239,16 +241,18 @@ namespace CatanRoguelike.Game
             int captureWidth,
             int captureHeight)
         {
-            uiCamera.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            uiCamera.transform.SetPositionAndRotation(
+                new Vector3(0f, 0f, -WorldCaptureCanvasDistance),
+                Quaternion.identity);
             uiCamera.orthographic = true;
             uiCamera.orthographicSize = captureHeight * WorldCaptureCanvasUnitScale * 0.5f;
             uiCamera.nearClipPlane = 0.1f;
             uiCamera.farClipPlane = 10f;
             uiCamera.aspect = captureWidth / (float)captureHeight;
             uiCamera.depth = mainCamera.depth + 1f;
-            uiCamera.clearFlags = CameraClearFlags.Depth;
             uiCamera.cullingMask = 1 << HudCaptureUiLayer;
-            uiCamera.targetTexture = mainCamera.targetTexture;
+            uiCamera.clearFlags = CameraClearFlags.Nothing;
+            uiCamera.enabled = true;
             uiCamera.pixelRect = mainCamera.pixelRect;
         }
 
@@ -262,7 +266,8 @@ namespace CatanRoguelike.Game
                 $"ortho={uiCamera.orthographic} orthoSize={uiCamera.orthographicSize:F4} " +
                 $"near={uiCamera.nearClipPlane:F3} far={uiCamera.farClipPlane:F1} " +
                 $"cullingMask=0x{uiCamera.cullingMask:X8} clearFlags={uiCamera.clearFlags} " +
-                $"targetTexture={(uiCamera.targetTexture != null ? uiCamera.targetTexture.name : "null")}");
+                $"enabled={uiCamera.enabled} " +
+                $"targetTexture={(uiCamera.targetTexture != null ? $"{uiCamera.targetTexture.width}x{uiCamera.targetTexture.height}" : "null")}");
         }
 
         public void PrepareCanvasForCameraCapture(Camera camera) =>

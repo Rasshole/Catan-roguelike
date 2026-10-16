@@ -141,6 +141,7 @@ namespace CatanRoguelike.Game
             BuildIncomingTradePanel(_canvas.transform);
             EnsureFlyLayer();
             RunHudCostTooltip.EnsureShared(_canvas.transform);
+            SetLayerRecursively(_canvas.gameObject, HudCaptureUiLayer);
         }
 
         private void BuildSidePanel(Transform root)
@@ -497,6 +498,8 @@ namespace CatanRoguelike.Game
 
             if (state.PlayerHand.Count > 0)
                 _selectedCardIndex = Mathf.Clamp(_selectedCardIndex, 0, state.PlayerHand.Count - 1);
+
+            SetLayerRecursively(_canvas.gameObject, HudCaptureUiLayer);
         }
 
         private void RebuildActionBar(GameState state)

@@ -50,6 +50,7 @@ namespace CatanRoguelike.Tests
         public void PrepareCanvasForCameraCapture_AssignsWorldCamera()
         {
             var root = new GameObject("ColonistCaptureHudTests_Root");
+            RenderTexture captureRt = null;
             try
             {
                 var camGo = new GameObject("Camera");
@@ -69,10 +70,18 @@ namespace CatanRoguelike.Tests
                 game.State.Phase = GamePhase.DayPlayerActions;
 
                 hud.Initialize(game, new MetaProgression(), null);
+                Assert.IsNotNull(hud.HudCanvas, "RunHud should build a canvas during Initialize.");
+
+                captureRt = new RenderTexture(
+                    GameSceneCapture.CaptureWidth,
+                    GameSceneCapture.CaptureHeight,
+                    24,
+                    RenderTextureFormat.ARGB32);
+                camera.targetTexture = captureRt;
                 hud.PrepareCanvasForCameraCapture(camera);
 
-                var canvas = hudGo.GetComponentInChildren<Canvas>();
-                Assert.IsNotNull(canvas, "RunHud should build a canvas during Initialize.");
+                var canvas = hud.HudCanvas;
+                Assert.IsNotNull(canvas, "HudCanvas should remain reachable after capture prep (canvas may be reparented).");
                 Assert.AreEqual(RenderMode.WorldSpace, canvas.renderMode);
                 Assert.IsNotNull(canvas.worldCamera);
                 Assert.AreEqual("HudCaptureUiCamera", canvas.worldCamera.name);
@@ -87,6 +96,12 @@ namespace CatanRoguelike.Tests
             }
             finally
             {
+                if (captureRt != null)
+                {
+                    captureRt.Release();
+                    UnityEngine.Object.DestroyImmediate(captureRt);
+                }
+
                 UnityEngine.Object.DestroyImmediate(root);
             }
         }

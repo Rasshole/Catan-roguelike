@@ -17,6 +17,7 @@ namespace CatanRoguelike.Game
         {
             var go = new GameObject("RunHudCanvas");
             go.transform.SetParent(parent, false);
+            go.layer = RunHudController.HudCaptureUiLayer;
             var canvas = go.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 10;
@@ -40,6 +41,7 @@ namespace CatanRoguelike.Game
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
+            go.layer = parent.gameObject.layer;
             var rect = go.AddComponent<RectTransform>();
             rect.anchorMin = anchorMin;
             rect.anchorMax = anchorMax;
@@ -62,6 +64,7 @@ namespace CatanRoguelike.Game
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
+            go.layer = parent.gameObject.layer;
             var rect = go.AddComponent<RectTransform>();
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
