@@ -7,12 +7,11 @@
 - **Source:** [Kenney Hexagon Pack](https://kenney.nl/assets/hexagon-pack) (OpenGameArt mirror used in `tools/import-kenney-board-art.py`)
 - **Attribution:** Not required.
 
-## Kenney — Board Game Icons (resource HUD / hex icons)
+## Kenney — Board Game Icons (optional; board uses procedural icons)
 
-- **Files:** `Resources/Art/Icons/*.png`
+- **Files:** `Resources/Art/Icons/*.png` (bundled for reference; **hex and port icons use procedural v87-style art** in `ColonistResourceIconTextures`)
 - **License:** CC0 1.0
 - **Source:** [Kenney Board Game Icons](https://kenney.nl/assets/board-game-icons)
-- **Mapping:** wood, planks→brick, wheat, structure_farm→sheep, iron→stone/ore
 
 ## Kenney — Boardgame Pack (dice, card back)
 

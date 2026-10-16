@@ -43,13 +43,6 @@ namespace CatanRoguelike.Game
             if (cache.TryGetValue(resource, out var cached) && cached != null)
                 return cached;
 
-            var kenney = ColonistKenneyResourceIcons.TryGet(resource);
-            if (kenney != null)
-            {
-                cache[resource] = kenney;
-                return kenney;
-            }
-
             bool isPortBadge = inkOverride.HasValue && ReferenceEquals(cache, PortBadgeCache);
             var tex = new Texture2D(Size, Size, TextureFormat.RGBA32, false)
             {

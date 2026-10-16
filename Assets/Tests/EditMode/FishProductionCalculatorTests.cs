@@ -33,11 +33,14 @@ namespace CatanRoguelike.Tests.EditMode
             var state = new GameState(board)
             {
                 FishermenOfCatanEnabled = true,
-                FishermenRunSeed = 99
+                FishermenRunSeed = 99,
+                FishBagRemaining = new List<int> { 2, 2, 2, 2 }
             };
 
-            board.VertexBuildings[placement.BorderVertexInland] = (BuildingType.Settlement, PlayerId.Human);
-            board.VertexBuildings[placement.BorderVertexLeft] = (BuildingType.Settlement, PlayerId.Ai);
+            var inland = VertexGraph.Canonicalize(placement.BorderVertexInland);
+            var left = VertexGraph.Canonicalize(placement.BorderVertexLeft);
+            board.VertexBuildings[inland] = (BuildingType.Settlement, PlayerId.Human);
+            board.VertexBuildings[left] = (BuildingType.Settlement, PlayerId.Ai);
 
             int humanFish = FishProductionCalculator.CalculateForPlayer(
                 state,

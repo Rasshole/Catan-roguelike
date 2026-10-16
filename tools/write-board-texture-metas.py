@@ -168,6 +168,7 @@ def main() -> None:
     write_folder(BOARDGAME / "Cards")
     write_folder(ROOT / "Resources" / "Art" / "Models")
     write_folder(ROOT / "Resources" / "Art" / "Models" / "Nature")
+    write_folder(ROOT / "Resources" / "Art" / "Models" / "Nature" / "Textures")
     art_doc = ROOT / "Art" / "ART_LICENSES.md"
     if not (art_doc.parent / "ART_LICENSES.md.meta").exists():
         (art_doc.parent / "ART_LICENSES.md.meta").write_text(DOC_META.format(guid=guid()), encoding="utf-8")
@@ -177,6 +178,7 @@ def main() -> None:
     write_png_metas(ICONS)
     write_png_metas(BOARDGAME / "Dice")
     write_png_metas(BOARDGAME / "Cards")
+    write_png_metas(ROOT / "Resources" / "Art" / "Models" / "Nature" / "Textures")
 
 
 if __name__ == "__main__":

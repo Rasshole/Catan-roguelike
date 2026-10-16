@@ -50,9 +50,13 @@ namespace CatanRoguelike.Core.Map
         public bool BordersVertex(Vertex v)
         {
             v = VertexGraph.Canonicalize(v);
-            return v.Equals(VertexGraph.Canonicalize(BorderVertexInland))
-                || v.Equals(VertexGraph.Canonicalize(BorderVertexLeft))
-                || v.Equals(VertexGraph.Canonicalize(BorderVertexRight));
+            return v.Equals(Inland)
+                || v.Equals(Left)
+                || v.Equals(Right);
         }
+
+        private Vertex Inland => VertexGraph.Canonicalize(BorderVertexInland);
+        private Vertex Left => VertexGraph.Canonicalize(BorderVertexLeft);
+        private Vertex Right => VertexGraph.Canonicalize(BorderVertexRight);
     }
 }

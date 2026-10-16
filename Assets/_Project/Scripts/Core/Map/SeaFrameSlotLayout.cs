@@ -19,9 +19,9 @@ namespace CatanRoguelike.Core.Map
         /// <summary>Extra radius so clearance matches drawn hex outline + badge rim (world units).</summary>
         public const float BadgeRenderedLandInset = 0.055f;
         public const float FishShoalLandClearance = 0.05f;
-        private const float FishChevronCoastArmFactor = 0.40f;
-        private const float FishChevronSeaDepthFactor = 0.58f;
-        private const float FishChevronTokenDepthFactor = 0.34f;
+        private const float FishChevronCoastArmFactor = 0.36f;
+        private const float FishChevronSeaDepthFactor = 0.62f;
+        private const float FishChevronTokenDepthFactor = 0.40f;
         private const float BadgeClearanceEpsilon = 0.004f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 
@@ -251,8 +251,8 @@ namespace CatanRoguelike.Core.Map
 
                 var edgeA = HexMath.GetEdgeFacing(landA, dirA);
                 var edgeB = HexMath.GetEdgeFacing(landB, dirB);
-                var outerLeft = OtherVertexOnEdge(edgeA, inlandVertex);
-                var outerRight = OtherVertexOnEdge(edgeB, inlandVertex);
+                var outerLeft = VertexGraph.Canonicalize(OtherVertexOnEdge(edgeA, inlandVertex));
+                var outerRight = VertexGraph.Canonicalize(OtherVertexOnEdge(edgeB, inlandVertex));
 
                 var (olx, olz) = HexMath.VertexToWorldPosition(outerLeft, hexScale);
                 var (orx, orz) = HexMath.VertexToWorldPosition(outerRight, hexScale);

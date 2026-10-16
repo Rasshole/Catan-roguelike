@@ -371,7 +371,7 @@ namespace CatanRoguelike.Game
 
                 float hexHeight = tileHeight * 0.25f;
                 var view = ColonistCoastalFishShoalVisual.Build(
-                    boardRoot, kvp.Value, placement, hexHeight);
+                    boardRoot, kvp.Value, placement, hexHeight, hexScale);
                 _fishShoalViews[kvp.Key] = view;
             }
         }

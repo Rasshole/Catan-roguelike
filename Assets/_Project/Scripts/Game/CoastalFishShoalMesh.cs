@@ -7,27 +7,35 @@ namespace CatanRoguelike.Game
     public static class CoastalFishShoalMesh
     {
         public const float TopLocalY = 1.06f;
+        private const float SeawardVisualInsetFactor = 0.055f;
 
-        public static Mesh CreateLocal(FishShoalPlacement placement, MapPlaneXz origin)
+        public static Mesh CreateLocal(FishShoalPlacement placement, MapPlaneXz origin, float hexScale)
         {
             var mesh = new Mesh { name = "CoastalFishChevron" };
             float ox = origin.X;
             float oz = origin.Z;
+            float push = SeawardVisualInsetFactor * hexScale;
+            Vector3 outward = new Vector3(placement.Outward.X, 0f, placement.Outward.Z);
+            if (outward.sqrMagnitude > 1e-8f)
+                outward.Normalize();
 
-            Vector3 inland = ToLocal(placement.InlandTip, ox, oz);
-            Vector3 armL = ToLocal(placement.CoastArmLeft, ox, oz);
-            Vector3 armR = ToLocal(placement.CoastArmRight, ox, oz);
-            Vector3 seaL = ToLocal(placement.SeaFlatLeft, ox, oz);
-            Vector3 seaR = ToLocal(placement.SeaFlatRight, ox, oz);
+            Vector3 inland = PushSeaward(ToLocal(placement.InlandTip, ox, oz), outward, push * 0.35f);
+            Vector3 armL = PushSeaward(ToLocal(placement.CoastArmLeft, ox, oz), outward, push);
+            Vector3 armR = PushSeaward(ToLocal(placement.CoastArmRight, ox, oz), outward, push);
+            Vector3 seaL = PushSeaward(ToLocal(placement.SeaFlatLeft, ox, oz), outward, push);
+            Vector3 seaR = PushSeaward(ToLocal(placement.SeaFlatRight, ox, oz), outward, push);
 
             var vertices = new[] { inland, armL, armR, seaL, seaR };
             if (SignedAreaXZ(inland, armL, armR, seaL, seaR) < 0f)
-            {
                 vertices = new[] { inland, armR, armL, seaR, seaL };
-            }
 
             mesh.vertices = vertices;
-            mesh.triangles = new[] { 0, 1, 2, 1, 3, 2, 2, 3, 4 };
+            mesh.triangles = new[]
+            {
+                0, 1, 2, 2, 1, 0,
+                1, 3, 2, 2, 3, 1,
+                2, 3, 4, 4, 3, 2
+            };
             mesh.uv = new[]
             {
                 new Vector2(0.5f, 0.08f),
@@ -43,6 +51,9 @@ namespace CatanRoguelike.Game
             mesh.RecalculateBounds();
             return mesh;
         }
+
+        private static Vector3 PushSeaward(Vector3 v, Vector3 outward, float distance) =>
+            outward.sqrMagnitude < 1e-8f ? v : v + outward * distance;
 
         private static Vector3 ToLocal(MapPlaneXz p, float ox, float oz) =>
             new Vector3(p.X - ox, TopLocalY, p.Z - oz);
