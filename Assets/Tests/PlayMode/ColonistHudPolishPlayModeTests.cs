@@ -295,7 +295,8 @@ namespace CatanRoguelike.Tests.PlayMode
 
             Assert.IsNotNull(referenceToken, "Board should include a numbered token for badge sizing.");
             Assert.IsNotNull(referenceToken.TokenRimRenderer, "Token should expose rim renderer for badge sizing.");
-            float tokenScreen = ColonistBoardScreenMetrics.MeasureNumberTokenScreenDiameter(referenceToken, camera);
+            float tokenScreen = ColonistBoardScreenMetrics.MeasureNumberTokenScreenDiameter(
+                referenceToken, camera, tableCamera, layoutW, layoutH);
             float targetScreen = tokenScreen * ColonistBoardScreenMetrics.PortBadgeTargetTokenScreenDiameterRatio;
 
             int checkedDiscs = 0;
@@ -304,7 +305,9 @@ namespace CatanRoguelike.Tests.PlayMode
                 if (renderer == null || renderer.gameObject.name != "BadgeDisc")
                     continue;
 
-                float discScreen = ColonistBoardScreenMetrics.MeasureScreenDiameter(renderer, camera);
+                Vector3 discCenter = renderer.bounds.center;
+                float discScreen = ColonistBoardScreenMetrics.MeasureProjectedScreenDiameter(
+                    renderer, camera, tableCamera, layoutW, layoutH, discCenter);
                 Assert.Greater(discScreen, 12f, $"Badge disc should be readable on screen (d={discScreen:F1}px).");
                 float ratio = discScreen / Mathf.Max(1f, tokenScreen);
                 Assert.That(

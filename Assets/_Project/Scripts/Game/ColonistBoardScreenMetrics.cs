@@ -18,20 +18,50 @@ namespace CatanRoguelike.Game
             return Mathf.Max(size.x, size.y);
         }
 
-        /// <summary>Projected chip diameter using rim bounds (falls back to face × rim factor).</summary>
-        public static float MeasureNumberTokenScreenDiameter(HexTileView tile, Camera camera)
+        /// <summary>
+        /// Projected on-screen diameter using capture pose and renderer bounds (same path as rim capture probes).
+        /// </summary>
+        public static float MeasureProjectedScreenDiameter(
+            Renderer renderer,
+            Camera camera,
+            TableCamera tableCamera,
+            int textureWidth,
+            int textureHeight,
+            Vector3 centerWorld)
         {
-            if (tile == null || camera == null)
+            float radius = MeasureProjectedRadiusFromCenter(
+                renderer, camera, tableCamera, textureWidth, textureHeight, centerWorld);
+            return radius * 2f;
+        }
+
+        /// <summary>
+        /// Number-token outer chip diameter on the capture framebuffer (rim bounds, shared with rim probes).
+        /// </summary>
+        public static float MeasureNumberTokenScreenDiameter(
+            HexTileView tile,
+            Camera camera,
+            TableCamera tableCamera,
+            int textureWidth,
+            int textureHeight)
+        {
+            if (tile == null || camera == null || tableCamera == null)
                 return 0f;
 
-            float rim = tile.TokenRimRenderer != null
-                ? MeasureScreenDiameter(tile.TokenRimRenderer, camera)
-                : 0f;
-            float face = tile.TokenFaceRenderer != null
-                ? MeasureScreenDiameter(tile.TokenFaceRenderer, camera)
-                : 0f;
-            float faceScaled = face * HexTileView.RimOuterRadiusFactor;
-            return Mathf.Max(rim, faceScaled, face);
+            var faceRenderer = tile.TokenFaceRenderer;
+            var rimRenderer = tile.TokenRimRenderer;
+            if (faceRenderer == null)
+                return 0f;
+
+            Vector3 center = faceRenderer.bounds.center;
+            float faceDiameter = MeasureProjectedScreenDiameter(
+                faceRenderer, camera, tableCamera, textureWidth, textureHeight, center);
+            if (rimRenderer == null)
+                return faceDiameter * HexTileView.RimOuterRadiusFactor;
+
+            float rimDiameter = MeasureProjectedScreenDiameter(
+                rimRenderer, camera, tableCamera, textureWidth, textureHeight, center);
+            float faceScaled = faceDiameter * HexTileView.RimOuterRadiusFactor;
+            return Mathf.Max(rimDiameter, faceScaled, faceDiameter);
         }
 
         public static float MeasureProjectedRadiusFromCenter(
