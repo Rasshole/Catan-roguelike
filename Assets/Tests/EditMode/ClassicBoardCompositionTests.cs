@@ -16,8 +16,7 @@ namespace CatanRoguelike.Tests.EditMode
             Assert.AreEqual(19, preset.Count);
 
             var center = new HexCoord(0, 0);
-            Assert.AreEqual(ResourceType.Desert, preset.First(p => p.coord == center).resource);
-            var productive = preset.Where(p => p.resource != ResourceType.Desert);
+            var productive = preset.Where(p => p.coord != center);
             int wood = productive.Count(p => p.resource == ResourceType.Wood);
             int sheep = productive.Count(p => p.resource == ResourceType.Sheep);
             int wheat = productive.Count(p => p.resource == ResourceType.Wheat);
@@ -29,6 +28,14 @@ namespace CatanRoguelike.Tests.EditMode
             Assert.AreEqual(4, wheat);
             Assert.AreEqual(3, brick);
             Assert.AreEqual(3, stone);
+        }
+
+        [Test]
+        public void CreateBoard_Large_CenterIsDesertTerrain()
+        {
+            var board = MapPresets.CreateBoard(MapSize.Large);
+            Assert.IsTrue(board.Tiles[new HexCoord(0, 0)].IsDesert);
+            Assert.IsFalse(board.Tiles[new HexCoord(0, 0)].NumberToken.HasValue);
         }
 
         [Test]

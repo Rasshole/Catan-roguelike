@@ -50,7 +50,7 @@ namespace CatanRoguelike.Core.Data
         {
             var resources = new[]
             {
-                ResourceType.Desert,
+                ResourceType.Stone, // center — marked desert in CreateBoard / ApplyDesertCenter
                 ResourceType.Wood, ResourceType.Wheat, ResourceType.Sheep,
                 ResourceType.Brick, ResourceType.Wood, ResourceType.Wheat,
                 ResourceType.Sheep, ResourceType.Stone, ResourceType.Wood,
@@ -112,7 +112,7 @@ namespace CatanRoguelike.Core.Data
             for (int i = 0; i < coords.Count; i++)
             {
                 if (coords[i].Equals(desertCoord))
-                    resources[i] = ResourceType.Desert;
+                    resources[i] = ResourceType.Stone;
                 else
                     resources[i] = multiset[pi++];
             }
@@ -381,8 +381,6 @@ namespace CatanRoguelike.Core.Data
         private static HexTileData CreateLandTile(HexCoord coord, ResourceType resource)
         {
             var tile = new HexTileData(coord, resource, isCoastal: false);
-            if (resource == ResourceType.Desert)
-                tile.IsDesert = true;
             return tile;
         }
     }

@@ -253,7 +253,7 @@ namespace CatanRoguelike.Game
             grid.constraintCount = 2;
             RunHudUiFactory.AddLayoutElement(gridGo, 108f);
 
-            foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
+            foreach (ResourceType resource in ResourceTypes.Productive)
             {
                 var chip = new GameObject($"Chip_{resource}");
                 chip.layer = gridGo.layer;
@@ -369,7 +369,7 @@ namespace CatanRoguelike.Game
         private void RefreshResources(ResourceBundle bundle)
         {
             int i = 0;
-            foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
+            foreach (ResourceType resource in ResourceTypes.Productive)
             {
                 if (i >= _resourceAmountTexts.Count)
                     break;
@@ -381,7 +381,7 @@ namespace CatanRoguelike.Game
         private static string FormatAiSummary(GameState state)
         {
             var sb = new StringBuilder("AI\n");
-            foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
+            foreach (ResourceType resource in ResourceTypes.Productive)
             {
                 int amount = state.AiInventory[resource];
                 if (amount > 0)
@@ -615,7 +615,7 @@ namespace CatanRoguelike.Game
 
         private void AddResourcePickerButtons()
         {
-            foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
+            foreach (ResourceType resource in ResourceTypes.Productive)
             {
                 int index = (int)resource;
                 string label = ResourceDisplayNames.GetDanish(resource);

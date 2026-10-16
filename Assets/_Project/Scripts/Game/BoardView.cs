@@ -118,8 +118,12 @@ namespace CatanRoguelike.Game
                 return;
 
             float beachWidth = hexScale * ColonistCoastSandMesh.BeachWidthFactor;
+            Vector3 boardCenter = GetBoardWorldCenter();
             foreach (var kvp in _tiles)
             {
+                if (kvp.Value.Data.IsFishTile)
+                    continue;
+
                 var coord = kvp.Key;
                 var tileRoot = kvp.Value.transform;
                 float sampleY = GetHexTopWorldPoint(tileRoot).y;
@@ -132,7 +136,7 @@ namespace CatanRoguelike.Game
                     var (x, z) = HexMath.VertexToWorldPosition(coord, corner, hexScale);
                     samples.Add(new Vector3(x, sampleY, z));
 
-                    var outward = new Vector2(x - cx, z - cz);
+                    var outward = new Vector2(x - boardCenter.x, z - boardCenter.z);
                     if (outward.sqrMagnitude > 1e-8f)
                     {
                         outward.Normalize();
@@ -249,6 +253,9 @@ namespace CatanRoguelike.Game
                 _tiles[kvp.Key] = tile;
             }
 
+            if (ColonistPresentation.IsActive)
+                ColonistBoardVisualScale.UpdateFromBoard(board, hexScale);
+
             CreateTableSurface(board);
             CreatePortMarkers(board);
         }
@@ -364,7 +371,7 @@ namespace CatanRoguelike.Game
             if (ColonistPresentation.IsActive)
             {
                 ColonistHexTileIcon.Apply(go, data, hexScale);
-                if (data.IsDesert || data.Resource == ResourceType.Desert)
+                if (data.IsDesert)
                     ColonistDesertDuneDecor.Apply(go, hexScale);
             }
             else

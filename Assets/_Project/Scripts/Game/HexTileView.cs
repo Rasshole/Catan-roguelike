@@ -392,6 +392,9 @@ namespace CatanRoguelike.Game
             }
 
             var lossy = transform.lossyScale;
+            float robberScale = ColonistPresentation.IsActive
+                ? ColonistBoardVisualScale.RobberScale * 1.2f
+                : 1f;
             _robberMarker = new GameObject("RobberPawn");
             _robberMarker.transform.SetParent(transform, false);
             _robberMarker.transform.localPosition = new Vector3(
@@ -405,36 +408,36 @@ namespace CatanRoguelike.Game
             stackLocalY = AddRobberCylinder(
                 "RobberBase",
                 stackLocalY,
-                WorldRobberFootprint,
-                WorldRobberFootprint,
-                WorldRobberBaseHeight,
+                WorldRobberFootprint * robberScale,
+                WorldRobberFootprint * robberScale,
+                WorldRobberBaseHeight * robberScale,
                 sx,
                 sy,
                 sz);
             stackLocalY = AddRobberCylinder(
                 "RobberBody",
                 stackLocalY,
-                WorldRobberFootprint * 0.68f,
-                WorldRobberFootprint * 0.68f,
-                WorldRobberBodyHeight,
+                WorldRobberFootprint * 0.68f * robberScale,
+                WorldRobberFootprint * 0.68f * robberScale,
+                WorldRobberBodyHeight * robberScale,
                 sx,
                 sy,
                 sz);
             stackLocalY = AddRobberCylinder(
                 RobberShoulderPartName,
                 stackLocalY,
-                WorldRobberShoulderDiameter,
-                WorldRobberShoulderDiameter,
-                WorldRobberShoulderHeight,
+                WorldRobberShoulderDiameter * robberScale,
+                WorldRobberShoulderDiameter * robberScale,
+                WorldRobberShoulderHeight * robberScale,
                 sx,
                 sy,
                 sz);
             stackLocalY = AddRobberCylinder(
                 "RobberHead",
                 stackLocalY,
-                WorldRobberHeadDiameter,
-                WorldRobberHeadDiameter,
-                WorldRobberHeadDiameter,
+                WorldRobberHeadDiameter * robberScale,
+                WorldRobberHeadDiameter * robberScale,
+                WorldRobberHeadDiameter * robberScale,
                 sx,
                 sy,
                 sz,
@@ -456,8 +459,8 @@ namespace CatanRoguelike.Game
                 _robberMarker.transform,
                 RobberTopIconPartName,
                 new Vector3(0f, iconLocalY, 0f),
-                WorldRobberTopIconDiameter,
-                WorldRobberTopIconDiameter,
+                WorldRobberTopIconDiameter * robberScale,
+                WorldRobberTopIconDiameter * robberScale,
                 ColonistRobberTopIconTextures.Get(),
                 3360,
                 pawnTopRenderer,

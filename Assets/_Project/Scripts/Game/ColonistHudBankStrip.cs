@@ -30,7 +30,7 @@ namespace CatanRoguelike.Game
             layout.padding = new RectOffset(2, 2, 2, 2);
 
             float cardWidth = cardHeight * CardAspectWidthOverHeight;
-            foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
+            foreach (ResourceType resource in ResourceTypes.Productive)
             {
                 var card = CreateMiniCard(parent, resource, cardHeight, cardWidth, out Text countLabel);
                 widget.CountLabels.Add(countLabel);
@@ -42,7 +42,7 @@ namespace CatanRoguelike.Game
         public static void RefreshCounts(Widget widget, BankStock bank)
         {
             int i = 0;
-            foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
+            foreach (ResourceType resource in ResourceTypes.Productive)
             {
                 if (i >= widget.CountLabels.Count)
                     break;

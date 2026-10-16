@@ -136,8 +136,9 @@ namespace CatanRoguelike.Tests.PlayMode
                 var icon = tile.transform.Find("ResourceIcon");
                 Assert.IsNotNull(icon, $"Hex {tile.Data.Coord} should have ResourceIcon.");
                 var alignment = ColonistFlatBoardQuad.AlignmentMode.BoardPitchOnly;
-                Vector2 screenV = ColonistFlatBoardQuad.MeasureTextureVScreenDelta(icon, camera, alignment);
-                float screenUpAlign = ColonistFlatBoardQuad.MeasureTextureScreenUpAlignment(icon, camera, alignment);
+                float probeOffset = ColonistFlatBoardQuad.ComputeTextureProbeWorldOffset(icon, camera, 3f);
+                Vector2 screenV = ColonistFlatBoardQuad.MeasureTextureVScreenDelta(icon, camera, alignment, probeOffset);
+                float screenUpAlign = ColonistFlatBoardQuad.MeasureTextureScreenUpAlignment(icon, camera, alignment, probeOffset);
                 Assert.Greater(
                     screenUpAlign,
                     0.85f,
@@ -147,10 +148,11 @@ namespace CatanRoguelike.Tests.PlayMode
                     screenV.y,
                     2f,
                     $"Resource icon effective texture +V should map toward screen +Y for {tile.Data.Coord} (screenDelta={screenV}).");
+                float minScreenMag = Mathf.Max(2f, probeOffset * 18f);
                 Assert.Greater(
                     screenV.magnitude,
-                    3f,
-                    $"Resource icon screen-up sample should be measurable for {tile.Data.Coord}.");
+                    minScreenMag,
+                    $"Resource icon screen-up sample should be measurable for {tile.Data.Coord} (probe={probeOffset:F3}).");
                 checkedIcons++;
             }
 

@@ -202,6 +202,33 @@ namespace CatanRoguelike.Game
         }
 
         /// <summary>Cosine between measured on-screen up and screen +Y (1 = upright).</summary>
+        /// <summary>World-space probe distance so texture V maps to at least <paramref name="minScreenPixels"/> on screen.</summary>
+        public static float ComputeTextureProbeWorldOffset(
+            Transform quadTransform,
+            Camera camera,
+            float minScreenPixels = 3f)
+        {
+            if (quadTransform == null || camera == null)
+                return 0.08f;
+
+            var renderer = quadTransform.GetComponent<Renderer>();
+            if (renderer == null)
+                return 0.08f;
+
+            Bounds bounds = renderer.bounds;
+            Vector3 center = bounds.center;
+            Vector3 edge = center + quadTransform.right * Mathf.Max(bounds.extents.x, 0.001f);
+            float screenSpan = Vector2.Distance(
+                (Vector2)camera.WorldToScreenPoint(center),
+                (Vector2)camera.WorldToScreenPoint(edge));
+            float worldSpan = Vector3.Distance(center, edge);
+            if (worldSpan < 1e-5f || screenSpan < 0.5f)
+                return 0.08f;
+
+            float pixelsPerWorld = screenSpan / worldSpan;
+            return Mathf.Clamp(minScreenPixels / pixelsPerWorld, 0.035f, 0.18f);
+        }
+
         public static float MeasureTextureScreenUpAlignment(
             Transform quadTransform,
             Camera camera,

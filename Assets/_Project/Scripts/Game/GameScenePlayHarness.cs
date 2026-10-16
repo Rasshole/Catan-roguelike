@@ -106,7 +106,7 @@ namespace CatanRoguelike.Game
 
             var inv = controller.State.PlayerInventory;
             var discard = new ResourceBundle();
-            foreach (ResourceType type in System.Enum.GetValues(typeof(ResourceType)))
+            foreach (ResourceType type in ResourceTypes.Productive)
             {
                 while (need > 0 && inv[type] > discard[type])
                 {

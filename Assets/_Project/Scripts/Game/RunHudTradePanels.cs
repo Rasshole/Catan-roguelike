@@ -112,7 +112,7 @@ namespace CatanRoguelike.Game
             chipLayout.spacing = 4f;
             chipLayout.childAlignment = TextAnchor.MiddleLeft;
 
-            foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
+            foreach (ResourceType resource in ResourceTypes.Productive)
             {
                 var captured = resource;
                 string shortName = ResourceDisplayNames.GetEnglish(captured);

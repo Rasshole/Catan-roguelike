@@ -6,8 +6,6 @@ namespace CatanRoguelike.Core
         Brick = 1,
         Wheat = 2,
         Sheep = 3,
-        Stone = 4,
-        /// <summary>Desert — no resource production (classic robber tile).</summary>
-        Desert = 5
+        Stone = 4
     }
 }

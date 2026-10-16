@@ -88,7 +88,7 @@ namespace CatanRoguelike.Game
             _resourceAmountTexts.Clear();
             _resourceSwatches.Clear();
 
-            foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
+            foreach (ResourceType resource in ResourceTypes.Productive)
             {
                 var card = CreateColonistResourceCard(_handPanel, resource);
                 _handCardObjects.Add(card);
@@ -463,7 +463,7 @@ namespace CatanRoguelike.Game
         private void RefreshColonistResources(ResourceBundle bundle)
         {
             int i = 0;
-            foreach (ResourceType resource in System.Enum.GetValues(typeof(ResourceType)))
+            foreach (ResourceType resource in ResourceTypes.Productive)
             {
                 if (i >= _resourceAmountTexts.Count)
                     break;

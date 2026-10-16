@@ -14,7 +14,7 @@ namespace CatanRoguelike.Game
         {
             if (data.IsFishTile)
                 return new Color(0.22f, 0.48f, 0.72f);
-            if (data.IsDesert || data.Resource == ResourceType.Desert)
+            if (data.IsDesert)
                 return ToUnityColor(BoardResourcePalette.Desert);
             return ToUnityColor(BoardResourcePalette.GetResource(data.Resource));
         }

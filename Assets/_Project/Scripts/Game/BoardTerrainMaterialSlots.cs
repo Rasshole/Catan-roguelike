@@ -12,7 +12,7 @@ namespace CatanRoguelike.Game
             if (data.IsFishTile)
                 return ColonistBoardTextureLoader.GetTerrainMaterial(BoardTerrainSlot.SeaLake);
 
-            if (data.IsDesert || data.Resource == ResourceType.Desert)
+            if (data.IsDesert)
                 return ColonistBoardTextureLoader.GetTerrainMaterial(BoardTerrainSlot.Desert);
 
             return ColonistBoardTextureLoader.GetTerrainMaterial(ResourceToSlot(data.Resource));
@@ -25,7 +25,6 @@ namespace CatanRoguelike.Game
             ResourceType.Wheat => BoardTerrainSlot.Wheat,
             ResourceType.Sheep => BoardTerrainSlot.Sheep,
             ResourceType.Stone => BoardTerrainSlot.Ore,
-            ResourceType.Desert => BoardTerrainSlot.Desert,
             _ => BoardTerrainSlot.Wheat
         };
     }

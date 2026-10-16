@@ -17,17 +17,15 @@ namespace CatanRoguelike.Game
         public static Mesh Create(BoardState board, float hexScale, float beachWidth)
         {
             LastTargetBeachWidth = beachWidth;
-            var tileSet = new HashSet<HexCoord>(board.Tiles.Keys);
+            var tileSet = CollectLandCoords(board);
             float y = ThinDiskMesh.TopY;
+            var boardCenter = ComputeBoardCenterXZ(board, hexScale);
 
             var coastalEdges = new List<CoastalEdge>();
             var cornerNormals = new Dictionary<long, List<Vector2>>();
 
             foreach (var coord in tileSet)
             {
-                var (cx, cz) = HexMath.ToWorldPosition(coord, hexScale);
-                var hexCenter = new Vector2(cx, cz);
-
                 for (int direction = 0; direction < 6; direction++)
                 {
                     if (tileSet.Contains(HexMath.GetNeighbor(coord, direction)))
@@ -37,7 +35,7 @@ namespace CatanRoguelike.Game
                     int corner1 = (direction + 1) % 6;
                     var inner0 = CornerVertex(coord, corner0, hexScale, y);
                     var inner1 = CornerVertex(coord, corner1, hexScale, y);
-                    var outward = ComputeEdgeOutwardNormal(inner0, inner1, hexCenter);
+                    var outward = ComputeEdgeOutwardNormal(inner0, inner1, boardCenter);
                     coastalEdges.Add(new CoastalEdge(inner0, inner1, outward));
                     AccumulateCornerNormal(cornerNormals, inner0, outward);
                     AccumulateCornerNormal(cornerNormals, inner1, outward);
@@ -69,6 +67,19 @@ namespace CatanRoguelike.Game
             return mesh;
         }
 
+        private static HashSet<HexCoord> CollectLandCoords(BoardState board)
+        {
+            var tileSet = new HashSet<HexCoord>();
+            foreach (var kvp in board.Tiles)
+            {
+                if (kvp.Value.IsFishTile)
+                    continue;
+                tileSet.Add(kvp.Key);
+            }
+
+            return tileSet;
+        }
+
         public static Vector2 ComputeBoardCenterXZ(BoardState board, float hexScale)
         {
             if (board.Tiles.Count == 0)
@@ -76,14 +87,21 @@ namespace CatanRoguelike.Game
 
             float sumX = 0f;
             float sumZ = 0f;
-            foreach (var coord in board.Tiles.Keys)
+            int count = 0;
+            foreach (var kvp in board.Tiles)
             {
-                var (x, z) = HexMath.ToWorldPosition(coord, hexScale);
+                if (kvp.Value.IsFishTile)
+                    continue;
+                var (x, z) = HexMath.ToWorldPosition(kvp.Key, hexScale);
                 sumX += x;
                 sumZ += z;
+                count++;
             }
 
-            float inv = 1f / board.Tiles.Count;
+            if (count == 0)
+                return Vector2.zero;
+
+            float inv = 1f / count;
             return new Vector2(sumX * inv, sumZ * inv);
         }
 
@@ -106,7 +124,7 @@ namespace CatanRoguelike.Game
 
         public static int CountCoastalEdges(BoardState board)
         {
-            var tileSet = new HashSet<HexCoord>(board.Tiles.Keys);
+            var tileSet = CollectLandCoords(board);
             int count = 0;
             foreach (var coord in tileSet)
             {
@@ -136,13 +154,12 @@ namespace CatanRoguelike.Game
         public static float ComputeOuterExtentRadius(BoardState board, float hexScale, float beachWidth)
         {
             float maxR = 0f;
-            var tileSet = new HashSet<HexCoord>(board.Tiles.Keys);
+            var tileSet = CollectLandCoords(board);
+            var boardCenter = ComputeBoardCenterXZ(board, hexScale);
             var cornerNormals = new Dictionary<long, List<Vector2>>();
 
             foreach (var coord in tileSet)
             {
-                var (cx, cz) = HexMath.ToWorldPosition(coord, hexScale);
-                var hexCenter = new Vector2(cx, cz);
                 for (int direction = 0; direction < 6; direction++)
                 {
                     if (tileSet.Contains(HexMath.GetNeighbor(coord, direction)))
@@ -155,7 +172,7 @@ namespace CatanRoguelike.Game
                     var outward = ComputeEdgeOutwardNormal(
                         CornerVertex(coord, corner0, hexScale, ThinDiskMesh.TopY),
                         CornerVertex(coord, corner1, hexScale, ThinDiskMesh.TopY),
-                        hexCenter);
+                        boardCenter);
                     AccumulateCornerNormal(cornerNormals, inner0, outward);
                     AccumulateCornerNormal(cornerNormals, inner1, outward);
                     maxR = Mathf.Max(maxR, new Vector2(inner0.x, inner0.z).magnitude);
@@ -242,7 +259,8 @@ namespace CatanRoguelike.Game
             float denom = Vector2.Dot(sum, reference);
             if (Mathf.Abs(denom) < 1e-4f)
                 denom = 1f;
-            float miterLength = beachWidth / denom;
+            float miterLength = beachWidth / Mathf.Max(0.25f, Mathf.Abs(denom));
+            miterLength = Mathf.Min(miterLength, beachWidth * 2.5f);
             return new Vector3(inner.x + sum.x * miterLength, inner.y, inner.z + sum.y * miterLength);
         }
 

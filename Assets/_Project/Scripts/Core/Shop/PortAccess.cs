@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using CatanRoguelike.Core;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 
@@ -37,10 +38,8 @@ namespace CatanRoguelike.Core.Shop
             var ports = new List<PortDefinition>();
             var used = new HashSet<HexMath.Vertex>();
 
-            foreach (var resource in System.Enum.GetValues(typeof(ResourceType)).Cast<ResourceType>())
+            foreach (var resource in ResourceTypes.AllProductive)
             {
-                if (resource == ResourceType.Desert)
-                    continue;
                 if (ports.Count(p => !p.IsGeneric) >= specificTarget)
                     break;
 
