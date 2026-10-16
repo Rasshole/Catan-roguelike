@@ -133,15 +133,17 @@ namespace CatanRoguelike.Game
             float aspect = labelTexture.height / (float)labelTexture.width;
             float labelWorldHeight = labelWorldWidth * aspect;
 
+            Vector3 baseLabelLocal = new Vector3(0f, labelLocalY, 0f);
             var labelGo = ColonistFlatBoardQuad.Create(
                 badgeRoot.transform,
                 "RateLabel",
-                new Vector3(0f, labelLocalY, 0f),
+                baseLabelLocal,
                 labelWorldWidth,
                 labelWorldHeight,
                 labelTexture,
                 3210,
-                discRenderer);
+                placeAbove: null,
+                alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);
 
             if (!isGeneric && specificResource.HasValue)
             {
@@ -152,24 +154,36 @@ namespace CatanRoguelike.Game
                 if (upLocal.sqrMagnitude > 1e-6f)
                     upLocal.Normalize();
 
-                Vector3 labelLocal = new Vector3(0f, labelLocalY, 0f) - upLocal * (iconWorldSize * 0.5f + stackGap * 0.5f);
+                Vector3 labelLocal = baseLabelLocal - upLocal * (iconWorldSize * 0.5f + stackGap * 0.5f);
                 labelGo.transform.localPosition = labelLocal;
+                ColonistFlatBoardQuad.ApplyWorldSize(
+                    labelGo.transform,
+                    badgeRoot.transform,
+                    labelWorldWidth,
+                    labelWorldHeight);
+                ColonistFlatBoardQuad.PlaceWorldYAbove(labelGo.transform, discRenderer);
 
+                Vector3 iconLocal = labelLocal + upLocal * (labelWorldHeight * 0.5f + stackGap + iconWorldSize * 0.5f);
                 var iconGo = ColonistFlatBoardQuad.Create(
                     badgeRoot.transform,
                     "RateIcon",
-                    labelLocal + upLocal * (iconWorldSize + stackGap),
+                    iconLocal,
                     iconWorldSize,
                     iconWorldSize,
                     ColonistResourceIconTextures.Get(specificResource.Value),
                     3220,
-                    discRenderer,
+                    placeAbove: null,
                     alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);
                 ColonistFlatBoardQuad.ApplyWorldSize(
                     iconGo.transform,
                     badgeRoot.transform,
                     iconWorldSize,
                     iconWorldSize);
+                ColonistFlatBoardQuad.PlaceWorldYAbove(iconGo.transform, discRenderer);
+            }
+            else
+            {
+                ColonistFlatBoardQuad.PlaceWorldYAbove(labelGo.transform, discRenderer);
             }
         }
 

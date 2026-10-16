@@ -135,14 +135,18 @@ namespace CatanRoguelike.Tests.PlayMode
 
                 var icon = tile.transform.Find("ResourceIcon");
                 Assert.IsNotNull(icon, $"Hex {tile.Data.Coord} should have ResourceIcon.");
-                Vector2 screenV = ColonistFlatBoardQuad.MeasureTextureVScreenDelta(
-                    icon,
-                    camera,
-                    ColonistFlatBoardQuad.AlignmentMode.BoardPitchOnly);
+                var alignment = ColonistFlatBoardQuad.AlignmentMode.BoardPitchOnly;
+                Vector2 screenV = ColonistFlatBoardQuad.MeasureTextureVScreenDelta(icon, camera, alignment);
+                float screenUpAlign = ColonistFlatBoardQuad.MeasureTextureScreenUpAlignment(icon, camera, alignment);
+                Assert.Greater(
+                    screenUpAlign,
+                    0.85f,
+                    $"Resource icon art should read upward on screen for {tile.Data.Coord} " +
+                    $"(screenUpAlign={screenUpAlign:F3} screenDelta={screenV}).");
                 Assert.Greater(
                     screenV.y,
                     2f,
-                    $"Resource icon art should read upward on screen for {tile.Data.Coord} (screenDelta={screenV}).");
+                    $"Resource icon effective texture +V should map toward screen +Y for {tile.Data.Coord} (screenDelta={screenV}).");
                 Assert.Greater(
                     screenV.magnitude,
                     3f,

@@ -221,17 +221,24 @@ namespace CatanRoguelike.Tests.PlayMode
                 Vector2 iconScreen = ColonistFlatBoardQuad.MeasureScreenPixelSize(iconRenderer, camera);
                 Assert.Greater(
                     iconScreen.y,
-                    labelScreen.y * 0.65f,
-                    $"2:1 port icon should be readable on screen (iconH={iconScreen.y:F1} labelH={labelScreen.y:F1}).");
+                    labelScreen.y * 0.85f,
+                    $"2:1 port icon height should match label text on screen (iconH={iconScreen.y:F1} labelH={labelScreen.y:F1}).");
                 Assert.Greater(iconScreen.y, 10f, $"2:1 port icon screen height should not be a sliver (h={iconScreen.y:F1}px).");
 
                 Vector3 iconScreenCenter = camera.WorldToScreenPoint(iconRenderer.bounds.center);
+                Vector3 labelScreenCenter = camera.WorldToScreenPoint(labelRenderer.bounds.center);
                 Vector3 discScreenCenter = camera.WorldToScreenPoint(discRenderer.bounds.center);
                 Vector2 discScreenSize = ColonistFlatBoardQuad.MeasureScreenPixelSize(discRenderer, camera);
-                Assert.Less(Mathf.Abs(iconScreenCenter.x - discScreenCenter.x), discScreenSize.x * 0.45f,
+                Assert.Greater(
+                    iconScreenCenter.y,
+                    labelScreenCenter.y,
+                    "2:1 port icon should stack above the rate label in screen space.");
+                Assert.Less(Mathf.Abs(iconScreenCenter.x - discScreenCenter.x), discScreenSize.x * 0.42f,
                     "2:1 port icon should stay centered on the badge in screen space.");
-                Assert.Less(Mathf.Abs(iconScreenCenter.y - discScreenCenter.y), discScreenSize.y * 0.55f,
-                    "2:1 port icon should stay inside the badge in screen space.");
+                Assert.Less(iconScreenCenter.y - discScreenCenter.y, discScreenSize.y * 0.55f,
+                    "2:1 port icon should not hang far above the badge disc.");
+                Assert.Greater(iconScreenCenter.y - discScreenCenter.y, -discScreenSize.y * 0.15f,
+                    "2:1 port icon should stay inside the badge stack in screen space.");
             }
         }
     }

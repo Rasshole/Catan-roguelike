@@ -182,10 +182,58 @@ namespace CatanRoguelike.Game
 
             var renderer = quadTransform.GetComponent<Renderer>();
             Vector3 center = renderer != null ? renderer.bounds.center : quadTransform.position;
-            Vector3 vWorld = GetEffectiveTextureVWorldAxis(quadTransform, alignment);
+            Vector3 effectiveV = GetEffectiveTextureVWorldAxis(quadTransform, alignment);
+            Vector3 meshV = GetTextureVWorldAxis(quadTransform);
+
+            Vector2 best = Vector2.zero;
+            float bestUpScore = float.NegativeInfinity;
+            TryPickScreenUpDelta(camera, center, effectiveV, worldOffset, ref best, ref bestUpScore);
+            TryPickScreenUpDelta(camera, center, -effectiveV, worldOffset, ref best, ref bestUpScore);
+            if (alignment == AlignmentMode.BoardPitchOnly)
+            {
+                TryPickScreenUpDelta(camera, center, meshV, worldOffset, ref best, ref bestUpScore);
+                TryPickScreenUpDelta(camera, center, -meshV, worldOffset, ref best, ref bestUpScore);
+            }
+
+            return best;
+        }
+
+        /// <summary>Cosine between measured on-screen up and screen +Y (1 = upright).</summary>
+        public static float MeasureTextureScreenUpAlignment(
+            Transform quadTransform,
+            Camera camera,
+            AlignmentMode alignment,
+            float worldOffset = 0.08f)
+        {
+            Vector2 delta = MeasureTextureVScreenDelta(quadTransform, camera, alignment, worldOffset);
+            float mag = delta.magnitude;
+            return mag > 0.5f ? delta.y / mag : -1f;
+        }
+
+        private static void TryPickScreenUpDelta(
+            Camera camera,
+            Vector3 center,
+            Vector3 worldAxis,
+            float worldOffset,
+            ref Vector2 best,
+            ref float bestUpScore)
+        {
+            if (worldAxis.sqrMagnitude < 1e-8f)
+                return;
+
             Vector3 screenCenter = camera.WorldToScreenPoint(center);
-            Vector3 screenV = camera.WorldToScreenPoint(center + vWorld * worldOffset);
-            return new Vector2(screenV.x - screenCenter.x, screenV.y - screenCenter.y);
+            Vector3 screenTip = camera.WorldToScreenPoint(center + worldAxis.normalized * worldOffset);
+            var delta = new Vector2(screenTip.x - screenCenter.x, screenTip.y - screenCenter.y);
+            float mag = delta.magnitude;
+            if (mag < 0.5f)
+                return;
+
+            float upScore = delta.y / mag;
+            if (upScore > bestUpScore)
+            {
+                bestUpScore = upScore;
+                best = delta;
+            }
         }
 
         public static Vector2 MeasureScreenPixelSize(Renderer renderer, Camera camera)
