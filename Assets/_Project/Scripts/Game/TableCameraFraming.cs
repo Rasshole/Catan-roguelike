@@ -141,13 +141,13 @@ namespace CatanRoguelike.Game
 
         public readonly struct ColonistSurfaceLayout
         {
-            public float HexBottomY;
-            public float SandCenterY;
-            public float SandTopY;
-            public float OceanCenterY;
-            public float OceanTopY;
-            public Vector3 OceanScale;
-            public Vector3 SandScale;
+            public readonly float HexBottomY;
+            public readonly float SandCenterY;
+            public readonly float SandTopY;
+            public readonly float OceanCenterY;
+            public readonly float OceanTopY;
+            public readonly Vector3 OceanScale;
+            public readonly Vector3 SandScale;
         }
 
         /// <summary>Ocean below sand below hex prism base (top-down camera sees hex tops first).</summary>
