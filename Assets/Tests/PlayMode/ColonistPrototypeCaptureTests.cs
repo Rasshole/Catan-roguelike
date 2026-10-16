@@ -121,6 +121,9 @@ namespace CatanRoguelike.Tests.PlayMode
                     $"Colonist capture framing: playAreaCenterTexture=({playCenter.x},{playCenter.y}) " +
                     $"boardReferenceTexture=({boardPixel.x},{boardPixel.y})");
 
+                ColonistBoardCaptureAssertions.AssertColonistLandHexViewCount(19);
+                ColonistBoardCaptureAssertions.AssertRenderedPortBadgeDiscCount(9);
+
                 ColonistBoardCaptureAssertions.AssertColonistBoardCaptureShowsHexTiles(
                     boardOnly,
                     mainCamera,
@@ -160,7 +163,6 @@ namespace CatanRoguelike.Tests.PlayMode
                     tableCamera,
                     GameSceneCapture.CaptureWidth,
                     GameSceneCapture.CaptureHeight);
-                ColonistBoardCaptureAssertions.AssertRenderedPortBadgeDiscCount(9);
                 ColonistBoardCaptureAssertions.AssertFishermenHarnessBoardAndHud(gameManager.Controller.State);
 
                 AssertTextureHasVisibleContent(withHud);

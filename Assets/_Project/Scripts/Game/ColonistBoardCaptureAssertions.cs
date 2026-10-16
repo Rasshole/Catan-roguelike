@@ -58,6 +58,15 @@ namespace CatanRoguelike.Game
                 $"ColonistBoardCaptureAssertions sample texture {boardCapture.width}x{boardCapture.height} " +
                 $"id={boardCapture.GetInstanceID()} center=({center.x},{center.y}) [bottom-left origin]");
             WriteSamplePatchDebugPng(boardCapture, center.x, center.y);
+            foreach (var tile in Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
+            {
+                if (!tile.Data.IsFishTile || tile.Data.IsDesert)
+                {
+                    ColonistBoardTerrainDiagnostics.LogSampleLandHexRenderers(tile);
+                    break;
+                }
+            }
+
             AssertCenterRegionShowsHexTiles(boardCapture, center.x, center.y);
         }
 
@@ -709,7 +718,24 @@ namespace CatanRoguelike.Game
                     count++;
             }
 
+            Debug.Log($"ColonistBoardCaptureAssertions port BadgeDisc count={count} (expected {expected}).");
             Assert.AreEqual(expected, count, $"Colonist board should render {expected} port BadgeDisc meshes.");
+        }
+
+        public static void AssertColonistLandHexViewCount(int expectedLandHexes = 19)
+        {
+            int land = 0;
+            foreach (var tile in Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
+            {
+                if (!tile.Data.IsFishTile || tile.Data.IsDesert)
+                    land++;
+            }
+
+            Debug.Log($"ColonistBoardCaptureAssertions land HexTileView count={land} (expected {expectedLandHexes}).");
+            Assert.AreEqual(
+                expectedLandHexes,
+                land,
+                $"Colonist board should show {expectedLandHexes} land hex views (sea fish are separate).");
         }
 
         public static void AssertFishermenHarnessBoardAndHud(GameState state)
@@ -728,9 +754,11 @@ namespace CatanRoguelike.Game
                 else
                     fishGrounds++;
 
-                Assert.IsNotNull(
-                    tile.transform.Find("FishGroundIcon"),
-                    $"Fish tile at {tile.Data.Coord} should spawn FishGroundIcon.");
+                bool hasVisual = tile.transform.Find("FishGroundIcon") != null
+                    || tile.transform.Find("SeaFishGround") != null;
+                Assert.IsTrue(
+                    hasVisual,
+                    $"Fish tile at {tile.Data.Coord} should spawn sea ground or fish icon.");
             }
 
             Assert.IsTrue(sawDesertLake, "Desert center should become a fishing lake when Fishermen is enabled.");

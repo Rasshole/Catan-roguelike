@@ -18,7 +18,7 @@ namespace CatanRoguelike.Game
             if (_cache.TryGetValue(slot, out var cached))
                 return cached;
 
-            var fallback = GetFallbackColor(slot);
+            var fallback = ColonistBoardTerrainDiagnostics.EnsureVisibleTerrainFallback(GetFallbackColor(slot));
             Texture2D texture = Resources.Load<Texture2D>($"{ArtRoot}/{slot}");
             if (texture == null)
             {
@@ -35,6 +35,7 @@ namespace CatanRoguelike.Game
 
             Material mat = BuiltInMaterials.CreateTerrainSurface(texture, fallback);
             mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry;
+            ColonistBoardTerrainDiagnostics.LogTerrainMaterialCreation(slot, mat, texture, fallback);
 
             _cache[slot] = mat;
             return mat;

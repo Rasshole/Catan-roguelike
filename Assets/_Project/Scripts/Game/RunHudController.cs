@@ -114,6 +114,7 @@ namespace CatanRoguelike.Game
             {
                 RefreshColonistPresentation(state);
                 RefreshFishSpendPanel(state);
+                RefreshColonistFishHud(state);
                 RefreshColonistResources(
                     _resourceAnimLock ? _resourceAnimDisplay : state.PlayerInventory);
             }

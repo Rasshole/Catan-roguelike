@@ -22,6 +22,9 @@ namespace CatanRoguelike.Game
         public static void ApplyOutline(GameObject tileRoot, HexCoord hex, float hexScale,
             IReadOnlyCollection<HexCoord> landTiles = null)
         {
+            if (ColonistPresentation.IsActive)
+                return;
+
             var outlineRoot = new GameObject("TileOutline");
             outlineRoot.transform.SetParent(tileRoot.transform, false);
             CreateEdgeOutlines(outlineRoot.transform, hex, hexScale, tileRoot.transform.lossyScale, landTiles);
@@ -86,7 +89,9 @@ namespace CatanRoguelike.Game
                     length / hexLossyScale.x,
                     OutlineThickness / hexLossyScale.y,
                     OutlineThickness / hexLossyScale.z);
-                strip.GetComponent<Renderer>().sharedMaterial = BuiltInMaterials.Create(outlineColor);
+                strip.GetComponent<Renderer>().sharedMaterial = ColonistPresentation.IsActive
+                    ? BuiltInMaterials.CreateUnlit(outlineColor)
+                    : BuiltInMaterials.Create(outlineColor);
                 DestroyCollider(strip);
             }
         }

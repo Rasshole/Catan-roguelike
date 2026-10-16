@@ -95,9 +95,12 @@ namespace CatanRoguelike.Game
             if (board == null)
                 return false;
 
-            foreach (var hex in board.Tiles.Keys)
+            foreach (var kvp in board.Tiles)
             {
-                if (DiscIntersectsHexPolygon(discCenter, discRadius, hex, hexScale))
+                if (kvp.Value.IsFishTile && !kvp.Value.IsDesert)
+                    continue;
+
+                if (DiscIntersectsHexPolygon(discCenter, discRadius, kvp.Key, hexScale))
                     return true;
             }
 
@@ -140,12 +143,15 @@ namespace CatanRoguelike.Game
         {
             foreach (var hex in VertexGraph.GetHexesForVertex(portVertex))
             {
-                if (board.Tiles.ContainsKey(hex))
+                if (board.Tiles.TryGetValue(hex, out var tile) && IsLandTile(tile))
                     return true;
             }
 
             return false;
         }
+
+        private static bool IsLandTile(HexTileData tile) =>
+            !tile.IsFishTile || tile.IsDesert;
 
         private static Vector2 GetCoastAnchor(
             BoardState board,
@@ -204,9 +210,12 @@ namespace CatanRoguelike.Game
         {
             Vector2 sum = Vector2.zero;
             int count = 0;
-            foreach (var hex in board.Tiles.Keys)
+            foreach (var kvp in board.Tiles)
             {
-                var (x, z) = HexMath.ToWorldPosition(hex, hexScale);
+                if (!IsLandTile(kvp.Value))
+                    continue;
+
+                var (x, z) = HexMath.ToWorldPosition(kvp.Key, hexScale);
                 sum += new Vector2(x, z);
                 count++;
             }

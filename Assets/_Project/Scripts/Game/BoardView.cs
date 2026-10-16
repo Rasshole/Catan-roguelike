@@ -252,8 +252,11 @@ namespace CatanRoguelike.Game
             DisableLegacySceneTable();
 
             _boardTileCoords.Clear();
-            foreach (var coord in board.Tiles.Keys)
-                _boardTileCoords.Add(coord);
+            foreach (var kvp in board.Tiles)
+            {
+                if (IsLandHexCoord(kvp.Value))
+                    _boardTileCoords.Add(kvp.Key);
+            }
 
             foreach (var kvp in board.Tiles)
             {
@@ -355,6 +358,9 @@ namespace CatanRoguelike.Game
             }
         }
 
+        private static bool IsLandHexCoord(HexTileData data) =>
+            !data.IsFishTile || data.IsDesert;
+
         private HexTileView CreateHexTile(HexTileData data)
         {
             var go = new GameObject($"Hex_{data.Coord.Q}_{data.Coord.R}");
@@ -363,28 +369,36 @@ namespace CatanRoguelike.Game
             var (x, z) = HexMath.ToWorldPosition(data.Coord, hexScale);
             go.transform.localPosition = new Vector3(x, 0f, z);
             float height = ColonistPresentation.IsActive ? tileHeight * 0.25f : tileHeight;
-            // Colonist flattens prism height on Y only (never Z — Z scale would squash the hex footprint).
             go.transform.localScale = new Vector3(1f, height, 1f);
 
-            var mesh = HexPrismMesh.Create(data.Coord, hexScale);
-            var meshFilter = go.AddComponent<MeshFilter>();
-            meshFilter.sharedMesh = mesh;
+            Renderer renderer;
+            if (ColonistPresentation.IsActive && data.IsFishTile && !data.IsDesert)
+            {
+                renderer = ColonistSeaFishHexVisual.Apply(go, data, hexScale, height);
+            }
+            else
+            {
+                var mesh = HexPrismMesh.Create(data.Coord, hexScale);
+                var meshFilter = go.AddComponent<MeshFilter>();
+                meshFilter.sharedMesh = mesh;
 
-            var renderer = go.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = ColonistPresentation.IsActive
-                ? BoardTerrainMaterialSlots.GetTileMaterial(data)
-                : BuiltInMaterials.Create(BoardResourceColors.GetTileFace(data));
+                renderer = go.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial = ColonistPresentation.IsActive
+                    ? BoardTerrainMaterialSlots.GetTileMaterial(data)
+                    : BuiltInMaterials.Create(BoardResourceColors.GetTileFace(data));
 
-            var collider = go.AddComponent<MeshCollider>();
-            collider.sharedMesh = mesh;
+                var collider = go.AddComponent<MeshCollider>();
+                collider.sharedMesh = mesh;
+            }
 
             HexCartoonTileDecor.ApplyOutline(go, data.Coord, hexScale, _boardTileCoords);
             if (ColonistPresentation.IsActive)
             {
-                ColonistHexTileIcon.Apply(go, data, hexScale);
-                if (data.IsDesert)
+                if (!data.IsFishTile || data.IsDesert)
+                    ColonistHexTileIcon.Apply(go, data, hexScale);
+                if (data.IsDesert && !data.IsFishTile)
                     ColonistDesertDuneDecor.Apply(go, hexScale);
-                if (data.IsFishTile)
+                if (data.IsFishTile && data.IsDesert)
                     ColonistFishTileVisual.Apply(go, data, hexScale);
             }
             else

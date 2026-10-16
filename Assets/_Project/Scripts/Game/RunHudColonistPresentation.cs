@@ -20,6 +20,7 @@ namespace CatanRoguelike.Game
         private Text _colonistChatText;
         private GameObject _colonistTurnBanner;
         private ColonistHudBankStrip.Widget _colonistBankStrip;
+        private RectTransform _colonistBankStripRoot;
         private GamePhase _turnCountdownLastPhase;
         private float _turnCountdownSeconds = 90f;
 
@@ -311,6 +312,7 @@ namespace CatanRoguelike.Game
                 Vector2.zero);
             RunHudUiFactory.AddLayoutElement(bankStrip.gameObject, 52f);
             SetBankFlyTarget(bankStrip);
+            _colonistBankStripRoot = bankStrip;
             _colonistBankStrip = ColonistHudBankStrip.Build(bankStrip);
         }
 

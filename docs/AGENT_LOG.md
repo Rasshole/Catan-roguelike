@@ -1,5 +1,14 @@
 # Agent log
 
+## 2026-10-16 (UTC) — PR #109 v69 board shape/terrain/ports (`HEAD` after `ae9069e`)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Black hexes — skip colonist Standard outlines; terrain diag logs; visible unlit fallback | Done |
+| 2 | 19-hex shape — sea fish as `SeaFishGround` discs; land coords only for outlines; EditMode test | Done |
+| 3 | Nine ports — even frame pick fill; land-only badge collision; short colonist piers; assert before hex | Done |
+| 4 | Fish HUD — hand + bank strip cards; lake/sea visuals | Done |
+
 ## 2026-10-16 (UTC) — PR #109 v67 board fixes (`9280c66` on `edfda26`)
 
 | # | Item | Status |

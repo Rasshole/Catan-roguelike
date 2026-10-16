@@ -81,7 +81,6 @@ namespace CatanRoguelike.Game
             Vector3 vertexPos = new Vector3(vertexX, hexTopY + BaseGapAboveHex, vertexZ);
 
             Vector3 seaDir3;
-            float badgeLocalZ;
             if (board != null
                 && PortBadgePlacement.TryComputeBadgeCenter(
                     board,
@@ -110,13 +109,22 @@ namespace CatanRoguelike.Game
             root.transform.SetParent(parent, false);
             root.transform.SetPositionAndRotation(vertexPos, Quaternion.LookRotation(seaDir3, Vector3.up));
 
-            Vector3 badgeWorld = new Vector3(badgeCenter.x, vertexPos.y, badgeCenter.y);
-            Vector3 badgeLocal = root.transform.InverseTransformPoint(badgeWorld);
-            badgeLocalZ = Mathf.Max(
-                badgeLocal.z,
-                BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc);
-
-            float pierLen = Mathf.Max(PierWidth * 2f, badgeLocalZ);
+            float badgeLocalZ;
+            float pierLen;
+            if (ColonistPresentation.IsActive)
+            {
+                pierLen = PierLength;
+                badgeLocalZ = pierLen + BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc;
+            }
+            else
+            {
+                Vector3 badgeWorld = new Vector3(badgeCenter.x, vertexPos.y, badgeCenter.y);
+                Vector3 badgeLocal = root.transform.InverseTransformPoint(badgeWorld);
+                badgeLocalZ = Mathf.Max(
+                    badgeLocal.z,
+                    BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc);
+                pierLen = Mathf.Max(PierWidth * 2f, badgeLocalZ);
+            }
 
             CreatePart("PierPlank", root.transform,
                 new Vector3(0f, PierHeight * 0.5f, pierLen * 0.5f),

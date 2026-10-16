@@ -121,10 +121,10 @@ namespace CatanRoguelike.Core.Shop
             if (sorted.Count == 0 || count <= 0)
                 return picked;
 
-            double step = sorted.Count / (double)count;
             for (int i = 0; i < count; i++)
             {
-                int start = (int)Math.Round(i * step) % sorted.Count;
+                int start = (int)Math.Floor((i + 0.5) * sorted.Count / (double)count) % sorted.Count;
+                bool added = false;
                 for (int attempt = 0; attempt < sorted.Count; attempt++)
                 {
                     int idx = (start + attempt) % sorted.Count;
@@ -132,12 +132,16 @@ namespace CatanRoguelike.Core.Shop
                     if (!PortSpacingRules.ConflictsWithAny(candidate, picked))
                     {
                         picked.Add(candidate);
+                        added = true;
                         break;
                     }
                 }
+
+                if (!added)
+                    break;
             }
 
-            return picked;
+            return FillRemainingSpaced(sorted, picked, count);
         }
 
         private static List<HexMath.Vertex> FillRemainingSpaced(
