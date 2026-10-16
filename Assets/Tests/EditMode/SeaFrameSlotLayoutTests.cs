@@ -119,7 +119,7 @@ namespace CatanRoguelike.Tests.EditMode
         }
 
         [Test]
-        public void FishShoals_AttachToLandSeaEdges()
+        public void FishChevrons_NestAtCoastalVertexWithTwoLandHexes()
         {
             var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
             var land = new HashSet<HexCoord>(board.Tiles.Keys);
@@ -128,11 +128,28 @@ namespace CatanRoguelike.Tests.EditMode
             {
                 Assert.IsTrue(
                     SeaFrameSlotLayout.TryGetFishShoalPlacement(board, sea, HexScale, out FishShoalPlacement p),
-                    $"Sea fish slot {sea} should resolve to a coastal shoal.");
+                    $"Sea fish slot {sea} should resolve to a coastal chevron.");
 
                 Assert.IsFalse(land.Contains(sea), $"Fish slot {sea} must not be a land hex.");
-                float edgeLen = (p.CoastVertexA - p.CoastVertexB).Magnitude;
-                Assert.Greater(edgeLen, HexScale * 0.5f, "Shoal base should span a land coast edge.");
+
+                int landAtInland = 0;
+                foreach (var hex in VertexGraph.GetHexesForVertex(p.BorderVertexInland))
+                {
+                    if (land.Contains(hex))
+                        landAtInland++;
+                }
+
+                Assert.GreaterOrEqual(
+                    landAtInland,
+                    2,
+                    $"Chevron inland vertex should touch at least two land hexes (got {landAtInland}).");
+
+                float flatSpan = (p.SeaFlatLeft - p.SeaFlatRight).Magnitude;
+                Assert.Greater(flatSpan, HexScale * 0.35f, "Chevron flat sea edge should span the coast opening.");
+                Assert.Greater(
+                    (p.SeaFlatLeft - p.InlandTip).Magnitude,
+                    (p.InlandTip - p.CoastArmLeft).Magnitude * 0.5f,
+                    "Flat sea edge should sit farther from land than the coast arms.");
             }
         }
 
@@ -148,14 +165,14 @@ namespace CatanRoguelike.Tests.EditMode
                     SeaFrameSlotLayout.TryGetFishShoalPlacement(board, sea, HexScale, out FishShoalPlacement p),
                     $"Fish shoal placement for {sea}.");
 
-                var points = new[] { p.CoastVertexA, p.CoastVertexB, p.SeaTip, p.TokenCenter };
-                foreach (var point in points)
+                var seaPoints = new[] { p.SeaFlatLeft, p.SeaFlatRight, p.TokenCenter };
+                foreach (var point in seaPoints)
                 {
                     float minDist = SeaFrameSlotLayout.MinDistanceToLandHexPolygons(board, point, HexScale);
                     Assert.Greater(
                         minDist,
                         clearance,
-                        $"Fish shoal point {point} at sea {sea} should stay off land (minDist={minDist:F3}).");
+                        $"Fish chevron sea point {point} at sea {sea} should stay off land (minDist={minDist:F3}).");
                 }
             }
         }

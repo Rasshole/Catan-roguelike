@@ -68,6 +68,25 @@ namespace CatanRoguelike.Game
             return mat;
         }
 
+        public static Material CreateUnlitTextured(Texture2D texture, Color tint, bool zWrite = true)
+        {
+            var shader = Shader.Find("Unlit/Texture");
+            if (shader == null)
+            {
+                var fallback = CreateUnlit(tint, zWrite);
+                if (texture != null)
+                    fallback.mainTexture = texture;
+                return fallback;
+            }
+
+            var mat = new Material(shader) { color = tint };
+            if (texture != null)
+                mat.mainTexture = texture;
+            mat.SetInt("_ZWrite", zWrite ? 1 : 0);
+            mat.renderQueue = zWrite ? 3500 : 3080;
+            return mat;
+        }
+
         public static Material CreateUnlitTransparent(Texture2D texture, bool zWrite = false)
         {
             var shader = Shader.Find(UnlitTransparentShaderName);

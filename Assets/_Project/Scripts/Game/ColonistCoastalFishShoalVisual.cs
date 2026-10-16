@@ -7,6 +7,7 @@ namespace CatanRoguelike.Game
     public static class ColonistCoastalFishShoalVisual
     {
         public const string ShoalRootName = "CoastalFishShoal";
+        private static readonly Color ChevronWaterTint = new(0.62f, 0.82f, 0.96f, 1f);
 
         public static HexTileView Build(
             Transform boardRoot,
@@ -28,7 +29,7 @@ namespace CatanRoguelike.Game
             var meshFilter = meshGo.AddComponent<MeshFilter>();
             meshFilter.sharedMesh = mesh;
             var renderer = meshGo.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = CreateShoalMaterial();
+            renderer.sharedMaterial = CreateChevronMaterial();
             renderer.sharedMaterial.renderQueue = 2002;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
@@ -39,11 +40,14 @@ namespace CatanRoguelike.Game
             return view;
         }
 
-        private static Material CreateShoalMaterial()
+        private static Material CreateChevronMaterial()
         {
-            var fallback = BuiltInMaterials.CreateUnlit(new Color(0.48f, 0.72f, 0.78f, 1f), zWrite: true);
-            fallback.renderQueue = 2002;
-            return fallback;
+            var texture = ColonistBoardTextureLoader.LoadBoardTexture(BoardTerrainSlot.FishShoal);
+            Material mat = texture != null
+                ? BuiltInMaterials.CreateUnlitTextured(texture, ChevronWaterTint, zWrite: true)
+                : BuiltInMaterials.CreateUnlit(ChevronWaterTint, zWrite: true);
+            mat.renderQueue = 2002;
+            return mat;
         }
     }
 }

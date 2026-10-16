@@ -19,10 +19,9 @@ namespace CatanRoguelike.Core.Map
         /// <summary>Extra radius so clearance matches drawn hex outline + badge rim (world units).</summary>
         public const float BadgeRenderedLandInset = 0.055f;
         public const float FishShoalLandClearance = 0.05f;
-        private const float FishShoalCoastInsetFactor = 0.14f;
-        private const float FishShoalSeaDepthFactor = 0.75f;
-        private const float FishShoalBaseHalfWidthFactor = 0.45f;
-        private const float FishShoalTokenDepthFactor = 0.45f;
+        private const float FishChevronCoastArmFactor = 0.40f;
+        private const float FishChevronSeaDepthFactor = 0.58f;
+        private const float FishChevronTokenDepthFactor = 0.34f;
         private const float BadgeClearanceEpsilon = 0.004f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 
@@ -61,6 +60,12 @@ namespace CatanRoguelike.Core.Map
             {
                 if (!usedSea.Contains(coord))
                     fishCandidates.Add(coord);
+            }
+
+            for (int i = fishCandidates.Count - 1; i >= 0; i--)
+            {
+                if (!TryGetFishShoalPlacement(board, fishCandidates[i], 1f, out _))
+                    fishCandidates.RemoveAt(i);
             }
 
             int fishCount = Math.Min(6, fishCandidates.Count);
@@ -222,39 +227,87 @@ namespace CatanRoguelike.Core.Map
             out FishShoalPlacement placement)
         {
             placement = default;
-            var land = new HashSet<HexCoord>(board.Tiles.Keys);
+            if (board == null || board.Tiles.ContainsKey(seaCoord))
+                return false;
+
             var (seaX, seaZ) = HexMath.ToWorldPosition(seaCoord, hexScale);
             var seaCenter = new MapPlaneXz(seaX, seaZ);
 
-            foreach (var hex in land)
+            for (int corner = 0; corner < 6; corner++)
             {
-                for (int d = 0; d < 6; d++)
-                {
-                    if (HexMath.GetNeighbor(hex, d) != seaCoord)
-                        continue;
+                var landA = HexMath.GetNeighbor(seaCoord, (corner + 4) % 6);
+                var landB = HexMath.GetNeighbor(seaCoord, (corner + 5) % 6);
+                if (!board.Tiles.ContainsKey(landA) || !board.Tiles.ContainsKey(landB))
+                    continue;
 
-                    var edge = HexMath.GetEdgeFacing(hex, d);
-                    var (mx, mz) = HexMath.EdgeMidpoint(edge, hexScale);
-                    var coastMid = new MapPlaneXz(mx, mz);
-                    MapPlaneXz outward = (seaCenter - coastMid).Normalized;
-                    var (ax, az) = HexMath.VertexToWorldPosition(edge.A, hexScale);
-                    var (bx, bz) = HexMath.VertexToWorldPosition(edge.B, hexScale);
-                    MapPlaneXz edgeVec = new MapPlaneXz(bx - ax, bz - az);
-                    float edgeLen = edgeVec.Magnitude;
-                    MapPlaneXz edgeDir = edgeLen > 1e-5f ? edgeVec / edgeLen : outward;
-                    float inset = hexScale * FishShoalCoastInsetFactor;
-                    float halfW = hexScale * FishShoalBaseHalfWidthFactor;
-                    float depth = hexScale * FishShoalSeaDepthFactor;
-                    var baseA = coastMid + edgeDir * halfW + outward * inset;
-                    var baseB = coastMid - edgeDir * halfW + outward * inset;
-                    var seaTip = coastMid + outward * (inset + depth);
-                    var tokenCenter = coastMid + outward * (inset + depth * FishShoalTokenDepthFactor);
-                    placement = new FishShoalPlacement(baseA, baseB, seaTip, tokenCenter, outward);
-                    return true;
-                }
+                var inlandVertex = VertexGraph.Canonicalize(new Vertex(seaCoord, corner));
+                var (tipX, tipZ) = HexMath.VertexToWorldPosition(inlandVertex, hexScale);
+                var inlandTip = new MapPlaneXz(tipX, tipZ);
+
+                int dirA = DirectionToNeighbor(landA, seaCoord);
+                int dirB = DirectionToNeighbor(landB, seaCoord);
+                if (dirA < 0 || dirB < 0)
+                    continue;
+
+                var edgeA = HexMath.GetEdgeFacing(landA, dirA);
+                var edgeB = HexMath.GetEdgeFacing(landB, dirB);
+                var outerLeft = OtherVertexOnEdge(edgeA, inlandVertex);
+                var outerRight = OtherVertexOnEdge(edgeB, inlandVertex);
+
+                var (olx, olz) = HexMath.VertexToWorldPosition(outerLeft, hexScale);
+                var (orx, orz) = HexMath.VertexToWorldPosition(outerRight, hexScale);
+                var outerLeftXz = new MapPlaneXz(olx, olz);
+                var outerRightXz = new MapPlaneXz(orx, orz);
+
+                float arm = FishChevronCoastArmFactor * hexScale;
+                var coastArmLeft = inlandTip + (outerLeftXz - inlandTip).Normalized * arm;
+                var coastArmRight = inlandTip + (outerRightXz - inlandTip).Normalized * arm;
+
+                MapPlaneXz outward = (seaCenter - inlandTip).Normalized;
+                float depth = FishChevronSeaDepthFactor * hexScale;
+                var seaFlatLeft = coastArmLeft + outward * depth;
+                var seaFlatRight = coastArmRight + outward * depth;
+                float tokenDepth = FishChevronTokenDepthFactor * hexScale;
+                var tokenCenter = inlandTip + outward * tokenDepth;
+
+                placement = new FishShoalPlacement(
+                    inlandTip,
+                    coastArmLeft,
+                    coastArmRight,
+                    seaFlatLeft,
+                    seaFlatRight,
+                    tokenCenter,
+                    outward,
+                    inlandVertex,
+                    outerLeft,
+                    outerRight);
+                return true;
             }
 
             return false;
+        }
+
+        private static int DirectionToNeighbor(HexCoord from, HexCoord to)
+        {
+            for (int d = 0; d < 6; d++)
+            {
+                if (HexMath.GetNeighbor(from, d).Equals(to))
+                    return d;
+            }
+
+            return -1;
+        }
+
+        private static Vertex OtherVertexOnEdge(Edge edge, Vertex onEdge)
+        {
+            onEdge = VertexGraph.Canonicalize(onEdge);
+            var a = VertexGraph.Canonicalize(edge.A);
+            var b = VertexGraph.Canonicalize(edge.B);
+            if (a.Equals(onEdge))
+                return b;
+            if (b.Equals(onEdge))
+                return a;
+            return onEdge;
         }
 
         public static void AppendFishShoalFramingSamples(
@@ -270,9 +323,11 @@ namespace CatanRoguelike.Core.Map
                 if (!TryGetFishShoalPlacement(board, sea, hexScale, out FishShoalPlacement p))
                     continue;
 
-                xzSamples.Add(p.CoastVertexA);
-                xzSamples.Add(p.CoastVertexB);
-                xzSamples.Add(p.SeaTip);
+                xzSamples.Add(p.InlandTip);
+                xzSamples.Add(p.CoastArmLeft);
+                xzSamples.Add(p.CoastArmRight);
+                xzSamples.Add(p.SeaFlatLeft);
+                xzSamples.Add(p.SeaFlatRight);
             }
         }
 

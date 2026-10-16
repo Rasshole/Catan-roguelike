@@ -3,6 +3,7 @@ using CatanRoguelike.Core;
 using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
+using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
 namespace CatanRoguelike.Core.Yield
 {
@@ -16,23 +17,28 @@ namespace CatanRoguelike.Core.Yield
             var board = state.Board;
             int fish = 0;
 
-            foreach (var kvp in board.VertexBuildings)
+            foreach (var seaKvp in board.SeaFishGrounds)
             {
-                var (building, owner) = kvp.Value;
-                if (owner != player || building == BuildingType.None)
+                var tile = seaKvp.Value;
+                if (!tile.IsFishTile || !tile.NumberToken.HasValue || tile.FishValue < 0)
                     continue;
 
-                foreach (var hex in VertexGraph.GetHexesForVertex(kvp.Key))
-                {
-                    if (!board.TryGetHexData(hex, out var tile))
-                        continue;
-                    if (!tile.IsFishTile || !tile.NumberToken.HasValue || tile.FishValue <= 0)
-                        continue;
-                    if (ModifierService.IsRobberBlocking(state, hex, player))
-                        continue;
+                if (!SeaFrameSlotLayout.TryGetFishShoalPlacement(board, seaKvp.Key, 1f, out FishShoalPlacement placement))
+                    continue;
 
-                    int hits = CountDiceHits(tile.NumberToken.Value, diceRolls);
-                    if (hits <= 0)
+                if (IsRobberBlockingFishGround(state, board, placement, player))
+                    continue;
+
+                int hits = CountDiceHits(tile.NumberToken.Value, diceRolls);
+                if (hits <= 0)
+                    continue;
+
+                foreach (var buildingKvp in board.VertexBuildings)
+                {
+                    var (building, owner) = buildingKvp.Value;
+                    if (owner != player || building == BuildingType.None)
+                        continue;
+                    if (!placement.BordersVertex(buildingKvp.Key))
                         continue;
 
                     for (int h = 0; h < hits; h++)
@@ -48,6 +54,23 @@ namespace CatanRoguelike.Core.Yield
             }
 
             return fish;
+        }
+
+        private static bool IsRobberBlockingFishGround(
+            GameState state,
+            BoardState board,
+            FishShoalPlacement placement,
+            PlayerId player)
+        {
+            foreach (var hex in VertexGraph.GetHexesForVertex(placement.BorderVertexInland))
+            {
+                if (!board.Tiles.ContainsKey(hex))
+                    continue;
+                if (ModifierService.IsRobberBlocking(state, hex, player))
+                    return true;
+            }
+
+            return false;
         }
 
         private static int CountDiceHits(int token, IReadOnlyList<int> diceRolls)

@@ -782,8 +782,8 @@ namespace CatanRoguelike.Game
             Assert.IsNotNull(board);
 
             int shoals = 0;
-            int tealSamples = 0;
-            int tealHits = 0;
+            int waterSamples = 0;
+            int waterHits = 0;
             foreach (var tile in Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
             {
                 if (!BoardState.IsSeaFishGround(tile.Data))
@@ -795,9 +795,7 @@ namespace CatanRoguelike.Game
                     continue;
 
                 float y = tile.ChipTopWorldY;
-                const float probeAlongShoal = 0.15f;
-                var probeXz = placement.CoastVertexA
-                    + (placement.SeaTip - placement.CoastVertexA) * probeAlongShoal;
+                var probeXz = (placement.SeaFlatLeft + placement.SeaFlatRight) / 2f;
                 var probeWorld = new Vector3(probeXz.X, y, probeXz.Z);
                 var pixel = ColonistCaptureProjection.WorldToTexturePixel(
                     probeWorld, camera, tableCamera, textureWidth, textureHeight);
@@ -809,21 +807,21 @@ namespace CatanRoguelike.Game
                         int x = Mathf.Clamp(pixel.x + dx, 0, boardCapture.width - 1);
                         int yPx = Mathf.Clamp(pixel.y + dy, 0, boardCapture.height - 1);
                         Color c = boardCapture.GetPixel(x, yPx);
-                        tealSamples++;
-                        if (IsFishShoalTeal(c))
-                            tealHits++;
+                        waterSamples++;
+                        if (IsFishChevronLightBlue(c))
+                            waterHits++;
                     }
                 }
             }
 
             Assert.IsTrue(shoals > 2, "Board should render multiple coastal fish shoals.");
             Assert.IsTrue(
-                tealHits > Mathf.Max(12, tealSamples / 6),
-                $"Fish shoal capture should include teal shoal pixels (teal={tealHits}/{tealSamples}).");
+                waterHits > Mathf.Max(12, waterSamples / 6),
+                $"Fish chevron capture should include light-blue water pixels (hits={waterHits}/{waterSamples}).");
         }
 
-        private static bool IsFishShoalTeal(Color c) =>
-            c.g > c.r + 0.06f && c.b > c.r + 0.04f && c.g > 0.42f && c.b > 0.38f;
+        private static bool IsFishChevronLightBlue(Color c) =>
+            c.b > c.r + 0.08f && c.g > c.r + 0.04f && c.b > 0.45f && c.g > 0.55f;
 
         public static void AssertFishermenHarnessBoardAndHud(GameState state)
         {

@@ -117,9 +117,9 @@ namespace CatanRoguelike.Game
                 if (!SeaFrameSlotLayout.TryGetFishShoalPlacement(board, sea, hexScale, out FishShoalPlacement p))
                     continue;
 
-                max = Mathf.Max(max, Vector2.Distance(centerXZ, new Vector2(p.CoastVertexA.X, p.CoastVertexA.Z)));
-                max = Mathf.Max(max, Vector2.Distance(centerXZ, new Vector2(p.CoastVertexB.X, p.CoastVertexB.Z)));
-                max = Mathf.Max(max, Vector2.Distance(centerXZ, new Vector2(p.SeaTip.X, p.SeaTip.Z)));
+                max = Mathf.Max(max, Vector2.Distance(centerXZ, new Vector2(p.SeaFlatLeft.X, p.SeaFlatLeft.Z)));
+                max = Mathf.Max(max, Vector2.Distance(centerXZ, new Vector2(p.SeaFlatRight.X, p.SeaFlatRight.Z)));
+                max = Mathf.Max(max, Vector2.Distance(centerXZ, new Vector2(p.InlandTip.X, p.InlandTip.Z)));
             }
 
             return max;
