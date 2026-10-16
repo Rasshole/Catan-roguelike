@@ -51,11 +51,13 @@ namespace CatanRoguelike.Tests
         {
             var root = new GameObject("ColonistCaptureHudTests_Root");
             RenderTexture captureRt = null;
+            Camera camera = null;
+            Camera uiCamera = null;
             try
             {
                 var camGo = new GameObject("Camera");
                 camGo.transform.SetParent(root.transform);
-                var camera = camGo.AddComponent<Camera>();
+                camera = camGo.AddComponent<Camera>();
 
                 var hudGo = new GameObject("RunHud");
                 hudGo.transform.SetParent(root.transform);
@@ -93,9 +95,15 @@ namespace CatanRoguelike.Tests
                 var canvasRect = canvas.GetComponent<RectTransform>();
                 Assert.AreEqual(GameSceneCapture.CaptureWidth, canvasRect.sizeDelta.x, 0.01f);
                 Assert.AreEqual(GameSceneCapture.CaptureHeight, canvasRect.sizeDelta.y, 0.01f);
+                uiCamera = canvas.worldCamera;
             }
             finally
             {
+                if (camera != null)
+                    camera.targetTexture = null;
+                if (uiCamera != null)
+                    uiCamera.targetTexture = null;
+
                 if (captureRt != null)
                 {
                     captureRt.Release();

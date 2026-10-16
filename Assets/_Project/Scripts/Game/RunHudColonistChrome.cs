@@ -144,6 +144,7 @@ namespace CatanRoguelike.Game
             internal Vector3 CanvasLocalScale;
             internal Vector2 CanvasSizeDelta;
             internal GameObject SanityProbeObject;
+            internal GameObject BottomBandMarkerObject;
         }
 
         /// <summary>
@@ -196,6 +197,7 @@ namespace CatanRoguelike.Game
             canvasRect.localScale = Vector3.one * WorldCaptureCanvasUnitScale;
 
             restore.SanityProbeObject = CreateHudCaptureSanityProbe(uiGo.transform, captureWidth, captureHeight);
+            restore.BottomBandMarkerObject = CreateCaptureBottomBandMarker(canvasRect);
 
             LayoutRebuilder.ForceRebuildLayoutImmediate(canvasRect);
             Canvas.ForceUpdateCanvases();
@@ -228,6 +230,8 @@ namespace CatanRoguelike.Game
 
             DestroyCaptureObject(restore.SanityProbeObject);
             restore.SanityProbeObject = null;
+            DestroyCaptureObject(restore.BottomBandMarkerObject);
+            restore.BottomBandMarkerObject = null;
 
             if (restore.UiCameraObject != null)
                 DestroyCaptureObject(restore.UiCameraObject);

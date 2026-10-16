@@ -99,6 +99,29 @@ namespace CatanRoguelike.Game
         internal static bool ColorLooksMagenta(Color c) =>
             c.r > 0.75f && c.g < 0.35f && c.b > 0.75f;
 
+        internal GameObject CreateCaptureBottomBandMarker(RectTransform canvasRect)
+        {
+            if (canvasRect == null)
+                return null;
+
+            var go = new GameObject("HudCaptureBottomBandMarker");
+            go.layer = canvasRect.gameObject.layer;
+            go.transform.SetParent(canvasRect, false);
+            go.transform.SetAsLastSibling();
+
+            var rect = go.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 0f);
+            rect.anchorMax = new Vector2(1f, 0f);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(0f, 160f);
+
+            var image = go.AddComponent<Image>();
+            image.raycastTarget = false;
+            image.color = new Color(0f, 0.92f, 1f, 1f);
+            return go;
+        }
+
         internal GameObject CreateHudCaptureSanityProbe(Transform uiCameraRoot, int captureWidth, int captureHeight)
         {
             if (!HudCaptureSanityProbeEnabled || uiCameraRoot == null)

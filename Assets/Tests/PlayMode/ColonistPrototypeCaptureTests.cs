@@ -75,6 +75,8 @@ namespace CatanRoguelike.Tests.PlayMode
                 GameSceneCapture.CaptureWidth,
                 GameSceneCapture.CaptureHeight);
             Texture2D withHud = GameSceneCapture.CaptureMainCameraWithHudComposite(hud);
+            GameSceneCapture.LogCaptureTextureFingerprint(boardOnly, "test-board-before-write");
+            GameSceneCapture.LogCaptureTextureFingerprint(withHud, "test-hud-before-write");
             GameSceneCapture.WriteDebugCapturePngs(boardOnly, withHud);
             try
             {

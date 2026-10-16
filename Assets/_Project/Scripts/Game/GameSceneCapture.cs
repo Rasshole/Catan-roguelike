@@ -7,7 +7,7 @@ namespace CatanRoguelike.Game
     /// <summary>
     /// Shared Camera.main → PNG capture used by editor CLI/menu and PlayMode screenshot tests.
     /// </summary>
-    public static class GameSceneCapture
+    public static partial class GameSceneCapture
     {
         public const string HudCompositePipelineMarker = "CATAN_HUD_CAPTURE_PIPELINE_V8";
 
@@ -107,18 +107,19 @@ namespace CatanRoguelike.Game
 
                 Debug.Log($"{HudCompositePipelineMarker} main camera rendered; compositing HUD via RenderHudCaptureUiCamera");
                 hud.RenderHudCaptureUiCamera(canvasRestore, renderTexture);
-                AssertHudCaptureSanityProbeVisible(renderTexture, width, height);
-                Debug.Log($"{HudCompositePipelineMarker} sanity probe passed");
 
-                RenderTexture.active = renderTexture;
-                texture = new Texture2D(width, height, TextureFormat.RGB24, false);
-                texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-                texture.Apply();
+                texture = ReadbackRgbFromRenderTexture(renderTexture, width, height);
+                LogCaptureTextureFingerprint(texture, "after-readback");
+                AssertHudCaptureSanityProbeVisible(texture, width, height);
+                LogCaptureTextureFingerprint(texture, "after-probe");
+                Debug.Log($"{HudCompositePipelineMarker} sanity probe passed on readback texture id={texture.GetInstanceID()}");
+
                 Debug.Log($"{HudCompositePipelineMarker} CaptureMainCameraWithHudComposite exit");
                 return texture;
             }
             finally
             {
+                DetachCamerasFromRenderTexture(renderTexture, camera, canvasRestore.UiCamera);
                 hud.RestoreCanvasAfterCapture(canvasRestore);
 
                 camera.cullingMask = previousCullingMask;
@@ -153,14 +154,13 @@ namespace CatanRoguelike.Game
                 Canvas.ForceUpdateCanvases();
                 camera.Render();
 
-                RenderTexture.active = renderTexture;
-                texture = new Texture2D(width, height, TextureFormat.RGB24, false);
-                texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-                texture.Apply();
+                texture = ReadbackRgbFromRenderTexture(renderTexture, width, height);
+                LogCaptureTextureFingerprint(texture, "board-only-readback");
                 return texture;
             }
             finally
             {
+                DetachCamerasFromRenderTexture(renderTexture, camera, null);
                 camera.targetTexture = previousTarget;
                 camera.pixelRect = previousPixelRect;
                 RenderTexture.active = previousActive;
@@ -182,18 +182,28 @@ namespace CatanRoguelike.Game
             if (boardOnly != null)
             {
                 var boardPath = outputPath + ".board.png";
-                File.WriteAllBytes(boardPath, boardOnly.EncodeToPNG());
-                Debug.Log($"{HudCompositePipelineMarker} wrote board-only PNG to {boardPath}");
+                LogCaptureTextureFingerprint(boardOnly, "encode-board");
+                var boardPng = boardOnly.EncodeToPNG();
+                string boardMd5 = Convert.ToHexString(System.Security.Cryptography.MD5.HashData(boardPng)).ToLowerInvariant();
+                File.WriteAllBytes(boardPath, boardPng);
+                Debug.Log(
+                    $"{HudCompositePipelineMarker} wrote board-only PNG to {boardPath} " +
+                    $"textureId={boardOnly.GetInstanceID()} md5={boardMd5}");
             }
 
             if (hudComposite != null)
             {
-                File.WriteAllBytes(outputPath, hudComposite.EncodeToPNG());
-                Debug.Log($"{HudCompositePipelineMarker} wrote HUD-composited PNG to {outputPath}");
+                LogCaptureTextureFingerprint(hudComposite, "encode-hud");
+                var png = hudComposite.EncodeToPNG();
+                string md5 = Convert.ToHexString(System.Security.Cryptography.MD5.HashData(png)).ToLowerInvariant();
+                File.WriteAllBytes(outputPath, png);
+                Debug.Log(
+                    $"{HudCompositePipelineMarker} wrote HUD-composited PNG to {outputPath} " +
+                    $"textureId={hudComposite.GetInstanceID()} md5={md5} bytes={png.Length}");
             }
         }
 
-        private static void AssertHudCaptureSanityProbeVisible(RenderTexture target, int width, int height)
+        private static void AssertHudCaptureSanityProbeVisible(Texture2D texture, int width, int height)
         {
             if (!RunHudController.HudCaptureSanityProbeEnabled)
             {
@@ -201,32 +211,19 @@ namespace CatanRoguelike.Game
                     $"{HudCompositePipelineMarker} sanity probe disabled but required for HUD capture.");
             }
 
+            if (texture == null)
+                throw new InvalidOperationException($"{HudCompositePipelineMarker} sanity probe: texture is null.");
+
             int x = Mathf.Clamp((int)(width * RunHudController.SanityProbeScreenX), 0, width - 1);
             int y = Mathf.Clamp((int)(height * RunHudController.SanityProbeScreenY), 0, height - 1);
-
-            if (!RunHudController.TrySampleRenderTargetPixel(target, x, y, out var pixel))
-            {
-                throw new InvalidOperationException(
-                    $"{HudCompositePipelineMarker} sanity probe: failed to read capture RT at ({x},{y}).");
-            }
+            var pixel = texture.GetPixel(x, y);
 
             if (!RunHudController.ColorLooksMagenta(pixel))
             {
                 throw new InvalidOperationException(
-                    $"{HudCompositePipelineMarker} sanity probe: expected magenta at ({x},{y}) " +
+                    $"{HudCompositePipelineMarker} sanity probe: expected magenta at ({x},{y}) on texture id={texture.GetInstanceID()} " +
                     $"but got r={pixel.r:F3} g={pixel.g:F3} b={pixel.b:F3}.");
             }
-        }
-
-        private static void DestroyCaptureTexture(Texture texture)
-        {
-            if (texture == null)
-                return;
-
-            if (Application.isPlaying)
-                UnityEngine.Object.Destroy(texture);
-            else
-                UnityEngine.Object.DestroyImmediate(texture);
         }
     }
 }
