@@ -160,6 +160,8 @@ namespace CatanRoguelike.Tests.PlayMode
                     tableCamera,
                     GameSceneCapture.CaptureWidth,
                     GameSceneCapture.CaptureHeight);
+                ColonistBoardCaptureAssertions.AssertRenderedPortBadgeDiscCount(9);
+                ColonistBoardCaptureAssertions.AssertFishermenHarnessBoardAndHud(gameManager.Controller.State);
 
                 AssertTextureHasVisibleContent(withHud);
                 AssertBottomBandDiffersBoardOnlyVsHud(boardOnly, withHud);

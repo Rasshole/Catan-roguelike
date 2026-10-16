@@ -193,6 +193,7 @@ namespace CatanRoguelike.Game
             var labelRgb = NumberTokenVisualStyle.GetLabel(token);
             _tokenLabel.color = new Color(labelRgb.R, labelRgb.G, labelRgb.B);
             _tokenLabel.characterSize = NumberTokenVisualStyle.GetLabelCharacterSize(token);
+            ApplyTokenLabelFontMaterial();
             ClearPipDots();
         }
 
@@ -380,16 +381,32 @@ namespace CatanRoguelike.Game
             _tokenLabel.alignment = TextAlignment.Center;
             var font = ColonistNumberTokenFont.Get();
             if (font != null)
+            {
                 _tokenLabel.font = font;
+                _tokenLabel.fontStyle = FontStyle.Bold;
+            }
 
             _tokenLabel.fontSize = 64;
             _tokenLabel.characterSize = 0.62f;
             _tokenLabel.color = Color.black;
-            _tokenLabel.fontStyle = FontStyle.Bold;
 
-            var labelRenderer = labelGo.GetComponent<MeshRenderer>();
-            if (labelRenderer != null)
-                labelRenderer.sharedMaterial.renderQueue = 3300;
+            ApplyTokenLabelFontMaterial();
+        }
+
+        private void ApplyTokenLabelFontMaterial()
+        {
+            if (_tokenLabel == null)
+                return;
+
+            var labelRenderer = _tokenLabel.GetComponent<MeshRenderer>();
+            if (labelRenderer == null)
+                return;
+
+            var font = _tokenLabel.font;
+            if (font != null)
+                labelRenderer.sharedMaterial = font.material;
+
+            labelRenderer.sharedMaterial.renderQueue = 3300;
         }
 
         public IEnumerator PulseProduction(float duration)

@@ -22,9 +22,9 @@ namespace CatanRoguelike.Core.Yield
         public static Rgb GetLabel(int token) =>
             NumberTokenLibrary.IsRedNumber(token) ? LabelRed : LabelStandard;
 
-        /// <summary>Smaller glyphs so two-digit tokens (10–12) fit on the chip.</summary>
+        /// <summary>Smaller glyphs so two-digit tokens (10–12) fit on the chip (TextMesh local units).</summary>
         public static float GetLabelCharacterSize(int token) =>
-            (token >= 10 ? 0.42f : 0.5f) * 1.2f;
+            token >= 10 ? 0.52f : 0.62f;
 
         public readonly struct Rgb
         {

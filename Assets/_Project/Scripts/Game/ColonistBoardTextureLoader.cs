@@ -18,16 +18,22 @@ namespace CatanRoguelike.Game
             if (_cache.TryGetValue(slot, out var cached))
                 return cached;
 
-            var texture = Resources.Load<Texture2D>($"{ArtRoot}/{slot}");
-            Material mat;
-            if (texture != null)
-                mat = BuiltInMaterials.Create(texture, Color.white);
-            else
+            var fallback = GetFallbackColor(slot);
+            Texture2D texture = Resources.Load<Texture2D>($"{ArtRoot}/{slot}");
+            if (texture == null)
             {
-                texture = ColonistProceduralBoardTextures.Create(slot);
-                mat = BuiltInMaterials.Create(texture, Color.white);
+                try
+                {
+                    texture = ColonistProceduralBoardTextures.Create(slot);
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"ColonistBoardTextureLoader: procedural texture failed for {slot}: {ex.Message}");
+                    texture = null;
+                }
             }
 
+            Material mat = BuiltInMaterials.CreateTerrainSurface(texture, fallback);
             mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry;
 
             _cache[slot] = mat;

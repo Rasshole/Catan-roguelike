@@ -42,7 +42,10 @@ namespace CatanRoguelike.Game
             meshFilter.sharedMesh = ThinDiskMesh.Shared;
 
             var renderer = cap.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = BuiltInMaterials.Create(BoardResourceColors.GetTileTopBevel(data));
+            var bevel = BoardResourceColors.GetTileTopBevel(data);
+            renderer.sharedMaterial = ColonistPresentation.IsActive
+                ? BuiltInMaterials.CreateUnlit(bevel)
+                : BuiltInMaterials.Create(bevel);
             DestroyCollider(cap);
         }
 

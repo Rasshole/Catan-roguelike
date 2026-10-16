@@ -10,7 +10,7 @@ namespace CatanRoguelike.Game
 
         public static void Apply(GameObject hexRoot, HexTileData data, float hexScale)
         {
-            if (hexRoot == null || data == null || !data.IsFishTile || data.IsDesert)
+            if (hexRoot == null || data == null || !data.IsFishTile)
                 return;
 
             var existing = hexRoot.transform.Find("FishGroundIcon");

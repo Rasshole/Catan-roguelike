@@ -23,6 +23,7 @@ namespace CatanRoguelike.Game
         public static void CompleteRunSelect(GameController controller, MetaProgression meta)
         {
             EnsureHarnessMapUnlocked(meta);
+            controller.FishermenMapOption = true;
             controller.SelectMap(DefaultHarnessMapSize);
             if (controller.State.Phase != GamePhase.RunSelectLeader)
                 throw new InvalidOperationException(

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using CatanRoguelike.Core;
 using CatanRoguelike.Core.UI;
 using CatanRoguelike.Core.Yield;
 using UnityEngine;
@@ -697,6 +698,49 @@ namespace CatanRoguelike.Game
         {
             var rgb = NumberTokenVisualStyle.GetChipRim(token);
             return MatchesTokenRgb(c, rgb, 0.18f);
+        }
+
+        public static void AssertRenderedPortBadgeDiscCount(int expected = 9)
+        {
+            int count = 0;
+            foreach (var renderer in Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+            {
+                if (renderer != null && renderer.gameObject.name == "BadgeDisc")
+                    count++;
+            }
+
+            Assert.AreEqual(expected, count, $"Colonist board should render {expected} port BadgeDisc meshes.");
+        }
+
+        public static void AssertFishermenHarnessBoardAndHud(GameState state)
+        {
+            Assert.IsTrue(state.FishermenOfCatanEnabled, "Harness should enable Fishermen of Catan.");
+
+            int fishGrounds = 0;
+            bool sawDesertLake = false;
+            foreach (var tile in Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
+            {
+                if (!tile.Data.IsFishTile)
+                    continue;
+
+                if (tile.Data.IsDesert)
+                    sawDesertLake = true;
+                else
+                    fishGrounds++;
+
+                Assert.IsNotNull(
+                    tile.transform.Find("FishGroundIcon"),
+                    $"Fish tile at {tile.Data.Coord} should spawn FishGroundIcon.");
+            }
+
+            Assert.IsTrue(sawDesertLake, "Desert center should become a fishing lake when Fishermen is enabled.");
+            Assert.IsTrue(
+                fishGrounds >= 3,
+                $"Board should show several sea fishing ground tiles (found {fishGrounds}).");
+
+            var spendPanel = GameObject.Find("FishSpendPanel");
+            Assert.IsNotNull(spendPanel, "Fish spend panel should exist on colonist HUD when Fishermen is enabled.");
+            Assert.IsTrue(spendPanel.activeInHierarchy, "Fish spend panel should be visible during day actions.");
         }
     }
 }
