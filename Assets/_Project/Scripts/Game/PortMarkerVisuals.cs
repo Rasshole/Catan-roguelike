@@ -109,22 +109,14 @@ namespace CatanRoguelike.Game
             root.transform.SetParent(parent, false);
             root.transform.SetPositionAndRotation(vertexPos, Quaternion.LookRotation(seaDir3, Vector3.up));
 
-            float badgeLocalZ;
-            float pierLen;
-            if (ColonistPresentation.IsActive)
-            {
-                pierLen = PierLength;
-                badgeLocalZ = pierLen + BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc;
-            }
-            else
-            {
-                Vector3 badgeWorld = new Vector3(badgeCenter.x, vertexPos.y, badgeCenter.y);
-                Vector3 badgeLocal = root.transform.InverseTransformPoint(badgeWorld);
-                badgeLocalZ = Mathf.Max(
-                    badgeLocal.z,
-                    BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc);
-                pierLen = Mathf.Max(PierWidth * 2f, badgeLocalZ);
-            }
+            Vector3 badgeWorld = new Vector3(badgeCenter.x, vertexPos.y, badgeCenter.y);
+            Vector3 badgeLocal = root.transform.InverseTransformPoint(badgeWorld);
+            float badgeLocalZ = Mathf.Max(
+                badgeLocal.z,
+                BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc);
+            float pierLen = ColonistPresentation.IsActive
+                ? Mathf.Min(PierLength, badgeLocalZ)
+                : Mathf.Max(PierWidth * 2f, badgeLocalZ);
 
             CreatePart("PierPlank", root.transform,
                 new Vector3(0f, PierHeight * 0.5f, pierLen * 0.5f),

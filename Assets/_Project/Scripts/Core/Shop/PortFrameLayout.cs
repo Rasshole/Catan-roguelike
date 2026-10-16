@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using CatanRoguelike.Core;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 
@@ -30,20 +31,15 @@ namespace CatanRoguelike.Core.Shop
                     ports.Add(new PortDefinition(vertex, specific));
                     usedResources.Add(specific.Value);
                 }
-                else if (ports.Count(p => !p.IsGeneric) < specificTarget)
-                {
-                    // Hold slot — assign generic later if we cannot match a specific.
-                    ports.Add(new PortDefinition(vertex, null));
-                }
                 else
                 {
                     ports.Add(new PortDefinition(vertex, null));
                 }
             }
 
-            int specificCount = ports.Count(p => !p.IsGeneric);
-            if (specificCount < specificTarget)
-                PromoteGenericsToSpecific(board, ports, specificTarget, usedResources);
+            int landTiles = board.Tiles.Values.Count(IsLandTile);
+            bool allowDuplicateResources = landTiles <= 13;
+            EnsureSpecificTargets(board, edgeVertices, ports, specificTarget, usedResources, allowDuplicateResources);
 
             while (ports.Count(p => p.IsGeneric) < genericTarget)
             {
@@ -124,7 +120,6 @@ namespace CatanRoguelike.Core.Shop
             for (int i = 0; i < count; i++)
             {
                 int start = (int)Math.Floor((i + 0.5) * sorted.Count / (double)count) % sorted.Count;
-                bool added = false;
                 for (int attempt = 0; attempt < sorted.Count; attempt++)
                 {
                     int idx = (start + attempt) % sorted.Count;
@@ -132,11 +127,9 @@ namespace CatanRoguelike.Core.Shop
                     if (!PortSpacingRules.ConflictsWithAny(candidate, picked))
                     {
                         picked.Add(candidate);
-                        added = true;
                         break;
                     }
                 }
-
             }
 
             return FillRemainingSpaced(sorted, picked, count);
@@ -164,11 +157,12 @@ namespace CatanRoguelike.Core.Shop
         private static ResourceType? TryPickSpecificResource(
             BoardState board,
             HexMath.Vertex vertex,
-            HashSet<ResourceType> used)
+            HashSet<ResourceType> used,
+            bool allowDuplicates = false)
         {
             foreach (var resource in ResourceTypes.AllProductive)
             {
-                if (used.Contains(resource))
+                if (!allowDuplicates && used.Contains(resource))
                     continue;
                 if (VertexTouchesCoastalResource(board, vertex, resource))
                     return resource;
@@ -177,26 +171,67 @@ namespace CatanRoguelike.Core.Shop
             return null;
         }
 
+        private static void EnsureSpecificTargets(
+            BoardState board,
+            List<HexMath.Vertex> edgeVertices,
+            List<PortDefinition> ports,
+            int specificTarget,
+            HashSet<ResourceType> usedResources,
+            bool allowDuplicateResources)
+        {
+            PromoteGenericsToSpecific(board, ports, specificTarget, usedResources, allowDuplicateResources);
+
+            while (ports.Count(p => !p.IsGeneric) < specificTarget)
+            {
+                int genericIdx = ports.FindIndex(p => p.IsGeneric);
+                if (genericIdx < 0)
+                    break;
+
+                var placedVertices = ports.Select(p => p.Vertex).ToList();
+                bool upgraded = false;
+
+                foreach (var vertex in edgeVertices)
+                {
+                    if (ports.Any(p => p.Vertex.Equals(vertex)))
+                        continue;
+                    if (PortSpacingRules.ConflictsWithAny(vertex, placedVertices))
+                        continue;
+
+                    var resource = TryPickSpecificResource(board, vertex, usedResources, allowDuplicateResources);
+                    if (!resource.HasValue)
+                        continue;
+
+                    ports[genericIdx] = new PortDefinition(vertex, resource);
+                    if (!usedResources.Contains(resource.Value))
+                        usedResources.Add(resource.Value);
+                    upgraded = true;
+                    break;
+                }
+
+                if (!upgraded)
+                    break;
+            }
+        }
+
         private static void PromoteGenericsToSpecific(
             BoardState board,
             List<PortDefinition> ports,
             int specificTarget,
-            HashSet<ResourceType> used)
+            HashSet<ResourceType> used,
+            bool allowDuplicateResources)
         {
-            for (int i = 0; i < ports.Count && used.Count < specificTarget; i++)
+            for (int i = 0; i < ports.Count && ports.Count(p => !p.IsGeneric) < specificTarget; i++)
             {
                 if (!ports[i].IsGeneric)
                     continue;
-                foreach (var resource in ResourceTypes.AllProductive)
-                {
-                    if (used.Contains(resource))
-                        continue;
-                    if (!VertexTouchesCoastalResource(board, ports[i].Vertex, resource))
-                        continue;
-                    ports[i] = new PortDefinition(ports[i].Vertex, resource);
-                    used.Add(resource);
-                    break;
-                }
+
+                var resource = TryPickSpecificResource(board, ports[i].Vertex, used, allowDuplicateResources);
+                if (!resource.HasValue)
+                    continue;
+
+                ports[i] = new PortDefinition(ports[i].Vertex, resource);
+                if (!used.Contains(resource.Value))
+                    used.Add(resource.Value);
             }
         }
 

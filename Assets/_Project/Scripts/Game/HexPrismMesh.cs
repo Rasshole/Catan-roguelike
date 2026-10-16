@@ -70,8 +70,24 @@ namespace CatanRoguelike.Game
                 triangles[tri++] = bottomA;
             }
 
+            float extent = 0.001f;
+            for (int i = 0; i < SideCount; i++)
+            {
+                var top = vertices[i];
+                extent = Mathf.Max(extent, Mathf.Abs(top.x), Mathf.Abs(top.z));
+            }
+
+            float invTwoSize = 1f / (2f * extent);
+            var uvs = new Vector2[vertCount];
+            for (int i = 0; i < vertCount; i++)
+            {
+                var v = vertices[i];
+                uvs[i] = new Vector2(v.x * invTwoSize + 0.5f, v.z * invTwoSize + 0.5f);
+            }
+
             mesh.vertices = vertices;
             mesh.triangles = triangles;
+            mesh.uv = uvs;
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
             return mesh;

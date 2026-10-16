@@ -22,7 +22,9 @@ namespace CatanRoguelike.Game
             string shaderName = mat != null && mat.shader != null ? mat.shader.name : "null";
             string texInfo = DescribeTexture(sourceTexture);
             Color matColor = mat != null && mat.HasProperty("_Color") ? mat.GetColor("_Color") : Color.magenta;
-            Texture bound = mat != null ? mat.mainTexture : null;
+            Texture bound = null;
+            if (mat != null && mat.HasProperty("_MainTex"))
+                bound = mat.GetTexture("_MainTex");
 
             Debug.Log(
                 $"ColonistTerrainDiag loader slot={slot} shader={shaderName} " +
@@ -44,13 +46,8 @@ namespace CatanRoguelike.Game
                 var mat = renderer.sharedMaterial;
                 string shader = mat != null && mat.shader != null ? mat.shader.name : "null";
                 string tex = "null";
-                if (mat != null)
-                {
-                    if (mat.HasProperty("_MainTex") && mat.GetTexture("_MainTex") != null)
-                        tex = mat.GetTexture("_MainTex").name;
-                    else if (mat.mainTexture != null)
-                        tex = mat.mainTexture.name;
-                }
+                if (mat != null && mat.HasProperty("_MainTex") && mat.GetTexture("_MainTex") != null)
+                    tex = mat.GetTexture("_MainTex").name;
                 Color c = mat != null && mat.HasProperty("_Color") ? mat.GetColor("_Color") : Color.black;
                 sb.AppendLine(
                     $"  {renderer.gameObject.name} enabled={renderer.enabled} queue={mat?.renderQueue} " +

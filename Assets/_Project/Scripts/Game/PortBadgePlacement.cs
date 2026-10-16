@@ -12,6 +12,7 @@ namespace CatanRoguelike.Game
     public static class PortBadgePlacement
     {
         public const float SeaClearanceBeyondDisc = 0.05f;
+        private const float SeaFishGroundClearance = 0.14f;
         private const float HexInradiusPushFactor = 0.12f;
         private const float OutwardStepInradiusFactor = 0.06f;
         private const int MaxOutwardIterations = 32;
@@ -104,7 +105,9 @@ namespace CatanRoguelike.Game
 
             foreach (var kvp in board.Tiles)
             {
-                if (DiscIntersectsHexPolygon(discCenter, discRadius, kvp.Key, hexScale))
+                bool isSeaFish = kvp.Value.IsFishTile && !kvp.Value.IsDesert;
+                float radius = isSeaFish ? discRadius + SeaFishGroundClearance : discRadius;
+                if (DiscIntersectsHexPolygon(discCenter, radius, kvp.Key, hexScale))
                     return true;
             }
 

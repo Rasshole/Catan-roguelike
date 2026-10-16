@@ -19,6 +19,14 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
+        public void Create_UvCountMatchesVertexCount()
+        {
+            var mesh = HexPrismMesh.Create(new HexCoord(0, 0), HexScale);
+            Assert.AreEqual(mesh.vertexCount, mesh.uv.Length);
+            Assert.Greater(mesh.uv.Length, 0);
+        }
+
+        [Test]
         public void Create_TopRingAtPositiveOne_BottomRingAtNegativeOne()
         {
             var mesh = HexPrismMesh.Create(new HexCoord(0, 0), HexScale);
