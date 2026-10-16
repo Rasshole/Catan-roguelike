@@ -136,6 +136,7 @@ namespace CatanRoguelike.Game
             var fit = ColonistBoardFraming.ComputeColonistCameraFit(framingSamples, screenWidth, screenHeight);
             _camera.orthographicSize = fit.OrthographicSize;
             transform.position = fit.Position;
+            ColonistPortBadgeSizing.RefineDiscScreenScaleToTokens(_camera, boardView);
         }
 
         private void ApplyOrbitPose()

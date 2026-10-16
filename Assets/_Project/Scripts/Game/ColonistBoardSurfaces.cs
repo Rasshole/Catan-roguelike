@@ -29,13 +29,14 @@ namespace CatanRoguelike.Game
                 $"sandOuterExtent={layout.SandOuterRadius:F3} beachWidth={beachWidth:F3} " +
                 $"hexPrismHeightScale={hexPrismHeightScale:F4}");
 
-            CreateSandCoastMesh(boardRoot, board, layout.SandCenterY, layout.SandThicknessY, hexScale, beachWidth);
+            float hexTopY = hexPrismHeightScale * HexPrismMesh.TopY;
+            CreateSandCoastMesh(boardRoot, board, hexTopY, layout.SandThicknessY, hexScale, beachWidth);
         }
 
         private static void CreateSandCoastMesh(
             Transform parent,
             BoardState board,
-            float localY,
+            float hexTopLocalY,
             float thinY,
             float hexScale,
             float beachWidth)
@@ -43,15 +44,16 @@ namespace CatanRoguelike.Game
             var go = new GameObject("ColonistSandCoast");
             go.transform.SetParent(parent, false);
             go.transform.SetAsFirstSibling();
-            go.transform.localPosition = new Vector3(0f, localY, 0f);
+            go.transform.localPosition = new Vector3(0f, hexTopLocalY + 0.0015f, 0f);
             go.transform.localRotation = Quaternion.identity;
             float yScale = thinY / ThinDiskMesh.MeshHeight;
             go.transform.localScale = new Vector3(1f, yScale, 1f);
 
             var meshFilter = go.AddComponent<MeshFilter>();
-            meshFilter.sharedMesh = ColonistCoastSandMesh.Create(board, hexScale, beachWidth);
+            meshFilter.sharedMesh = ColonistCoastSandMesh.Create(board, hexScale, beachWidth, meshLocalY: 0f);
             var renderer = go.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = BuiltInMaterials.CreateUnlit(SandAlbedo);
+            renderer.sharedMaterial.renderQueue = 2980;
         }
     }
 }

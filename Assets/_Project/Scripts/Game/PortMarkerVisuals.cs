@@ -26,7 +26,7 @@ namespace CatanRoguelike.Game
         private const float FlagHeight = 0.1f;
         private const float FlagWidth = 0.06f;
         public const float BadgeDiscSizeScale = 1.4f;
-        public static float BadgeDiscWorldRadius => HexTileView.PortBadgeDiscWorldRadius;
+        public static float BadgeDiscWorldRadius => ColonistPortBadgeSizing.ActiveDiscWorldRadius;
         private const float BadgeDiscHeight = 0.012f * BadgeDiscSizeScale;
         public const float BadgeLabelWidthFractionGeneric = 0.65f;
         public const float BadgeLabelWidthFractionSpecific = 0.45f;

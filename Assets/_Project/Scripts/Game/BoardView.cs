@@ -157,12 +157,13 @@ namespace CatanRoguelike.Game
             if (boardRoot == null)
                 return;
 
-            foreach (var badge in boardRoot.GetComponentsInChildren<Transform>(true))
+            foreach (var disc in boardRoot.GetComponentsInChildren<Transform>(true))
             {
-                if (badge.name != "PortRateBadge")
+                if (disc.name != "BadgeDisc")
                     continue;
 
-                foreach (var renderer in badge.GetComponentsInChildren<Renderer>())
+                var renderer = disc.GetComponent<Renderer>();
+                if (renderer != null)
                     ColonistBoardFraming.AppendBoundsCorners(renderer.bounds, samples);
             }
         }
@@ -229,6 +230,7 @@ namespace CatanRoguelike.Game
 
             _tiles.Clear();
             _boardTileCoords.Clear();
+            ColonistPortBadgeSizing.ResetBoardSession();
         }
 
         private static void DestroySceneObject(GameObject target)
@@ -260,7 +262,10 @@ namespace CatanRoguelike.Game
             }
 
             if (ColonistPresentation.IsActive)
+            {
                 ColonistBoardVisualScale.UpdateFromBoard(board, hexScale);
+                ColonistPortBadgeSizing.ConfigureFromTiles(_tiles.Values);
+            }
 
             CreateTableSurface(board);
             CreatePortMarkers(board);

@@ -12,10 +12,14 @@ namespace CatanRoguelike.Tests
         private const float HexScale = 1.2f;
 
         [Test]
-        public void PortBadges_DiscDiameterIsEightyPercentOfNumberToken()
+        public void PortBadges_DiscDiameterTracksConfiguredTokenFraction()
         {
             float expectedRadius = HexTileView.TokenWorldFaceDiameter * 0.5f * HexTileView.PortBadgeDiameterFraction;
             Assert.AreEqual(expectedRadius, PortMarkerVisuals.BadgeDiscWorldRadius, 0.0001f);
+            Assert.AreEqual(
+                ColonistBoardScreenMetrics.PortBadgeTargetTokenScreenDiameterRatio,
+                HexTileView.PortBadgeDiameterFraction,
+                0.0001f);
         }
 
         [TestCase(MapSize.Large)]

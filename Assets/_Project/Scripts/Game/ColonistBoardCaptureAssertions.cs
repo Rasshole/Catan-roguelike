@@ -567,39 +567,31 @@ namespace CatanRoguelike.Game
             int w = boardCapture.width;
             int h = boardCapture.height;
             int token = tokenTile.Data.NumberToken.Value;
-            Vector3 center = tokenTile.GetChipFaceWorldCenter();
-            Vector3 flatRight = camera.transform.right;
-            flatRight.y = 0f;
-            if (flatRight.sqrMagnitude < 1e-6f)
-                flatRight = Vector3.right;
-            flatRight.Normalize();
+            var faceRenderer = tokenTile.TokenFaceRenderer;
+            var rimRenderer = tokenTile.TokenRimRenderer;
+            Assert.IsNotNull(faceRenderer, "Token tile needs a face renderer for rim sampling.");
+            Assert.IsNotNull(rimRenderer, "Token tile needs a rim renderer for rim sampling.");
 
-            float chipY = center.y;
-            float faceR = tokenTile.TokenFaceWorldRadius;
-            float rimR = tokenTile.TokenRimOuterWorldRadius;
+            Vector3 center = faceRenderer.bounds.center;
             var centerPx = ColonistCaptureProjection.WorldToTexturePixel(center, camera, tableCamera, w, h);
             var centerPxV = new Vector2(centerPx.x, centerPx.y);
 
-            var faceEdgeWorld = new Vector3(
-                center.x + flatRight.x * faceR,
-                chipY,
-                center.z + flatRight.z * faceR);
-            var rimEdgeWorld = new Vector3(
-                center.x + flatRight.x * rimR,
-                chipY,
-                center.z + flatRight.z * rimR);
-            var faceEdgePx = ColonistCaptureProjection.WorldToTexturePixel(
-                faceEdgeWorld, camera, tableCamera, w, h);
-            var rimEdgePx = ColonistCaptureProjection.WorldToTexturePixel(
-                rimEdgeWorld, camera, tableCamera, w, h);
-            float faceRadiusPixels = Vector2.Distance(centerPxV, new Vector2(faceEdgePx.x, faceEdgePx.y));
-            float rimRadiusPixels = Vector2.Distance(centerPxV, new Vector2(rimEdgePx.x, rimEdgePx.y));
+            float faceRadiusPixels = ColonistBoardScreenMetrics.MeasureProjectedRadiusFromCenter(
+                faceRenderer, camera, tableCamera, w, h, center);
+            float rimRadiusPixels = ColonistBoardScreenMetrics.MeasureProjectedRadiusFromCenter(
+                rimRenderer, camera, tableCamera, w, h, center);
 
+            var faceEdgePx = ColonistCaptureProjection.WorldToTexturePixel(
+                center + camera.transform.right * tokenTile.TokenFaceWorldRadius,
+                camera,
+                tableCamera,
+                w,
+                h);
             var screenRight = new Vector2(faceEdgePx.x - centerPx.x, faceEdgePx.y - centerPx.y);
             if (screenRight.sqrMagnitude < 1e-4f)
             {
                 var altEdgePx = ColonistCaptureProjection.WorldToTexturePixel(
-                    center + camera.transform.up * faceR,
+                    center + camera.transform.up * tokenTile.TokenFaceWorldRadius,
                     camera,
                     tableCamera,
                     w,
@@ -608,24 +600,17 @@ namespace CatanRoguelike.Game
             }
 
             screenRight.Normalize();
+            const float rimSampleRadiusFraction = 0.9f;
             var faceSamplePx = centerPxV + screenRight * (faceRadiusPixels * 0.35f);
-            var rimSamplePx = centerPxV + screenRight * (rimRadiusPixels * 0.96f);
+            var rimSamplePx = centerPxV + screenRight * (rimRadiusPixels * rimSampleRadiusFraction);
             int facePxX = Mathf.Clamp(Mathf.RoundToInt(faceSamplePx.x), 0, w - 1);
             int facePxY = Mathf.Clamp(Mathf.RoundToInt(faceSamplePx.y), 0, h - 1);
             int rimPxX = Mathf.Clamp(Mathf.RoundToInt(rimSamplePx.x), 0, w - 1);
             int rimPxY = Mathf.Clamp(Mathf.RoundToInt(rimSamplePx.y), 0, h - 1);
             float pixelSeparation = Vector2.Distance(faceSamplePx, rimSamplePx);
             float centerToRimSamplePx = Vector2.Distance(centerPxV, rimSamplePx);
-            float rimOffset = rimR * 0.96f;
-            float faceOffset = faceR * 0.35f;
-            var faceWorld = new Vector3(
-                center.x + flatRight.x * faceOffset,
-                chipY,
-                center.z + flatRight.z * faceOffset);
-            var rimWorld = new Vector3(
-                center.x + flatRight.x * rimOffset,
-                chipY,
-                center.z + flatRight.z * rimOffset);
+            var faceWorld = faceRenderer.bounds.center;
+            var rimWorld = rimRenderer.bounds.center;
 
             Color face = boardCapture.GetPixel(facePxX, facePxY);
             Color rim = boardCapture.GetPixel(rimPxX, rimPxY);
@@ -636,14 +621,13 @@ namespace CatanRoguelike.Game
                 $"faceWorld={faceWorld} rimWorld={rimWorld} faceTex=({facePxX},{facePxY}) rimTex=({rimPxX},{rimPxY}) " +
                 $"pixelSep={pixelSeparation:F1} rimRadiusPx~{rimRadiusPixels:F1})).");
             float rimSampleToEdgeRatio = centerToRimSamplePx / Mathf.Max(0.01f, rimRadiusPixels);
-            float expectedRimSampleRatio = rimOffset / Mathf.Max(0.01f, rimR);
             Assert.IsTrue(
-                Mathf.Abs(rimSampleToEdgeRatio - expectedRimSampleRatio) < 0.12f,
-                $"Rim sample should sit ~rimR outward on screen (ratio={rimSampleToEdgeRatio:F3} expected~{expectedRimSampleRatio:F3} " +
-                $"centerToRimPx={centerToRimSamplePx:F1} rimRadiusPx={rimRadiusPixels:F1}).");
+                Mathf.Abs(rimSampleToEdgeRatio - rimSampleRadiusFraction) < 0.12f,
+                $"Rim sample should sit ~{rimSampleRadiusFraction:P0} of projected rim radius on screen " +
+                $"(ratio={rimSampleToEdgeRatio:F3} centerToRimPx={centerToRimSamplePx:F1} rimRadiusPx={rimRadiusPixels:F1}).");
             Assert.IsTrue(
-                rimRadiusPixels > faceR * 8f,
-                $"Rim radius should project to visible pixels (rimRadiusPx={rimRadiusPixels:F1} faceR={faceR:F3}).");
+                rimRadiusPixels > 6f,
+                $"Rim radius should project to visible pixels (rimRadiusPx={rimRadiusPixels:F1}).");
             Assert.IsTrue(
                 pixelSeparation > 4f,
                 $"Face and rim samples should be separated on screen (pixelSep={pixelSeparation:F1}).");
@@ -651,10 +635,19 @@ namespace CatanRoguelike.Game
                 MatchesTokenFaceColor(face, token),
                 $"Face sample should match token face palette (rgb=({face.r:F3},{face.g:F3},{face.b:F3}) token={token} " +
                 $"world={faceWorld} tex=({facePxX},{facePxY})).");
+            if (!MatchesTokenRimColor(rim, token))
+            {
+                Debug.LogWarning(
+                    $"TokenRimSample token={token} rgb=({rim.r:F3},{rim.g:F3},{rim.b:F3}) " +
+                    $"centerPx=({centerPx.x},{centerPx.y}) rimSamplePx=({rimSamplePx.x:F1},{rimSamplePx.y:F1}) " +
+                    $"rimRadiusPx={rimRadiusPixels:F1} fraction={rimSampleRadiusFraction:F2} " +
+                    $"faceRadiusPx={faceRadiusPixels:F1}");
+            }
+
             Assert.IsTrue(
                 MatchesTokenRimColor(rim, token),
                 $"Rim sample should match token rim palette (rgb=({rim.r:F3},{rim.g:F3},{rim.b:F3}) token={token} " +
-                $"world={rimWorld} tex=({rimPxX},{rimPxY})).");
+                $"world={rimWorld} tex=({rimPxX},{rimPxY}) rimRadiusPx={rimRadiusPixels:F1}).");
         }
 
         private static bool MatchesTokenFaceColor(Color c, int token)

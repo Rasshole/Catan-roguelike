@@ -110,7 +110,7 @@ namespace CatanRoguelike.Game
         // Target world-space chip size (visible disc on the hex top).
         public const float TokenWorldFaceDiameter = 0.62f;
         /// <summary>Port rate badge disc diameter as a fraction of the number token face diameter.</summary>
-        public const float PortBadgeDiameterFraction = 0.8f;
+        public const float PortBadgeDiameterFraction = 0.9f;
         public static float PortBadgeDiscWorldRadius =>
             TokenWorldFaceDiameter * 0.5f * PortBadgeDiameterFraction;
 

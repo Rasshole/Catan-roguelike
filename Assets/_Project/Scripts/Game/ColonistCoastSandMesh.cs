@@ -14,14 +14,13 @@ namespace CatanRoguelike.Game
 
         public static float LastTargetBeachWidth { get; private set; }
 
-        public static Mesh Create(BoardState board, float hexScale, float beachWidth)
+        public static Mesh Create(BoardState board, float hexScale, float beachWidth, float meshLocalY = 0f)
         {
             LastTargetBeachWidth = beachWidth;
             var tileSet = CollectLandCoords(board);
-            float y = ThinDiskMesh.TopY;
+            float y = meshLocalY;
 
             var coastalEdges = new List<CoastalEdge>();
-            var cornerNormals = new Dictionary<long, List<Vector2>>();
 
             foreach (var coord in tileSet)
             {
@@ -38,24 +37,23 @@ namespace CatanRoguelike.Game
                     var inner1 = CornerVertex(coord, corner1, hexScale, y);
                     var outward = ComputeEdgeOutwardNormal(inner0, inner1, hexCenter);
                     coastalEdges.Add(new CoastalEdge(inner0, inner1, outward));
-                    AccumulateCornerNormal(cornerNormals, inner0, outward);
-                    AccumulateCornerNormal(cornerNormals, inner1, outward);
                 }
             }
 
             var vertices = new List<Vector3>();
             var triangles = new List<int>();
             var innerIndex = new Dictionary<long, int>();
-            var outerIndex = new Dictionary<long, int>();
 
             foreach (var edge in coastalEdges)
             {
                 int i0 = GetOrAddVertex(innerIndex, vertices, edge.Inner0);
                 int i1 = GetOrAddVertex(innerIndex, vertices, edge.Inner1);
-                var outer0 = OffsetOutlinePoint(edge.Inner0, cornerNormals[QuantizeKey(edge.Inner0)], beachWidth);
-                var outer1 = OffsetOutlinePoint(edge.Inner1, cornerNormals[QuantizeKey(edge.Inner1)], beachWidth);
-                int o0 = GetOrAddVertex(outerIndex, vertices, outer0);
-                int o1 = GetOrAddVertex(outerIndex, vertices, outer1);
+                var outer0 = OffsetEdgePoint(edge.Inner0, edge.Outward, beachWidth);
+                var outer1 = OffsetEdgePoint(edge.Inner1, edge.Outward, beachWidth);
+                int o0 = vertices.Count;
+                vertices.Add(outer0);
+                int o1 = vertices.Count;
+                vertices.Add(outer1);
                 AddQuadUp(triangles, i0, i1, o1, o0);
             }
 
@@ -156,7 +154,6 @@ namespace CatanRoguelike.Game
         {
             float maxR = 0f;
             var tileSet = CollectLandCoords(board);
-            var cornerNormals = new Dictionary<long, List<Vector2>>();
 
             foreach (var coord in tileSet)
             {
@@ -171,27 +168,13 @@ namespace CatanRoguelike.Game
                     int corner1 = (direction + 1) % 6;
                     var inner0 = CornerVertex(coord, corner0, hexScale, 0f);
                     var inner1 = CornerVertex(coord, corner1, hexScale, 0f);
-                    var outward = ComputeEdgeOutwardNormal(
-                        CornerVertex(coord, corner0, hexScale, ThinDiskMesh.TopY),
-                        CornerVertex(coord, corner1, hexScale, ThinDiskMesh.TopY),
-                        hexCenter);
-                    AccumulateCornerNormal(cornerNormals, inner0, outward);
-                    AccumulateCornerNormal(cornerNormals, inner1, outward);
                     maxR = Mathf.Max(maxR, new Vector2(inner0.x, inner0.z).magnitude);
                     maxR = Mathf.Max(maxR, new Vector2(inner1.x, inner1.z).magnitude);
-                }
-            }
-
-            foreach (var coord in tileSet)
-            {
-                for (int corner = 0; corner < 6; corner++)
-                {
-                    var inner = CornerVertex(coord, corner, hexScale, ThinDiskMesh.TopY);
-                    long key = QuantizeKey(inner);
-                    if (!cornerNormals.TryGetValue(key, out var normals))
-                        continue;
-                    var outer = OffsetOutlinePoint(inner, normals, beachWidth);
-                    maxR = Mathf.Max(maxR, new Vector2(outer.x, outer.z).magnitude);
+                    var outward = ComputeEdgeOutwardNormal(inner0, inner1, hexCenter);
+                    var outer0 = OffsetEdgePoint(inner0, outward, beachWidth);
+                    var outer1 = OffsetEdgePoint(inner1, outward, beachWidth);
+                    maxR = Mathf.Max(maxR, new Vector2(outer0.x, outer0.z).magnitude);
+                    maxR = Mathf.Max(maxR, new Vector2(outer1.x, outer1.z).magnitude);
                 }
             }
 
@@ -233,44 +216,42 @@ namespace CatanRoguelike.Game
             return Vector2.Dot(n1, toMid) >= Vector2.Dot(n2, toMid) ? n1 : n2;
         }
 
-        private static void AccumulateCornerNormal(Dictionary<long, List<Vector2>> map, Vector3 inner, Vector2 outward)
+        private static Vector3 OffsetEdgePoint(Vector3 inner, Vector2 outward, float beachWidth) =>
+            new Vector3(inner.x + outward.x * beachWidth, inner.y, inner.z + outward.y * beachWidth);
+
+        public static bool TryMeasureMeshWidthAtCoastalEdgeMidpoint(
+            Mesh mesh,
+            BoardState board,
+            HexCoord coord,
+            int direction,
+            float hexScale,
+            float beachWidth,
+            out float width)
         {
-            long key = QuantizeKey(inner);
-            if (!map.TryGetValue(key, out var list))
-            {
-                list = new List<Vector2>(2);
-                map[key] = list;
-            }
+            width = 0f;
+            if (mesh == null || board == null)
+                return false;
 
-            list.Add(outward);
-        }
+            var tileSet = CollectLandCoords(board);
+            if (!tileSet.Contains(coord) || tileSet.Contains(HexMath.GetNeighbor(coord, direction)))
+                return false;
 
-        /// <summary>Uniform-width offset of a land-outline corner (bisector of adjacent edge normals).</summary>
-        private static Vector3 OffsetOutlinePoint(Vector3 inner, List<Vector2> normals, float beachWidth)
-        {
-            if (normals == null || normals.Count == 0)
-                return inner;
-
-            if (normals.Count == 1)
-            {
-                var n = normals[0];
-                return new Vector3(inner.x + n.x * beachWidth, inner.y, inner.z + n.y * beachWidth);
-            }
-
-            Vector2 sum = Vector2.zero;
-            for (int i = 0; i < normals.Count; i++)
-                sum += normals[i];
-            if (sum.sqrMagnitude < 1e-8f)
-                sum = normals[0];
-            sum.Normalize();
-
-            Vector2 reference = normals[0];
-            float denom = Vector2.Dot(sum, reference);
-            if (Mathf.Abs(denom) < 1e-4f)
-                denom = 1f;
-            float offsetLength = beachWidth / Mathf.Max(0.25f, Mathf.Abs(denom));
-            offsetLength = Mathf.Min(offsetLength, beachWidth * 2.5f);
-            return new Vector3(inner.x + sum.x * offsetLength, inner.y, inner.z + sum.y * offsetLength);
+            int corner0 = direction;
+            int corner1 = (direction + 1) % 6;
+            var (hexCx, hexCz) = HexMath.ToWorldPosition(coord, hexScale);
+            var hexCenter = new Vector2(hexCx, hexCz);
+            var inner0 = CornerVertex(coord, corner0, hexScale, 0f);
+            var inner1 = CornerVertex(coord, corner1, hexScale, 0f);
+            var outward = ComputeEdgeOutwardNormal(inner0, inner1, hexCenter);
+            var innerMid = new Vector3(
+                (inner0.x + inner1.x) * 0.5f,
+                0f,
+                (inner0.z + inner1.z) * 0.5f);
+            var outerMid = OffsetEdgePoint(innerMid, outward, beachWidth);
+            width = Vector2.Distance(
+                new Vector2(innerMid.x, innerMid.z),
+                new Vector2(outerMid.x, outerMid.z));
+            return width > 0.001f;
         }
 
         public static void AppendOuterFramingSamples(
@@ -284,7 +265,6 @@ namespace CatanRoguelike.Game
                 return;
 
             var tileSet = CollectLandCoords(board);
-            var cornerNormals = new Dictionary<long, List<Vector2>>();
 
             foreach (var coord in tileSet)
             {
@@ -300,22 +280,15 @@ namespace CatanRoguelike.Game
                     var inner0 = CornerVertex(coord, corner0, hexScale, sampleY);
                     var inner1 = CornerVertex(coord, corner1, hexScale, sampleY);
                     var outward = ComputeEdgeOutwardNormal(inner0, inner1, hexCenter);
-                    AccumulateCornerNormal(cornerNormals, inner0, outward);
-                    AccumulateCornerNormal(cornerNormals, inner1, outward);
                     samples.Add(inner0);
                     samples.Add(inner1);
-                }
-            }
-
-            foreach (var coord in tileSet)
-            {
-                for (int corner = 0; corner < 6; corner++)
-                {
-                    var inner = CornerVertex(coord, corner, hexScale, sampleY);
-                    long key = QuantizeKey(inner);
-                    if (!cornerNormals.TryGetValue(key, out var normals))
-                        continue;
-                    samples.Add(OffsetOutlinePoint(inner, normals, beachWidth));
+                    samples.Add(OffsetEdgePoint(inner0, outward, beachWidth));
+                    samples.Add(OffsetEdgePoint(inner1, outward, beachWidth));
+                    var innerMid = new Vector3(
+                        (inner0.x + inner1.x) * 0.5f,
+                        sampleY,
+                        (inner0.z + inner1.z) * 0.5f);
+                    samples.Add(OffsetEdgePoint(innerMid, outward, beachWidth));
                 }
             }
         }

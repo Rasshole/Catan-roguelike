@@ -7,36 +7,39 @@ namespace CatanRoguelike.Game
     /// <summary>Procedural sand-dune bumps on desert hexes (placeholder until painted art).</summary>
     public static class ColonistDesertDuneDecor
     {
-        private static readonly Color DuneHighlight = new(0.96f, 0.84f, 0.58f);
-        private static readonly Color DuneMid = new(0.90f, 0.76f, 0.50f);
-        private static readonly Color DuneShadow = new(0.82f, 0.66f, 0.42f);
+        private const int DuneRenderQueue = 3195;
+        private static readonly Color DuneHighlight = new(0.98f, 0.86f, 0.55f);
+        private static readonly Color DuneMid = new(0.93f, 0.78f, 0.48f);
+        private static readonly Color DuneShadow = new(0.84f, 0.66f, 0.38f);
 
         public static void Apply(GameObject tileRoot, float hexScale)
         {
             var root = new GameObject("DesertDunes");
             root.transform.SetParent(tileRoot.transform, false);
-            float r = hexScale * HexMath.OuterRadius * 0.18f;
-            float top = HexPrismMesh.TopY + 0.02f;
+            root.transform.SetAsLastSibling();
+
+            float top = HexPrismMesh.TopY + 0.06f;
+            float r = hexScale * HexMath.OuterRadius * 0.28f;
 
             CreateDuneRidge(
                 root.transform,
-                new Vector3(-0.32f * hexScale, top, 0.08f * hexScale),
-                new Vector3(0.28f * hexScale, top + 0.02f, -0.22f * hexScale),
-                r * 1.05f,
+                new Vector3(-0.34f * hexScale, top, 0.1f * hexScale),
+                new Vector3(0.3f * hexScale, top + 0.04f, -0.24f * hexScale),
+                r * 1.1f,
                 DuneShadow,
                 DuneMid);
             CreateDuneRidge(
                 root.transform,
-                new Vector3(0.12f * hexScale, top + 0.01f, 0.26f * hexScale),
-                new Vector3(-0.18f * hexScale, top + 0.03f, -0.06f * hexScale),
-                r * 0.9f,
+                new Vector3(0.14f * hexScale, top + 0.02f, 0.3f * hexScale),
+                new Vector3(-0.2f * hexScale, top + 0.05f, -0.04f * hexScale),
+                r,
                 DuneMid,
                 DuneHighlight);
             CreateDuneRidge(
                 root.transform,
-                new Vector3(0.34f * hexScale, top, -0.12f * hexScale),
-                new Vector3(-0.08f * hexScale, top + 0.02f, 0.18f * hexScale),
-                r * 0.75f,
+                new Vector3(0.36f * hexScale, top, -0.14f * hexScale),
+                new Vector3(-0.1f * hexScale, top + 0.03f, 0.22f * hexScale),
+                r * 0.85f,
                 DuneShadow,
                 DuneHighlight);
         }
@@ -49,15 +52,15 @@ namespace CatanRoguelike.Game
             Color shadowColor,
             Color highlightColor)
         {
-            const int segments = 5;
+            const int segments = 6;
             for (int i = 0; i <= segments; i++)
             {
                 float t = i / (float)segments;
                 Vector3 pos = Vector3.Lerp(startLocal, endLocal, t);
                 float crest = Mathf.Sin(t * Mathf.PI);
-                pos.y += crest * radius * 0.45f;
+                pos.y += crest * radius * 0.55f;
                 var color = Color.Lerp(shadowColor, highlightColor, crest);
-                CreateDuneBump(parent, pos, radius * (0.55f + crest * 0.35f), color, t * 28f);
+                CreateDuneBump(parent, pos, radius * (0.6f + crest * 0.4f), color, t * 32f);
             }
         }
 
@@ -68,10 +71,12 @@ namespace CatanRoguelike.Game
             go.transform.SetParent(parent, false);
             go.transform.localPosition = localPos;
             go.transform.localRotation = Quaternion.Euler(0f, yawDegrees, 0f);
-            float sy = radius * 0.28f;
-            go.transform.localScale = new Vector3(radius * 2.4f, sy * 2f, radius * 1.1f);
+            float sy = radius * 0.32f;
+            go.transform.localScale = new Vector3(radius * 2.8f, sy * 2.2f, radius * 1.35f);
             var renderer = go.GetComponent<Renderer>();
-            renderer.sharedMaterial = BuiltInMaterials.Create(color);
+            var mat = BuiltInMaterials.CreateUnlit(color);
+            mat.renderQueue = DuneRenderQueue;
+            renderer.sharedMaterial = mat;
             ColonistSceneDestroy.SafeDestroy(go.GetComponent<Collider>());
         }
     }

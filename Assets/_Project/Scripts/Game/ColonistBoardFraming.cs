@@ -203,12 +203,54 @@ namespace CatanRoguelike.Game
             int screenWidth,
             int screenHeight)
         {
-            var play = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
-            float minX = play.Left + play.PlayWidth * PlayAreaFitMarginFraction;
-            float maxX = play.Left + play.PlayWidth * (1f - PlayAreaFitMarginFraction);
-            float minY = play.Bottom + play.PlayHeight * PlayAreaFitMarginFraction;
-            float maxY = play.Bottom + play.PlayHeight * (1f - PlayAreaFitMarginFraction);
+            GetFitMarginRect(screenWidth, screenHeight, out float minX, out float maxX, out float minY, out float maxY);
             return AreInsideRect(screenPixelsFromBottom, minX, maxX, minY, maxY);
+        }
+
+        public static bool TryGetFirstSampleOutsideFitMargin(
+            IReadOnlyList<Vector3> worldSamples,
+            Camera camera,
+            int layoutWidth,
+            int layoutHeight,
+            out int sampleIndex,
+            out Vector3 worldPoint,
+            out Vector2 screenPixels)
+        {
+            sampleIndex = -1;
+            worldPoint = default;
+            screenPixels = default;
+            if (worldSamples == null || camera == null || worldSamples.Count == 0)
+                return false;
+
+            GetFitMarginRect(layoutWidth, layoutHeight, out float minX, out float maxX, out float minY, out float maxY);
+            for (int i = 0; i < worldSamples.Count; i++)
+            {
+                var px = WorldToLayoutPixels(camera, worldSamples[i], layoutWidth, layoutHeight);
+                if (px.x < minX || px.x > maxX || px.y < minY || px.y > maxY)
+                {
+                    sampleIndex = i;
+                    worldPoint = worldSamples[i];
+                    screenPixels = px;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void GetFitMarginRect(
+            int screenWidth,
+            int screenHeight,
+            out float minX,
+            out float maxX,
+            out float minY,
+            out float maxY)
+        {
+            var play = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
+            minX = play.Left + play.PlayWidth * PlayAreaFitMarginFraction;
+            maxX = play.Left + play.PlayWidth * (1f - PlayAreaFitMarginFraction);
+            minY = play.Bottom + play.PlayHeight * PlayAreaFitMarginFraction;
+            maxY = play.Bottom + play.PlayHeight * (1f - PlayAreaFitMarginFraction);
         }
 
         public static Vector2 WorldToScreenPixelsFromBottom(Camera camera, Vector3 world)

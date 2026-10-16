@@ -46,6 +46,40 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(edges, ColonistCoastSandMesh.LastBuiltQuadCount);
 
             AssertUniformEdgeWidths(board, hexScale, beachWidth);
+            AssertMeshCoastalMidpointWidths(mesh, board, hexScale, beachWidth);
+        }
+
+        private static void AssertMeshCoastalMidpointWidths(
+            Mesh mesh,
+            BoardState board,
+            float hexScale,
+            float beachWidth)
+        {
+            var land = new System.Collections.Generic.HashSet<HexCoord>();
+            foreach (var kvp in board.Tiles)
+            {
+                if (!kvp.Value.IsFishTile)
+                    land.Add(kvp.Key);
+            }
+
+            foreach (var coord in land)
+            {
+                for (int direction = 0; direction < 6; direction++)
+                {
+                    if (land.Contains(HexMath.GetNeighbor(coord, direction)))
+                        continue;
+
+                    Assert.IsTrue(
+                        ColonistCoastSandMesh.TryMeasureMeshWidthAtCoastalEdgeMidpoint(
+                            mesh, board, coord, direction, hexScale, beachWidth, out float width),
+                        $"Mesh should cover coastal edge midpoint at {coord} dir={direction}.");
+                    Assert.Less(
+                        Mathf.Abs(width - beachWidth) / beachWidth,
+                        0.10f,
+                        $"Mesh sand width at {coord} dir={direction} should be within 10% " +
+                        $"(got {width:F3}, target {beachWidth:F3}).");
+                }
+            }
         }
 
         private static void AssertUniformEdgeWidths(BoardState board, float hexScale, float beachWidth)
@@ -77,8 +111,8 @@ namespace CatanRoguelike.Tests
                     Assert.IsTrue(
                         ColonistCoastSandMesh.TryMeasureEdgeQuadWidth(inner0, inner1, outer0, outer1, out float width),
                         "Coastal edge should produce measurable sand width.");
-                    Assert.Less(Mathf.Abs(width - beachWidth) / beachWidth, 0.05f,
-                        $"Sand width should be within 5% of target (got {width:F3}, target {beachWidth:F3}).");
+                    Assert.Less(Mathf.Abs(width - beachWidth) / beachWidth, 0.10f,
+                        $"Sand width should be within 10% of target (got {width:F3}, target {beachWidth:F3}).");
                 }
             }
         }

@@ -68,9 +68,19 @@ namespace CatanRoguelike.Tests.PlayMode
 
             bool inside = ColonistBoardFraming.ArePointsInsideFitMargin(screenPoints, layoutW, layoutH);
             if (!inside)
+            {
                 ColonistBoardFraming.LogPlayAreaFitDiagnostics(screenPoints, layoutW, layoutH);
+                if (ColonistBoardFraming.TryGetFirstSampleOutsideFitMargin(
+                        samples, camera, layoutW, layoutH, out int badIndex, out Vector3 badWorld, out Vector2 badPx))
+                {
+                    Debug.LogWarning(
+                        $"ColonistBoardFraming offender sample[{badIndex}] world={badWorld} screen=({badPx.x:F1},{badPx.y:F1})");
+                }
+            }
 
-            Assert.IsTrue(inside, "Land+sand+badges should fit inside colonist play area (3% margin).");
+            Assert.IsTrue(
+                inside,
+                "Land+sand+badges should fit inside colonist play area (3% margin). See offender log if failing.");
 
             ColonistBoardFraming.MeasurePlayAreaFill(camera, samples, layoutW, layoutH, out float fillWidth, out float fillHeight);
             float fill = Mathf.Max(fillWidth, fillHeight);

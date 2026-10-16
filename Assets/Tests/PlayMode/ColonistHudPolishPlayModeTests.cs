@@ -251,6 +251,76 @@ namespace CatanRoguelike.Tests.PlayMode
 
         [Timeout(90000)]
         [UnityTest]
+        public IEnumerator PortBadges_ScreenDiameterMatchesTokenScreenDiameter()
+        {
+            if (!File.Exists(ColonistScenePath))
+            {
+                Assert.Inconclusive($"Colonist prototype not found at {ColonistScenePath}.");
+                yield break;
+            }
+
+            int width = GameSceneCapture.CaptureWidth;
+            int height = GameSceneCapture.CaptureHeight;
+            Screen.SetResolution(width, height, false);
+            yield return null;
+
+            var loadOp = SceneManager.LoadSceneAsync(ColonistSceneName, LoadSceneMode.Single);
+            yield return loadOp;
+            for (int i = 0; i < 6; i++)
+                yield return null;
+
+            var gameManager = Object.FindFirstObjectByType<GameManager>();
+            GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
+            gameManager.EnsureRunHudReady();
+            for (int i = 0; i < 4; i++)
+                yield return null;
+
+            var tableCamera = Object.FindFirstObjectByType<TableCamera>();
+            var camera = Camera.main;
+            Assert.IsNotNull(tableCamera);
+            Assert.IsNotNull(camera);
+            ColonistBoardFraming.GetLayoutPixelSize(camera, width, height, out int layoutW, out int layoutH);
+            tableCamera.ApplyCapturePose(layoutW, layoutH);
+            camera.pixelRect = new Rect(0f, 0f, layoutW, layoutH);
+            yield return null;
+
+            HexTileView referenceToken = null;
+            foreach (var tile in Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
+            {
+                if (tile.Data.IsDesert || !tile.Data.NumberToken.HasValue || tile.TokenFaceRenderer == null)
+                    continue;
+                referenceToken = tile;
+                break;
+            }
+
+            Assert.IsNotNull(referenceToken, "Board should include a numbered token for badge sizing.");
+            float tokenScreen = ColonistBoardScreenMetrics.MeasureScreenDiameter(referenceToken.TokenFaceRenderer, camera);
+            float targetScreen = tokenScreen * ColonistBoardScreenMetrics.PortBadgeTargetTokenScreenDiameterRatio;
+
+            int checkedDiscs = 0;
+            foreach (var renderer in Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+            {
+                if (renderer == null || renderer.gameObject.name != "BadgeDisc")
+                    continue;
+
+                float discScreen = ColonistBoardScreenMetrics.MeasureScreenDiameter(renderer, camera);
+                Assert.Greater(discScreen, 12f, $"Badge disc should be readable on screen (d={discScreen:F1}px).");
+                float ratio = discScreen / Mathf.Max(1f, tokenScreen);
+                Assert.That(
+                    ratio,
+                    Is.InRange(
+                        ColonistBoardScreenMetrics.PortBadgeTargetTokenScreenDiameterRatio - 0.08f,
+                        ColonistBoardScreenMetrics.PortBadgeTargetTokenScreenDiameterRatio + 0.08f),
+                    $"Badge screen diameter should be ~{ColonistBoardScreenMetrics.PortBadgeTargetTokenScreenDiameterRatio:P0} of token " +
+                    $"(disc={discScreen:F1}px token={tokenScreen:F1}px target={targetScreen:F1}px ratio={ratio:F3}).");
+                checkedDiscs++;
+            }
+
+            Assert.Greater(checkedDiscs, 0, "Colonist board should show port badge discs.");
+        }
+
+        [Timeout(90000)]
+        [UnityTest]
         public IEnumerator PortBadges_DiscClearOfLandHexes()
         {
             if (!File.Exists(ColonistScenePath))
