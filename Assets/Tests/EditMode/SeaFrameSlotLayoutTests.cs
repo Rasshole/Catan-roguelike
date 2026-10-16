@@ -82,7 +82,11 @@ namespace CatanRoguelike.Tests.EditMode
                 foreach (var landCoord in board.Tiles.Keys)
                 {
                     Assert.IsFalse(
-                        SeaFrameSlotLayout.DiscIntersectsHexPolygon(center, radius, landCoord, HexScale),
+                        SeaFrameSlotLayout.DiscIntersectsHexPolygon(
+                            center,
+                            radius + SeaFrameSlotLayout.BadgeLandPolygonClearance,
+                            landCoord,
+                            HexScale),
                         $"Port badge at {center} overlaps land hex {landCoord}.");
                 }
             }

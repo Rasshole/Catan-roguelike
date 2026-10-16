@@ -125,6 +125,12 @@ namespace CatanRoguelike.Tests.PlayMode
                     $"Colonist capture framing: playAreaCenterTexture=({playCenter.x},{playCenter.y}) " +
                     $"boardReferenceTexture=({boardPixel.x},{boardPixel.y})");
 
+                ColonistBoardFraming.AssertSeaFishGroundCornersInsidePlayArea(
+                    boardView,
+                    mainCamera,
+                    GameSceneCapture.CaptureWidth,
+                    GameSceneCapture.CaptureHeight);
+
                 ColonistBoardCaptureAssertions.AssertColonistLandHexViewCount(19);
                 ColonistBoardCaptureAssertions.AssertRenderedPortBadgeDiscCount(9);
 

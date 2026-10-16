@@ -627,34 +627,50 @@ namespace CatanRoguelike.Game
             var centerPx = ColonistCaptureProjection.WorldToTexturePixel(center, camera, tableCamera, w, h);
             var centerPxV = new Vector2(centerPx.x, centerPx.y);
 
-            float faceRadiusPixels = ColonistBoardScreenMetrics.MeasureProjectedRadiusFromCenter(
-                faceRenderer, camera, tableCamera, w, h, center);
-            float rimRadiusPixels = ColonistBoardScreenMetrics.MeasureProjectedRadiusFromCenter(
-                rimRenderer, camera, tableCamera, w, h, center);
+            Vector3 radialWorld = camera.transform.right;
+            Vector3 faceEdgeWorld = center + radialWorld * tokenTile.TokenFaceWorldRadius;
+            float midRimWorldRadius = tokenTile.TokenFaceWorldRadius + HexTileView.TokenRimBandWorldWidth * 0.5f;
+            Vector3 rimProbeWorld = center + radialWorld * midRimWorldRadius;
+            Vector3 rimOuterWorld = center + radialWorld * tokenTile.TokenRimOuterWorldRadius;
+            Vector3 faceSampleWorld = center + radialWorld * (tokenTile.TokenFaceWorldRadius * 0.35f);
 
             var faceEdgePx = ColonistCaptureProjection.WorldToTexturePixel(
-                center + camera.transform.right * tokenTile.TokenFaceWorldRadius,
-                camera,
-                tableCamera,
-                w,
-                h);
+                faceEdgeWorld, camera, tableCamera, w, h);
+            var rimProbePx = ColonistCaptureProjection.WorldToTexturePixel(
+                rimProbeWorld, camera, tableCamera, w, h);
+            var faceSamplePxV = ColonistCaptureProjection.WorldToTexturePixel(
+                faceSampleWorld, camera, tableCamera, w, h);
+
             var screenRight = new Vector2(faceEdgePx.x - centerPx.x, faceEdgePx.y - centerPx.y);
             if (screenRight.sqrMagnitude < 1e-4f)
             {
-                var altEdgePx = ColonistCaptureProjection.WorldToTexturePixel(
-                    center + camera.transform.up * tokenTile.TokenFaceWorldRadius,
-                    camera,
-                    tableCamera,
-                    w,
-                    h);
-                screenRight = new Vector2(altEdgePx.x - centerPx.x, altEdgePx.y - centerPx.y);
+                radialWorld = camera.transform.up;
+                faceEdgeWorld = center + radialWorld * tokenTile.TokenFaceWorldRadius;
+                rimProbeWorld = center + radialWorld * midRimWorldRadius;
+                faceSampleWorld = center + radialWorld * (tokenTile.TokenFaceWorldRadius * 0.35f);
+                faceEdgePx = ColonistCaptureProjection.WorldToTexturePixel(
+                    faceEdgeWorld, camera, tableCamera, w, h);
+                rimProbePx = ColonistCaptureProjection.WorldToTexturePixel(
+                    rimProbeWorld, camera, tableCamera, w, h);
+                faceSamplePxV = ColonistCaptureProjection.WorldToTexturePixel(
+                    faceSampleWorld, camera, tableCamera, w, h);
+                screenRight = new Vector2(faceEdgePx.x - centerPx.x, faceEdgePx.y - centerPx.y);
             }
 
             screenRight.Normalize();
-            float rimBandWidthPx = Mathf.Max(0.01f, rimRadiusPixels - faceRadiusPixels);
-            float rimProbeRadiusPixels = (faceRadiusPixels + rimRadiusPixels) * 0.5f;
-            var faceSamplePx = centerPxV + screenRight * (faceRadiusPixels * 0.35f);
-            var rimSamplePx = centerPxV + screenRight * rimProbeRadiusPixels;
+            float faceRadiusPixels = Vector2.Distance(centerPxV, new Vector2(faceEdgePx.x, faceEdgePx.y));
+            float rimRadiusPixels = ColonistBoardScreenMetrics.MeasureProjectedRadiusFromCenter(
+                rimRenderer, camera, tableCamera, w, h, center);
+            var rimOuterPx = ColonistCaptureProjection.WorldToTexturePixel(
+                rimOuterWorld, camera, tableCamera, w, h);
+            float rimOuterRadiusPixels = Vector2.Distance(
+                centerPxV, new Vector2(rimOuterPx.x, rimOuterPx.y));
+
+            float rimBandWidthPx = Mathf.Max(0.01f, rimOuterRadiusPixels - faceRadiusPixels);
+            float rimProbeRadiusPixels = Vector2.Distance(
+                centerPxV, new Vector2(rimProbePx.x, rimProbePx.y));
+            var faceSamplePx = new Vector2(faceSamplePxV.x, faceSamplePxV.y);
+            var rimSamplePx = new Vector2(rimProbePx.x, rimProbePx.y);
             int facePxX = Mathf.Clamp(Mathf.RoundToInt(faceSamplePx.x), 0, w - 1);
             int facePxY = Mathf.Clamp(Mathf.RoundToInt(faceSamplePx.y), 0, h - 1);
             int rimPxX = Mathf.Clamp(Mathf.RoundToInt(rimSamplePx.x), 0, w - 1);
@@ -672,8 +688,7 @@ namespace CatanRoguelike.Game
                 $"Token rim pixel should differ from face (delta={delta:F3} face={face} rim={rim} " +
                 $"faceWorld={faceWorld} rimWorld={rimWorld} faceTex=({facePxX},{facePxY}) rimTex=({rimPxX},{rimPxY}) " +
                 $"pixelSep={pixelSeparation:F1} rimRadiusPx~{rimRadiusPixels:F1})).");
-            float expectedProbeRatio = rimProbeRadiusPixels / Mathf.Max(0.01f, faceRadiusPixels);
-            float expectedBandRatio = (faceRadiusPixels + rimRadiusPixels) * 0.5f / Mathf.Max(0.01f, faceRadiusPixels);
+            float expectedBandRatio = midRimWorldRadius / Mathf.Max(0.01f, tokenTile.TokenFaceWorldRadius);
             float rimSampleToFaceRatio = centerToRimSamplePx / Mathf.Max(0.01f, faceRadiusPixels);
             Assert.IsTrue(
                 Mathf.Abs(rimSampleToFaceRatio - expectedBandRatio) < 0.08f,

@@ -15,7 +15,7 @@ namespace CatanRoguelike.Core.Map
     {
         private const int HexCornerCount = 6;
         public const float DefaultBadgeDiscRadius = 0.42f;
-        public const float BadgeCoastClearance = 0.20f;
+        public const float BadgeLandPolygonClearance = 0.08f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 
         public static void AssignPortSeaSlots(BoardState board, IReadOnlyList<PortDefinition> ports)
@@ -187,8 +187,35 @@ namespace CatanRoguelike.Core.Map
             var (sx, sz) = HexMath.ToWorldPosition(sea, hexScale);
             var seaCenter = new MapPlaneXz(sx, sz);
             MapPlaneXz outward = (seaCenter - coastMid).Normalized;
-            float push = badgeRadius + BadgeCoastClearance;
-            center = coastMid + outward * push;
+
+            const float pushStep = 0.01f;
+            const float maxPush = 3.5f;
+            float push = badgeRadius + BadgeLandPolygonClearance;
+            for (; push <= maxPush; push += pushStep)
+            {
+                center = coastMid + outward * push;
+                if (DiscClearOfAllLandHexes(board, center, badgeRadius, BadgeLandPolygonClearance, hexScale))
+                    return true;
+            }
+
+            center = coastMid + outward * maxPush;
+            return true;
+        }
+
+        public static bool DiscClearOfAllLandHexes(
+            BoardState board,
+            MapPlaneXz center,
+            float badgeRadius,
+            float polygonClearance,
+            float hexScale)
+        {
+            float probeRadius = badgeRadius + polygonClearance;
+            foreach (var landCoord in board.Tiles.Keys)
+            {
+                if (DiscIntersectsHexPolygon(center, probeRadius, landCoord, hexScale))
+                    return false;
+            }
+
             return true;
         }
 

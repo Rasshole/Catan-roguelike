@@ -14,6 +14,8 @@ namespace CatanRoguelike.Game
 {
     public sealed class BoardView : MonoBehaviour
     {
+        public const float SeaFishGroundInset = 0.88f;
+
         [SerializeField] private float hexScale = 1.2f;
         [SerializeField] private float tileHeight = 0.15f;
         [SerializeField] private Transform boardRoot;
@@ -106,24 +108,20 @@ namespace CatanRoguelike.Game
 
         private float ComputeSeaFishGroundExtentFromCenter(Vector3 center)
         {
-            if (boardRoot == null)
+            var board = _controller?.State?.Board;
+            if (board == null || board.SeaFishGrounds.Count == 0)
                 return 0f;
 
             var centerXZ = new Vector2(center.x, center.z);
+            float fishScale = hexScale * SeaFishGroundInset;
             float max = 0f;
-            foreach (var ground in boardRoot.GetComponentsInChildren<Transform>(true))
+            foreach (var coord in board.SeaFishGrounds.Keys)
             {
-                if (ground.name != "SeaFishGround")
-                    continue;
-
-                var renderer = ground.GetComponent<Renderer>();
-                if (renderer == null)
-                    continue;
-
-                float radius = Mathf.Max(renderer.bounds.extents.x, renderer.bounds.extents.z);
-                var pos = renderer.bounds.center;
-                float dist = Vector2.Distance(centerXZ, new Vector2(pos.x, pos.z)) + radius;
-                max = Mathf.Max(max, dist);
+                for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
+                {
+                    var (x, z) = HexMath.VertexToWorldPosition(coord, corner, fishScale);
+                    max = Mathf.Max(max, Vector2.Distance(centerXZ, new Vector2(x, z)));
+                }
             }
 
             return max;
@@ -201,18 +199,45 @@ namespace CatanRoguelike.Game
                     ColonistBoardFraming.AppendBoundsCorners(renderer.bounds, samples);
             }
 
-            foreach (var tile in _tiles.Values)
+            AppendSeaFishGroundCornerSamples(samples, sampleY);
+        }
+
+        /// <summary>Outer corners of inset sea-fish hex prisms (full hex footprint, not centre).</summary>
+        public void AppendSeaFishGroundCornerSamples(List<Vector3> samples)
+        {
+            float sampleY = 0f;
+            foreach (var kvp in _tiles)
             {
-                if (!IsSeaFishTile(tile.Data))
+                if (!IsSeaFishTile(kvp.Value.Data))
                     continue;
+                sampleY = GetHexTopWorldPoint(kvp.Value.transform).y;
+                break;
+            }
 
-                var ground = tile.transform.Find("SeaFishGround");
-                if (ground == null)
-                    continue;
+            AppendSeaFishGroundCornerSamples(samples, sampleY);
+        }
 
-                var renderer = ground.GetComponent<Renderer>();
-                if (renderer != null)
-                    ColonistBoardFraming.AppendBoundsCorners(renderer.bounds, samples);
+        public void AppendSeaFishGroundCornerSamples(List<Vector3> samples, float sampleY)
+        {
+            if (samples == null)
+                return;
+
+            var board = _controller?.State?.Board;
+            if (board == null || board.SeaFishGrounds.Count == 0)
+                return;
+
+            float fishScale = hexScale * SeaFishGroundInset;
+            foreach (var coord in board.SeaFishGrounds.Keys)
+            {
+                float y = sampleY;
+                if (_tiles.TryGetValue(coord, out var view))
+                    y = GetHexTopWorldPoint(view.transform).y;
+
+                for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
+                {
+                    var (x, z) = HexMath.VertexToWorldPosition(coord, corner, fishScale);
+                    samples.Add(new Vector3(x, y, z));
+                }
             }
         }
 
@@ -467,7 +492,6 @@ namespace CatanRoguelike.Game
             go.transform.localScale = new Vector3(1f, height, 1f);
 
             Renderer renderer;
-            const float seaFishInset = 0.88f;
             if (ColonistPresentation.IsActive && IsSeaFishTile(data))
             {
                 var mesh = HexPrismMesh.Create(data.Coord, hexScale);
@@ -476,7 +500,7 @@ namespace CatanRoguelike.Game
                 renderer = go.AddComponent<MeshRenderer>();
                 renderer.sharedMaterial = ColonistBoardTextureLoader.CreateSeaFishGroundMaterial();
                 renderer.sharedMaterial.renderQueue = 1985;
-                go.transform.localScale = new Vector3(seaFishInset, height, seaFishInset);
+                go.transform.localScale = new Vector3(SeaFishGroundInset, height, SeaFishGroundInset);
                 var collider = go.AddComponent<MeshCollider>();
                 collider.sharedMesh = mesh;
             }

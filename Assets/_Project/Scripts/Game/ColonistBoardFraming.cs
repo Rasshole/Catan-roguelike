@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CatanRoguelike.Core.Map;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -148,6 +149,28 @@ namespace CatanRoguelike.Game
         {
             var play = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
             return play.Bottom + play.PlayHeight;
+        }
+
+        public static void AssertSeaFishGroundCornersInsidePlayArea(
+            BoardView boardView,
+            Camera camera,
+            int screenWidth,
+            int screenHeight)
+        {
+            Assert.IsNotNull(boardView);
+            Assert.IsNotNull(camera);
+
+            var corners = new List<Vector3>(64);
+            boardView.AppendSeaFishGroundCornerSamples(corners);
+            Assert.IsTrue(corners.Count > 0, "Sea fish grounds should expose hex corner framing samples.");
+
+            var screenPoints = new Vector2[corners.Count];
+            for (int i = 0; i < corners.Count; i++)
+                screenPoints[i] = WorldToLayoutPixels(camera, corners[i], screenWidth, screenHeight);
+
+            Assert.IsTrue(
+                ArePointsInsideFitMargin(screenPoints, screenWidth, screenHeight),
+                "All sea fish hex corners must fit inside the colonist play-area margin.");
         }
 
         public static void AssertBoardTopBelowTurnBanner(

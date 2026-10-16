@@ -100,6 +100,9 @@ namespace CatanRoguelike.Tests.PlayMode
                     inside,
                     "Land+badges should fit inside colonist play area (3% margin) on capture camera pose.");
 
+                ColonistBoardFraming.AssertSeaFishGroundCornersInsidePlayArea(
+                    boardView, camera, width, height);
+
                 ColonistBoardFraming.MeasurePlayAreaFill(camera, samples, width, height, out float fillWidth, out float fillHeight);
                 float fill = Mathf.Max(fillWidth, fillHeight);
                 Debug.Log(
