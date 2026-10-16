@@ -20,7 +20,7 @@ namespace CatanRoguelike.Tests
             state.TodayDiceRolls = new List<int> { 6 };
 
             var vertex = VertexGraph.Canonicalize(new Vertex(new HexCoord(0, 0), 0));
-            HexCoord woodHex = default;
+            HexCoord? expectedWoodHex = null;
             foreach (var hex in VertexGraph.GetHexesForVertex(vertex))
             {
                 if (!board.TryGetTile(hex, out var tile))
@@ -28,8 +28,11 @@ namespace CatanRoguelike.Tests
                 if (tile.Resource != ResourceType.Wood)
                     continue;
                 tile.NumberToken = 6;
-                woodHex = hex;
+                if (!expectedWoodHex.HasValue || CompareHexCoords(hex, expectedWoodHex.Value) < 0)
+                    expectedWoodHex = hex;
             }
+
+            Assert.IsTrue(expectedWoodHex.HasValue, "fixture needs a wood hex on the settlement corner");
 
             board.VertexBuildings[vertex] = (BuildingType.Settlement, PlayerId.Human);
             var gained = new ResourceBundle { Wood = 2 };
@@ -41,7 +44,13 @@ namespace CatanRoguelike.Tests
                 gained);
 
             Assert.IsTrue(map.ContainsKey(ResourceType.Wood));
-            Assert.AreEqual(woodHex, map[ResourceType.Wood]);
+            Assert.AreEqual(expectedWoodHex.Value, map[ResourceType.Wood]);
+        }
+
+        private static int CompareHexCoords(HexCoord a, HexCoord b)
+        {
+            int cmp = a.Q.CompareTo(b.Q);
+            return cmp != 0 ? cmp : a.R.CompareTo(b.R);
         }
     }
 }

@@ -40,54 +40,6 @@ namespace CatanRoguelike.Game
                 ApplyBoardFramingOffset(screenWidth, screenHeight);
         }
 
-        /// <summary>Colonist HUD capture: tighter zoom (~60% screen height) with run side-panel framing.</summary>
-        public void ApplyColonistCapturePose(int screenWidth, int screenHeight)
-        {
-            PlaceholderHudLayout.SetActivePanelWidth(RunHudLayout.SidePanelWidth);
-            EnsureCameraAndBoardView();
-            EnsureLookTarget();
-
-            float savedMargin = distanceMargin;
-            distanceMargin = TableCameraFraming.DefaultMarginFactor * 0.58f;
-            ApplyOrbitPose();
-            distanceMargin = savedMargin;
-
-            if (frameBoardRightOfHud && _camera != null)
-                ApplyBoardFramingOffset(screenWidth, screenHeight);
-
-            RefineBoardVerticalFill(screenWidth, screenHeight, 0.6f);
-        }
-
-        private void RefineBoardVerticalFill(int screenWidth, int screenHeight, float targetFraction)
-        {
-            if (_camera == null || boardView == null)
-                return;
-
-            float boardRadius = boardView.GetBoardBoundingRadius();
-            if (boardRadius <= 0f)
-                return;
-
-            Vector3 center = lookTarget.position;
-            for (int i = 0; i < 5; i++)
-            {
-                float topY = _camera.WorldToScreenPoint(center + Vector3.up * boardRadius).y;
-                float bottomY = _camera.WorldToScreenPoint(center - Vector3.up * (boardRadius * 0.35f)).y;
-                float heightPx = Mathf.Abs(topY - bottomY);
-                float targetPx = screenHeight * targetFraction;
-                if (heightPx <= 1f)
-                    return;
-
-                float ratio = targetPx / heightPx;
-                if (ratio > 0.92f && ratio < 1.08f)
-                    return;
-
-                Vector3 toCamera = transform.position - center;
-                transform.position = center + toCamera / Mathf.Clamp(ratio, 0.75f, 1.35f);
-                transform.LookAt(center + Vector3.up * 0.5f);
-                if (frameBoardRightOfHud)
-                    ApplyBoardFramingOffset(screenWidth, screenHeight);
-            }
-        }
 #endif
 
         private void EnsureCameraAndBoardView()
