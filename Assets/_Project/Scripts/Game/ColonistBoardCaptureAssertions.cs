@@ -413,9 +413,8 @@ namespace CatanRoguelike.Game
             Color face = boardCapture.GetPixel(facePx.x, facePx.y);
             Color rim = boardCapture.GetPixel(rimPx.x, rimPx.y);
             float delta = ColorDistance(face, rim);
-            Assert.Greater(
-                delta,
-                0.06f,
+            Assert.IsTrue(
+                delta > 0.06f,
                 $"Token rim pixel should differ from face (delta={delta:F3} face={face} rim={rim}).");
             Assert.IsTrue(
                 MatchesTokenChipColor(face),
