@@ -113,7 +113,7 @@ namespace CatanRoguelike.Game
             _buildDevButton.interactable = false;
             var devTip = _buildDevButton.gameObject.AddComponent<RunHudCostTooltip>();
             devTip.SetTooltip(ColonistPresentation.IsActive
-                ? "Development cards are played from the roguelike deck (hidden in classic view)."
+                ? "Buy a development card (classic rules coming soon)."
                 : "Roguelike cards are played at night.");
             _actionButtons.Add(_buildRoadButton);
             _actionButtons.Add(_buildSettlementButton);

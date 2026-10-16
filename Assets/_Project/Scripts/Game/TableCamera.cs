@@ -74,8 +74,13 @@ namespace CatanRoguelike.Game
             if (_camera == null)
             {
                 _camera = GetComponent<Camera>();
-                if (_camera != null && _camera.nearClipPlane < 0.3f)
-                    _camera.nearClipPlane = 0.3f;
+                if (_camera != null)
+                {
+                    if (_camera.nearClipPlane < 0.3f)
+                        _camera.nearClipPlane = 0.3f;
+                    if (ColonistPresentation.IsActive)
+                        _camera.backgroundColor = new Color(0.08f, 0.22f, 0.38f, 1f);
+                }
             }
 
             if (boardView == null)
@@ -128,8 +133,8 @@ namespace CatanRoguelike.Game
             _camera.transform.position = lookTarget.position + Vector3.up * 24f;
 
             float margin = TableCameraFraming.DefaultMarginFactor;
-            float hudBottom = (RunHudLayout.BottomHandHeight + RunHudLayout.BottomActionBarHeight + RunHudLayout.Margin * 3f)
-                / Mathf.Max(1f, screenHeight);
+            float hudBottom = (RunHudLayout.GetBottomHandHeight() + RunHudLayout.GetBottomActionBarHeight()
+                + RunHudLayout.Margin * 3f) / Mathf.Max(1f, screenHeight);
             float hudRight = (RunHudLayout.RightChromePanelWidth + RunHudLayout.Margin * 2f)
                 / Mathf.Max(1f, screenWidth);
 

@@ -1,3 +1,4 @@
+using CatanRoguelike.Core;
 using CatanRoguelike.Core.Turn;
 using UnityEngine;
 using UnityEngine.UI;
@@ -16,13 +17,14 @@ namespace CatanRoguelike.Game
         {
             float margin = RunHudLayout.Margin;
             float bottom = RunHudLayout.GetActionBarBottomInset();
+            float barHeight = RunHudLayout.GetBottomActionBarHeight();
             _actionBar = RunHudUiFactory.CreatePanel(
                 root,
                 "ActionBar",
                 new Vector2(0f, 0f),
                 new Vector2(1f, 0f),
-                new Vector2(margin + RunHudLayout.SidePanelWidth + margin, bottom),
-                new Vector2(-(margin + RunHudLayout.RightChromePanelWidth + margin), bottom + RunHudLayout.BottomActionBarHeight));
+                new Vector2(RunHudLayout.GetContentLeftInset(), bottom),
+                new Vector2(-RunHudLayout.GetContentRightInset(), bottom + barHeight));
             _actionBar.GetComponent<Image>().color = new Color(0.08f, 0.10f, 0.14f, 0.92f);
 
             var rootLayout = _actionBar.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -35,7 +37,8 @@ namespace CatanRoguelike.Game
 
             _actionBarBuildRoot = CreateActionBarSlot("BuildSlot", flexibleWidth: 1f);
             _actionBarCenterRoot = CreateActionBarSlot("DiceRollSlot", flexibleWidth: 0f, minWidth: 220f);
-            _actionBarEndRoot = CreateActionBarSlot("EndTurnSlot", flexibleWidth: 0f, minWidth: 148f);
+            float endTurnMinWidth = ColonistPresentation.IsActive ? 200f : 148f;
+            _actionBarEndRoot = CreateActionBarSlot("EndTurnSlot", flexibleWidth: 0f, minWidth: endTurnMinWidth);
 
             BuildDiceAndRollCluster(_actionBarCenterRoot);
             BuildEndTurnButton(_actionBarEndRoot);
@@ -60,7 +63,7 @@ namespace CatanRoguelike.Game
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = true;
             layout.childControlHeight = true;
-            var element = RunHudUiFactory.AddLayoutElement(go, RunHudLayout.BottomActionBarHeight - 16f, flexibleWidth);
+            var element = RunHudUiFactory.AddLayoutElement(go, RunHudLayout.GetBottomActionBarHeight() - 16f, flexibleWidth);
             if (minWidth > 0f)
                 element.minWidth = minWidth;
             return go.GetComponent<RectTransform>();
@@ -95,10 +98,15 @@ namespace CatanRoguelike.Game
         private void BuildEndTurnButton(RectTransform parent)
         {
             _endTurnPinned = RunHudUiFactory.CreateButton(parent, ColonistHudCopy.EndTurn, new Color(0.18f, 0.55f, 0.32f, 1f));
-            RunHudUiFactory.AddLayoutElement(_endTurnPinned.gameObject, 52f).preferredWidth = 140f;
+            float endHeight = ColonistPresentation.IsActive ? 60f : 52f;
+            float endWidth = ColonistPresentation.IsActive ? 196f : 140f;
+            RunHudUiFactory.AddLayoutElement(_endTurnPinned.gameObject, endHeight).preferredWidth = endWidth;
             var label = _endTurnPinned.GetComponentInChildren<Text>();
             if (label != null)
-                label.fontSize = 18;
+            {
+                label.fontSize = ColonistPresentation.IsActive ? 22 : 18;
+                label.fontStyle = ColonistPresentation.IsActive ? FontStyle.Bold : FontStyle.Normal;
+            }
             _endTurnPinned.onClick.AddListener(() =>
             {
                 if (_controller != null)

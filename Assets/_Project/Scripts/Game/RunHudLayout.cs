@@ -14,6 +14,19 @@ namespace CatanRoguelike.Game
 
         public static float GetHandRowBottomInset() => Margin;
 
-        public static float GetActionBarBottomInset() => Margin + BottomHandHeight + Margin * 0.5f;
+        public static float GetActionBarBottomInset() =>
+            Margin + GetBottomHandHeight() + Margin * 0.5f;
+
+        public static float GetBottomHandHeight() =>
+            ColonistPresentation.IsActive ? 172f : BottomHandHeight;
+
+        public static float GetBottomActionBarHeight() =>
+            ColonistPresentation.IsActive ? 84f : BottomActionBarHeight;
+
+        public static float GetContentLeftInset() =>
+            ColonistPresentation.IsActive ? Margin : Margin + SidePanelWidth + Margin;
+
+        public static float GetContentRightInset() =>
+            Margin + RightChromePanelWidth + Margin;
     }
 }
