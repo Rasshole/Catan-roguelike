@@ -62,7 +62,7 @@ namespace CatanRoguelike.Game
             HexCoord hex,
             float hexScale)
         {
-            Span<Vector2> corners = stackalloc Vector2[HexPrismMesh.SideCount];
+            var corners = new Vector2[HexPrismMesh.SideCount];
             FillHexCorners(hex, hexScale, corners);
             if (PointInConvexPolygon(discCenter, corners))
                 return true;
@@ -79,7 +79,7 @@ namespace CatanRoguelike.Game
             return false;
         }
 
-        public static void FillHexCorners(HexCoord hex, float hexScale, Span<Vector2> corners)
+        public static void FillHexCorners(HexCoord hex, float hexScale, Vector2[] corners)
         {
             for (int i = 0; i < HexPrismMesh.SideCount; i++)
             {
@@ -216,7 +216,7 @@ namespace CatanRoguelike.Game
             return hexes;
         }
 
-        private static bool PointInConvexPolygon(Vector2 point, ReadOnlySpan<Vector2> polygon)
+        private static bool PointInConvexPolygon(Vector2 point, Vector2[] polygon)
         {
             bool? sign = null;
             for (int i = 0; i < polygon.Length; i++)

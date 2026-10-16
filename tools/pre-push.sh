@@ -7,5 +7,7 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 "$root/tools/check-internal-test-refs.sh" "$root"
 "$root/tools/check-core-usings.sh" "$root"
 "$root/tools/check-unity-api-misrefs.sh" "$root"
+chmod +x "$root/tools/check-span-without-system.sh" 2>/dev/null || true
+"$root/tools/check-span-without-system.sh" "$root"
 chmod +x "$root/tools/check-bare-destroy.sh" 2>/dev/null || true
 "$root/tools/check-bare-destroy.sh" "$root"
