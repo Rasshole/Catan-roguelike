@@ -15,7 +15,7 @@ namespace CatanRoguelike.Core.Map
     {
         private const int HexCornerCount = 6;
         public const float DefaultBadgeDiscRadius = 0.42f;
-        public const float BadgeCoastClearance = 0.15f;
+        public const float BadgeCoastClearance = 0.20f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 
         public static void AssignPortSeaSlots(BoardState board, IReadOnlyList<PortDefinition> ports)
@@ -57,7 +57,7 @@ namespace CatanRoguelike.Core.Map
 
             int fishCount = Math.Min(6, fishCandidates.Count);
             var fishValues = new[] { 1, 1, 2, 2, 3, 0 };
-            var picked = PickFishCoordsEvenlyAroundRing(board, fishCandidates, fishCount);
+            var picked = PickFishCoordsMaxMinAngularGap(board, fishCandidates, fishCount);
 
             for (int i = 0; i < picked.Count; i++)
             {
@@ -71,7 +71,7 @@ namespace CatanRoguelike.Core.Map
             }
         }
 
-        private static List<HexCoord> PickFishCoordsEvenlyAroundRing(
+        private static List<HexCoord> PickFishCoordsMaxMinAngularGap(
             BoardState board,
             List<HexCoord> candidates,
             int fishCount)
@@ -81,50 +81,79 @@ namespace CatanRoguelike.Core.Map
                 return result;
 
             MapPlaneXz center = ComputeBoardCenter(board);
-            var scored = new List<(HexCoord coord, float angle)>(candidates.Count);
+            var angles = new Dictionary<HexCoord, float>(candidates.Count);
             foreach (var coord in candidates)
             {
                 var (x, z) = HexMath.ToWorldPosition(coord, 1f);
-                float angle = (float)Math.Atan2(z - center.Z, x - center.X);
-                scored.Add((coord, angle));
+                angles[coord] = (float)Math.Atan2(z - center.Z, x - center.X);
             }
 
-            var used = new HashSet<HexCoord>();
-            for (int i = 0; i < fishCount; i++)
+            var orderedCandidates = new List<HexCoord>(candidates);
+            orderedCandidates.Sort(CompareHexCoord);
+
+            HexCoord first = orderedCandidates[0];
+            float firstAngle = angles[first];
+            foreach (var coord in orderedCandidates)
             {
-                double target = -Math.PI + (2.0 * Math.PI * (i + 0.5) / fishCount);
-                HexCoord? best = null;
-                float bestDelta = float.MaxValue;
-                foreach (var (coord, angle) in scored)
+                float angle = angles[coord];
+                if (angle < firstAngle - 1e-6f
+                    || (Math.Abs(angle - firstAngle) < 1e-6f && CompareHexCoord(coord, first) < 0))
                 {
-                    if (used.Contains(coord))
+                    first = coord;
+                    firstAngle = angle;
+                }
+            }
+
+            result.Add(first);
+            var remaining = new HashSet<HexCoord>(candidates);
+            remaining.Remove(first);
+
+            while (result.Count < fishCount && remaining.Count > 0)
+            {
+                var pool = new List<HexCoord>(remaining);
+                pool.Sort(CompareHexCoord);
+
+                HexCoord? best = null;
+                float bestMinGap = float.NegativeInfinity;
+
+                foreach (var coord in pool)
+                {
+                    float minGap = float.MaxValue;
+                    foreach (var picked in result)
+                        minGap = Math.Min(minGap, AngularDistance(angles[coord], angles[picked]));
+
+                    bool better = !best.HasValue
+                        || minGap > bestMinGap + 1e-6f
+                        || (Math.Abs(minGap - bestMinGap) < 1e-6f && CompareHexCoord(coord, best.Value) < 0);
+                    if (!better)
                         continue;
 
-                    float delta = Math.Abs(NormalizeAngle(angle - (float)target));
-                    if (delta < bestDelta)
-                    {
-                        bestDelta = delta;
-                        best = coord;
-                    }
+                    bestMinGap = minGap;
+                    best = coord;
                 }
 
                 if (!best.HasValue)
                     break;
 
-                used.Add(best.Value);
                 result.Add(best.Value);
+                remaining.Remove(best.Value);
             }
 
             return result;
         }
 
-        private static float NormalizeAngle(float radians)
+        private static float AngularDistance(float a, float b)
         {
-            while (radians > Math.PI)
-                radians -= (float)(2.0 * Math.PI);
-            while (radians < -Math.PI)
-                radians += (float)(2.0 * Math.PI);
-            return Math.Abs(radians);
+            float d = Math.Abs(a - b);
+            if (d > Math.PI)
+                d = (float)(2.0 * Math.PI) - d;
+            return d;
+        }
+
+        private static int CompareHexCoord(HexCoord a, HexCoord b)
+        {
+            int cmp = a.Q.CompareTo(b.Q);
+            return cmp != 0 ? cmp : a.R.CompareTo(b.R);
         }
 
         public static void AssignPortAndFishSlots(

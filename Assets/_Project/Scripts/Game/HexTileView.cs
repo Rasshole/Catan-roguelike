@@ -438,7 +438,15 @@ namespace CatanRoguelike.Game
             if (visible)
                 EnsureRobberMarker();
             if (_robberMarker != null)
+            {
                 _robberMarker.SetActive(visible);
+                if (visible)
+                {
+                    var robberOffset = GetRobberLocalOffset();
+                    _robberMarker.transform.localPosition = new Vector3(
+                        robberOffset.x, HexPrismMesh.TopY + MarkerLiftLocal, robberOffset.z);
+                }
+            }
         }
 
         private Vector3 GetRobberLocalOffset()
@@ -446,7 +454,7 @@ namespace CatanRoguelike.Game
             if (Data == null)
                 return RobberLocalOffset;
             if (Data.IsDesert && Data.IsFishTile && ColonistPresentation.IsActive)
-                return new Vector3(0.34f, 0f, 0.28f);
+                return new Vector3(0.58f, 0f, 0.54f);
             if (Data.IsDesert)
                 return Vector3.zero;
             return RobberLocalOffset;
