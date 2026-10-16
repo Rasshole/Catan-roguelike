@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CatanRoguelike.Core.Hex;
+using CatanRoguelike.Core.Map;
 
 namespace CatanRoguelike.Core.Shop
 {

@@ -28,7 +28,7 @@ namespace CatanRoguelike.Game
                 3050,
                 placeAbove: null,
                 alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);
-            ColonistFlatBoardQuad.AlignToColonistCamera(icon);
+            ColonistFlatBoardQuad.AlignToColonistCamera(icon.transform);
         }
     }
 }

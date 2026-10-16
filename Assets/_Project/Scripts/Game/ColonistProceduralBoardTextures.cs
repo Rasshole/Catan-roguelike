@@ -28,7 +28,7 @@ namespace CatanRoguelike.Game
                     float v = y / (float)Size;
                     float n = Mathf.PerlinNoise(u * 6f + slot.GetHashCode() * 0.01f, v * 6f) * 0.12f;
                     float streak = Mathf.Sin((u + v) * 18f) * 0.04f;
-                    float brush = (rng.NextDouble() - 0.5f) * 0.06f;
+                    float brush = ((float)rng.NextDouble() - 0.5f) * 0.06f;
                     var c = baseColor;
                     c.r = Mathf.Clamp01(c.r + n + streak + brush);
                     c.g = Mathf.Clamp01(c.g + n * 0.8f + brush);
