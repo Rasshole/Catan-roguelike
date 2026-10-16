@@ -54,7 +54,7 @@ namespace CatanRoguelike.Game
 
             if (useColonistShortPier
                 && SeaFrameSlotLayout.TryGetBadgeCenter(
-                    board, portVertex, hexScale, out MapPlaneXz shortCenter))
+                    board, portVertex, hexScale, discRadius, out MapPlaneXz shortCenter))
             {
                 badgeCenter = new Vector2(shortCenter.X, shortCenter.Z);
                 seaOutward = ComputeSeawardDirection(board, portVertex, hexScale, vertexPos);

@@ -20,6 +20,8 @@ namespace CatanRoguelike.Game
 
         private const float PierLength = 0.36f;
         private const float PierWidth = 0.16f;
+        private const float SeaSlotPlankWidth = 0.06f;
+        private const float SeaSlotPlankHeight = 0.08f;
         private const float PierHeight = 0.06f;
         private const float PostHeight = 0.11f;
         private const float PostWidth = 0.07f;
@@ -174,7 +176,8 @@ namespace CatanRoguelike.Game
             Color resourceColor)
         {
             float y = hexTopY + BaseGapAboveHex;
-            if (!SeaFrameSlotLayout.TryGetBadgeCenter(board, vertex, hexScale, out MapPlaneXz badgeXZ))
+            if (!SeaFrameSlotLayout.TryGetBadgeCenter(
+                    board, vertex, hexScale, BadgeDiscWorldRadius, out MapPlaneXz badgeXZ))
             {
                 var (seaX, seaZ) = HexMath.ToWorldPosition(seaCoord, hexScale);
                 badgeXZ = new MapPlaneXz(seaX, seaZ);
@@ -188,8 +191,23 @@ namespace CatanRoguelike.Game
             if (SeaFrameSlotLayout.TryGetHarborCoastEdge(
                     board, vertex, seaCoord, hexScale, out _, out MapPlaneXz coastA, out MapPlaneXz coastB))
             {
-                CreateWorldPlank(root.transform, badgeWorld, new Vector3(coastA.X, y, coastA.Z), PierWoodColor);
-                CreateWorldPlank(root.transform, badgeWorld, new Vector3(coastB.X, y, coastB.Z), PierWoodColor);
+                float rim = BadgeDiscWorldRadius;
+                var coastAWorld = new Vector3(coastA.X, y, coastA.Z);
+                var coastBWorld = new Vector3(coastB.X, y, coastB.Z);
+                CreateWorldPlank(
+                    root.transform,
+                    coastAWorld,
+                    RimPointToward(badgeWorld, coastAWorld, rim),
+                    PierWoodColor,
+                    SeaSlotPlankWidth,
+                    SeaSlotPlankHeight);
+                CreateWorldPlank(
+                    root.transform,
+                    coastBWorld,
+                    RimPointToward(badgeWorld, coastBWorld, rim),
+                    PierWoodColor,
+                    SeaSlotPlankWidth,
+                    SeaSlotPlankHeight);
             }
 
             CreatePart("PierPost", root.transform,
@@ -208,7 +226,21 @@ namespace CatanRoguelike.Game
             return root;
         }
 
-        private static void CreateWorldPlank(Transform parent, Vector3 from, Vector3 to, Color color)
+        private static Vector3 RimPointToward(Vector3 badgeCenter, Vector3 toward, float radius)
+        {
+            Vector3 delta = toward - badgeCenter;
+            if (delta.sqrMagnitude < 1e-8f)
+                return badgeCenter;
+            return badgeCenter + delta.normalized * radius;
+        }
+
+        private static void CreateWorldPlank(
+            Transform parent,
+            Vector3 from,
+            Vector3 to,
+            Color color,
+            float width,
+            float height)
         {
             Vector3 delta = to - from;
             float len = delta.magnitude;
@@ -223,9 +255,11 @@ namespace CatanRoguelike.Game
             part.transform.SetParent(parent, true);
             part.transform.position = mid;
             part.transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
-            part.transform.localScale = new Vector3(PierWidth, PierHeight, len);
+            part.transform.localScale = new Vector3(width, height, len);
 
-            part.GetComponent<Renderer>().sharedMaterial = BuiltInMaterials.Create(color);
+            var mat = BuiltInMaterials.Create(color);
+            mat.renderQueue = 3075;
+            part.GetComponent<Renderer>().sharedMaterial = mat;
             DestroyCollider(part.GetComponent<Collider>());
         }
 

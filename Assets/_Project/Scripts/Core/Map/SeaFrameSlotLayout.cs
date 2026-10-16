@@ -13,7 +13,8 @@ namespace CatanRoguelike.Core.Map
     public static class SeaFrameSlotLayout
     {
         private const int HexCornerCount = 6;
-        public const float HarborBadgeTowardSeaFactor = 0.35f;
+        public const float DefaultBadgeDiscRadius = 0.42f;
+        public const float BadgeCoastClearance = 0.15f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 
         public static void AssignPortSeaSlots(BoardState board, IReadOnlyList<PortDefinition> ports)
@@ -138,6 +139,7 @@ namespace CatanRoguelike.Core.Map
             BoardState board,
             Vertex portVertex,
             float hexScale,
+            float badgeRadius,
             out MapPlaneXz center)
         {
             center = MapPlaneXz.Zero;
@@ -154,7 +156,9 @@ namespace CatanRoguelike.Core.Map
 
             var (sx, sz) = HexMath.ToWorldPosition(sea, hexScale);
             var seaCenter = new MapPlaneXz(sx, sz);
-            center = coastMid + (seaCenter - coastMid) * HarborBadgeTowardSeaFactor;
+            MapPlaneXz outward = (seaCenter - coastMid).Normalized;
+            float push = badgeRadius + BadgeCoastClearance;
+            center = coastMid + outward * push;
             return true;
         }
 

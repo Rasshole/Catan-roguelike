@@ -9,7 +9,7 @@ namespace CatanRoguelike.Game
     {
         public static Material GetTileMaterial(HexTileData data)
         {
-            if (data.IsFishTile)
+            if (data.IsFishTile && !data.IsDesert)
                 return ColonistBoardTextureLoader.GetTerrainMaterial(BoardTerrainSlot.SeaLake);
 
             if (data.IsDesert)

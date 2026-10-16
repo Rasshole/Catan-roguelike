@@ -46,5 +46,7 @@ namespace CatanRoguelike.Core.Map
 
         public static float Clamp01(float value) =>
             value < 0f ? 0f : value > 1f ? 1f : value;
+
+        public override string ToString() => $"({X:F3},{Z:F3})";
     }
 }

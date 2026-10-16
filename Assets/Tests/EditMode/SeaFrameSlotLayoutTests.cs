@@ -41,12 +41,13 @@ namespace CatanRoguelike.Tests.EditMode
         {
             var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
             var ports = PortAccess.DiscoverPorts(board);
-            float radius = HexScale * HexMath.InnerRadius * 0.72f;
+            float radius = SeaFrameSlotLayout.DefaultBadgeDiscRadius;
 
             foreach (var port in ports)
             {
                 Assert.IsTrue(
-                    SeaFrameSlotLayout.TryGetBadgeCenter(board, port.Vertex, HexScale, out MapPlaneXz center),
+                    SeaFrameSlotLayout.TryGetBadgeCenter(
+                        board, port.Vertex, HexScale, radius, out MapPlaneXz center),
                     $"Badge center should resolve for port {port.Vertex}.");
 
                 foreach (var landCoord in board.Tiles.Keys)
