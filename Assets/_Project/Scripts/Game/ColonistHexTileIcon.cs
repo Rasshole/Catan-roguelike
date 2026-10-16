@@ -5,8 +5,8 @@ namespace CatanRoguelike.Game
 {
     internal static class ColonistHexTileIcon
     {
-        private const float IconDiameter = 0.22f;
-        private const float IconY = 1.06f;
+        private const float IconWorldDiameter = 0.38f;
+        private const float IconLocalY = 1.04f;
 
         public static void Apply(GameObject tileRoot, HexTileData data)
         {
@@ -16,14 +16,16 @@ namespace CatanRoguelike.Game
             var iconGo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             iconGo.name = "ResourceIcon";
             iconGo.transform.SetParent(tileRoot.transform, false);
-            iconGo.transform.localPosition = new Vector3(0f, IconY, 0f);
+            iconGo.transform.localPosition = new Vector3(0f, IconLocalY, 0f);
+            iconGo.transform.localRotation = Quaternion.identity;
             var lossy = tileRoot.transform.lossyScale;
-            float d = IconDiameter / lossy.x;
-            float h = 0.04f / lossy.y;
+            float d = IconWorldDiameter / lossy.x;
+            float h = 0.08f / lossy.y;
             iconGo.transform.localScale = new Vector3(d, h, d);
             UnityEngine.Object.Destroy(iconGo.GetComponent<Collider>());
-            iconGo.GetComponent<Renderer>().sharedMaterial =
-                BuiltInMaterials.Create(BoardResourceColors.GetHudSwatch(data.Resource));
+            var renderer = iconGo.GetComponent<Renderer>();
+            renderer.sharedMaterial = BuiltInMaterials.Create(BoardResourceColors.GetHudSwatch(data.Resource));
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
     }
 }

@@ -93,10 +93,14 @@ namespace CatanRoguelike.Game
             _pipRoot.transform.SetParent(_tokenChip.transform, false);
 
             var hexScale = transform.lossyScale;
-            float localDiameter = 0.09f / hexScale.x;
-            float localHeight = 0.025f / hexScale.y;
+            float localDiameter = ColonistPresentation.IsActive
+                ? 0.14f / hexScale.x
+                : 0.09f / hexScale.x;
+            float localHeight = ColonistPresentation.IsActive
+                ? 0.04f / hexScale.y
+                : 0.025f / hexScale.y;
             float rowZ = ColonistPresentation.IsActive
-                ? 0.20f / hexScale.z
+                ? 0.24f / hexScale.z
                 : -0.14f / hexScale.z;
             float rowY = WorldChipThickness * 0.35f / hexScale.y;
 

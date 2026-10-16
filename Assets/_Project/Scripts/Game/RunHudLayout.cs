@@ -43,8 +43,12 @@ namespace CatanRoguelike.Game
                 + Margin * 2f;
             float top = Margin;
             float playWidth = Mathf.Max(64f, screenWidth - left - right);
-            float playHeight = Mathf.Max(64f, screenHeight - bottom - top);
-            return new Vector2(left + playWidth * 0.5f, bottom + playHeight * 0.5f);
+            float playHeight = Mathf.Max(
+                64f,
+                screenHeight - bottom - top - ColonistBoardViewConstants.BoardBottomBreathingRoomPixels);
+            float centerY = bottom + playHeight * 0.5f
+                + ColonistBoardViewConstants.BoardBottomBreathingRoomPixels * 0.5f;
+            return new Vector2(left + playWidth * 0.5f, centerY);
         }
     }
 }

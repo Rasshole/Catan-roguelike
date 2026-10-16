@@ -133,11 +133,23 @@ namespace CatanRoguelike.Game
         public static Vector3 ComputeDiskScaleForWorldRadius(float worldRadius, float thinY) =>
             ComputeCylinderDiskScale(worldRadius, thinY);
 
+        public static float ComputeColonistSandWorldRadius(float boardBoundingRadius) =>
+            ComputeTableDiskWorldRadius(boardBoundingRadius) * 1.05f;
+
+        public static float ComputeColonistOceanWorldRadius(float boardBoundingRadius) =>
+            Mathf.Min(
+                ComputeWaterDiskWorldRadius(boardBoundingRadius) * 1.12f,
+                ComputeColonistSandWorldRadius(boardBoundingRadius) * 1.35f);
+
         public static Vector3 ComputeColonistOceanDiskScale(float boardBoundingRadius) =>
-            ComputeCylinderDiskScale(boardBoundingRadius * 2.1f, WaterSurfaceThinY);
+            ComputeCylinderDiskScale(
+                ComputeColonistOceanWorldRadius(boardBoundingRadius),
+                WaterSurfaceThinY);
 
         public static Vector3 ComputeColonistSandDiskScale(float boardBoundingRadius) =>
-            ComputeCylinderDiskScale(boardBoundingRadius * 1.18f, WaterSurfaceThinY * 0.9f);
+            ComputeCylinderDiskScale(
+                ComputeColonistSandWorldRadius(boardBoundingRadius),
+                WaterSurfaceThinY * 0.9f);
 
         public struct ColonistSurfaceLayout
         {

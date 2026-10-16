@@ -141,7 +141,9 @@ namespace CatanRoguelike.Game
             float top = RunHudLayout.Margin;
 
             float playWidth = Mathf.Max(64f, screenWidth - left - right);
-            float playHeight = Mathf.Max(64f, screenHeight - bottom - top);
+            float playHeight = Mathf.Max(
+                64f,
+                screenHeight - bottom - top - ColonistBoardViewConstants.BoardBottomBreathingRoomPixels);
             float boardFill = ColonistBoardViewConstants.BoardPlayAreaFill;
             float orthoFromHeight = boardRadius * screenHeight / (boardFill * playHeight);
             float orthoFromWidth = boardRadius * screenWidth / (boardFill * playWidth * _camera.aspect);
@@ -149,15 +151,20 @@ namespace CatanRoguelike.Game
 
             float worldPerPixel = (2f * _camera.orthographicSize) / screenHeight;
             float desiredScreenX = left + playWidth * 0.5f;
-            float desiredScreenY = bottom + playHeight * 0.5f;
+            float desiredScreenY = bottom + playHeight * 0.5f
+                + ColonistBoardViewConstants.BoardBottomBreathingRoomPixels * 0.5f;
             float deltaScreenX = desiredScreenX - screenWidth * 0.5f;
             float deltaScreenY = desiredScreenY - screenHeight * 0.5f;
 
             Vector3 center = boardView != null ? boardView.transform.position : lookTarget.position;
-            transform.position = new Vector3(
-                center.x - deltaScreenX * worldPerPixel,
-                center.y + 28f,
-                center.z - deltaScreenY * worldPerPixel);
+            var panRight = transform.right;
+            panRight.y = 0f;
+            panRight.Normalize();
+            var panUp = transform.up;
+            panUp.y = 0f;
+            panUp.Normalize();
+            Vector3 pan = panRight * (deltaScreenX * worldPerPixel) + panUp * (deltaScreenY * worldPerPixel);
+            transform.position = new Vector3(center.x, center.y + 28f, center.z) - pan;
         }
 
         private void ApplyOrbitPose()

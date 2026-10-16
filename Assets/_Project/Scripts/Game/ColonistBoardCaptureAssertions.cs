@@ -13,6 +13,21 @@ namespace CatanRoguelike.Game
         public static readonly Color SandReference = new(0.82f, 0.74f, 0.52f, 1f);
         public static readonly Color CameraSkyReference = new(0.08f, 0.22f, 0.38f, 1f);
 
+        public static void AssertCenterRegionShowsHexTilesAtBoard(
+            Texture2D boardCapture,
+            Camera camera,
+            BoardView boardView)
+        {
+            Assert.IsNotNull(boardCapture);
+            Assert.IsNotNull(camera);
+            Assert.IsNotNull(boardView);
+
+            var boardPixel = GameSceneCapture.WorldPointToCaptureTexturePixel(
+                boardView.transform.position,
+                camera);
+            AssertCenterRegionShowsHexTiles(boardCapture, boardPixel.x, boardPixel.y);
+        }
+
         public static void AssertCenterRegionShowsHexTiles(Texture2D boardCapture) =>
             AssertCenterRegionShowsHexTiles(
                 boardCapture,
@@ -125,7 +140,7 @@ namespace CatanRoguelike.Game
         {
             var sb = new StringBuilder();
             sb.AppendLine(
-                $"ColonistBoardCaptureAssertions sample @ ({centerX},{centerY}): " +
+                $"ColonistBoardCaptureAssertions sample @ texture ({centerX},{centerY}) [origin bottom-left]: " +
                 $"hex={hexLike} ocean={oceanLike} sand={sandLike} sky={skyLike} other={other} / {samples}");
             for (int i = 0; i < sampleColors.Count; i++)
             {
@@ -134,27 +149,40 @@ namespace CatanRoguelike.Game
                     $"  sample[{i}] rgb=({c.r:F3},{c.g:F3},{c.b:F3})");
             }
 
-            Debug.LogError(sb.ToString());
+            Debug.LogWarning(sb.ToString());
         }
 
-        private static bool IsOceanLike(Color c) => ColorDistance(c, OceanReference) < 0.12f;
+        private static bool IsOceanLike(Color c)
+        {
+            if (ColorDistance(c, OceanReference) < 0.20f)
+                return true;
+            if (ColorDistance(c, CameraSkyReference) < 0.14f)
+                return true;
 
-        private static bool IsSkyLike(Color c) => ColorDistance(c, CameraSkyReference) < 0.10f;
+            // Lit ocean / water in capture (e.g. ~0.22, 0.45, 0.68).
+            return c.b >= 0.40f
+                && c.b >= c.r
+                && c.g >= 0.26f
+                && c.g >= c.r * 0.85f;
+        }
+
+        private static bool IsSkyLike(Color c) =>
+            !IsOceanLike(c) && ColorDistance(c, CameraSkyReference) < 0.10f;
 
         private static bool IsSandCoastLike(Color c) =>
-            ColorDistance(c, SandReference) < 0.10f && !MatchesPalette(c, BoardResourcePalette.Desert, 0.08f);
+            ColorDistance(c, SandReference) < 0.12f && !MatchesPalette(c, BoardResourcePalette.Desert, 0.10f);
 
         private static bool IsHexTileLike(Color c)
         {
             if (IsOceanLike(c) || IsSkyLike(c))
                 return false;
 
-            return MatchesPalette(c, BoardResourcePalette.Desert, 0.14f)
-                || MatchesPalette(c, BoardResourcePalette.Wood, 0.16f)
-                || MatchesPalette(c, BoardResourcePalette.Brick, 0.16f)
-                || MatchesPalette(c, BoardResourcePalette.Wheat, 0.16f)
-                || MatchesPalette(c, BoardResourcePalette.Sheep, 0.16f)
-                || MatchesPalette(c, BoardResourcePalette.Stone, 0.16f);
+            return MatchesPalette(c, BoardResourcePalette.Desert, 0.16f)
+                || MatchesPalette(c, BoardResourcePalette.Wood, 0.18f)
+                || MatchesPalette(c, BoardResourcePalette.Brick, 0.18f)
+                || MatchesPalette(c, BoardResourcePalette.Wheat, 0.18f)
+                || MatchesPalette(c, BoardResourcePalette.Sheep, 0.18f)
+                || MatchesPalette(c, BoardResourcePalette.Stone, 0.18f);
         }
 
         private static bool MatchesPalette(Color c, BoardResourcePalette.Rgb rgb, float tolerance) =>

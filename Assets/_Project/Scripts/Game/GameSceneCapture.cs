@@ -194,6 +194,20 @@ namespace CatanRoguelike.Game
             }
         }
 
+        /// <summary>
+        /// Maps a world point to <see cref="Texture2D.GetPixel"/> coordinates after a full-viewport capture.
+        /// Unity screen space and ReadPixels both use origin bottom-left.
+        /// </summary>
+        public static Vector2Int WorldPointToCaptureTexturePixel(Vector3 worldPoint, Camera camera)
+        {
+            Vector3 screen = camera.WorldToScreenPoint(worldPoint);
+            return new Vector2Int(Mathf.RoundToInt(screen.x), Mathf.RoundToInt(screen.y));
+        }
+
+        /// <summary>Screen-space pixel (origin bottom-left) to texture pixel (same convention).</summary>
+        public static Vector2Int ScreenPointToCaptureTexturePixel(float screenX, float screenYFromBottom) =>
+            new Vector2Int(Mathf.RoundToInt(screenX), Mathf.RoundToInt(screenYFromBottom));
+
         /// <summary>Writes colonist HUD PNG (separate path from Game scene capture).</summary>
         public static void WriteColonistDebugCapturePngs(Texture2D boardOnly, Texture2D hudComposite) =>
             WriteDebugCapturePngs(boardOnly, hudComposite, ResolveColonistHudOutputPath());
