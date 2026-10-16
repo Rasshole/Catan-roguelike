@@ -29,8 +29,8 @@ namespace CatanRoguelike.Game
                 worldDiameter,
                 worldDiameter,
                 ColonistResourceIconTextures.Get(data.Resource),
-                3180);
-            ColonistFlatBoardQuad.AlignToColonistCamera(iconGo.transform);
+                3180,
+                alignment: ColonistFlatBoardQuad.AlignmentMode.BoardPitchOnly);
             iconGo.layer = 0;
         }
     }

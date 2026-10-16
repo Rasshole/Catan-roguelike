@@ -12,6 +12,8 @@ namespace CatanRoguelike.Tests.PlayMode
     {
         private const string GameScenePath = "Assets/_Project/Scenes/Game.unity";
         private const string GameSceneName = "Game";
+        private const string ColonistScenePath = "Assets/_Project/Scenes/ColonistStylePrototype.unity";
+        private const string ColonistSceneName = "ColonistStylePrototype";
 
         [Timeout(90000)]
         [UnityTest]
@@ -100,6 +102,50 @@ namespace CatanRoguelike.Tests.PlayMode
             }
 
             Assert.Greater(iconsChecked, 6, "Board should show resource icons on multiple non-desert hexes.");
+        }
+
+        [Timeout(90000)]
+        [UnityTest]
+        public IEnumerator ColonistBoard_ResourceIcons_TextureVAlignsWithCameraUp()
+        {
+            if (!File.Exists(ColonistScenePath))
+            {
+                Assert.Inconclusive($"Colonist prototype not found at {ColonistScenePath}.");
+                yield break;
+            }
+
+            var loadOp = SceneManager.LoadSceneAsync(ColonistSceneName, LoadSceneMode.Single);
+            yield return loadOp;
+            for (int i = 0; i < 6; i++)
+                yield return null;
+
+            var gameManager = Object.FindFirstObjectByType<GameManager>();
+            GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
+            for (int i = 0; i < 4; i++)
+                yield return null;
+
+            var camera = Camera.main;
+            Assert.IsNotNull(camera);
+            Vector3 cameraUp = ColonistFlatBoardQuad.GetColonistCameraUpOnBoard(camera);
+
+            int checkedIcons = 0;
+            foreach (var tile in Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
+            {
+                if (tile.Data.IsDesert)
+                    continue;
+
+                var icon = tile.transform.Find("ResourceIcon");
+                Assert.IsNotNull(icon, $"Hex {tile.Data.Coord} should have ResourceIcon.");
+                Vector3 textureV = ColonistFlatBoardQuad.GetTextureVWorldAxis(icon);
+                Assert.Greater(
+                    Vector3.Dot(textureV, cameraUp),
+                    0.85f,
+                    $"Resource icon +V should align with camera up on board for {tile.Data.Coord} " +
+                    $"(dot={Vector3.Dot(textureV, cameraUp):F3}).");
+                checkedIcons++;
+            }
+
+            Assert.Greater(checkedIcons, 6, "Colonist board should show multiple resource icons.");
         }
 
         private static bool TextureHasTransparentPixels(Texture2D texture)

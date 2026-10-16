@@ -80,7 +80,7 @@ namespace CatanRoguelike.Game
             root.transform.position = new Vector3(vertexX, hexTopY + BaseGapAboveHex, vertexZ);
             root.transform.rotation = Quaternion.LookRotation(outward, Vector3.up);
 
-            float coastOffset = hexScale * 0.35f;
+            float coastOffset = hexScale * 0.50f;
             float badgeLocalZ = PierLength + PostWidth * 0.35f + coastOffset;
             float pierLen = Mathf.Max(PierLength, badgeLocalZ * 0.9f);
 
@@ -146,19 +146,15 @@ namespace CatanRoguelike.Game
             if (!isGeneric && specificResource.HasValue)
             {
                 float iconSize = discDiameter * 0.40f;
-                Vector3 worldOffset =
-                    ColonistFlatBoardQuad.GetColonistCameraRightOnBoard() * (labelWorldWidth * 0.55f)
-                    + ColonistFlatBoardQuad.GetColonistCameraUpOnBoard() * (-discDiameter * 0.12f);
-                Vector3 localOffset = badgeRoot.transform.InverseTransformDirection(worldOffset);
                 ColonistFlatBoardQuad.Create(
-                    badgeRoot.transform,
+                    labelGo.transform,
                     "RateIcon",
-                    new Vector3(localOffset.x, labelLocalY, localOffset.z),
+                    new Vector3(0.58f, 0.30f, -0.002f),
                     iconSize,
                     iconSize,
                     ColonistResourceIconTextures.Get(specificResource.Value),
-                    3205,
-                    discRenderer);
+                    3220,
+                    alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);
             }
         }
 

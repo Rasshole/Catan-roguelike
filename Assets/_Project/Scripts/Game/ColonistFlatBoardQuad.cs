@@ -7,7 +7,16 @@ namespace CatanRoguelike.Game
     public static class ColonistFlatBoardQuad
     {
         public const float DefaultClearanceAboveReference = 0.01f;
+        public const float BoardPitchDegrees = 90f;
         private const float DefaultMeshExtent = 1f;
+
+        public enum AlignmentMode
+        {
+            /// <summary>Flat on board XZ without camera yaw (hex resource icons).</summary>
+            BoardPitchOnly,
+            /// <summary>Readable text/icons under the yawed colonist table camera.</summary>
+            ColonistCamera
+        }
 
         public static GameObject Create(
             Transform parent,
@@ -19,13 +28,14 @@ namespace CatanRoguelike.Game
             int renderQueue,
             Renderer placeAbove = null,
             float clearanceAbove = DefaultClearanceAboveReference,
-            bool zWrite = false)
+            bool zWrite = false,
+            AlignmentMode alignment = AlignmentMode.ColonistCamera)
         {
             var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             quad.name = name;
             quad.transform.SetParent(parent, false);
             quad.transform.localPosition = localPosition;
-            AlignToColonistCamera(quad.transform);
+            ApplyAlignment(quad.transform, alignment);
             ApplyWorldSize(quad.transform, parent, worldWidth, worldHeight);
 
             var renderer = quad.GetComponent<Renderer>();
@@ -44,12 +54,18 @@ namespace CatanRoguelike.Game
             return quad;
         }
 
-        public static void AlignToColonistCamera(Transform quadTransform, Camera camera = null)
+        public static void ApplyAlignment(Transform quadTransform, AlignmentMode alignment, Camera camera = null)
         {
             if (quadTransform == null)
                 return;
-            quadTransform.rotation = NumberTokenLabelOrientation.ComputeColonistTopDownRotation(camera);
+
+            quadTransform.rotation = alignment == AlignmentMode.BoardPitchOnly
+                ? Quaternion.Euler(BoardPitchDegrees, 0f, 0f)
+                : NumberTokenLabelOrientation.ComputeColonistTopDownRotation(camera);
         }
+
+        public static void AlignToColonistCamera(Transform quadTransform, Camera camera = null) =>
+            ApplyAlignment(quadTransform, AlignmentMode.ColonistCamera, camera);
 
         public static Vector3 ProjectOnBoardXZ(Vector3 direction)
         {
