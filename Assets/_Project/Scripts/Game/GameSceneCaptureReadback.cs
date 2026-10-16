@@ -93,9 +93,6 @@ namespace CatanRoguelike.Game
             return samples > 0 ? sum : 0d;
         }
 
-        private static string FormatColor(Color c) =>
-            $"({c.r:F3},{c.g:F3},{c.b:F3})";
-
         private static void DestroyCaptureTexture(Texture texture)
         {
             if (texture == null)

@@ -50,10 +50,26 @@ namespace CatanRoguelike.Tests
         [Test]
         public void GetBoardScreenOffsetX_ShiftsRightOfScreenCenter()
         {
-            float offset = PlaceholderHudLayout.GetBoardScreenOffsetX(
-                PlaceholderHudLayout.InRunPanelWidth, 1920);
+            float panelWidth = PlaceholderHudLayout.InRunPanelWidth;
+            float hudLeft = PlaceholderHudLayout.Margin + panelWidth + PlaceholderHudLayout.Margin;
+            float expected = hudLeft + (1920f - hudLeft) * 0.5f - 960f;
+
+            float offset = PlaceholderHudLayout.GetBoardScreenOffsetX(panelWidth, 1920);
             Assert.Greater(offset, 0f);
-            Assert.AreEqual(150f, offset, 0.01f);
+            Assert.AreEqual(expected, offset, 0.01f);
+        }
+
+        [Test]
+        public void GetBoardScreenOffsetX_WithRightRail_CentersBetweenChrome()
+        {
+            float panelWidth = 0f;
+            float rightWidth = RunHudLayout.RightChromePanelWidth;
+            float hudLeft = PlaceholderHudLayout.Margin + panelWidth + PlaceholderHudLayout.Margin;
+            float hudRight = PlaceholderHudLayout.Margin + rightWidth + PlaceholderHudLayout.Margin;
+            float expected = hudLeft + (1920f - hudLeft - hudRight) * 0.5f - 960f;
+
+            float offset = PlaceholderHudLayout.GetBoardScreenOffsetX(panelWidth, 1920, rightWidth);
+            Assert.AreEqual(expected, offset, 0.01f);
         }
 
         [Test]

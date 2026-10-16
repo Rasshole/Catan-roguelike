@@ -53,8 +53,17 @@ namespace CatanRoguelike.Game
         public static float GetBoardScreenOffsetX(float panelWidth, int screenWidth, float rightPanelWidth = 0f)
         {
             float hudLeft = Margin + panelWidth + Margin;
-            float hudRight = Margin + rightPanelWidth + Margin;
-            float unobstructedCenter = hudLeft + (screenWidth - hudLeft - hudRight) * 0.5f;
+            float unobstructedCenter;
+            if (rightPanelWidth <= 0f)
+            {
+                unobstructedCenter = hudLeft + (screenWidth - hudLeft) * 0.5f;
+            }
+            else
+            {
+                float hudRight = Margin + rightPanelWidth + Margin;
+                unobstructedCenter = hudLeft + (screenWidth - hudLeft - hudRight) * 0.5f;
+            }
+
             return unobstructedCenter - screenWidth * 0.5f;
         }
     }
