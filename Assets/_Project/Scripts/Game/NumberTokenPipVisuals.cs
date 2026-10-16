@@ -9,7 +9,7 @@ namespace CatanRoguelike.Game
         public const float LabelLocalRowY = -1.75f;
         public const float LabelLocalRowZ = 0.1f;
         public const float LabelOffsetScale = 2.35f;
-        public const float MaxRowWidthFaceFraction = 0.7f;
+        public const float MaxRowWidthFaceFraction = 0.6f;
 
         public static int GetExpectedPipCount(int token) => NumberTokenPipLayout.GetPipCount(token);
 
@@ -28,14 +28,14 @@ namespace CatanRoguelike.Game
             float maxRowLabel = MaxRowWidthFaceFraction * faceDiameterWorld / Mathf.Max(labelLossyScale, 0.001f);
             if (pipCount == 1)
             {
-                pipScale = Mathf.Min(pipScale, maxRowLabel * 0.55f);
+                pipScale = Mathf.Min(pipScale, maxRowLabel * 0.5f);
                 step = 0f;
                 return;
             }
 
-            pipScale = Mathf.Min(0.42f, maxRowLabel * 0.38f);
-            float spanBudget = Mathf.Max(0.05f, maxRowLabel - pipScale);
-            step = Mathf.Min(0.56f, spanBudget / (pipCount - 1) / LabelOffsetScale);
+            pipScale = Mathf.Min(0.36f, maxRowLabel * 0.32f);
+            float maxCenterSpan = Mathf.Max(0.02f, maxRowLabel - pipScale);
+            step = Mathf.Min(0.56f, maxCenterSpan / (pipCount - 1) / LabelOffsetScale);
         }
 
         public static void PlacePipOnLabelRow(Transform pip, float offsetX, Color pipColor, float pipScale)

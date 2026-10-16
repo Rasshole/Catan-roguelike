@@ -64,15 +64,16 @@ namespace CatanRoguelike.Game
             return transform.position;
         }
 
-        /// <summary>Land hex top offset toward a corner (avoids centre number token) for capture sampling.</summary>
+        /// <summary>Land hex top offset toward a corner (fully off centre number token) for capture sampling.</summary>
         public Vector3 GetCaptureHexSampleWorldPoint()
         {
             var top = GetCaptureReferenceWorldPoint();
-            float cornerOffset = hexScale * HexMath.OuterRadius * 0.38f;
+            float outer = hexScale * HexMath.OuterRadius;
+            const float cornerInset = 0.78f;
             return new Vector3(
-                top.x + cornerOffset * 0.55f,
+                top.x + outer * cornerInset * 0.8660254f,
                 top.y + 0.002f,
-                top.z + cornerOffset * 0.45f);
+                top.z + outer * cornerInset * 0.5f);
         }
 
         private static Vector3 GetHexTopWorldPoint(Transform tileRoot)

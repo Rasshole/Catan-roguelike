@@ -58,6 +58,8 @@ namespace CatanRoguelike.Game
 
             if (resource == ResourceType.Wood || resource == ResourceType.Wheat)
                 RotatePixels90Clockwise(pixels);
+            if (resource == ResourceType.Wood)
+                RotatePixels180(pixels);
 
             tex.SetPixels32(pixels);
             tex.Apply(false, false);
@@ -77,6 +79,19 @@ namespace CatanRoguelike.Game
                     int dstY = x;
                     rotated[dstY * Size + dstX] = pixels[src];
                 }
+            }
+
+            for (int i = 0; i < pixels.Length; i++)
+                pixels[i] = rotated[i];
+        }
+
+        private static void RotatePixels180(Color32[] pixels)
+        {
+            var rotated = new Color32[Size * Size];
+            for (int y = 0; y < Size; y++)
+            {
+                for (int x = 0; x < Size; x++)
+                    rotated[(Size - 1 - y) * Size + (Size - 1 - x)] = pixels[y * Size + x];
             }
 
             for (int i = 0; i < pixels.Length; i++)
