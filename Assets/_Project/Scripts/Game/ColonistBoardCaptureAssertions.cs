@@ -47,14 +47,8 @@ namespace CatanRoguelike.Game
             TableCamera tableCamera,
             BoardView boardView,
             int screenWidth,
-            int screenHeight)
-        {
-            var center = ColonistPlayAreaLayout.GetCenterTexturePixels(screenWidth, screenHeight);
-            if (!TryMeasureHexFraction(boardCapture, center.x, center.y, out float hexFrac) || hexFrac < 0.35f)
-                center = FindBestHexClusterCenter(boardCapture, screenWidth, screenHeight);
-
-            return center;
-        }
+            int screenHeight) =>
+            ColonistBoardFraming.GetPlayAreaCenterTexturePixels(screenWidth, screenHeight);
 
         public static void AssertCenterRegionShowsHexTiles(
             Texture2D boardCapture,

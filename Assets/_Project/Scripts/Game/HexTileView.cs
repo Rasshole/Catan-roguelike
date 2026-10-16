@@ -21,6 +21,8 @@ namespace CatanRoguelike.Game
         private GameObject _pipRoot;
         private readonly List<Renderer> _pipRenderers = new();
 
+        public int PipChildCount => _pipRoot != null ? _pipRoot.transform.childCount : 0;
+
         private static readonly Color FamineTint = new(0.55f, 0.35f, 0.15f);
         private static readonly Color GoldRushTint = new(0.95f, 0.75f, 0.1f);
         private static readonly Color GoodHarvestTint = new(0.3f, 0.75f, 0.3f);
@@ -89,18 +91,11 @@ namespace CatanRoguelike.Game
                 return;
 
             EnsureTokenChip();
-            _pipRoot = new GameObject("TokenPips");
-            _pipRoot.transform.SetParent(_tokenChip.transform, false);
+            EnsureTokenLabel();
 
-            var hexScale = transform.lossyScale;
-            float localDiameter = ColonistPresentation.IsActive
-                ? 0.11f / hexScale.x
-                : 0.09f / hexScale.x;
-            float localHeight = ColonistPresentation.IsActive
-                ? 0.035f / hexScale.y
-                : 0.025f / hexScale.y;
-            float rowY = WorldChipThickness * 0.42f / hexScale.y;
-            float rowZ = -0.17f / hexScale.z;
+            _pipRoot = new GameObject("TokenPips");
+            _pipRoot.transform.SetParent(_tokenLabel.transform, false);
+            _pipRoot.transform.localRotation = Quaternion.identity;
 
             var offsets = NumberTokenPipLayout.GetPipOffsetsX(pipCount);
             var labelRgb = NumberTokenVisualStyle.GetLabel(token);
@@ -111,13 +106,9 @@ namespace CatanRoguelike.Game
                 var pip = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 pip.name = $"Pip_{i}";
                 pip.transform.SetParent(_pipRoot.transform, false);
-                float offset = offsets[i];
-                pip.transform.localPosition = new Vector3(offset / hexScale.x, rowY, rowZ);
-                pip.transform.localScale = new Vector3(localDiameter, localHeight, localDiameter);
+                NumberTokenPipVisuals.PlacePipOnLabelRow(pip.transform, offsets[i], pipColor);
                 Destroy(pip.GetComponent<Collider>());
-                var renderer = pip.GetComponent<Renderer>();
-                renderer.sharedMaterial = BuiltInMaterials.Create(pipColor);
-                _pipRenderers.Add(renderer);
+                _pipRenderers.Add(pip.GetComponent<Renderer>());
             }
         }
 

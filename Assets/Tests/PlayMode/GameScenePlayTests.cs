@@ -40,6 +40,7 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsNotNull(loadOp, $"Failed to start loading scene '{GameSceneName}'. Is it in Build Settings?");
             yield return loadOp;
 
+            Screen.SetResolution(GameSceneCapture.CaptureWidth, GameSceneCapture.CaptureHeight, false);
             for (int i = 0; i < 3; i++)
                 yield return null;
 
@@ -47,8 +48,28 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsNotNull(gameManager, "GameManager should exist after scene load.");
             Assert.IsNotNull(gameManager.Controller, "Controller should be initialized after Start().");
             Assert.IsNotNull(gameManager.Meta, "Meta should be loaded after Start().");
+            Assert.IsTrue(ColonistPresentation.IsActive, "Game scene should use colonist presentation by default.");
 
             GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
+
+            var camera = Camera.main;
+            var tableCamera = UnityEngine.Object.FindFirstObjectByType<TableCamera>();
+            Assert.IsNotNull(camera);
+            Assert.IsNotNull(tableCamera);
+            NumberTokenLabelOrientation.RefreshAllLabelsForCamera(camera);
+            var facings = UnityEngine.Object.FindObjectsByType<FlatTokenLabelFacing>(FindObjectsSortMode.None);
+            if (facings.Length > 0)
+            {
+                int upright = 0;
+                for (int i = 0; i < facings.Length; i++)
+                {
+                    if (NumberTokenLabelOrientation.IsLabelUprightForCamera(facings[i].transform, camera))
+                        upright++;
+                }
+
+                Assert.Greater(upright, facings.Length / 2,
+                    "Game scene colonist tokens should be upright for top-down camera.");
+            }
 
             for (int i = 0; i < 8; i++)
                 yield return null;

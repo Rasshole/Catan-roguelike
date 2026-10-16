@@ -41,20 +41,16 @@ namespace CatanRoguelike.Tests.PlayMode
             var facings = Object.FindObjectsByType<FlatTokenLabelFacing>(FindObjectsSortMode.None);
             Assert.Greater(facings.Length, 0, "Board should spawn number token labels.");
 
-            int readable = 0;
+            int upright = 0;
             for (int i = 0; i < facings.Length; i++)
             {
                 var label = facings[i];
-                if (NumberTokenLabelOrientation.IsReadableFromCamera(
-                        label.transform.rotation,
-                        label.transform.position,
-                        camera.transform.position,
-                        camera))
-                    readable++;
+                if (NumberTokenLabelOrientation.IsLabelUprightForCamera(label.transform, camera))
+                    upright++;
             }
 
-            Assert.Greater(readable, facings.Length / 2,
-                "Most number tokens should face the live TableCamera pose (yaw+180 chip convention).");
+            Assert.Greater(upright, facings.Length / 2,
+                "Most number tokens should be upright vs colonist top-down camera.up.");
         }
     }
 }

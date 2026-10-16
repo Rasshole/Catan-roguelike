@@ -125,9 +125,9 @@ namespace CatanRoguelike.Game
             if (screenHeight <= 0)
                 screenHeight = Screen.height;
 
-            float boardRadius = boardView != null ? boardView.GetBoardBoundingRadius() : 0f;
-            if (boardRadius <= 0f)
-                boardRadius = 4f;
+            float extentRadius = boardView != null ? boardView.GetColonistFramingExtentRadius() : 0f;
+            if (extentRadius <= 0f)
+                extentRadius = 4f;
 
             _camera.orthographic = true;
             float pixelWidth = screenWidth;
@@ -136,11 +136,11 @@ namespace CatanRoguelike.Game
             transform.rotation = Quaternion.Euler(90f, ColonistBoardViewConstants.CameraYawDegrees, 0f);
 
             var playArea = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
-            float boardFill = ColonistBoardViewConstants.BoardPlayAreaFill;
-            float orthoFromHeight = boardRadius * pixelHeight / (boardFill * playArea.PlayHeight);
-            float orthoFromWidth = boardRadius * pixelWidth / (boardFill * playArea.PlayWidth * _camera.aspect);
-            _camera.orthographicSize = Mathf.Max(orthoFromHeight, orthoFromWidth)
-                / ColonistBoardViewConstants.BoardZoomMultiplier;
+            _camera.orthographicSize = ColonistBoardFraming.ComputeOrthographicSize(
+                extentRadius,
+                screenWidth,
+                screenHeight,
+                _camera.aspect);
 
             float worldPerPixel = (2f * _camera.orthographicSize) / pixelHeight;
             float desiredScreenX = playArea.Left + playArea.PlayWidth * 0.5f;

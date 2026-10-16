@@ -33,6 +33,13 @@ namespace CatanRoguelike.Game
             return 0f;
         }
 
+        /// <summary>Hex cluster + colonist sand coast outer radius (world units).</summary>
+        public float GetColonistFramingExtentRadius()
+        {
+            float boardRadius = GetBoardBoundingRadius();
+            return TableCameraFraming.ComputeColonistSandOuterRadius(boardRadius, hexScale);
+        }
+
         public Vector3 GetBoardWorldCenter()
         {
             if (_tiles.Count == 0)

@@ -25,7 +25,8 @@ namespace CatanRoguelike.Game
             if (GetComponent<ColonistPresentationMode>() != null)
                 return;
 
-            if (SceneManager.GetActiveScene().name == "ColonistStylePrototype")
+            var sceneName = SceneManager.GetActiveScene().name;
+            if (sceneName == "ColonistStylePrototype" || sceneName == "Game")
                 ColonistPresentation.SetActive(true);
         }
 
