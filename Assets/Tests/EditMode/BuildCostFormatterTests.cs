@@ -29,6 +29,7 @@ namespace CatanRoguelike.Tests
             var cost = new ResourceBundle { Wheat = 2 };
             Assert.That(BuildCostFormatter.FormatTooltip(cost), Does.Contain("Cost:"));
             Assert.That(BuildCostFormatter.FormatTooltip(cost), Does.Contain("Wheat"));
+            Assert.That(BuildCostFormatter.FormatBankStyleChips(cost), Is.EqualTo("W2"));
         }
     }
 }

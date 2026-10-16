@@ -12,6 +12,8 @@ namespace CatanRoguelike.Game
         public const string Accept = "Accept";
         public const string Road = "Road";
         public const string Settlement = "Settlement";
+        public const string SettlementShort = "Settle.";
+        public const string YourTurn = "Your turn";
         public const string City = "City";
         public const string DevCard = "Dev Card";
         public const string CancelPlacement = "Cancel (Esc)";

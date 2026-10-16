@@ -12,6 +12,7 @@ namespace CatanRoguelike.Game
         private RectTransform _actionBarEndRoot;
         private Text _diceWidgetValue;
         private Image _rollButtonGlow;
+        private Image _rollButtonGlowRing;
         private Button _rollPinned;
         private Button _endTurnPinned;
 
@@ -42,7 +43,7 @@ namespace CatanRoguelike.Game
             {
                 var buildLayout = _actionBarBuildRoot.GetComponent<LayoutElement>();
                 if (buildLayout != null)
-                    buildLayout.minWidth = 420f;
+                    buildLayout.minWidth = 460f;
             }
             _actionBarTradeRoot = CreateActionBarSlot("TradeSlot", flexibleWidth: 0f, minWidth: 96f);
             _actionBarCenterRoot = CreateActionBarSlot("DiceRollSlot", flexibleWidth: 0f, minWidth: 200f);
@@ -101,6 +102,21 @@ namespace CatanRoguelike.Game
             RunHudUiFactory.AddLayoutElement(_rollPinned.gameObject, 48f).preferredWidth = 96f;
             _rollPinned.onClick.AddListener(() => _feel?.RequestMorningRoll());
             _rollButtonGlow = _rollPinned.GetComponent<Image>();
+
+            if (ColonistPresentation.IsActive)
+            {
+                var glowGo = new GameObject("RollGlow");
+                glowGo.transform.SetParent(_rollPinned.transform, false);
+                glowGo.transform.SetAsFirstSibling();
+                var glowRect = glowGo.AddComponent<RectTransform>();
+                glowRect.anchorMin = Vector2.zero;
+                glowRect.anchorMax = Vector2.one;
+                glowRect.offsetMin = new Vector2(-6f, -6f);
+                glowRect.offsetMax = new Vector2(6f, 6f);
+                _rollButtonGlowRing = glowGo.AddComponent<Image>();
+                _rollButtonGlowRing.color = new Color(1f, 0.88f, 0.28f, 0f);
+                _rollButtonGlowRing.raycastTarget = false;
+            }
         }
 
         private void BuildEndTurnButton(RectTransform parent)
@@ -151,6 +167,11 @@ namespace CatanRoguelike.Game
                     ? Color.Lerp(baseColor, new Color(1f, 0.9f, 0.35f, 1f), 0.45f)
                     : baseColor;
             }
+
+            if (_rollButtonGlowRing != null)
+                _rollButtonGlowRing.color = active
+                    ? new Color(1f, 0.88f, 0.28f, 0.55f)
+                    : new Color(1f, 0.88f, 0.28f, 0f);
         }
     }
 }

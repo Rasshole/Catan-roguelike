@@ -14,7 +14,7 @@ namespace CatanRoguelike.Game
 
         /// <summary>Upright digits on a flat colonist.io top-down board (chip lies in XZ).</summary>
         public static Quaternion ComputeColonistTopDownRotation() =>
-            Quaternion.Euler(FlatPitchDegrees, 90f, 0f);
+            Quaternion.Euler(FlatPitchDegrees, ColonistBoardViewConstants.CameraYawDegrees + 180f, 0f);
 
         public static Quaternion ComputeWorldRotation(Vector3 labelWorldPosition, Vector3 cameraWorldPosition)
         {

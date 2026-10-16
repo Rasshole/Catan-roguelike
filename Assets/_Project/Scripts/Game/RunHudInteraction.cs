@@ -119,8 +119,10 @@ namespace CatanRoguelike.Game
                 bool showRoll = state.Phase == GamePhase.DayProduction && !state.Winner.HasValue;
                 _rollPinned.gameObject.SetActive(showRoll);
                 _rollPinned.interactable = showRoll && (_feel == null || !_feel.IsBlockingInput);
+                SetRollPromptActive(showRoll && _rollPinned.interactable);
             }
 
+            RefreshColonistTurnBanner(state);
             RefreshDiceWidget(state);
             RefreshTradePanel(state);
         }
@@ -135,13 +137,38 @@ namespace CatanRoguelike.Game
                 return;
 
             RunHudCostTooltip.EnsureShared(_canvas.transform);
-            _buildRoadButton = CreateBuildButton(ColonistHudCopy.Road, out _buildRoadChip);
-            _buildSettlementButton = CreateBuildButton(ColonistHudCopy.Settlement, out _buildSettlementChip);
-            _buildCityButton = CreateBuildButton(ColonistHudCopy.City, out _buildCityChip);
-            Text devChip;
-            _buildDevButton = CreateBuildButton(
-                ColonistPresentation.IsActive ? "Dev" : ColonistHudCopy.DevCard,
-                out devChip);
+            if (ColonistPresentation.IsActive)
+            {
+                _buildRoadButton = ColonistBuildButtonChrome.Create(
+                    _actionBarBuildRoot,
+                    ColonistHudCopy.Road,
+                    ColonistBuildButtonChrome.IconTintFor(ColonistHudCopy.Road),
+                    out _buildRoadChip);
+                _buildSettlementButton = ColonistBuildButtonChrome.Create(
+                    _actionBarBuildRoot,
+                    ColonistHudCopy.SettlementShort,
+                    ColonistBuildButtonChrome.IconTintFor(ColonistHudCopy.SettlementShort),
+                    out _buildSettlementChip);
+                _buildCityButton = ColonistBuildButtonChrome.Create(
+                    _actionBarBuildRoot,
+                    ColonistHudCopy.City,
+                    ColonistBuildButtonChrome.IconTintFor(ColonistHudCopy.City),
+                    out _buildCityChip);
+                Text devChip;
+                _buildDevButton = ColonistBuildButtonChrome.Create(
+                    _actionBarBuildRoot,
+                    "Dev",
+                    ColonistBuildButtonChrome.IconTintFor("Dev"),
+                    out devChip);
+            }
+            else
+            {
+                _buildRoadButton = CreateBuildButton(ColonistHudCopy.Road, out _buildRoadChip);
+                _buildSettlementButton = CreateBuildButton(ColonistHudCopy.Settlement, out _buildSettlementChip);
+                _buildCityButton = CreateBuildButton(ColonistHudCopy.City, out _buildCityChip);
+                Text devChip;
+                _buildDevButton = CreateBuildButton(ColonistHudCopy.DevCard, out devChip);
+            }
             _buildDevButton.interactable = false;
             var devTip = _buildDevButton.gameObject.AddComponent<RunHudCostTooltip>();
             devTip.SetTooltip(ColonistPresentation.IsActive
@@ -222,7 +249,7 @@ namespace CatanRoguelike.Game
 
             ConfigureBuildButton(
                 _buildSettlementButton,
-                compact ? ColonistHudCopy.Settlement : BuildCostFormatter.FormatButtonLabel(ColonistHudCopy.Settlement, settlementCost, settlementOk),
+                compact ? ColonistHudCopy.SettlementShort : BuildCostFormatter.FormatButtonLabel(ColonistHudCopy.Settlement, settlementCost, settlementOk),
                 BuildCostFormatter.FormatTooltip(settlementCost),
                 settlementOk,
                 () => _boardInput.SetBuildModeSettlement());
@@ -233,6 +260,13 @@ namespace CatanRoguelike.Game
                 BuildCostFormatter.FormatTooltip(cityCost),
                 cityOk,
                 () => _boardInput.SetBuildModeCity());
+
+            if (compact)
+            {
+                ColonistBuildButtonChrome.SetCost(_buildRoadButton, roadCost, roadOk);
+                ColonistBuildButtonChrome.SetCost(_buildSettlementButton, settlementCost, settlementOk);
+                ColonistBuildButtonChrome.SetCost(_buildCityButton, cityCost, cityOk);
+            }
         }
 
         private static void ConfigureBuildButton(
@@ -247,7 +281,7 @@ namespace CatanRoguelike.Game
 
             foreach (var text in button.GetComponentsInChildren<Text>())
             {
-                if (text.gameObject.name == "Label")
+                if (text.gameObject.name == "Label" || text.gameObject.name == "Title")
                     text.text = label;
             }
 

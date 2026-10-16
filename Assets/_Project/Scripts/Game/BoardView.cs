@@ -106,14 +106,7 @@ namespace CatanRoguelike.Game
             }
 
             if (ColonistPresentation.IsActive)
-            {
-                var waterScale = TableCameraFraming.ComputeWaterDiskScale(boundingRadius) * 1.35f;
-                CreateTableDisk(
-                    "WaterSurface",
-                    -0.16f,
-                    waterScale,
-                    BoardWaterMaterial.Create());
-            }
+                ColonistBoardSurfaces.CreateOceanAndCoast(boardRoot, boundingRadius);
             else
             {
                 CreateTableDisk(

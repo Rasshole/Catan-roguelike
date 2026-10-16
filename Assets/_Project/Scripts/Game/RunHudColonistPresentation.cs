@@ -17,6 +17,7 @@ namespace CatanRoguelike.Game
         private Text _colonistHumanPanelText;
         private Text _colonistAiPanelText;
         private Text _colonistChatText;
+        private GameObject _colonistTurnBanner;
 
         private void EnsureColonistCanvasBuilt()
         {
@@ -27,6 +28,7 @@ namespace CatanRoguelike.Game
             BuildColonistBottomHand(_canvas.transform);
             BuildActionBarChrome(_canvas.transform);
             BuildColonistRightRail(_canvas.transform);
+            BuildColonistTurnBanner(_canvas.transform);
             EnsureTradeDialogBuilt();
             BuildToastWidget(_canvas.transform);
             BuildIncomingTradePanel(_canvas.transform);
@@ -134,7 +136,59 @@ namespace CatanRoguelike.Game
                 FontStyle.Bold);
             _resourceAmountTexts.Add(count);
 
+            var name = RunHudUiFactory.CreateText(
+                cardGo.transform,
+                "Name",
+                ResourceDisplayNames.GetEnglish(resource),
+                11,
+                TextAnchor.LowerCenter,
+                RunHudUiFactory.TextMuted);
+            var nameRect = name.rectTransform;
+            nameRect.anchorMin = new Vector2(0f, 0f);
+            nameRect.anchorMax = new Vector2(1f, 0f);
+            nameRect.pivot = new Vector2(0.5f, 0f);
+            nameRect.anchoredPosition = new Vector2(0f, 6f);
+            nameRect.sizeDelta = new Vector2(0f, 18f);
+            name.horizontalOverflow = HorizontalWrapMode.Overflow;
+
             return cardGo;
+        }
+
+        private void BuildColonistTurnBanner(Transform root)
+        {
+            float left = RunHudLayout.GetContentLeftInset();
+            float right = RunHudLayout.GetContentRightInset();
+            float top = RunHudLayout.Margin;
+
+            var banner = RunHudUiFactory.CreatePanel(
+                root,
+                "YourTurnBanner",
+                new Vector2(0.5f, 1f),
+                new Vector2(0.5f, 1f),
+                new Vector2(-150f, -(top + 48f)),
+                new Vector2(150f, -top));
+            banner.pivot = new Vector2(0.5f, 1f);
+            banner.anchoredPosition = new Vector2((left - right) * 0.5f, -top);
+            banner.GetComponent<Image>().color = new Color(0.12f, 0.42f, 0.28f, 0.94f);
+            RunHudUiFactory.CreateText(
+                banner,
+                "Label",
+                ColonistHudCopy.YourTurn,
+                20,
+                TextAnchor.MiddleCenter,
+                RunHudUiFactory.TextPrimary,
+                FontStyle.Bold);
+            _colonistTurnBanner = banner.gameObject;
+            _colonistTurnBanner.SetActive(false);
+        }
+
+        private void RefreshColonistTurnBanner(GameState state)
+        {
+            if (_colonistTurnBanner == null)
+                return;
+
+            bool show = state.Phase == GamePhase.DayPlayerActions && !state.Winner.HasValue;
+            _colonistTurnBanner.SetActive(show);
         }
 
         private void BuildColonistRightRail(Transform root)
@@ -269,22 +323,18 @@ namespace CatanRoguelike.Game
             {
                 int roads = state.Board.CountRoads(PlayerId.Human);
                 _colonistHumanPanelText.text =
-                    $"{ColonistHudCopy.You} · VP {state.PlayerVictoryPoints}\n" +
-                    $"{ColonistHudCopy.Cards} {state.PlayerInventory.Total} · {ColonistHudCopy.DevCards} {state.PlayerHand.Count}\n" +
-                    $"{ColonistHudCopy.LongestRoad}: {(longestRoad == PlayerId.Human ? "✓" : "—")} · " +
-                    $"{ColonistHudCopy.LargestArmy}: {(state.LargestArmyOwner == PlayerId.Human ? "✓" : "—")}\n" +
-                    $"Roads {roads}";
+                    $"{ColonistHudCopy.You}  VP {state.PlayerVictoryPoints}  ·  {ColonistHudCopy.Cards} {state.PlayerInventory.Total}\n" +
+                    $"{ColonistHudCopy.DevCards} {state.PlayerHand.Count}  ·  Roads {roads}\n" +
+                    $"LR {(longestRoad == PlayerId.Human ? "✓" : "—")}  LA {(state.LargestArmyOwner == PlayerId.Human ? "✓" : "—")}";
             }
 
             if (_colonistAiPanelText != null)
             {
                 int aiRoads = state.Board.CountRoads(PlayerId.Ai);
                 _colonistAiPanelText.text =
-                    $"{ColonistHudCopy.Opponent} · VP {state.AiVictoryPoints}\n" +
-                    $"{ColonistHudCopy.Cards} ? · {ColonistHudCopy.DevCards} {state.AiHand.Count}\n" +
-                    $"{ColonistHudCopy.LongestRoad}: {(longestRoad == PlayerId.Ai ? "✓" : "—")} · " +
-                    $"{ColonistHudCopy.LargestArmy}: {(state.LargestArmyOwner == PlayerId.Ai ? "✓" : "—")}\n" +
-                    $"Roads {aiRoads}";
+                    $"{ColonistHudCopy.Opponent}  VP {state.AiVictoryPoints}  ·  {ColonistHudCopy.Cards} ?\n" +
+                    $"{ColonistHudCopy.DevCards} {state.AiHand.Count}  ·  Roads {aiRoads}\n" +
+                    $"LR {(longestRoad == PlayerId.Ai ? "✓" : "—")}  LA {(state.LargestArmyOwner == PlayerId.Ai ? "✓" : "—")}";
             }
 
             RefreshColonistChrome(state);
@@ -303,7 +353,7 @@ namespace CatanRoguelike.Game
                 Vector2.one,
                 Vector2.zero,
                 Vector2.zero);
-            RunHudUiFactory.AddLayoutElement(panel.gameObject, 112f);
+            RunHudUiFactory.AddLayoutElement(panel.gameObject, 96f);
 
             var row = new GameObject("Row");
             row.transform.SetParent(panel, false);
@@ -320,7 +370,7 @@ namespace CatanRoguelike.Game
 
             var avatarGo = new GameObject("Avatar");
             avatarGo.transform.SetParent(row.transform, false);
-            RunHudUiFactory.AddLayoutElement(avatarGo, 48f).preferredWidth = 48f;
+            RunHudUiFactory.AddLayoutElement(avatarGo, 32f).preferredWidth = 32f;
             var avatarImg = avatarGo.AddComponent<Image>();
             avatarImg.color = avatarColor;
 
