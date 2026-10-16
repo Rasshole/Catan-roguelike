@@ -100,11 +100,14 @@ namespace CatanRoguelike.Game
         private static bool _loggedTokenChipRimDiagnostics;
         private const float LabelLiftLocal = 0.20f;
         private const float MarkerLiftLocal = 0.24f;
-        private const float WorldRobberBaseDiameter = 0.18f;
-        private const float WorldRobberHeadDiameter = 0.14f;
+        private const float WorldRobberBaseDiameter = 0.20f;
+        private const float WorldRobberBodyDiameter = 0.16f;
+        private const float WorldRobberHeadDiameter = 0.17f;
+        private const float WorldRobberBaseHeight = 0.10f;
+        private const float WorldRobberBodyHeight = 0.14f;
         private const float WorldStormExtent = 0.22f;
         private const float WorldStormHeight = 0.06f;
-        private static readonly Vector3 RobberLocalOffset = new(0.26f, 0f, -0.24f);
+        private static readonly Vector3 RobberLocalOffset = new(0.30f, 0f, -0.30f);
         private static readonly Color RobberColor = new(0.28f, 0.28f, 0.32f, 1f);
         private static readonly Vector3 StormLocalOffset = new(-0.18f, 0f, -0.16f);
 
@@ -388,23 +391,33 @@ namespace CatanRoguelike.Game
             _robberMarker.transform.localPosition = new Vector3(
                 RobberLocalOffset.x, HexPrismMesh.TopY + MarkerLiftLocal, RobberLocalOffset.z);
 
-            float baseY = 0.05f / Mathf.Max(hexScale.y, 0.001f);
-            float headY = 0.14f / Mathf.Max(hexScale.y, 0.001f);
+            float yScale = Mathf.Max(hexScale.y, 0.001f);
+            float baseCenterY = WorldRobberBaseHeight * 0.5f / yScale;
+            float bodyCenterY = (WorldRobberBaseHeight + WorldRobberBodyHeight * 0.5f) / yScale;
+            float headCenterY = (WorldRobberBaseHeight + WorldRobberBodyHeight + WorldRobberHeadDiameter * 0.45f) / yScale;
             CreateRobberPart(
                 "RobberBase",
                 PrimitiveType.Cylinder,
-                new Vector3(0f, baseY, 0f),
+                new Vector3(0f, baseCenterY, 0f),
                 new Vector3(
                     WorldRobberBaseDiameter / hexScale.x,
-                    0.08f / hexScale.y,
+                    WorldRobberBaseHeight / yScale,
                     WorldRobberBaseDiameter / hexScale.z));
+            CreateRobberPart(
+                "RobberBody",
+                PrimitiveType.Cylinder,
+                new Vector3(0f, bodyCenterY, 0f),
+                new Vector3(
+                    WorldRobberBodyDiameter / hexScale.x,
+                    WorldRobberBodyHeight / yScale,
+                    WorldRobberBodyDiameter / hexScale.z));
             CreateRobberPart(
                 "RobberHead",
                 PrimitiveType.Sphere,
-                new Vector3(0f, headY, 0f),
+                new Vector3(0f, headCenterY, 0f),
                 new Vector3(
                     WorldRobberHeadDiameter / hexScale.x,
-                    WorldRobberHeadDiameter / hexScale.y,
+                    WorldRobberHeadDiameter / yScale,
                     WorldRobberHeadDiameter / hexScale.z));
         }
 

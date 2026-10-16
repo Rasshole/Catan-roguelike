@@ -51,7 +51,7 @@ namespace CatanRoguelike.Game
             var meshFilter = go.AddComponent<MeshFilter>();
             meshFilter.sharedMesh = ColonistCoastSandMesh.Create(board, hexScale, beachWidth);
             var renderer = go.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = BuiltInMaterials.Create(SandAlbedo);
+            renderer.sharedMaterial = BuiltInMaterials.CreateUnlit(SandAlbedo);
         }
     }
 }

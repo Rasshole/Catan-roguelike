@@ -6,6 +6,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace CatanRoguelike.Tests.PlayMode
 {
@@ -34,11 +35,13 @@ namespace CatanRoguelike.Tests.PlayMode
                 GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
             GameScenePlayHarness.AdvanceToDayPlayerActions(gameManager.Controller);
             gameManager.EnsureRunHudReady();
+            var hud = gameManager.GetComponent<RunHudController>();
+            Assert.IsNotNull(hud);
+            hud.Refresh(gameManager.Controller.State);
+            Canvas.ForceUpdateCanvases();
             for (int i = 0; i < 6; i++)
                 yield return null;
 
-            var hud = gameManager.GetComponent<RunHudController>();
-            Assert.IsNotNull(hud);
             Assert.AreEqual(ColonistHudBankStrip.ExpectedCardCount, hud.GetColonistBankCardCountForTests());
 
             var probe = hud.GetColonistActionBarLayoutForTests();

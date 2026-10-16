@@ -42,7 +42,7 @@ namespace CatanRoguelike.Game
                 titleRow.transform,
                 "Title",
                 shortTitle,
-                13,
+                11,
                 TextAnchor.MiddleLeft,
                 RunHudUiFactory.TextPrimary,
                 FontStyle.Bold);
@@ -50,7 +50,7 @@ namespace CatanRoguelike.Game
             title.verticalOverflow = VerticalWrapMode.Truncate;
             var titleLayout = title.gameObject.AddComponent<LayoutElement>();
             titleLayout.flexibleWidth = 1f;
-            titleLayout.preferredWidth = 72f;
+            titleLayout.preferredWidth = 64f;
 
             var cost = RunHudUiFactory.CreateText(
                 button.transform,
@@ -82,8 +82,27 @@ namespace CatanRoguelike.Game
                 FontStyle.Bold);
             pieceCountChip.raycastTarget = false;
 
-            RunHudUiFactory.AddLayoutElement(button.gameObject, 56f).preferredWidth = 94f;
+            float buttonWidth = shortTitle == ColonistHudCopy.Settlement ? 108f : 94f;
+            RunHudUiFactory.AddLayoutElement(button.gameObject, 56f).preferredWidth = buttonWidth;
             return button;
+        }
+
+        public static string GetTitleText(Button button)
+        {
+            if (button == null)
+                return string.Empty;
+
+            var title = button.transform.Find("TitleRow/Title")?.GetComponent<Text>();
+            if (title != null && !string.IsNullOrEmpty(title.text))
+                return title.text;
+
+            foreach (var text in button.GetComponentsInChildren<Text>(true))
+            {
+                if (text.gameObject.name == "Title")
+                    return text.text;
+            }
+
+            return string.Empty;
         }
 
         public static void SetTitle(Button button, string shortTitle)
@@ -112,7 +131,8 @@ namespace CatanRoguelike.Game
         public static Color IconTintFor(string shortTitle) => shortTitle switch
         {
             _ when shortTitle == ColonistHudCopy.Road => new Color(0.72f, 0.58f, 0.38f, 1f),
-            _ when shortTitle == ColonistHudCopy.SettlementShort => new Color(0.94f, 0.92f, 0.86f, 1f),
+            _ when shortTitle == ColonistHudCopy.SettlementShort || shortTitle == ColonistHudCopy.Settlement
+                => new Color(0.94f, 0.92f, 0.86f, 1f),
             _ when shortTitle == ColonistHudCopy.City => new Color(0.88f, 0.62f, 0.28f, 1f),
             _ => new Color(0.55f, 0.62f, 0.92f, 1f)
         };

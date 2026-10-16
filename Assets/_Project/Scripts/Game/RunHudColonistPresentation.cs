@@ -113,12 +113,14 @@ namespace CatanRoguelike.Game
             var iconGo = new GameObject("Icon");
             iconGo.transform.SetParent(cardGo.transform, false);
             var iconRect = iconGo.AddComponent<RectTransform>();
-            iconRect.anchorMin = new Vector2(0.5f, 0.55f);
-            iconRect.anchorMax = new Vector2(0.5f, 0.55f);
-            iconRect.sizeDelta = new Vector2(40f, 40f);
+            iconRect.anchorMin = new Vector2(0.14f, 0.20f);
+            iconRect.anchorMax = new Vector2(0.86f, 0.82f);
+            iconRect.offsetMin = Vector2.zero;
+            iconRect.offsetMax = Vector2.zero;
             var iconImg = iconGo.AddComponent<Image>();
             iconImg.sprite = ColonistHudResourceSprites.Get(resource);
             iconImg.preserveAspect = true;
+            iconImg.color = Color.white;
             _resourceSwatches.Add(iconImg);
 
             var badgeGo = new GameObject("Badge");
@@ -308,9 +310,9 @@ namespace CatanRoguelike.Game
                 Vector2.one,
                 Vector2.zero,
                 Vector2.zero);
-            RunHudUiFactory.AddLayoutElement(bankStrip.gameObject, 44f);
+            RunHudUiFactory.AddLayoutElement(bankStrip.gameObject, 52f);
             SetBankFlyTarget(bankStrip);
-            _colonistBankStrip = ColonistHudBankStrip.Build(bankStrip, 40f);
+            _colonistBankStrip = ColonistHudBankStrip.Build(bankStrip);
         }
 
         private void RefreshColonistPresentation(GameState state)
@@ -323,19 +325,23 @@ namespace CatanRoguelike.Game
             if (_colonistHumanPanelText != null)
             {
                 int roads = state.Board.CountRoads(PlayerId.Human);
+                _colonistHumanPanelText.fontSize = 11;
+                _colonistHumanPanelText.horizontalOverflow = HorizontalWrapMode.Overflow;
                 _colonistHumanPanelText.text =
-                    $"{ColonistHudCopy.You}  VP {state.PlayerVictoryPoints}  ·  {ColonistHudCopy.Cards} {state.PlayerInventory.Total}\n" +
-                    $"{ColonistHudCopy.DevCards} {state.PlayerHand.Count}  ·  Roads {roads}\n" +
-                    $"LR {(longestRoad == PlayerId.Human ? "✓" : "—")}  LA {(state.LargestArmyOwner == PlayerId.Human ? "✓" : "—")}";
+                    $"{ColonistHudCopy.You}\n" +
+                    $"VP {state.PlayerVictoryPoints}  ·  Res {state.PlayerInventory.Total}  ·  Dev {state.PlayerHand.Count}  ·  Rd {roads}\n" +
+                    $"LR {(longestRoad == PlayerId.Human ? "✓" : "—")}  ·  LA {(state.LargestArmyOwner == PlayerId.Human ? "✓" : "—")}";
             }
 
             if (_colonistAiPanelText != null)
             {
                 int aiRoads = state.Board.CountRoads(PlayerId.Ai);
+                _colonistAiPanelText.fontSize = 11;
+                _colonistAiPanelText.horizontalOverflow = HorizontalWrapMode.Overflow;
                 _colonistAiPanelText.text =
-                    $"{ColonistHudCopy.Opponent}  VP {state.AiVictoryPoints}  ·  {ColonistHudCopy.Cards} ?\n" +
-                    $"{ColonistHudCopy.DevCards} {state.AiHand.Count}  ·  Roads {aiRoads}\n" +
-                    $"LR {(longestRoad == PlayerId.Ai ? "✓" : "—")}  LA {(state.LargestArmyOwner == PlayerId.Ai ? "✓" : "—")}";
+                    $"{ColonistHudCopy.Opponent}\n" +
+                    $"VP {state.AiVictoryPoints}  ·  Dev {state.AiHand.Count}  ·  Rd {aiRoads}\n" +
+                    $"LR {(longestRoad == PlayerId.Ai ? "✓" : "—")}  ·  LA {(state.LargestArmyOwner == PlayerId.Ai ? "✓" : "—")}";
             }
 
             if (_colonistBankStrip != null)
