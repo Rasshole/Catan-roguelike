@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Turn;
-using CatanRoguelike.Tests;
 using CatanRoguelike.Game;
 using NUnit.Framework;
 using UnityEngine;
@@ -164,7 +163,7 @@ namespace CatanRoguelike.Tests.PlayMode
         }
 
         private static void SkipNightAndResolveMorning(GameController game) =>
-            GameControllerTestHelpers.SkipNightAndResolveMorning(game);
+            PlayModeTestHelpers.SkipNightAndResolveMorning(game);
 
         private static void PrepareNightAdvance(GameController game)
         {
