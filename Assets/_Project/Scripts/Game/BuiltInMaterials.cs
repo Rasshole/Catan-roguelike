@@ -32,6 +32,15 @@ namespace CatanRoguelike.Game
             return mat;
         }
 
+        public static Material Create(Texture2D albedo, Color tint)
+        {
+            var mat = new Material(Standard);
+            mat.color = tint;
+            if (albedo != null)
+                mat.mainTexture = albedo;
+            return mat;
+        }
+
         /// <summary>Opaque Standard surface (token chips, board props).</summary>
         public static Material CreateOpaque(Color color)
         {
