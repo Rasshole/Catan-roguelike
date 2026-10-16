@@ -128,7 +128,7 @@ namespace CatanRoguelike.Game
         private const float WorldChipThickness = 0.04f;
 
         // Tile-local Y offsets from hex prism top (TopY = 1).
-        private const float ChipBaseLiftLocal = 0.02f;
+        private const float ChipBaseLiftLocal = 0.028f;
         private const float FaceAboveRimGapLocal = 0.004f;
         private static bool _loggedTokenChipRimDiagnostics;
         private const float LabelLiftLocal = 0.20f;
@@ -231,8 +231,7 @@ namespace CatanRoguelike.Game
             float localFaceHeight = WorldChipThickness / (ThinDiskMesh.MeshHeight * hexScale.y);
             float localRimHeight = WorldChipThickness * 0.55f / (ThinDiskMesh.MeshHeight * hexScale.y);
 
-            float localRimDiameter = localFaceDiameter * RimOuterRadiusFactor;
-            _chipRimRenderer = CreateFlatChipDisc("Rim", localRimDiameter, localRimHeight, localRimHeight, 3110);
+            _chipRimRenderer = CreateTokenRimRing(localFaceDiameter, localRimHeight, 3115);
             _chipFaceRenderer = CreateFlatChipDisc("Face", localFaceDiameter, localFaceHeight, 0f, 3120);
             UpdateTokenChipGeometry();
         }
@@ -258,15 +257,30 @@ namespace CatanRoguelike.Game
             float localFaceHeight = WorldChipThickness / (ThinDiskMesh.MeshHeight * hexScale.y);
             float localRimHeight = WorldChipThickness * 0.55f / (ThinDiskMesh.MeshHeight * hexScale.y);
 
-            float localRimDiameter = localFaceDiameter * RimOuterRadiusFactor;
-            float rimStackTop = localRimHeight * 2f;
-            float faceCenterY = rimStackTop + FaceAboveRimGapLocal + localFaceHeight;
+            float rimTopY = localRimHeight * TokenChipAnnulusMesh.TopY;
+            float faceCenterY = rimTopY + FaceAboveRimGapLocal + localFaceHeight;
 
             _tokenChip.transform.localPosition = new Vector3(0f, HexPrismMesh.TopY + ChipBaseLiftLocal, 0f);
-            _chipRimRenderer.transform.localScale = new Vector3(localRimDiameter, localRimHeight, localRimDiameter);
-            _chipRimRenderer.transform.localPosition = new Vector3(0f, localRimHeight, 0f);
+            _chipRimRenderer.transform.localScale = new Vector3(localFaceDiameter, localRimHeight, localFaceDiameter);
+            _chipRimRenderer.transform.localPosition = Vector3.zero;
             _chipFaceRenderer.transform.localScale = new Vector3(localFaceDiameter, localFaceHeight, localFaceDiameter);
             _chipFaceRenderer.transform.localPosition = new Vector3(0f, faceCenterY, 0f);
+        }
+
+        private Renderer CreateTokenRimRing(float faceDiameter, float height, int renderQueue)
+        {
+            var ring = new GameObject("Rim");
+            ring.transform.SetParent(_tokenChip.transform, false);
+            ring.transform.localPosition = Vector3.zero;
+            ring.transform.localScale = new Vector3(faceDiameter, height, faceDiameter);
+
+            var meshFilter = ring.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = TokenChipAnnulusMesh.Shared;
+            var renderer = ring.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = BuiltInMaterials.CreateUnlit(Color.white);
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.sharedMaterial.renderQueue = renderQueue;
+            return renderer;
         }
 
         private Renderer CreateFlatChipDisc(string name, float diameter, float height, float localCenterY, int renderQueue)

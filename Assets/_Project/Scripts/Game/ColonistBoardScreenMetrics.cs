@@ -19,7 +19,7 @@ namespace CatanRoguelike.Game
         }
 
         /// <summary>
-        /// Projected on-screen diameter using capture pose and renderer bounds (same path as rim capture probes).
+        /// Projected on-screen diameter using capture pose and mesh top-cap vertices (not world AABB).
         /// </summary>
         public static float MeasureProjectedScreenDiameter(
             Renderer renderer,
@@ -75,6 +75,33 @@ namespace CatanRoguelike.Game
             if (renderer == null)
                 return 0f;
 
+            var meshFilter = renderer.GetComponent<MeshFilter>();
+            if (meshFilter != null && meshFilter.sharedMesh != null)
+            {
+                float meshRadius = MeasureProjectedMeshCapRadiusFromCenter(
+                    meshFilter.sharedMesh,
+                    renderer.transform,
+                    camera,
+                    tableCamera,
+                    textureWidth,
+                    textureHeight,
+                    centerWorld);
+                if (meshRadius > 0.01f)
+                    return meshRadius;
+            }
+
+            return MeasureProjectedBoundsRadiusFromCenter(
+                renderer, camera, tableCamera, textureWidth, textureHeight, centerWorld);
+        }
+
+        private static float MeasureProjectedBoundsRadiusFromCenter(
+            Renderer renderer,
+            Camera camera,
+            TableCamera tableCamera,
+            int textureWidth,
+            int textureHeight,
+            Vector3 centerWorld)
+        {
             var centerPx = ColonistCaptureProjection.WorldToTexturePixel(
                 centerWorld, camera, tableCamera, textureWidth, textureHeight);
             var centerV = new Vector2(centerPx.x, centerPx.y);
@@ -99,6 +126,47 @@ namespace CatanRoguelike.Game
             {
                 var px = ColonistCaptureProjection.WorldToTexturePixel(
                     c + offsets[i], camera, tableCamera, textureWidth, textureHeight);
+                maxR = Mathf.Max(maxR, Vector2.Distance(centerV, new Vector2(px.x, px.y)));
+            }
+
+            return maxR;
+        }
+
+        /// <summary>
+        /// Max screen radius from <paramref name="centerWorld"/> using top-cap mesh vertices only.
+        /// </summary>
+        public static float MeasureProjectedMeshCapRadiusFromCenter(
+            Mesh mesh,
+            Transform meshTransform,
+            Camera camera,
+            TableCamera tableCamera,
+            int textureWidth,
+            int textureHeight,
+            Vector3 centerWorld)
+        {
+            if (mesh == null || meshTransform == null)
+                return 0f;
+
+            var vertices = mesh.vertices;
+            if (vertices == null || vertices.Length == 0)
+                return 0f;
+
+            float topLocalY = mesh.bounds.max.y;
+            const float topEpsilon = 1e-3f;
+
+            var centerPx = ColonistCaptureProjection.WorldToTexturePixel(
+                centerWorld, camera, tableCamera, textureWidth, textureHeight);
+            var centerV = new Vector2(centerPx.x, centerPx.y);
+
+            float maxR = 0f;
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                if (vertices[i].y < topLocalY - topEpsilon)
+                    continue;
+
+                Vector3 world = meshTransform.TransformPoint(vertices[i]);
+                var px = ColonistCaptureProjection.WorldToTexturePixel(
+                    world, camera, tableCamera, textureWidth, textureHeight);
                 maxR = Mathf.Max(maxR, Vector2.Distance(centerV, new Vector2(px.x, px.y)));
             }
 

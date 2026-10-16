@@ -15,6 +15,8 @@ namespace CatanRoguelike.Core.Yield
             2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12
         };
 
+        private const int MaxAssignmentAttempts = 96;
+
         public static bool IsRedNumber(int token) => token == 6 || token == 8;
 
         /// <summary>Out of 36 two-dice outcomes — used for AI placement and robber targeting.</summary>
@@ -54,20 +56,27 @@ namespace CatanRoguelike.Core.Yield
                 throw new InvalidOperationException(
                     $"Not enough number tokens ({available.Count}) for {needing.Count} hexes.");
 
-            var rng = seed.HasValue ? new Random(seed.Value) : new Random();
             var coords = needing.Select(t => t.Coord).ToList();
-            Shuffle(coords, rng);
-
-            foreach (var coord in coords)
+            for (int attempt = 0; attempt < MaxAssignmentAttempts; attempt++)
             {
-                var tile = board.Tiles[coord];
-                int? pick = PickTokenForTile(board, coord, available);
-                if (!pick.HasValue)
-                    pick = available[0];
+                int attemptSeed = ComposeAttemptSeed(seed, attempt, needing.Count);
+                var rng = new Random(attemptSeed);
+                var order = coords.ToList();
+                Shuffle(order, rng);
+                var pool = available.ToList();
 
-                tile.NumberToken = pick;
-                available.Remove(pick.Value);
+                foreach (var coord in coords)
+                    board.Tiles[coord].NumberToken = null;
+
+                if (TryAssignInOrder(board, order, 0, pool) && !HasAdjacentRedTokens(board))
+                    return;
             }
+
+            if (TryRepairBySwapping(board, seed))
+                return;
+
+            throw new InvalidOperationException(
+                "Could not assign number tokens without adjacent 6/8 pairs.");
         }
 
         /// <summary>Build token multiset large enough for <paramref name="tokenSlots"/> assignments.</summary>
@@ -86,34 +95,107 @@ namespace CatanRoguelike.Core.Yield
             return pool;
         }
 
-        private static int? PickTokenForTile(BoardState board, HexCoord coord, List<int> available)
-        {
-            int? best = null;
-            int bestPip = -1;
+        private static int ComposeAttemptSeed(int? seed, int attempt, int tileCount) =>
+            unchecked((seed ?? 0x4B1D) ^ (attempt * 0x9E3779B9) ^ (tileCount * 0x85EBCA6B));
 
-            foreach (var token in available.OrderBy(t => t))
+        private static bool TryAssignInOrder(BoardState board, IList<HexCoord> coords, int index, List<int> available)
+        {
+            if (index >= coords.Count)
+                return true;
+
+            var coord = coords[index];
+            foreach (var token in available
+                         .OrderByDescending(GetPipWeight)
+                         .ThenBy(t => t))
             {
                 if (!CanPlaceToken(board, coord, token))
                     continue;
 
-                int pip = GetPipWeight(token);
-                if (pip > bestPip)
+                board.Tiles[coord].NumberToken = token;
+                available.Remove(token);
+                if (TryAssignInOrder(board, coords, index + 1, available))
+                    return true;
+
+                available.Add(token);
+                board.Tiles[coord].NumberToken = null;
+            }
+
+            return false;
+        }
+
+        private static bool HasAdjacentRedTokens(BoardState board)
+        {
+            foreach (var tile in board.Tiles.Values)
+            {
+                if (!tile.NumberToken.HasValue || !IsRedNumber(tile.NumberToken.Value))
+                    continue;
+
+                foreach (var dir in HexCoord.Directions)
                 {
-                    bestPip = pip;
-                    best = token;
+                    var neighbor = tile.Coord + dir;
+                    if (!board.TryGetTile(neighbor, out var other))
+                        continue;
+                    if (!other.NumberToken.HasValue)
+                        continue;
+                    if (IsRedNumber(other.NumberToken.Value))
+                        return true;
                 }
             }
 
-            if (best.HasValue)
-                return best;
+            return false;
+        }
 
-            foreach (var token in available.OrderBy(t => t))
+        private static bool TryRepairBySwapping(BoardState board, int? seed)
+        {
+            var rng = new Random(ComposeAttemptSeed(seed, MaxAssignmentAttempts, board.Tiles.Count));
+            var assignable = board.Tiles.Values
+                .Where(t => !t.IsDesert && t.NumberToken.HasValue)
+                .Select(t => t.Coord)
+                .ToList();
+
+            for (int pass = 0; pass < assignable.Count * 8; pass++)
             {
-                if (CanPlaceToken(board, coord, token))
-                    return token;
+                if (!HasAdjacentRedTokens(board))
+                    return true;
+
+                int i = rng.Next(assignable.Count);
+                int j = rng.Next(assignable.Count);
+                if (i == j)
+                    continue;
+
+                var a = assignable[i];
+                var b = assignable[j];
+                if (board.Tiles[a].Coord == board.Tiles[b].Coord)
+                    continue;
+
+                int tokenA = board.Tiles[a].NumberToken!.Value;
+                int tokenB = board.Tiles[b].NumberToken!.Value;
+                if (tokenA == tokenB)
+                    continue;
+
+                if (!WouldSwapBeValid(board, a, b, tokenA, tokenB))
+                    continue;
+
+                board.Tiles[a].NumberToken = tokenB;
+                board.Tiles[b].NumberToken = tokenA;
             }
 
-            return available.Count > 0 ? available[0] : (int?)null;
+            return !HasAdjacentRedTokens(board);
+        }
+
+        private static bool WouldSwapBeValid(
+            BoardState board,
+            HexCoord a,
+            HexCoord b,
+            int tokenAtA,
+            int tokenAtB)
+        {
+            board.Tiles[a].NumberToken = null;
+            board.Tiles[b].NumberToken = null;
+            bool ok = CanPlaceToken(board, a, tokenAtB) && CanPlaceToken(board, b, tokenAtA);
+            board.Tiles[a].NumberToken = tokenAtA;
+            board.Tiles[b].NumberToken = tokenAtB;
+            return ok;
         }
 
         private static bool CanPlaceToken(BoardState board, HexCoord coord, int token)

@@ -6,7 +6,8 @@ namespace CatanRoguelike.Game
     public static class TokenChipAnnulusMesh
     {
         public const float InnerRadius = ThinDiskMesh.MeshRadius;
-        public const float OuterRadius = ThinDiskMesh.MeshRadius * 1.18f;
+        /// <summary>Matches <see cref="HexTileView.RimOuterRadiusFactor"/> (15% rim band).</summary>
+        public const float OuterRadius = ThinDiskMesh.MeshRadius * 1.15f;
         public const float TopY = ThinDiskMesh.TopY;
         public const int SegmentCount = ThinDiskMesh.SegmentCount;
 

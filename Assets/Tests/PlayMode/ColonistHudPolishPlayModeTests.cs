@@ -305,7 +305,10 @@ namespace CatanRoguelike.Tests.PlayMode
                 if (renderer == null || renderer.gameObject.name != "BadgeDisc")
                     continue;
 
+                var meshFilter = renderer.GetComponent<MeshFilter>();
                 Vector3 discCenter = renderer.bounds.center;
+                if (meshFilter != null && meshFilter.sharedMesh != null)
+                    discCenter = renderer.transform.TransformPoint(meshFilter.sharedMesh.bounds.center);
                 float discScreen = ColonistBoardScreenMetrics.MeasureProjectedScreenDiameter(
                     renderer, camera, tableCamera, layoutW, layoutH, discCenter);
                 Assert.Greater(discScreen, 12f, $"Badge disc should be readable on screen (d={discScreen:F1}px).");

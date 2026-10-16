@@ -150,18 +150,21 @@ namespace CatanRoguelike.Game
             badgeRoot.transform.SetParent(parent, false);
             badgeRoot.transform.localPosition = new Vector3(0f, localY, localZ);
 
-            var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            disc.name = "BadgeDisc";
+            var disc = new GameObject("BadgeDisc");
             disc.transform.SetParent(badgeRoot.transform, false);
             disc.transform.localPosition = Vector3.zero;
             float discDiameter = BadgeDiscWorldRadius * 2f;
-            disc.transform.localScale = new Vector3(discDiameter, BadgeDiscHeight, discDiameter);
-            var discRenderer = disc.GetComponent<Renderer>();
+            float discYScale = BadgeDiscHeight / ThinDiskMesh.MeshHeight;
+            disc.transform.localScale = new Vector3(discDiameter, discYScale, discDiameter);
+            var meshFilter = disc.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = ThinDiskMesh.Shared;
+            var discRenderer = disc.AddComponent<MeshRenderer>();
             discRenderer.sharedMaterial = BuiltInMaterials.CreateUnlit(new Color(0.95f, 0.95f, 0.93f, 1f));
             discRenderer.sharedMaterial.renderQueue = 3100;
-            DestroyCollider(disc.GetComponent<Collider>());
+            discRenderer.shadowCastingMode = ShadowCastingMode.Off;
 
-            float labelLocalY = BadgeDiscHeight + 0.006f;
+            float discTopLocalY = discYScale * ThinDiskMesh.TopY;
+            float labelLocalY = discTopLocalY + 0.006f;
             var labelTexture = ColonistPortRateLabelTextures.Get(isGeneric);
             bool hasRateIcon = !isGeneric && specificResource.HasValue;
             float labelWorldWidth = discDiameter * (hasRateIcon
