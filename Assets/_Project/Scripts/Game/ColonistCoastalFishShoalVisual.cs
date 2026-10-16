@@ -96,7 +96,7 @@ namespace CatanRoguelike.Game
             if (texture == null || boardRoot == null)
                 return;
 
-            float iconSize = HexTileView.TokenWorldFaceDiameter * 0.44f;
+            float iconSize = HexTileView.TokenWorldFaceDiameter * 0.80f; // fish fills ~70% of the PNG width → ~0.35 hex fish
             float boardY = boardRoot.position.y + hexHeightScale * CoastalFishShoalMesh.TopLocalY + 0.03f;
 
             var armMidLeft = placement.CoastArmLeft + (placement.SeaFlatLeft - placement.CoastArmLeft) * 0.55f;
