@@ -4,6 +4,7 @@ using CatanRoguelike.Core;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Shop;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
+using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 
 namespace CatanRoguelike.Core.Map
 {

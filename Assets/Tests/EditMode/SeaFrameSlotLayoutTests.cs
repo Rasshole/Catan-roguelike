@@ -55,9 +55,12 @@ namespace CatanRoguelike.Tests.EditMode
                     $"Harbor coast edge should resolve for port {vertex} and sea {sea}.");
 
                 var canon = VertexGraph.Canonicalize(vertex);
+                var (vx, vz) = HexMath.VertexToWorldPosition(canon, HexScale);
+                const float tol = 1e-3f;
+                bool matchesA = System.Math.Abs(coastA.X - vx) < tol && System.Math.Abs(coastA.Z - vz) < tol;
+                bool matchesB = System.Math.Abs(coastB.X - vx) < tol && System.Math.Abs(coastB.Z - vz) < tol;
                 Assert.IsTrue(
-                    VertexGraph.Canonicalize(coastA).Equals(canon)
-                    || VertexGraph.Canonicalize(coastB).Equals(canon),
+                    matchesA || matchesB,
                     $"Sea slot {sea} for port {vertex} is not on the port's coast edge.");
             }
         }
