@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Game;
@@ -16,7 +17,7 @@ namespace CatanRoguelike.Tests.PlayMode
 
         [Timeout(90000)]
         [UnityTest]
-        public IEnumerator BoardExtent_ProjectsInsidePlayArea_WithMargin()
+        public IEnumerator BoardContent_FitsPlayArea_WithTightFill()
         {
             if (!File.Exists(ColonistScenePath))
             {
@@ -57,39 +58,30 @@ namespace CatanRoguelike.Tests.PlayMode
             camera.pixelRect = new Rect(0f, 0f, layoutW, layoutH);
             yield return null;
 
-            Vector3 center = boardView.GetBoardWorldCenter();
-            float extent = boardView.GetColonistFramingExtentRadius();
-            var worldPoints = new Vector3[8];
-            ColonistBoardFraming.GetExtentSamplePoints(center, extent, worldPoints);
+            var samples = new List<Vector3>(512);
+            boardView.FillColonistFramingSamples(samples);
+            Assert.Greater(samples.Count, 8, "Colonist framing should sample land, sand, and port badges.");
 
-            var screenPoints = new Vector2[worldPoints.Length];
-            for (int i = 0; i < worldPoints.Length; i++)
-                screenPoints[i] = ColonistBoardFraming.WorldToLayoutPixels(camera, worldPoints[i], layoutW, layoutH);
+            var screenPoints = new Vector2[samples.Count];
+            for (int i = 0; i < samples.Count; i++)
+                screenPoints[i] = ColonistBoardFraming.WorldToLayoutPixels(camera, samples[i], layoutW, layoutH);
 
-            bool inside = ColonistBoardFraming.ArePointsInsidePlayArea(screenPoints, layoutW, layoutH);
+            bool inside = ColonistBoardFraming.ArePointsInsideFitMargin(screenPoints, layoutW, layoutH);
             if (!inside)
                 ColonistBoardFraming.LogPlayAreaFitDiagnostics(screenPoints, layoutW, layoutH);
 
-            Assert.IsTrue(inside, "Board+sand extent should fit inside colonist play area with margin.");
+            Assert.IsTrue(inside, "Land+sand+badges should fit inside colonist play area (3% margin).");
 
-            float diameter = extent * 2f;
-            float ortho = camera.orthographicSize;
-            float aspect = Mathf.Max(0.01f, camera.aspect);
-            float boardLayoutWidthPixels = diameter / (2f * ortho * aspect) * layoutW;
-
-            var play = ColonistPlayAreaLayout.Compute(layoutW, layoutH);
-            float margin = ColonistUiScale.ScaleReferencePixels(
-                ColonistBoardFraming.PlayAreaMarginPixels, layoutW, layoutH);
-            float usablePlayWidth = Mathf.Max(8f, play.PlayWidth - margin * 2f);
-            float boardWidthOfPlayRect = boardLayoutWidthPixels / usablePlayWidth;
+            ColonistBoardFraming.MeasurePlayAreaFill(camera, samples, layoutW, layoutH, out float fillWidth, out float fillHeight);
+            float fill = Mathf.Max(fillWidth, fillHeight);
             Debug.Log(
-                $"ColonistBoardFraming boardWidthOfPlayRect={boardWidthOfPlayRect:F3} " +
-                $"boardLayoutWidthPx={boardLayoutWidthPixels:F1} usablePlayWidth={usablePlayWidth:F1} " +
-                $"layout={layoutW}x{layoutH} diameter={diameter:F3} ortho={ortho:F4}");
-            Assert.LessOrEqual(
-                boardWidthOfPlayRect,
-                0.9f,
-                "Board+sand should fit inside margined play width without shrinking ortho.");
+                $"ColonistBoardFraming fillWidth={fillWidth:F3} fillHeight={fillHeight:F3} " +
+                $"layout={layoutW}x{layoutH} ortho={camera.orthographicSize:F4}");
+            Assert.GreaterOrEqual(
+                fill,
+                ColonistBoardFraming.MinPlayAreaFillRatio,
+                $"Board content should fill at least {ColonistBoardFraming.MinPlayAreaFillRatio:P0} of play rect " +
+                $"(fillW={fillWidth:F3} fillH={fillHeight:F3}).");
         }
     }
 }

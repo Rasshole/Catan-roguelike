@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace CatanRoguelike.Game
@@ -6,9 +7,18 @@ namespace CatanRoguelike.Game
     public static class ColonistBoardFraming
     {
         public const float PlayAreaMarginPixels = 24f;
+        public const float PlayAreaFitMarginFraction = 0.03f;
+        public const float MinPlayAreaFillRatio = 0.85f;
+        public const float ColonistCameraHeight = 28f;
 
-        /// <summary>Tight fit to margined play rect height, with ~1% outward slack (ortho multiplier).</summary>
+        /// <summary>Tight fit slack after solving screen-space AABB.</summary>
         public const float FramingFitSlackMultiplier = 1.01f;
+
+        public struct ColonistCameraFit
+        {
+            public float OrthographicSize;
+            public Vector3 Position;
+        }
 
         public static float ComputeOrthographicSize(
             float boardExtentRadiusWorld,
@@ -24,12 +34,103 @@ namespace CatanRoguelike.Game
 
             float fromHeight = diameter * screenHeight / (2f * usableHeight);
             float fromWidth = diameter * screenWidth / (2f * usableWidth * Mathf.Max(0.01f, cameraAspect));
-            string bindingAxis = fromHeight >= fromWidth ? "height" : "width";
-            float fitOrtho = Mathf.Max(fromHeight, fromWidth);
-            Debug.Log(
-                $"ColonistBoardFraming ortho bindingAxis={bindingAxis} fromHeight={fromHeight:F4} " +
-                $"fromWidth={fromWidth:F4} ortho={fitOrtho * FramingFitSlackMultiplier:F4}");
-            return fitOrtho * FramingFitSlackMultiplier;
+            return Mathf.Max(fromHeight, fromWidth) * FramingFitSlackMultiplier;
+        }
+
+        public static ColonistCameraFit ComputeColonistCameraFit(
+            IReadOnlyList<Vector3> worldSamples,
+            int screenWidth,
+            int screenHeight)
+        {
+            if (worldSamples == null || worldSamples.Count == 0)
+            {
+                return new ColonistCameraFit
+                {
+                    OrthographicSize = 4f,
+                    Position = new Vector3(0f, ColonistCameraHeight, 0f)
+                };
+            }
+
+            Vector3 contentCenter = ComputeBoundsCenter(worldSamples);
+            var rotation = Quaternion.Euler(90f, ColonistBoardViewConstants.CameraYawDegrees, 0f);
+            GetBoardPlaneAxes(rotation, out Vector3 camRight, out Vector3 camUp);
+            ComputeCameraPlaneExtents(worldSamples, contentCenter, camRight, camUp, out float halfWidthWorld, out float halfHeightWorld);
+
+            var play = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
+            float usableWidth = Mathf.Max(8f, play.PlayWidth * (1f - PlayAreaFitMarginFraction * 2f));
+            float usableHeight = Mathf.Max(8f, play.PlayHeight * (1f - PlayAreaFitMarginFraction * 2f));
+            float aspect = screenWidth / (float)Mathf.Max(1, screenHeight);
+
+            float orthoH = halfHeightWorld * screenHeight / usableHeight;
+            float orthoW = halfWidthWorld * screenWidth / (usableWidth * Mathf.Max(0.01f, aspect));
+            float ortho = Mathf.Max(orthoH, orthoW) * FramingFitSlackMultiplier;
+
+            float worldPerPixel = (2f * ortho) / screenHeight;
+            float desiredScreenX = play.Left + play.PlayWidth * 0.5f;
+            float desiredScreenY = play.Bottom + play.PlayHeight * 0.5f;
+            float deltaScreenX = desiredScreenX - screenWidth * 0.5f;
+            float deltaScreenY = desiredScreenY - screenHeight * 0.5f;
+            Vector3 pan = camRight * (deltaScreenX * worldPerPixel) + camUp * (deltaScreenY * worldPerPixel);
+            Vector3 position = new Vector3(contentCenter.x, contentCenter.y + ColonistCameraHeight, contentCenter.z) - pan;
+
+            return new ColonistCameraFit { OrthographicSize = ortho, Position = position };
+        }
+
+        public static void MeasurePlayAreaFill(
+            Camera camera,
+            IReadOnlyList<Vector3> worldSamples,
+            int layoutWidth,
+            int layoutHeight,
+            out float fillWidth,
+            out float fillHeight)
+        {
+            fillWidth = 0f;
+            fillHeight = 0f;
+            if (camera == null || worldSamples == null || worldSamples.Count == 0)
+                return;
+
+            var play = ColonistPlayAreaLayout.Compute(layoutWidth, layoutHeight);
+            float usableWidth = Mathf.Max(8f, play.PlayWidth * (1f - PlayAreaFitMarginFraction * 2f));
+            float usableHeight = Mathf.Max(8f, play.PlayHeight * (1f - PlayAreaFitMarginFraction * 2f));
+
+            float minX = float.PositiveInfinity;
+            float maxX = float.NegativeInfinity;
+            float minY = float.PositiveInfinity;
+            float maxY = float.NegativeInfinity;
+            foreach (var world in worldSamples)
+            {
+                Vector2 px = WorldToLayoutPixels(camera, world, layoutWidth, layoutHeight);
+                minX = Mathf.Min(minX, px.x);
+                maxX = Mathf.Max(maxX, px.x);
+                minY = Mathf.Min(minY, px.y);
+                maxY = Mathf.Max(maxY, px.y);
+            }
+
+            fillWidth = (maxX - minX) / usableWidth;
+            fillHeight = (maxY - minY) / usableHeight;
+        }
+
+        public static void AppendBoundsCorners(Bounds bounds, List<Vector3> samples)
+        {
+            if (samples == null)
+                return;
+
+            Vector3 center = bounds.center;
+            Vector3 extents = bounds.extents;
+            Vector3[] offsets =
+            {
+                new Vector3(extents.x, extents.y, extents.z),
+                new Vector3(extents.x, extents.y, -extents.z),
+                new Vector3(extents.x, -extents.y, extents.z),
+                new Vector3(extents.x, -extents.y, -extents.z),
+                new Vector3(-extents.x, extents.y, extents.z),
+                new Vector3(-extents.x, extents.y, -extents.z),
+                new Vector3(-extents.x, -extents.y, extents.z),
+                new Vector3(-extents.x, -extents.y, -extents.z)
+            };
+
+            for (int i = 0; i < offsets.Length; i++)
+                samples.Add(center + offsets[i]);
         }
 
         public static void LogPlayAreaFitDiagnostics(
@@ -38,11 +139,10 @@ namespace CatanRoguelike.Game
             int screenHeight)
         {
             var play = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
-            float margin = ColonistUiScale.ScaleReferencePixels(PlayAreaMarginPixels, screenWidth, screenHeight);
-            float minX = play.Left + margin;
-            float maxX = play.Left + play.PlayWidth - margin;
-            float minY = play.Bottom + margin;
-            float maxY = play.Bottom + play.PlayHeight - margin;
+            float minX = play.Left + play.PlayWidth * PlayAreaFitMarginFraction;
+            float maxX = play.Left + play.PlayWidth * (1f - PlayAreaFitMarginFraction);
+            float minY = play.Bottom + play.PlayHeight * PlayAreaFitMarginFraction;
+            float maxY = play.Bottom + play.PlayHeight * (1f - PlayAreaFitMarginFraction);
 
             for (int i = 0; i < screenPixelsFromBottom.Length; i++)
             {
@@ -64,14 +164,12 @@ namespace CatanRoguelike.Game
         public static Vector2Int GetPlayAreaCenterTexturePixels(int screenWidth, int screenHeight) =>
             ColonistPlayAreaLayout.GetCenterTexturePixels(screenWidth, screenHeight);
 
-        /// <summary>Offset from play-area centre toward a hex corner (avoids centre token).</summary>
         public static Vector2Int GetHexColorSampleTexturePixels(int screenWidth, int screenHeight)
         {
             var center = GetPlayAreaCenterTexturePixels(screenWidth, screenHeight);
             return new Vector2Int(center.x + 72, center.y + 56);
         }
 
-        /// <summary>Sample points on the board extent circle (world XZ).</summary>
         public static void GetExtentSamplePoints(Vector3 boardCenter, float extentRadius, Vector3[] buffer)
         {
             int count = buffer.Length;
@@ -97,15 +195,20 @@ namespace CatanRoguelike.Game
             float maxX = play.Left + play.PlayWidth - margin;
             float minY = play.Bottom + margin;
             float maxY = play.Bottom + play.PlayHeight - margin;
+            return AreInsideRect(screenPixelsFromBottom, minX, maxX, minY, maxY);
+        }
 
-            for (int i = 0; i < screenPixelsFromBottom.Length; i++)
-            {
-                var p = screenPixelsFromBottom[i];
-                if (p.x < minX || p.x > maxX || p.y < minY || p.y > maxY)
-                    return false;
-            }
-
-            return true;
+        public static bool ArePointsInsideFitMargin(
+            Vector2[] screenPixelsFromBottom,
+            int screenWidth,
+            int screenHeight)
+        {
+            var play = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
+            float minX = play.Left + play.PlayWidth * PlayAreaFitMarginFraction;
+            float maxX = play.Left + play.PlayWidth * (1f - PlayAreaFitMarginFraction);
+            float minY = play.Bottom + play.PlayHeight * PlayAreaFitMarginFraction;
+            float maxY = play.Bottom + play.PlayHeight * (1f - PlayAreaFitMarginFraction);
+            return AreInsideRect(screenPixelsFromBottom, minX, maxX, minY, maxY);
         }
 
         public static Vector2 WorldToScreenPixelsFromBottom(Camera camera, Vector3 world)
@@ -114,9 +217,6 @@ namespace CatanRoguelike.Game
             return new Vector2(screen.x, screen.y);
         }
 
-        /// <summary>
-        /// Pixel size used for play-area layout and viewport projection (matches WorldToViewportPoint scaling).
-        /// </summary>
         public static void GetLayoutPixelSize(
             Camera camera,
             int nominalWidth,
@@ -186,6 +286,69 @@ namespace CatanRoguelike.Game
                 screenPoints[i] = WorldToLayoutPixels(camera, center + offsets[i], layoutWidth, layoutHeight);
 
             return ArePointsInsidePlayArea(screenPoints, layoutWidth, layoutHeight, marginPixels);
+        }
+
+        private static bool AreInsideRect(Vector2[] points, float minX, float maxX, float minY, float maxY)
+        {
+            for (int i = 0; i < points.Length; i++)
+            {
+                var p = points[i];
+                if (p.x < minX || p.x > maxX || p.y < minY || p.y > maxY)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static Vector3 ComputeBoundsCenter(IReadOnlyList<Vector3> samples)
+        {
+            Vector3 min = samples[0];
+            Vector3 max = samples[0];
+            for (int i = 1; i < samples.Count; i++)
+            {
+                min = Vector3.Min(min, samples[i]);
+                max = Vector3.Max(max, samples[i]);
+            }
+
+            return (min + max) * 0.5f;
+        }
+
+        private static void GetBoardPlaneAxes(Quaternion cameraRotation, out Vector3 camRight, out Vector3 camUp)
+        {
+            camRight = cameraRotation * Vector3.right;
+            camRight.y = 0f;
+            camRight.Normalize();
+            camUp = cameraRotation * Vector3.up;
+            camUp.y = 0f;
+            camUp.Normalize();
+        }
+
+        private static void ComputeCameraPlaneExtents(
+            IReadOnlyList<Vector3> worldSamples,
+            Vector3 contentCenter,
+            Vector3 camRight,
+            Vector3 camUp,
+            out float halfWidthWorld,
+            out float halfHeightWorld)
+        {
+            float minR = float.PositiveInfinity;
+            float maxR = float.NegativeInfinity;
+            float minU = float.PositiveInfinity;
+            float maxU = float.NegativeInfinity;
+            foreach (var point in worldSamples)
+            {
+                Vector3 delta = point - contentCenter;
+                delta.y = 0f;
+                float r = Vector3.Dot(delta, camRight);
+                float u = Vector3.Dot(delta, camUp);
+                minR = Mathf.Min(minR, r);
+                maxR = Mathf.Max(maxR, r);
+                minU = Mathf.Min(minU, u);
+                maxU = Mathf.Max(maxU, u);
+            }
+
+            halfWidthWorld = Mathf.Max((maxR - minR) * 0.5f, 0.01f);
+            halfHeightWorld = Mathf.Max((maxU - minU) * 0.5f, 0.01f);
         }
     }
 }

@@ -111,6 +111,52 @@ namespace CatanRoguelike.Game
             return sum / _tiles.Count;
         }
 
+        /// <summary>World samples for colonist camera fit (land corners, sand ring, port badges).</summary>
+        public void FillColonistFramingSamples(List<Vector3> samples)
+        {
+            if (samples == null)
+                return;
+
+            float beachWidth = hexScale * ColonistCoastSandMesh.BeachWidthFactor;
+            foreach (var kvp in _tiles)
+            {
+                var coord = kvp.Key;
+                var tileRoot = kvp.Value.transform;
+                float sampleY = GetHexTopWorldPoint(tileRoot).y;
+                var tilePos = tileRoot.position;
+                float cx = tilePos.x;
+                float cz = tilePos.z;
+
+                for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
+                {
+                    var (x, z) = HexMath.VertexToWorldPosition(coord, corner, hexScale);
+                    samples.Add(new Vector3(x, sampleY, z));
+
+                    var outward = new Vector2(x - cx, z - cz);
+                    if (outward.sqrMagnitude > 1e-8f)
+                    {
+                        outward.Normalize();
+                        samples.Add(new Vector3(
+                            x + outward.x * beachWidth,
+                            sampleY,
+                            z + outward.y * beachWidth));
+                    }
+                }
+            }
+
+            if (boardRoot == null)
+                return;
+
+            foreach (var badge in boardRoot.GetComponentsInChildren<Transform>(true))
+            {
+                if (badge.name != "PortRateBadge")
+                    continue;
+
+                foreach (var renderer in badge.GetComponentsInChildren<Renderer>())
+                    ColonistBoardFraming.AppendBoundsCorners(renderer.bounds, samples);
+            }
+        }
+
         /// <summary>World point on the top of the reference hex for capture colour sampling.</summary>
         public Vector3 GetCaptureReferenceWorldPoint()
         {

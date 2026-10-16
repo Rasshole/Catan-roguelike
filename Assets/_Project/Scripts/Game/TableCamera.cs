@@ -125,38 +125,17 @@ namespace CatanRoguelike.Game
             if (screenHeight <= 0)
                 screenHeight = Screen.height;
 
-            float extentRadius = boardView != null ? boardView.GetColonistFramingExtentRadius() : 0f;
-            if (extentRadius <= 0f)
-                extentRadius = 4f;
+            var framingSamples = new System.Collections.Generic.List<Vector3>(512);
+            if (boardView != null)
+                boardView.FillColonistFramingSamples(framingSamples);
 
             _camera.orthographic = true;
-            float pixelWidth = screenWidth;
-            float pixelHeight = screenHeight;
-            _camera.aspect = pixelWidth / pixelHeight;
+            _camera.aspect = screenWidth / (float)Mathf.Max(1, screenHeight);
             transform.rotation = Quaternion.Euler(90f, ColonistBoardViewConstants.CameraYawDegrees, 0f);
 
-            var playArea = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
-            _camera.orthographicSize = ColonistBoardFraming.ComputeOrthographicSize(
-                extentRadius,
-                screenWidth,
-                screenHeight,
-                _camera.aspect);
-
-            float worldPerPixel = (2f * _camera.orthographicSize) / pixelHeight;
-            float desiredScreenX = playArea.Left + playArea.PlayWidth * 0.5f;
-            float desiredScreenY = playArea.Bottom + playArea.PlayHeight * 0.5f;
-            float deltaScreenX = desiredScreenX - pixelWidth * 0.5f;
-            float deltaScreenY = desiredScreenY - pixelHeight * 0.5f;
-
-            Vector3 center = boardView != null ? boardView.GetBoardWorldCenter() : lookTarget.position;
-            var panRight = transform.right;
-            panRight.y = 0f;
-            panRight.Normalize();
-            var panUp = transform.up;
-            panUp.y = 0f;
-            panUp.Normalize();
-            Vector3 pan = panRight * (deltaScreenX * worldPerPixel) + panUp * (deltaScreenY * worldPerPixel);
-            transform.position = new Vector3(center.x, center.y + 28f, center.z) - pan;
+            var fit = ColonistBoardFraming.ComputeColonistCameraFit(framingSamples, screenWidth, screenHeight);
+            _camera.orthographicSize = fit.OrthographicSize;
+            transform.position = fit.Position;
         }
 
         private void ApplyOrbitPose()
