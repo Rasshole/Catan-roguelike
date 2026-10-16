@@ -113,7 +113,7 @@ namespace CatanRoguelike.Game
         private static readonly Color StormMarkerColor = new(0.1f, 0.15f, 0.55f);
 
         // Target world-space chip size (visible disc on the hex top).
-        public const float TokenWorldFaceDiameter = 0.68f;
+        public const float TokenWorldFaceDiameter = 0.74f;
         /// <summary>Port rate badge disc diameter as a fraction of the number token face diameter.</summary>
         public const float PortBadgeDiameterFraction = 0.90f;
         public static float TokenRimWorldDiameter => TokenWorldFaceDiameter * RimOuterRadiusFactor;
@@ -127,8 +127,8 @@ namespace CatanRoguelike.Game
         public const float RimOuterRadiusFactor = 1f + TokenRimBandWidthFractionOfFaceRadius;
         private const float WorldChipThickness = 0.04f;
 
-        // Tile-local Y offsets from hex prism top (TopY = 1).
-        private const float ChipBaseLiftLocal = 0.028f;
+        // Tile-local Y offsets from hex prism top (TopY = 1). Chip root sits on hex top; rim/face stack upward.
+        private const float ChipAboveHexTopLocal = 0.001f;
         private const float FaceAboveRimGapLocal = 0.004f;
         private static bool _loggedTokenChipRimDiagnostics;
         private const float LabelLiftLocal = 0.20f;
@@ -259,12 +259,14 @@ namespace CatanRoguelike.Game
             float localFaceHeight = WorldChipThickness / (ThinDiskMesh.MeshHeight * hexScale.y);
             float localRimHeight = WorldChipThickness * 0.55f / (ThinDiskMesh.MeshHeight * hexScale.y);
 
-            float rimTopY = localRimHeight * ThinDiskMesh.TopY;
-            float faceCenterY = rimTopY + FaceAboveRimGapLocal + localFaceHeight;
+            // Rim disc bottom at chip origin (== hex top); face and label stack above.
+            float rimCenterY = localRimHeight * ThinDiskMesh.TopY;
+            float rimTopY = rimCenterY + localRimHeight * ThinDiskMesh.TopY;
+            float faceCenterY = rimTopY + FaceAboveRimGapLocal + localFaceHeight * ThinDiskMesh.TopY;
 
-            _tokenChip.transform.localPosition = new Vector3(0f, HexPrismMesh.TopY + ChipBaseLiftLocal, 0f);
+            _tokenChip.transform.localPosition = new Vector3(0f, HexPrismMesh.TopY + ChipAboveHexTopLocal, 0f);
             _chipRimRenderer.transform.localScale = new Vector3(localRimDiameter, localRimHeight, localRimDiameter);
-            _chipRimRenderer.transform.localPosition = Vector3.zero;
+            _chipRimRenderer.transform.localPosition = new Vector3(0f, rimCenterY, 0f);
             _chipFaceRenderer.transform.localScale = new Vector3(localFaceDiameter, localFaceHeight, localFaceDiameter);
             _chipFaceRenderer.transform.localPosition = new Vector3(0f, faceCenterY, 0f);
         }
