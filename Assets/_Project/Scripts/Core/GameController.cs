@@ -48,6 +48,9 @@ namespace CatanRoguelike.Core
         private Vertex? _lastPlacedSettlement;
         private bool _metaStartCardGranted;
 
+        /// <summary>When true, new maps include Seafarers fish hexes and fish spend rules.</summary>
+        public bool FishermenMapOption { get; set; }
+
         public GameController(int? seed = null, MapSize mapSize = MapSize.Small, MetaProgression meta = null)
         {
             Meta = meta;
@@ -119,8 +122,10 @@ namespace CatanRoguelike.Core
                 return;
             }
 
-            var board = MapPresets.CreateBoard(mapSize, RunSeed);
+            var gen = new MapGenerationOptions(FishermenMapOption);
+            var board = MapPresets.CreateBoard(mapSize, RunSeed, gen);
             State.ResetForNewMap(board, mapSize);
+            State.FishermenOfCatanEnabled = FishermenMapOption;
             State.Ports = PortAccess.DiscoverPorts(board);
             State.StatusMessage = "Vælg din leader.";
             _lastPlacedSettlement = null;
@@ -716,7 +721,18 @@ namespace CatanRoguelike.Core
             var aInv = State.AiInventory;
             aInv.Add(aiProd);
             State.AiInventory = aInv;
+
+            if (FishermenRules.IsEnabled(State))
+            {
+                State.PlayerFish += FishProductionCalculator.CalculateForPlayer(
+                    State, PlayerId.Human, State.TodayDiceRolls);
+                State.AiFish += FishProductionCalculator.CalculateForPlayer(
+                    State, PlayerId.Ai, State.TodayDiceRolls);
+            }
         }
+
+        public bool TrySpendFish(FishermenSpendAction action) =>
+            FishermenFishActions.TrySpend(State, PlayerId.Human, action);
 
         private void GrantSetupBonus(Vertex vertex, PlayerId player)
         {

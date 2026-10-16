@@ -19,6 +19,9 @@ namespace CatanRoguelike.Core
         public BoardState Board { get; private set; }
         public MapSize MapSize { get; set; } = MapSize.Small;
         public GamePhase Phase { get; set; } = GamePhase.RunSelectMap;
+        public bool FishermenOfCatanEnabled { get; set; }
+        public int PlayerFish { get; set; }
+        public int AiFish { get; set; }
 
         public ResourceBundle PlayerInventory { get; set; }
         public ResourceBundle AiInventory { get; set; }
@@ -177,6 +180,9 @@ namespace CatanRoguelike.Core
             Bank.Stone = BankStock.DefaultPerResource;
             PendingSevenDiscard = 0;
             PendingPlayerTrade = null;
+            FishermenOfCatanEnabled = false;
+            PlayerFish = 0;
+            AiFish = 0;
             PendingAiTradeResponses = Array.Empty<AiTradeResponse>();
             IncomingAiTrade = null;
             ToastMessage = null;

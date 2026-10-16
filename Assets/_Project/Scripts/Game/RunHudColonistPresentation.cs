@@ -326,9 +326,10 @@ namespace CatanRoguelike.Game
                 int roads = state.Board.CountRoads(PlayerId.Human);
                 _colonistHumanPanelText.fontSize = 11;
                 _colonistHumanPanelText.horizontalOverflow = HorizontalWrapMode.Overflow;
+                string fishLine = state.FishermenOfCatanEnabled ? $"  ·  Fish {state.PlayerFish}" : string.Empty;
                 _colonistHumanPanelText.text =
                     $"{ColonistHudCopy.You}\n" +
-                    $"VP {state.PlayerVictoryPoints}  ·  Res {state.PlayerInventory.Total}  ·  Dev {state.PlayerHand.Count}  ·  Rd {roads}\n" +
+                    $"VP {state.PlayerVictoryPoints}  ·  Res {state.PlayerInventory.Total}  ·  Dev {state.PlayerHand.Count}  ·  Rd {roads}{fishLine}\n" +
                     $"LR {(longestRoad == PlayerId.Human ? "✓" : "—")}  ·  LA {(state.LargestArmyOwner == PlayerId.Human ? "✓" : "—")}";
             }
 

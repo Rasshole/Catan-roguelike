@@ -21,6 +21,12 @@ namespace CatanRoguelike.Core.Map
         /// <summary>Classic Catan number token (2–12). Null = no token (desert or unassigned).</summary>
         public int? NumberToken;
 
+        /// <summary>Seafarers fish hex (sea/lake). Produces fish when rolled, not resources.</summary>
+        public bool IsFishTile;
+
+        /// <summary>Fish caught per hit (1–3). 0 = old boot (no yield).</summary>
+        public int FishValue;
+
         public HexTileData(HexCoord coord, ResourceType resource, bool isCoastal = false)
         {
             Coord = coord;

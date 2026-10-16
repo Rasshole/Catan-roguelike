@@ -29,6 +29,7 @@ namespace CatanRoguelike.Game
         private int _selectedHexIndex;
         private int _selectedRoadIndex;
         private bool _showUnlockPanel;
+        private bool _fishermenMapToggle;
         private bool _runRewardGranted;
         private int _lastRunStarsEarned;
 
@@ -97,6 +98,8 @@ namespace CatanRoguelike.Game
                 GUILayout.Label($"<b>Stars:</b> {_meta.Stars}");
             GUILayout.Label($"Nuværende forhåndsvisning: {MapPresets.GetDisplayName(state.MapSize)}");
             GUILayout.Space(8);
+            _fishermenMapToggle = GUILayout.Toggle(_fishermenMapToggle, "Seafarers — Fishermen of Catan (fish hexes)");
+            _controller.FishermenMapOption = _fishermenMapToggle;
 
             if (_meta == null)
             {

@@ -30,6 +30,13 @@ namespace CatanRoguelike.Core.Map
                 tile.HasRobber = true;
         }
 
+        public void ClearRobber()
+        {
+            if (RobberTile.HasValue && Tiles.TryGetValue(RobberTile.Value, out var old))
+                old.HasRobber = false;
+            RobberTile = null;
+        }
+
         public IEnumerable<HexTileData> GetTilesForResource(ResourceType resource) =>
             Tiles.Values.Where(t => t.Resource == resource);
 
