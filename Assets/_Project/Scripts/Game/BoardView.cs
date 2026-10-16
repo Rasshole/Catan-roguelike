@@ -295,8 +295,6 @@ namespace CatanRoguelike.Game
 
         private void BuildBoard(BoardState board)
         {
-            if (board != null && ColonistPresentation.IsActive)
-                SeaFishPortRelocator.Resolve(board, hexScale);
             if (boardRoot == null) boardRoot = transform;
 
             DisableLegacySceneTable();
@@ -309,6 +307,12 @@ namespace CatanRoguelike.Game
             }
 
             foreach (var kvp in board.Tiles)
+            {
+                var tile = CreateHexTile(kvp.Value);
+                _tiles[kvp.Key] = tile;
+            }
+
+            foreach (var kvp in board.SeaFishGrounds)
             {
                 var tile = CreateHexTile(kvp.Value);
                 _tiles[kvp.Key] = tile;
@@ -411,10 +415,10 @@ namespace CatanRoguelike.Game
         }
 
         private static bool IsSeaFishTile(HexTileData data) =>
-            data.IsFishTile && !data.IsDesert;
+            BoardState.IsSeaFishGround(data);
 
         private static bool IsLandHexCoord(HexTileData data) =>
-            !IsSeaFishTile(data);
+            !BoardState.IsSeaFishGround(data);
 
         private IEnumerable<HexCoord> GetLandTileCoords()
         {
@@ -488,6 +492,15 @@ namespace CatanRoguelike.Game
         public void Refresh(GameState state)
         {
             foreach (var kvp in state.Board.Tiles)
+            {
+                if (_tiles.TryGetValue(kvp.Key, out var view))
+                {
+                    view.Refresh(kvp.Value);
+                    view.RefreshNumberToken(kvp.Value);
+                }
+            }
+
+            foreach (var kvp in state.Board.SeaFishGrounds)
             {
                 if (_tiles.TryGetValue(kvp.Key, out var view))
                 {

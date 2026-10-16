@@ -128,7 +128,7 @@ namespace CatanRoguelike.Game
             var tileSet = new HashSet<HexCoord>();
             foreach (var kvp in board.Tiles)
             {
-                if (kvp.Value.IsFishTile)
+                if (BoardState.IsSeaFishGround(kvp.Value))
                     continue;
                 tileSet.Add(kvp.Key);
             }
@@ -146,7 +146,7 @@ namespace CatanRoguelike.Game
             int count = 0;
             foreach (var kvp in board.Tiles)
             {
-                if (kvp.Value.IsFishTile)
+                if (BoardState.IsSeaFishGround(kvp.Value))
                     continue;
                 var (x, z) = HexMath.ToWorldPosition(kvp.Key, hexScale);
                 sumX += x;

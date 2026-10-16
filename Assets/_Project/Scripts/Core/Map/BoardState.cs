@@ -8,7 +8,12 @@ namespace CatanRoguelike.Core.Map
     [Serializable]
     public sealed class BoardState
     {
+        /// <summary>Land hexes only (map size / act expansion counts use <see cref="Tiles"/>).</summary>
         public Dictionary<HexCoord, HexTileData> Tiles { get; } = new();
+
+        /// <summary>Coastal sea fishing grounds (Fishermen); not counted in map hex size.</summary>
+        public Dictionary<HexCoord, HexTileData> SeaFishGrounds { get; } = new();
+
         public Dictionary<HexMath.Edge, PlayerId> Roads { get; } = new();
         public Dictionary<HexMath.Vertex, (BuildingType type, PlayerId owner)> VertexBuildings { get; } = new();
         public HashSet<HexMath.Edge> DisabledRoads { get; } = new();
@@ -16,9 +21,20 @@ namespace CatanRoguelike.Core.Map
         public HexCoord? RobberTile { get; private set; }
         public int DayNumber { get; set; } = 1;
 
+        public static bool IsSeaFishGround(HexTileData tile) => tile.IsFishTile && !tile.IsDesert;
+
+        public int LandTileCount => Tiles.Count;
+
         public HexTileData GetTile(HexCoord coord) => Tiles[coord];
 
         public bool TryGetTile(HexCoord coord, out HexTileData tile) => Tiles.TryGetValue(coord, out tile);
+
+        public bool TryGetHexData(HexCoord coord, out HexTileData tile)
+        {
+            if (Tiles.TryGetValue(coord, out tile))
+                return true;
+            return SeaFishGrounds.TryGetValue(coord, out tile);
+        }
 
         public void PlaceRobber(HexCoord coord)
         {

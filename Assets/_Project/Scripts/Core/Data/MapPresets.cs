@@ -3,6 +3,7 @@ using System.Linq;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Yield;
 
 namespace CatanRoguelike.Core.Data
@@ -323,48 +324,12 @@ namespace CatanRoguelike.Core.Data
             center.NumberToken = null;
         }
 
-        /// <summary>Sea/lake fish hexes just outside the coast (not counted in map size).</summary>
+        /// <summary>Sea fishing grounds outside the coast (stored in <see cref="BoardState.SeaFishGrounds"/>).</summary>
         public static void AppendFishermenFishTiles(BoardState board, int? seed = null)
         {
-            var land = new HashSet<HexCoord>(board.Tiles.Keys);
-            var candidates = new List<HexCoord>();
-            foreach (var coord in land)
-            {
-                for (int d = 0; d < 6; d++)
-                {
-                    var sea = HexMath.GetNeighbor(coord, d);
-                    if (!land.Contains(sea) && !candidates.Contains(sea))
-                        candidates.Add(sea);
-                }
-            }
-
-            candidates.Sort((a, b) =>
-            {
-                int cmp = a.Q.CompareTo(b.Q);
-                return cmp != 0 ? cmp : a.R.CompareTo(b.R);
-            });
-
-            var rng = seed.HasValue ? new System.Random(seed.Value ^ 0xF15E) : new System.Random();
-            int fishCount = System.Math.Min(6, candidates.Count);
-            var values = new[] { 1, 1, 2, 2, 3, 0 };
-
-            for (int i = 0; i < fishCount; i++)
-            {
-                int pick = rng.Next(candidates.Count);
-                var coord = candidates[pick];
-                candidates.RemoveAt(pick);
-
-                var tile = new HexTileData(coord, ResourceType.Wheat, isCoastal: true)
-                {
-                    IsFishTile = true,
-                    FishValue = values[i % values.Length]
-                };
-                board.Tiles[coord] = tile;
-            }
-
+            var ports = PortAccess.DiscoverPorts(board);
+            SeaFishHarborLayout.PlaceSeaFishGrounds(board, ports, seed);
             ApplyDesertFishingLake(board);
-
-            NumberTokenLibrary.AssignMissingTokens(board, seed);
         }
 
         private static void ApplyDesertFishingLake(BoardState board)

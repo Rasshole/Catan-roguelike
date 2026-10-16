@@ -12,7 +12,7 @@ namespace CatanRoguelike.Game
     public static class PortBadgePlacement
     {
         public const float SeaClearanceBeyondDisc = 0.05f;
-        private const float SeaFishGroundClearance = 0.14f;
+        private const float SeaFishGroundClearance = 0.24f;
         private const float HexInradiusPushFactor = 0.12f;
         private const float OutwardStepInradiusFactor = 0.06f;
         private const int MaxOutwardIterations = 32;
@@ -24,6 +24,23 @@ namespace CatanRoguelike.Game
             float hexScale,
             float discRadius,
             out Vector2 badgeCenter,
+            out Vector2 seaOutward) =>
+            TryComputeBadgeCenter(
+                board,
+                portVertex,
+                hexScale,
+                discRadius,
+                useColonistShortPier: false,
+                out badgeCenter,
+                out seaOutward);
+
+        public static bool TryComputeBadgeCenter(
+            BoardState board,
+            Vertex portVertex,
+            float hexScale,
+            float discRadius,
+            bool useColonistShortPier,
+            out Vector2 badgeCenter,
             out Vector2 seaOutward)
         {
             badgeCenter = default;
@@ -34,6 +51,14 @@ namespace CatanRoguelike.Game
             portVertex = VertexGraph.Canonicalize(portVertex);
             var (vx, vz) = HexMath.VertexToWorldPosition(portVertex, hexScale);
             Vector2 vertexPos = new Vector2(vx, vz);
+
+            if (useColonistShortPier
+                && SeaFishHarborLayout.TryComputeShortPierBadgeCenter(
+                    board, portVertex, hexScale, discRadius, out badgeCenter))
+            {
+                seaOutward = ComputeSeawardDirection(board, portVertex, hexScale, vertexPos);
+                return true;
+            }
 
             if (!TouchesLand(board, portVertex))
                 return false;
@@ -50,7 +75,7 @@ namespace CatanRoguelike.Game
             float step = hexInradius * OutwardStepInradiusFactor;
             for (int i = 0; i < MaxOutwardIterations; i++)
             {
-                if (!DiscIntersectsBlockedHex(badgeCenter, discRadius, board, hexScale))
+                if (!DiscIntersectsBlockedHex(badgeCenter, discRadius, board, hexScale, blockSeaFishGrounds: true))
                 {
                     seaOutward = seaDir;
                     return true;
@@ -60,7 +85,7 @@ namespace CatanRoguelike.Game
             }
 
             seaOutward = seaDir;
-            return !DiscIntersectsBlockedHex(badgeCenter, discRadius, board, hexScale);
+            return !DiscIntersectsBlockedHex(badgeCenter, discRadius, board, hexScale, blockSeaFishGrounds: true);
         }
 
         public static float ComputeMaxBadgeOuterDistanceFromCenter(
@@ -92,22 +117,38 @@ namespace CatanRoguelike.Game
             float discRadius,
             BoardState board,
             float hexScale) =>
-            DiscIntersectsBlockedHex(discCenter, discRadius, board, hexScale);
+            DiscIntersectsBlockedHex(discCenter, discRadius, board, hexScale, blockSeaFishGrounds: false);
 
         public static bool DiscIntersectsBlockedHex(
             Vector2 discCenter,
             float discRadius,
             BoardState board,
-            float hexScale)
+            float hexScale) =>
+            DiscIntersectsBlockedHex(discCenter, discRadius, board, hexScale, blockSeaFishGrounds: true);
+
+        public static bool DiscIntersectsBlockedHex(
+            Vector2 discCenter,
+            float discRadius,
+            BoardState board,
+            float hexScale,
+            bool blockSeaFishGrounds)
         {
             if (board == null)
                 return false;
 
             foreach (var kvp in board.Tiles)
             {
-                bool isSeaFish = kvp.Value.IsFishTile && !kvp.Value.IsDesert;
-                float radius = isSeaFish ? discRadius + SeaFishGroundClearance : discRadius;
-                if (DiscIntersectsHexPolygon(discCenter, radius, kvp.Key, hexScale))
+                if (DiscIntersectsHexPolygon(discCenter, discRadius, kvp.Key, hexScale))
+                    return true;
+            }
+
+            if (!blockSeaFishGrounds)
+                return false;
+
+            foreach (var kvp in board.SeaFishGrounds)
+            {
+                float radius = discRadius + SeaFishGroundClearance;
+                if (SeaFishHarborLayout.DiscIntersectsHexPolygon(discCenter, radius, kvp.Key, hexScale))
                     return true;
             }
 

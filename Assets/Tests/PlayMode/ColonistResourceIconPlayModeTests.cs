@@ -1,5 +1,6 @@
 using System.Collections;
 using System.IO;
+using CatanRoguelike.Core.Map;
 using CatanRoguelike.Game;
 using NUnit.Framework;
 using UnityEngine;
@@ -44,7 +45,7 @@ namespace CatanRoguelike.Tests.PlayMode
             bool loggedDiagnostics = false;
             foreach (var tile in tiles)
             {
-                if (tile.Data.IsDesert)
+                if (tile.Data.IsDesert || BoardState.IsSeaFishGround(tile.Data))
                     continue;
 
                 var iconTransform = tile.transform.Find("ResourceIcon");
@@ -130,7 +131,7 @@ namespace CatanRoguelike.Tests.PlayMode
             int checkedIcons = 0;
             foreach (var tile in Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
             {
-                if (tile.Data.IsDesert)
+                if (tile.Data.IsDesert || BoardState.IsSeaFishGround(tile.Data))
                     continue;
 
                 var icon = tile.transform.Find("ResourceIcon");

@@ -87,6 +87,7 @@ namespace CatanRoguelike.Game
                     vertex,
                     hexScale,
                     BadgeDiscWorldRadius,
+                    ColonistPresentation.IsActive,
                     out Vector2 badgeCenter,
                     out Vector2 seaOut))
             {

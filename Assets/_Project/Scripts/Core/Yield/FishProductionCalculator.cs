@@ -24,7 +24,7 @@ namespace CatanRoguelike.Core.Yield
 
                 foreach (var hex in VertexGraph.GetHexesForVertex(kvp.Key))
                 {
-                    if (!board.TryGetTile(hex, out var tile))
+                    if (!board.TryGetHexData(hex, out var tile))
                         continue;
                     if (!tile.IsFishTile || !tile.NumberToken.HasValue || tile.FishValue <= 0)
                         continue;

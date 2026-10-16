@@ -22,9 +22,8 @@ namespace CatanRoguelike.Tests.EditMode
         public void CreateBoard_WithFishermen_AddsFishHexesWithTokens()
         {
             var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
-            int fish = board.Tiles.Values.Count(t => t.IsFishTile);
-            Assert.Greater(fish, 0);
-            Assert.IsTrue(board.Tiles.Values.Any(t => t.IsFishTile && t.NumberToken.HasValue));
+            Assert.Greater(board.SeaFishGrounds.Count, 0);
+            Assert.IsTrue(board.SeaFishGrounds.Values.Any(t => t.NumberToken.HasValue));
         }
 
         [Test]

@@ -417,6 +417,9 @@ namespace CatanRoguelike.Game
 
         private static bool MatchesOceanColor(Color c)
         {
+            if (MatchesDesertLakeAccent(c))
+                return false;
+
             if (ColorDistance(c, OceanReference) < 0.22f)
                 return true;
 
@@ -425,6 +428,12 @@ namespace CatanRoguelike.Game
                 && c.b >= c.r
                 && c.g >= 0.26f;
         }
+
+        private static bool MatchesDesertLakeAccent(Color c) =>
+            c.r >= 0.28f && c.r <= 0.48f
+            && c.g >= 0.48f && c.g <= 0.68f
+            && c.b >= 0.52f && c.b <= 0.72f
+            && c.g > c.r + 0.08f;
 
         private static bool MatchesSkyColor(Color c) =>
             ColorDistance(c, CameraSkyReference) < 0.10f;
@@ -453,8 +462,8 @@ namespace CatanRoguelike.Game
             || MatchesPalette(c, BoardResourcePalette.Wood, 0.18f)
             || MatchesPalette(c, BoardResourcePalette.Brick, 0.18f)
             || MatchesPalette(c, BoardResourcePalette.Wheat, 0.18f)
-            || MatchesPalette(c, BoardResourcePalette.Sheep, 0.22f)
-            || MatchesPalette(c, BoardResourcePalette.Stone, 0.22f)
+            || MatchesPalette(c, BoardResourcePalette.Sheep, 0.18f)
+            || MatchesPalette(c, BoardResourcePalette.Stone, 0.18f)
             || MatchesLitResourceHex(c);
 
         private static bool MatchesLitResourceHex(Color c) =>

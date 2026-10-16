@@ -62,15 +62,15 @@ namespace CatanRoguelike.Game
             Color.RGBToHSV(c, out float h, out float s, out float v);
             float satBoost = slot switch
             {
-                BoardTerrainSlot.Sheep => 1.22f,
-                BoardTerrainSlot.Ore => 1.18f,
+                BoardTerrainSlot.Sheep => 1.20f,
+                BoardTerrainSlot.Ore => 1.28f,
                 BoardTerrainSlot.Wood => 1.08f,
                 BoardTerrainSlot.Brick => 1.06f,
                 BoardTerrainSlot.Wheat => 1.04f,
                 _ => 1f
             };
             s = Mathf.Clamp01(s * satBoost);
-            v = Mathf.Clamp(v, slot == BoardTerrainSlot.Ore ? 0.48f : 0.52f, 0.92f);
+            v = Mathf.Clamp(v, slot == BoardTerrainSlot.Ore ? 0.56f : 0.52f, slot == BoardTerrainSlot.Ore ? 0.78f : 0.92f);
             return Color.HSVToRGB(h, s, v);
         }
 

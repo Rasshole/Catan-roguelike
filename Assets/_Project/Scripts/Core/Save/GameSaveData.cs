@@ -77,6 +77,7 @@ namespace CatanRoguelike.Core.Save
     public sealed class BoardSaveData
     {
         public List<HexTileSaveData> Tiles { get; set; } = new();
+        public List<HexTileSaveData> SeaFishGrounds { get; set; } = new();
         public List<RoadSaveData> Roads { get; set; } = new();
         public List<VertexBuildingSaveData> VertexBuildings { get; set; } = new();
         public List<EdgeSaveData> DisabledRoads { get; set; } = new();
