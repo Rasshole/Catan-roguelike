@@ -24,10 +24,14 @@ namespace CatanRoguelike.Game
         private const float PostWidth = 0.07f;
         private const float FlagHeight = 0.1f;
         private const float FlagWidth = 0.06f;
-        private const float BadgeDiscRadius = 0.22f;
-        private const float BadgeDiscHeight = 0.012f;
+        public const float BadgeDiscSizeScale = 1.4f;
+        private const float BadgeDiscRadius = 0.22f * BadgeDiscSizeScale;
+        private const float BadgeDiscHeight = 0.012f * BadgeDiscSizeScale;
+        private const float CoastOffsetHexScale = 0.50f;
+        /// <summary>Extra seaward push so enlarged badge discs stay off hex tiles.</summary>
+        private const float CoastOffsetPerDiscDiameter = 0.32f;
         public const float BadgeLabelWidthFractionGeneric = 0.65f;
-        public const float BadgeLabelWidthFractionSpecific = 0.36f;
+        public const float BadgeLabelWidthFractionSpecific = 0.45f;
         /// <summary>World quad edge length; reads ~40% of disc diameter on screen under the colonist camera.</summary>
         public const float BadgeRateIconDiameterFraction = 0.42f;
         private const float BadgeStackGapFraction = 0.05f;
@@ -85,7 +89,8 @@ namespace CatanRoguelike.Game
             root.transform.position = new Vector3(vertexX, hexTopY + BaseGapAboveHex, vertexZ);
             root.transform.rotation = Quaternion.LookRotation(outward, Vector3.up);
 
-            float coastOffset = hexScale * 0.50f;
+            float discDiameter = BadgeDiscRadius * 2f;
+            float coastOffset = hexScale * CoastOffsetHexScale + discDiameter * CoastOffsetPerDiscDiameter;
             float badgeLocalZ = PierLength + PostWidth * 0.35f + coastOffset;
             float pierLen = Mathf.Max(PierLength, badgeLocalZ * 0.9f);
 
@@ -178,7 +183,7 @@ namespace CatanRoguelike.Game
                     iconLocal,
                     iconWorldSize,
                     iconWorldSize,
-                    ColonistResourceIconTextures.GetForHud(specificResource.Value),
+                    ColonistResourceIconTextures.GetForPortBadge(specificResource.Value),
                     3220,
                     placeAbove: null,
                     alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);

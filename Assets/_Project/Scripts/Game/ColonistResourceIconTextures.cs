@@ -11,22 +11,46 @@ namespace CatanRoguelike.Game
         private const int Size = 64;
         private static readonly Dictionary<ResourceType, Texture2D> BoardCache = new();
         private static readonly Dictionary<ResourceType, Texture2D> HudCache = new();
+        private static readonly Dictionary<ResourceType, Texture2D> PortBadgeCache = new();
+
+        private static readonly Color32 PortBadgeWoodInk = new(118, 74, 34, 255);
 
         public static Texture2D Get(ResourceType resource) => GetTexture(BoardCache, resource, forHud: false);
 
         public static Texture2D GetForHud(ResourceType resource) => GetTexture(HudCache, resource, forHud: true);
 
+        public static Texture2D GetForPortBadge(ResourceType resource) =>
+            GetTexture(PortBadgeCache, resource, forHud: true, inkOverride: GetPortBadgeInk(resource));
+
+        private static Color32 GetPortBadgeInk(ResourceType resource) =>
+            resource == ResourceType.Wood
+                ? PortBadgeWoodInk
+                : ToInk(BoardResourceColors.GetHudSwatch(resource));
+
+        private static Color32 ToInk(Color tint) =>
+            new(
+                (byte)(tint.r * 255f),
+                (byte)(tint.g * 255f),
+                (byte)(tint.b * 255f),
+                255);
+
         private static Texture2D GetTexture(
             Dictionary<ResourceType, Texture2D> cache,
             ResourceType resource,
-            bool forHud)
+            bool forHud,
+            Color32? inkOverride = null)
         {
             if (cache.TryGetValue(resource, out var cached) && cached != null)
                 return cached;
 
+            bool isPortBadge = inkOverride.HasValue && ReferenceEquals(cache, PortBadgeCache);
             var tex = new Texture2D(Size, Size, TextureFormat.RGBA32, false)
             {
-                name = forHud ? $"ColonistHudIcon_{resource}" : $"ColonistIcon_{resource}",
+                name = isPortBadge
+                    ? $"ColonistPortBadgeIcon_{resource}"
+                    : forHud
+                        ? $"ColonistHudIcon_{resource}"
+                        : $"ColonistIcon_{resource}",
                 filterMode = FilterMode.Bilinear,
                 wrapMode = TextureWrapMode.Clamp
             };
@@ -35,12 +59,7 @@ namespace CatanRoguelike.Game
             for (int i = 0; i < pixels.Length; i++)
                 pixels[i] = new Color32(0, 0, 0, 0);
 
-            var tint = BoardResourceColors.GetHudSwatch(resource);
-            var ink = new Color32(
-                (byte)(tint.r * 255f),
-                (byte)(tint.g * 255f),
-                (byte)(tint.b * 255f),
-                255);
+            var ink = inkOverride ?? ToInk(BoardResourceColors.GetHudSwatch(resource));
 
             switch (resource)
             {
