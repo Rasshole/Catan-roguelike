@@ -51,6 +51,8 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsTrue(ColonistPresentation.IsActive, "Game scene should use colonist presentation by default.");
 
             GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
+            GameScenePlayHarness.AdvanceToDayPlayerActions(gameManager.Controller);
+            gameManager.EnsureRunHudReady();
 
             var camera = Camera.main;
             var tableCamera = UnityEngine.Object.FindFirstObjectByType<TableCamera>();
@@ -74,12 +76,26 @@ namespace CatanRoguelike.Tests.PlayMode
             for (int i = 0; i < 8; i++)
                 yield return null;
 
-            GameSceneCapture.CaptureMainCameraToPng(outputPath);
+            var hud = gameManager.GetComponent<RunHudController>();
+            Assert.IsNotNull(hud, "RunHudController should exist on Game scene.");
+            hud.Refresh(gameManager.Controller.State);
+            UnityEngine.UI.Canvas.ForceUpdateCanvases();
+            Assert.IsTrue(hud.IsHudCaptureReady(), "HUD must be built before composited Game capture.");
+
+            GameSceneCapture.CaptureMainCameraToPng(outputPath, hud);
 
             Assert.True(File.Exists(outputPath), $"PNG should exist at {outputPath}");
             var bytes = File.ReadAllBytes(outputPath);
             Assert.Greater(bytes.Length, 0, "PNG should be non-empty.");
             Assert.AreEqual(0x89, bytes[0], "Output should be a PNG file.");
+
+            var boardOnlyPath = outputPath + ".board.png";
+            if (File.Exists(boardOnlyPath))
+            {
+                var boardBytes = File.ReadAllBytes(boardOnlyPath);
+                Assert.AreNotEqual(boardBytes.Length, bytes.Length,
+                    "HUD composite PNG should differ in size from board-only debug capture.");
+            }
         }
 
         private static readonly HashSet<GamePhase> SetupPhases = new()

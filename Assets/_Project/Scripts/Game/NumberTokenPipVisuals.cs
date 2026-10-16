@@ -9,7 +9,7 @@ namespace CatanRoguelike.Game
         public const float LabelLocalRowY = -1.75f;
         public const float LabelLocalRowZ = 0.1f;
         public const float LabelOffsetScale = 2.35f;
-        public const float PipLocalScale = 0.2f;
+        public const float PipLocalScale = 0.32f;
 
         public static int GetExpectedPipCount(int token) => NumberTokenPipLayout.GetPipCount(token);
 
@@ -19,7 +19,10 @@ namespace CatanRoguelike.Game
             pip.localScale = Vector3.one * PipLocalScale;
             var renderer = pip.GetComponent<Renderer>();
             if (renderer != null)
-                renderer.sharedMaterial = BuiltInMaterials.Create(pipColor);
+            {
+                renderer.sharedMaterial = BuiltInMaterials.CreateOpaque(pipColor);
+                renderer.sharedMaterial.renderQueue = 3310;
+            }
         }
     }
 }

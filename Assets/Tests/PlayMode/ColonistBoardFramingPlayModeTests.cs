@@ -1,5 +1,6 @@
 using System.Collections;
 using System.IO;
+using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Game;
 using NUnit.Framework;
 using UnityEngine;
@@ -33,6 +34,17 @@ namespace CatanRoguelike.Tests.PlayMode
             for (int i = 0; i < 8; i++)
                 yield return null;
 
+            var gameManager = Object.FindFirstObjectByType<GameManager>();
+            if (gameManager != null && gameManager.Controller != null)
+            {
+                if (gameManager.Controller.State.Phase == GamePhase.RunSelectMap)
+                    GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
+                GameScenePlayHarness.AdvanceToDayPlayerActions(gameManager.Controller);
+                gameManager.EnsureRunHudReady();
+                for (int i = 0; i < 4; i++)
+                    yield return null;
+            }
+
             var boardView = Object.FindFirstObjectByType<BoardView>();
             var tableCamera = Object.FindFirstObjectByType<TableCamera>();
             var camera = Camera.main;
@@ -52,9 +64,11 @@ namespace CatanRoguelike.Tests.PlayMode
             for (int i = 0; i < worldPoints.Length; i++)
                 screenPoints[i] = ColonistBoardFraming.WorldToScreenPixelsFromBottom(camera, worldPoints[i]);
 
-            Assert.IsTrue(
-                ColonistBoardFraming.ArePointsInsidePlayArea(screenPoints, width, height),
-                "Board+sand extent should fit inside colonist play area with margin.");
+            bool inside = ColonistBoardFraming.ArePointsInsidePlayArea(screenPoints, width, height);
+            if (!inside)
+                ColonistBoardFraming.LogPlayAreaFitDiagnostics(screenPoints, width, height);
+
+            Assert.IsTrue(inside, "Board+sand extent should fit inside colonist play area with margin.");
         }
     }
 }

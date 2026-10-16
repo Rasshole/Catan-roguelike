@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text;
 using CatanRoguelike.Core.UI;
+using CatanRoguelike.Core.Yield;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -48,7 +49,7 @@ namespace CatanRoguelike.Game
             BoardView boardView,
             int screenWidth,
             int screenHeight) =>
-            ColonistBoardFraming.GetPlayAreaCenterTexturePixels(screenWidth, screenHeight);
+            ColonistBoardFraming.GetHexColorSampleTexturePixels(screenWidth, screenHeight);
 
         public static void AssertCenterRegionShowsHexTiles(
             Texture2D boardCapture,
@@ -60,8 +61,9 @@ namespace CatanRoguelike.Game
         {
             int w = boardCapture.width;
             int h = boardCapture.height;
-            int rx = Mathf.Max(8, (int)(w * 0.18f));
-            int ry = Mathf.Max(8, (int)(h * 0.18f));
+            const int sampleRadius = 20;
+            int rx = sampleRadius;
+            int ry = sampleRadius;
 
             int hexLike = 0;
             int oceanLike = 0;
@@ -196,7 +198,9 @@ namespace CatanRoguelike.Game
             ref int skyLike,
             ref int other)
         {
-            if (IsOceanLike(pixel))
+            if (IsTokenChipLike(pixel))
+                hexLike++;
+            else if (IsOceanLike(pixel))
                 oceanLike++;
             else if (IsSkyLike(pixel))
                 skyLike++;
@@ -252,9 +256,25 @@ namespace CatanRoguelike.Game
         private static bool IsSandCoastLike(Color c) =>
             ColorDistance(c, SandReference) < 0.12f && !MatchesPalette(c, BoardResourcePalette.Desert, 0.10f);
 
+        private static bool IsTokenChipLike(Color c)
+        {
+            if (c.a < 0.5f)
+                return false;
+
+            return MatchesTokenRgb(c, NumberTokenVisualStyle.ChipFaceStandard, 0.14f)
+                || MatchesTokenRgb(c, NumberTokenVisualStyle.ChipFaceRedAccent, 0.14f)
+                || MatchesTokenRgb(c, NumberTokenVisualStyle.ChipRimStandard, 0.16f)
+                || MatchesTokenRgb(c, NumberTokenVisualStyle.ChipRimRedAccent, 0.16f);
+        }
+
+        private static bool MatchesTokenRgb(Color c, NumberTokenVisualStyle.Rgb rgb, float tolerance) =>
+            Mathf.Abs(c.r - rgb.R) <= tolerance
+            && Mathf.Abs(c.g - rgb.G) <= tolerance
+            && Mathf.Abs(c.b - rgb.B) <= tolerance;
+
         private static bool IsHexTileLike(Color c)
         {
-            if (IsOceanLike(c) || IsSkyLike(c))
+            if (IsOceanLike(c) || IsSkyLike(c) || IsTokenChipLike(c))
                 return false;
 
             return MatchesPalette(c, BoardResourcePalette.Desert, 0.16f)

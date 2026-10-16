@@ -23,6 +23,24 @@ namespace CatanRoguelike.Game
 
         public int PipChildCount => _pipRoot != null ? _pipRoot.transform.childCount : 0;
 
+        public float ChipTopWorldY
+        {
+            get
+            {
+                var lossy = transform.lossyScale;
+                return transform.position.y + lossy.y * (ChipElevationY + WorldChipThickness);
+            }
+        }
+
+        public float LabelWorldY => _tokenLabel != null ? _tokenLabel.transform.position.y : transform.position.y;
+
+        public bool HasOpaqueTokenChip =>
+            _chipFaceRenderer != null
+            && _chipFaceRenderer.sharedMaterial != null
+            && _chipFaceRenderer.sharedMaterial.color.a >= 0.98f;
+
+        public string TokenLabelText => _tokenLabel != null ? _tokenLabel.text : string.Empty;
+
         private static readonly Color FamineTint = new(0.55f, 0.35f, 0.15f);
         private static readonly Color GoldRushTint = new(0.95f, 0.75f, 0.1f);
         private static readonly Color GoodHarvestTint = new(0.3f, 0.75f, 0.3f);
@@ -34,9 +52,9 @@ namespace CatanRoguelike.Game
         private const float WorldFaceDiameter = 0.52f;
         private const float WorldChipThickness = 0.04f;
 
-        // Hex prism mesh top is parent-local y=1; place chip/label above that surface.
-        private const float ChipElevationY = 1.08f;
-        private const float LabelElevationY = 1.18f;
+        // Hex prism mesh top is parent-local y=1; flat chips + label sit above that surface (top-down view).
+        private const float ChipElevationY = 1.06f;
+        private const float LabelElevationY = 1.24f;
 
         // Robber/storm sit above chip+label; compensate scale like EnsureTokenChip.
         private const float MarkerElevationY = 1.28f;
@@ -147,27 +165,30 @@ namespace CatanRoguelike.Game
             float localRimDiameter = WorldRimDiameter / hexScale.x;
             float localFaceDiameter = WorldFaceDiameter / hexScale.x;
             // Unity cylinder primitive spans 2 units in Y (-1..+1).
-            float localRimHeight = WorldChipThickness / (2f * hexScale.y);
-            float localFaceHeight = WorldChipThickness * 0.85f / (2f * hexScale.y);
+            float localRimHeight = WorldChipThickness / (ThinDiskMesh.MeshHeight * hexScale.y);
+            float localFaceHeight = WorldChipThickness * 0.85f / (ThinDiskMesh.MeshHeight * hexScale.y);
 
-            _chipRimRenderer = CreateCylinderChipDisc("Rim", localRimDiameter, localRimHeight, 0f);
-            _chipFaceRenderer = CreateCylinderChipDisc(
+            _chipRimRenderer = CreateFlatChipDisc("Rim", localRimDiameter, localRimHeight, 0f);
+            _chipFaceRenderer = CreateFlatChipDisc(
                 "Face",
                 localFaceDiameter,
                 localFaceHeight,
-                localRimHeight + localFaceHeight * 0.5f);
+                localRimHeight * ThinDiskMesh.MeshHeight + localFaceHeight * 0.5f);
         }
 
-        private Renderer CreateCylinderChipDisc(string name, float diameter, float height, float localYOffset)
+        private Renderer CreateFlatChipDisc(string name, float diameter, float height, float localYOffset)
         {
-            var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            disc.name = name;
+            var disc = new GameObject(name);
             disc.transform.SetParent(_tokenChip.transform, false);
             disc.transform.localPosition = new Vector3(0f, localYOffset, 0f);
             disc.transform.localScale = new Vector3(diameter, height, diameter);
-            Destroy(disc.GetComponent<Collider>());
-            var renderer = disc.GetComponent<Renderer>();
-            renderer.material = BuiltInMaterials.Create(Color.white);
+
+            var meshFilter = disc.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = ThinDiskMesh.Shared;
+            var renderer = disc.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = BuiltInMaterials.CreateOpaque(Color.white);
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.sharedMaterial.renderQueue = 3100;
             return renderer;
         }
 
@@ -175,8 +196,12 @@ namespace CatanRoguelike.Game
         {
             var faceRgb = NumberTokenVisualStyle.GetChipFace(token);
             var rimRgb = NumberTokenVisualStyle.GetChipRim(token);
-            _chipFaceRenderer.sharedMaterial.color = new Color(faceRgb.R, faceRgb.G, faceRgb.B);
-            _chipRimRenderer.sharedMaterial.color = new Color(rimRgb.R, rimRgb.G, rimRgb.B);
+            _chipFaceRenderer.sharedMaterial = BuiltInMaterials.CreateOpaque(
+                new Color(faceRgb.R, faceRgb.G, faceRgb.B, 1f));
+            _chipFaceRenderer.sharedMaterial.renderQueue = 3110;
+            _chipRimRenderer.sharedMaterial = BuiltInMaterials.CreateOpaque(
+                new Color(rimRgb.R, rimRgb.G, rimRgb.B, 1f));
+            _chipRimRenderer.sharedMaterial.renderQueue = 3100;
         }
 
         private void EnsureTokenLabel()
@@ -193,14 +218,24 @@ namespace CatanRoguelike.Game
             var facing = labelGo.AddComponent<FlatTokenLabelFacing>();
 
             var camera = Camera.main;
+            labelGo.transform.rotation = camera != null
+                ? NumberTokenLabelOrientation.ComputeColonistTopDownRotation(camera)
+                : Quaternion.Euler(
+                    NumberTokenLabelOrientation.FlatPitchDegrees,
+                    ColonistBoardViewConstants.CameraYawDegrees,
+                    0f);
             if (camera != null)
                 facing.ApplyFacing(camera);
-            else
-                labelGo.transform.rotation = Quaternion.Euler(NumberTokenLabelOrientation.FlatPitchDegrees, 180f, 0f);
+
             _tokenLabel.anchor = TextAnchor.MiddleCenter;
             _tokenLabel.alignment = TextAlignment.Center;
             _tokenLabel.fontSize = 48;
             _tokenLabel.characterSize = 0.5f;
+            _tokenLabel.color = Color.black;
+
+            var labelRenderer = labelGo.GetComponent<MeshRenderer>();
+            if (labelRenderer != null)
+                labelRenderer.sharedMaterial.renderQueue = 3300;
         }
 
         public IEnumerator PulseProduction(float duration)

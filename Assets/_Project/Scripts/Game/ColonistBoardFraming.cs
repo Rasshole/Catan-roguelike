@@ -7,6 +7,9 @@ namespace CatanRoguelike.Game
     {
         public const float PlayAreaMarginPixels = 24f;
 
+        /// <summary>Multiply ortho size (&lt;1 fills more of the play area).</summary>
+        public const float TargetBoardFillScale = 0.9f;
+
         public static float ComputeOrthographicSize(
             float boardExtentRadiusWorld,
             int screenWidth,
@@ -20,7 +23,31 @@ namespace CatanRoguelike.Game
 
             float fromHeight = diameter * screenHeight / (2f * usableHeight);
             float fromWidth = diameter * screenWidth / (2f * usableWidth * Mathf.Max(0.01f, cameraAspect));
-            return Mathf.Max(fromHeight, fromWidth);
+            return Mathf.Max(fromHeight, fromWidth) * TargetBoardFillScale;
+        }
+
+        public static void LogPlayAreaFitDiagnostics(
+            Vector2[] screenPixelsFromBottom,
+            int screenWidth,
+            int screenHeight)
+        {
+            var play = ColonistPlayAreaLayout.Compute(screenWidth, screenHeight);
+            float minX = play.Left + PlayAreaMarginPixels;
+            float maxX = play.Left + play.PlayWidth - PlayAreaMarginPixels;
+            float minY = play.Bottom + PlayAreaMarginPixels;
+            float maxY = play.Bottom + play.PlayHeight - PlayAreaMarginPixels;
+
+            for (int i = 0; i < screenPixelsFromBottom.Length; i++)
+            {
+                var p = screenPixelsFromBottom[i];
+                Debug.LogWarning(
+                    $"ColonistBoardFraming extent[{i}] screen=({p.x:F1},{p.y:F1}) " +
+                    $"inside=({p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY})");
+            }
+
+            Debug.LogWarning(
+                $"ColonistBoardFraming playRect margin=({minX:F1},{minY:F1})-({maxX:F1},{maxY:F1}) " +
+                $"play=({play.Left:F1},{play.Bottom:F1}) {play.PlayWidth:F0}x{play.PlayHeight:F0}");
         }
 
         public static ColonistPlayAreaLayout.Rect GetPlayArea(int screenWidth, int screenHeight) =>
@@ -28,6 +55,13 @@ namespace CatanRoguelike.Game
 
         public static Vector2Int GetPlayAreaCenterTexturePixels(int screenWidth, int screenHeight) =>
             ColonistPlayAreaLayout.GetCenterTexturePixels(screenWidth, screenHeight);
+
+        /// <summary>Offset from play-area centre toward a hex corner (avoids centre token).</summary>
+        public static Vector2Int GetHexColorSampleTexturePixels(int screenWidth, int screenHeight)
+        {
+            var center = GetPlayAreaCenterTexturePixels(screenWidth, screenHeight);
+            return new Vector2Int(center.x + 72, center.y + 56);
+        }
 
         /// <summary>Sample points on the board extent circle (world XZ).</summary>
         public static void GetExtentSamplePoints(Vector3 boardCenter, float extentRadius, Vector3[] buffer)

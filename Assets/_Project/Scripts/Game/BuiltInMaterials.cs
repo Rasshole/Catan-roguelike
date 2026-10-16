@@ -30,6 +30,21 @@ namespace CatanRoguelike.Game
             return mat;
         }
 
+        /// <summary>Opaque Standard surface (token chips, board props).</summary>
+        public static Material CreateOpaque(Color color)
+        {
+            var mat = Create(color);
+            mat.SetFloat("_Mode", 0f);
+            mat.SetInt("_SrcBlend", (int)BlendMode.One);
+            mat.SetInt("_DstBlend", (int)BlendMode.Zero);
+            mat.SetInt("_ZWrite", 1);
+            mat.DisableKeyword("_ALPHATEST_ON");
+            mat.DisableKeyword("_ALPHABLEND_ON");
+            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            mat.renderQueue = (int)RenderQueue.Geometry;
+            return mat;
+        }
+
         public static Material CreateUnlit(Color color)
         {
             var shader = Shader.Find("Unlit/Color");
