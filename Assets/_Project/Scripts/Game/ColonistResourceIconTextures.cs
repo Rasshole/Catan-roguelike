@@ -56,10 +56,31 @@ namespace CatanRoguelike.Game
                     break;
             }
 
+            if (resource == ResourceType.Wood || resource == ResourceType.Wheat)
+                RotatePixels90Clockwise(pixels);
+
             tex.SetPixels32(pixels);
             tex.Apply(false, false);
             Cache[resource] = tex;
             return tex;
+        }
+
+        private static void RotatePixels90Clockwise(Color32[] pixels)
+        {
+            var rotated = new Color32[Size * Size];
+            for (int y = 0; y < Size; y++)
+            {
+                for (int x = 0; x < Size; x++)
+                {
+                    int src = y * Size + x;
+                    int dstX = Size - 1 - y;
+                    int dstY = x;
+                    rotated[dstY * Size + dstX] = pixels[src];
+                }
+            }
+
+            for (int i = 0; i < pixels.Length; i++)
+                pixels[i] = rotated[i];
         }
 
         private static void DrawTree(Color32[] px, Color32 c)

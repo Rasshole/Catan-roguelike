@@ -48,7 +48,7 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(new NumberTokenVisualStyle.Rgb(0.94f, 0.84f, 0.72f), NumberTokenVisualStyle.ChipFaceRedAccent);
             Assert.AreEqual(new NumberTokenVisualStyle.Rgb(0.36f, 0.26f, 0.14f), NumberTokenVisualStyle.ChipRimStandard);
             Assert.AreEqual(new NumberTokenVisualStyle.Rgb(0.58f, 0.12f, 0.08f), NumberTokenVisualStyle.ChipRimRedAccent);
-            Assert.That(NumberTokenVisualStyle.ChipRimStandard.ToString(), Does.Contain("0.480"));
+            Assert.That(NumberTokenVisualStyle.ChipRimStandard.ToString(), Does.Contain("0.360"));
             Assert.AreEqual(new NumberTokenVisualStyle.Rgb(0.08f, 0.08f, 0.08f), NumberTokenVisualStyle.LabelStandard);
             Assert.AreEqual(new NumberTokenVisualStyle.Rgb(0.82f, 0.12f, 0.10f), NumberTokenVisualStyle.LabelRed);
         }

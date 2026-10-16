@@ -83,7 +83,7 @@ namespace CatanRoguelike.Tests.PlayMode
                 float iconRadius = Mathf.Max(renderer.bounds.extents.x, renderer.bounds.extents.z);
                 Assert.Greater(
                     iconOffsetXz.magnitude,
-                    tile.TokenRimWorldRadius + iconRadius * 0.35f,
+                    tile.TokenRimOuterWorldRadius + iconRadius * 0.35f,
                     $"ResourceIcon should not overlap token disc on {tile.Data.Coord}.");
 
                 Assert.IsTrue(

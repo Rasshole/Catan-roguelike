@@ -399,15 +399,18 @@ namespace CatanRoguelike.Game
             Assert.IsNotNull(camera);
             Assert.IsNotNull(tableCamera);
             Assert.IsNotNull(tokenTile);
+            Assert.IsTrue(tokenTile.Data.NumberToken.HasValue, "Token tile needs a number for rim palette.");
 
             int w = boardCapture.width;
             int h = boardCapture.height;
+            int token = tokenTile.Data.NumberToken.Value;
             Vector3 chipCenter = tokenTile.transform.position;
-            chipCenter.y = tokenTile.ChipTopWorldY - 0.01f;
-            var facePx = ColonistCaptureProjection.WorldToTexturePixel(chipCenter, camera, tableCamera, w, h);
+            chipCenter.y = tokenTile.ChipTopWorldY - 0.005f;
 
-            float rimOffsetWorld = tokenTile.TokenRimWorldRadius * 0.88f;
-            var rimWorld = chipCenter + new Vector3(rimOffsetWorld, 0f, 0f);
+            float faceR = tokenTile.TokenFaceWorldRadius;
+            var faceWorld = chipCenter + new Vector3(faceR * 0.5f, 0f, 0f);
+            var rimWorld = chipCenter + new Vector3(faceR * 1.09f, 0f, 0f);
+            var facePx = ColonistCaptureProjection.WorldToTexturePixel(faceWorld, camera, tableCamera, w, h);
             var rimPx = ColonistCaptureProjection.WorldToTexturePixel(rimWorld, camera, tableCamera, w, h);
 
             Color face = boardCapture.GetPixel(facePx.x, facePx.y);
@@ -415,13 +418,28 @@ namespace CatanRoguelike.Game
             float delta = ColorDistance(face, rim);
             Assert.IsTrue(
                 delta > 0.06f,
-                $"Token rim pixel should differ from face (delta={delta:F3} face={face} rim={rim}).");
+                $"Token rim pixel should differ from face (delta={delta:F3} face={face} rim={rim} " +
+                $"faceWorld={faceWorld} rimWorld={rimWorld} faceTex=({facePx.x},{facePx.y}) rimTex=({rimPx.x},{rimPx.y})).");
             Assert.IsTrue(
-                MatchesTokenChipColor(face),
-                "Face sample should match token chip palette.");
+                MatchesTokenFaceColor(face, token),
+                $"Face sample should match token face palette (rgb=({face.r:F3},{face.g:F3},{face.b:F3}) token={token} " +
+                $"world={faceWorld} tex=({facePx.x},{facePx.y})).");
             Assert.IsTrue(
-                MatchesTokenChipColor(rim),
-                "Rim sample should match token chip palette.");
+                MatchesTokenRimColor(rim, token),
+                $"Rim sample should match token rim palette (rgb=({rim.r:F3},{rim.g:F3},{rim.b:F3}) token={token} " +
+                $"world={rimWorld} tex=({rimPx.x},{rimPx.y})).");
+        }
+
+        private static bool MatchesTokenFaceColor(Color c, int token)
+        {
+            var rgb = NumberTokenVisualStyle.GetChipFace(token);
+            return MatchesTokenRgb(c, rgb, 0.16f);
+        }
+
+        private static bool MatchesTokenRimColor(Color c, int token)
+        {
+            var rgb = NumberTokenVisualStyle.GetChipRim(token);
+            return MatchesTokenRgb(c, rgb, 0.18f);
         }
     }
 }

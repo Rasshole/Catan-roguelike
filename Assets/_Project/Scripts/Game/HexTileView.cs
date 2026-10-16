@@ -43,7 +43,9 @@ namespace CatanRoguelike.Game
             BuiltInMaterials.IsUnlitMaterial(_chipFaceRenderer != null ? _chipFaceRenderer.sharedMaterial : null);
 
         public float ChipWorldDiameter =>
-            _chipRimRenderer != null ? Mathf.Max(_chipRimRenderer.bounds.size.x, _chipRimRenderer.bounds.size.z) : 0f;
+            _chipFaceRenderer != null
+                ? Mathf.Max(_chipFaceRenderer.bounds.size.x, _chipFaceRenderer.bounds.size.z)
+                : 0f;
 
         public float ChipWorldHeight
         {
@@ -62,7 +64,9 @@ namespace CatanRoguelike.Game
 
         public string TokenLabelText => _tokenLabel != null ? _tokenLabel.text : string.Empty;
 
-        public float TokenRimWorldRadius => WorldRimDiameter * 0.5f;
+        public float TokenFaceWorldRadius => WorldFaceDiameter * 0.5f;
+
+        public float TokenRimOuterWorldRadius => TokenFaceWorldRadius * RimOuterRadiusFactor;
 
         private static readonly Color FamineTint = new(0.55f, 0.35f, 0.15f);
         private static readonly Color GoldRushTint = new(0.95f, 0.75f, 0.1f);
@@ -71,9 +75,8 @@ namespace CatanRoguelike.Game
         private static readonly Color StormMarkerColor = new(0.1f, 0.15f, 0.55f);
 
         // Target world-space chip size (visible disc on the hex top).
-        private const float WorldRimDiameter = 0.72f;
-        private const float FaceToRimDiameterRatio = 0.85f;
-        private const float WorldFaceDiameter = WorldRimDiameter * FaceToRimDiameterRatio;
+        private const float WorldFaceDiameter = 0.62f;
+        private const float RimOuterRadiusFactor = 1.18f;
         private const float WorldChipThickness = 0.04f;
 
         // Hex prism mesh top is parent-local y=1; flat chips + label sit above that surface (top-down view).
@@ -190,14 +193,12 @@ namespace CatanRoguelike.Game
             // BoardView scales hex cylinders non-uniformly (wide XZ, short Y). Child localScale is
             // multiplied by that lossyScale, so divide target world sizes to keep a visible cream disc.
             var hexScale = transform.lossyScale;
-            float localRimDiameter = WorldRimDiameter / hexScale.x;
             float localFaceDiameter = WorldFaceDiameter / hexScale.x;
-            // Unity cylinder primitive spans 2 units in Y (-1..+1).
-            float localRimHeight = WorldChipThickness / (ThinDiskMesh.MeshHeight * hexScale.y);
-            float localFaceHeight = WorldChipThickness * 0.85f / (ThinDiskMesh.MeshHeight * hexScale.y);
+            float localFaceHeight = WorldChipThickness / (ThinDiskMesh.MeshHeight * hexScale.y);
+            float localRimHeight = WorldChipThickness * 0.55f / (ThinDiskMesh.MeshHeight * hexScale.y);
 
-            _chipRimRenderer = CreateFlatChipDisc("Rim", localRimDiameter, localRimHeight, 0f);
-            _chipFaceRenderer = CreateFlatChipDisc("Face", localFaceDiameter, localFaceHeight, localRimHeight);
+            _chipFaceRenderer = CreateFlatChipDisc("Face", localFaceDiameter, localFaceHeight, 0f);
+            _chipRimRenderer = CreateRimAnnulus("Rim", localFaceDiameter, localRimHeight, localFaceHeight);
         }
 
         private void UpdateTokenChipGeometry()
@@ -206,15 +207,30 @@ namespace CatanRoguelike.Game
                 return;
 
             var hexScale = transform.lossyScale;
-            float localRimDiameter = WorldRimDiameter / hexScale.x;
             float localFaceDiameter = WorldFaceDiameter / hexScale.x;
-            float localRimHeight = WorldChipThickness / (ThinDiskMesh.MeshHeight * hexScale.y);
-            float localFaceHeight = WorldChipThickness * 0.85f / (ThinDiskMesh.MeshHeight * hexScale.y);
+            float localFaceHeight = WorldChipThickness / (ThinDiskMesh.MeshHeight * hexScale.y);
+            float localRimHeight = WorldChipThickness * 0.55f / (ThinDiskMesh.MeshHeight * hexScale.y);
 
-            _chipRimRenderer.transform.localScale = new Vector3(localRimDiameter, localRimHeight, localRimDiameter);
-            _chipRimRenderer.transform.localPosition = Vector3.zero;
             _chipFaceRenderer.transform.localScale = new Vector3(localFaceDiameter, localFaceHeight, localFaceDiameter);
-            _chipFaceRenderer.transform.localPosition = new Vector3(0f, localRimHeight + localFaceHeight * 0.05f, 0f);
+            _chipFaceRenderer.transform.localPosition = Vector3.zero;
+            _chipRimRenderer.transform.localScale = new Vector3(localFaceDiameter, localRimHeight, localFaceDiameter);
+            _chipRimRenderer.transform.localPosition = new Vector3(0f, localFaceHeight * ThinDiskMesh.MeshHeight + localRimHeight * 0.1f, 0f);
+        }
+
+        private Renderer CreateRimAnnulus(string name, float faceDiameter, float height, float faceHeight)
+        {
+            var ring = new GameObject(name);
+            ring.transform.SetParent(_tokenChip.transform, false);
+            ring.transform.localPosition = new Vector3(0f, faceHeight * ThinDiskMesh.MeshHeight + height * 0.1f, 0f);
+            ring.transform.localScale = new Vector3(faceDiameter, height, faceDiameter);
+
+            var meshFilter = ring.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = TokenChipAnnulusMesh.Shared;
+            var renderer = ring.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = BuiltInMaterials.CreateUnlit(Color.white);
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.sharedMaterial.renderQueue = 3130;
+            return renderer;
         }
 
         private Renderer CreateFlatChipDisc(string name, float diameter, float height, float localYOffset)
@@ -242,7 +258,7 @@ namespace CatanRoguelike.Game
             _chipFaceRenderer.sharedMaterial.renderQueue = 3120;
             _chipRimRenderer.sharedMaterial = BuiltInMaterials.CreateUnlit(
                 new Color(rimRgb.R, rimRgb.G, rimRgb.B, 1f));
-            _chipRimRenderer.sharedMaterial.renderQueue = 3095;
+            _chipRimRenderer.sharedMaterial.renderQueue = 3130;
         }
 
         private void EnsureTokenLabel()

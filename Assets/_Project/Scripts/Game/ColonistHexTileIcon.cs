@@ -7,8 +7,8 @@ namespace CatanRoguelike.Game
 {
     internal static class ColonistHexTileIcon
     {
-        private const float IconSizeFactor = 0.35f;
-        private const float CornerOffsetFactor = 0.45f;
+        private const float IconSizeFactor = 0.30f;
+        private const float CornerOffsetFactor = 0.55f;
         private const float IconLiftAboveHexTop = 0.05f;
 
         public static void Apply(GameObject tileRoot, HexTileData data, float hexScale)
@@ -28,9 +28,9 @@ namespace CatanRoguelike.Game
             float localDiameter = worldDiameter / Mathf.Max(lossy.x, 0.001f);
             float corner = hexSize * CornerOffsetFactor;
             iconGo.transform.localPosition = new Vector3(
-                corner * 0.25f,
+                corner * 0.12f,
                 HexPrismMesh.TopY + IconLiftAboveHexTop,
-                corner * 0.92f);
+                corner);
             iconGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             iconGo.transform.localScale = new Vector3(localDiameter, localDiameter, 1f);
 

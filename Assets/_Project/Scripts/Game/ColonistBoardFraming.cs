@@ -7,8 +7,8 @@ namespace CatanRoguelike.Game
     {
         public const float PlayAreaMarginPixels = 24f;
 
-        /// <summary>Tight fit to margined play rect, with ~3% outward slack (ortho multiplier).</summary>
-        public const float FramingFitSlackMultiplier = 1.03f;
+        /// <summary>Tight fit to margined play rect height, with ~1% outward slack (ortho multiplier).</summary>
+        public const float FramingFitSlackMultiplier = 1.01f;
 
         public static float ComputeOrthographicSize(
             float boardExtentRadiusWorld,
@@ -24,7 +24,12 @@ namespace CatanRoguelike.Game
 
             float fromHeight = diameter * screenHeight / (2f * usableHeight);
             float fromWidth = diameter * screenWidth / (2f * usableWidth * Mathf.Max(0.01f, cameraAspect));
-            return Mathf.Max(fromHeight, fromWidth) * FramingFitSlackMultiplier;
+            string bindingAxis = fromHeight >= fromWidth ? "height" : "width";
+            float fitOrtho = fromHeight;
+            Debug.Log(
+                $"ColonistBoardFraming ortho bindingAxis={bindingAxis} fromHeight={fromHeight:F4} " +
+                $"fromWidth={fromWidth:F4} chosen=height ortho={fitOrtho * FramingFitSlackMultiplier:F4}");
+            return fitOrtho * FramingFitSlackMultiplier;
         }
 
         public static void LogPlayAreaFitDiagnostics(
