@@ -136,12 +136,8 @@ namespace CatanRoguelike.Game
 
         private static void DestroyTexture(Texture2D tex)
         {
-            if (tex == null)
-                return;
-            if (Application.isPlaying)
-                Object.Destroy(tex);
-            else
-                Object.DestroyImmediate(tex);
+            if (tex != null)
+                ColonistSceneDestroy.SafeDestroy(tex);
         }
 
         private static void BlitGlyph(
