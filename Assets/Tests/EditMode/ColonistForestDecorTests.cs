@@ -41,6 +41,8 @@ namespace CatanRoguelike.Tests
                     var flat = new Vector2(child.localPosition.x, child.localPosition.z);
                     Assert.GreaterOrEqual(flat.magnitude, keepOut - 0.02f,
                         $"Tree on {tile.Coord} should sit outside token keep-out (r={flat.magnitude:F3} min={keepOut:F3}).");
+                    Assert.Less(Mathf.Abs(child.localPosition.y - HexPrismMesh.TopY), 0.25f,
+                        $"Tree on {tile.Coord} should sit on the hex top, not float (y={child.localPosition.y:F3}).");
                     Assert.LessOrEqual(flat.magnitude, maxCenter + 0.02f,
                         $"Tree on {tile.Coord} should stay within 0.70 hex cap (r={flat.magnitude:F3} max={maxCenter:F3}).");
                 }

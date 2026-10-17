@@ -144,10 +144,13 @@ namespace CatanRoguelike.Game
 
             int placed = 0;
             int attempt = 0;
-            foreach (var localXZ in ring)
+            foreach (var ringPoint in ring)
             {
                 if (placed >= treeTarget)
                     break;
+                // Poisson points are (x, z) in a Vector2; the implicit Vector2->Vector3 cast would
+                // put z into Y (trees floating on a line), so map explicitly onto the XZ plane.
+                var localXZ = new Vector3(ringPoint.x, 0f, ringPoint.y);
                 string modelName = TreeModels[PositiveMod(seed + attempt, TreeModels.Length)];
                 float scaleFactor = Mathf.Lerp(0.18f, 0.22f, Hash01(seed + attempt * 19));
                 float yaw = PositiveMod(seed + attempt * 137, 360) + 22f;
