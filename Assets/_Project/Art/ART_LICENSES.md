@@ -27,19 +27,23 @@
 - **Source:** [Quaternius Ultimate Nature](https://quaternius.com/packs/ultimatenature.html) (FBX via community Godot bundle mirror in `tools/import-kenney-board-art.py`)
 - **Use:** Forest trees and sheep pasture bushes.
 
-## Kenney — Hexagon Kit (terrain buildings & geology)
+## Kenney — Medieval RTS (top-down terrain decor sprites)
 
-- **Files:** `Resources/Art/Models/Kenney/building-mill.fbx`, `building-farm.fbx`, `building-mine.fbx`, `building-smelter.fbx`, `stone-mountain.fbx`, `stone-rocks.fbx`, `dirt-lumber.fbx`, `sand-rocks.fbx`, …
-- **License:** CC0 1.0 — see `Art/ThirdParty/Kenney/hexagon-kit-CC0.txt`
-- **Source:** [Kenney Hexagon Kit](https://kenney.nl/assets/hexagon-kit) (`tools/import-kenney-hex-decor.py`, zip at `assets-eval/kenney_hexagon-kit.zip`)
-- **Use:** Wheat mill/farm, brick quarry, stone peaks and boulders, desert rocks.
+- **Files:** `Resources/Art/Board/TopDownDecor/*.png` (wheat fields, windmill, rocks, mountain, brick/clay, fence, desert rock)
+- **License:** CC0 1.0 — see `Art/ThirdParty/Kenney/medieval-rts-CC0.txt`
+- **Source:** [Kenney Medieval RTS](https://kenney.nl/assets/medieval-rts) (OpenGameArt mirror in `tools/import-kenney-topdown-decor.py`)
+- **Use:** Flat top-down props on wheat, stone, brick, desert, and sheep fence hexes (forest stays Quaternius 3D).
 
-## Kenney — Nature Kit (crops, cacti, fences)
+## Kenney — Hexagon Kit / Nature Kit (3D, legacy import)
 
-- **Files:** `Resources/Art/Models/Kenney/crops_wheatStageA.fbx`, `cactus_tall.fbx`, `fence_planksDouble.fbx`, `rock_largeA.fbx`, `campfire_bricks.fbx`, …
-- **License:** CC0 1.0 — see `Art/ThirdParty/Kenney/nature-kit-CC0.txt`
-- **Source:** [Kenney Nature Kit](https://kenney.nl/assets/nature-kit) (`tools/import-kenney-hex-decor.py`)
-- **Use:** Golden wheat rows, desert cacti, sheep fences, brick stacks.
+- **Files:** `Resources/Art/Models/Kenney/*.fbx` (retained for tooling; board decor uses 2D sprites above)
+- **License:** CC0 1.0 — `Art/ThirdParty/Kenney/hexagon-kit-CC0.txt`, `nature-kit-CC0.txt`
+- **Import:** `tools/import-kenney-hex-decor.py`
+
+## Procedural top-down desert cacti
+
+- **Files:** `Resources/Art/Board/TopDownDecor/cactus_tall.png`, `cactus_short.png`
+- **License:** Same project / CC0-style shapes generated in `tools/import-kenney-topdown-decor.py` (Medieval RTS pack has no cactus).
 
 ## Fishermen fishing-ground art
 

@@ -162,6 +162,7 @@ def write_png_metas(folder: Path) -> None:
 def main() -> None:
     write_folder(ROOT / "Resources" / "Art")
     write_folder(BOARD)
+    write_folder(BOARD / "TopDownDecor")
     write_folder(ICONS)
     write_folder(BOARDGAME)
     write_folder(BOARDGAME / "Dice")
@@ -179,6 +180,7 @@ def main() -> None:
     write_png_metas(BOARDGAME / "Dice")
     write_png_metas(BOARDGAME / "Cards")
     write_png_metas(ROOT / "Resources" / "Art" / "Models" / "Nature" / "Textures")
+    write_png_metas(BOARD / "TopDownDecor")
 
 
 if __name__ == "__main__":
