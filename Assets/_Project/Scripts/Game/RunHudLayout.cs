@@ -16,18 +16,33 @@ namespace CatanRoguelike.Game
         public const float CardHeight = 124f;
         public const float CardSpacing = 10f;
 
-        public static float GetHandRowBottomInset() => Margin;
+        public static float GetHandRowBottomInset() =>
+            ColonistPresentation.IsActive ? GetColonistDeckBandBottom() : Margin;
 
         public static float GetActionBarBottomInset() =>
-            Margin + GetBottomHandHeight() + (ColonistPresentation.IsActive ? Margin * 0.25f : Margin * 0.5f);
+            ColonistPresentation.IsActive
+                ? Margin
+                : Margin + GetBottomHandHeight() + Margin * 0.5f;
 
         public static float GetBottomHandHeight() =>
-            ColonistPresentation.IsActive ? 96f : BottomHandHeight;
+            ColonistPresentation.IsActive ? ColonistResourceHandHeight : BottomHandHeight;
 
-        public const float ColonistResourceHandWidth = 500f;
+        public const float ColonistResourceHandWidth = 420f;
+        public const float ColonistRoguelikeHandHeight = 158f;
+        public const float ColonistResourceHandHeight = 96f;
+        public const float ColonistDeckBandGap = 4f;
 
         public static float GetBottomActionBarHeight() =>
             ColonistPresentation.IsActive ? 68f : BottomActionBarHeight;
+
+        public static float GetColonistDeckBandBottom() =>
+            Margin + GetBottomActionBarHeight() + ColonistDeckBandGap;
+
+        public static float GetColonistDeckBandHeight() =>
+            Mathf.Max(ColonistRoguelikeHandHeight, ColonistResourceHandHeight);
+
+        public static float GetColonistBottomChromeHeight() =>
+            GetBottomActionBarHeight() + ColonistDeckBandGap + GetColonistDeckBandHeight();
 
         public static float GetContentLeftInset() =>
             ColonistPresentation.IsActive ? Margin : Margin + SidePanelWidth + Margin;

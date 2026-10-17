@@ -155,6 +155,7 @@ namespace CatanRoguelike.Editor
             if (controller.State.Phase == GamePhase.RunSelectMap)
                 GameScenePlayHarness.CompleteRunSelectAndSetup(controller, meta);
 
+            ColonistCaptureCardSeeding.ForceDemoHandForCapture(controller.State);
             gameManager.EditorRefreshRunHud();
             var hud = gameManager.EditorRunHud
                 ?? UnityEngine.Object.FindFirstObjectByType<RunHudController>();

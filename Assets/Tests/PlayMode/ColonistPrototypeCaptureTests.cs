@@ -58,6 +58,8 @@ namespace CatanRoguelike.Tests.PlayMode
             GameScenePlayHarness.AdvanceToDayPlayerActions(gameManager.Controller);
             Assert.AreEqual(GamePhase.DayPlayerActions, gameManager.Controller.State.Phase);
 
+            ColonistCaptureCardSeeding.ForceDemoHandForCapture(gameManager.Controller.State);
+
             gameManager.EnsureRunHudReady();
 
             Assert.IsFalse(gameManager.Controller.State.IsSetupPhase,

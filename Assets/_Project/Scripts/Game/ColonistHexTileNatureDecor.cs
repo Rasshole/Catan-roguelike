@@ -104,7 +104,7 @@ namespace CatanRoguelike.Game
             if (data.IsFishTile)
                 tokenClear = Mathf.Max(tokenClear, hexScale * HexMath.OuterRadius * 2f * 0.35f * 0.59f + hexScale * 0.04f);
 
-            int cactusTarget = 5 + PositiveMod(seed, 2);
+            int cactusTarget = 8 + PositiveMod(seed, 3);
             float maxR = MaxPropCenterRadius(hexScale);
             for (int c = 0; c < cactusTarget; c++)
             {
@@ -114,12 +114,15 @@ namespace CatanRoguelike.Game
                     PositiveMod(seed + c * 91, 24) - 12f, $"Cactus_{sprite}_{c}", tokenClear, maxR);
             }
 
-            for (int r = 0; r < 2; r++)
+            for (int r = 0; r < 4 + PositiveMod(seed, 2); r++)
             {
                 var pos = SamplePosition(hexScale, seed + 360 + r * 71, tokenClear, MaxPropRadiusFactor);
                 PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, "desert_rock", 0.26f,
                     PositiveMod(seed + r * 113, 360), $"DesertRock_{r}", tokenClear, maxR);
             }
+
+            ScatterModels(hexRoot, propsRoot, hexScale, seed + 900, 5 + PositiveMod(seed, 2),
+                new[] { "Bush", "Bush_Small_Flowers", "Bush" }, 0.14f, 0.20f, tokenClear, ResourceType.Sheep);
         }
 
         private static void ApplyBrick(
@@ -129,16 +132,16 @@ namespace CatanRoguelike.Game
             int seed,
             float tokenClear)
         {
-            int target = 6 + PositiveMod(seed, 2);
+            int target = 10 + PositiveMod(seed, 3);
             float maxR = MaxPropCenterRadius(hexScale);
-            string[] sprites = { "clay_pit", "clay_pit", "brick_stack", "brick_stack", "brick_kiln", "brick_stack" };
+            string[] sprites = { "clay_pit", "clay_pit", "clay_pit", "brick_stack", "brick_stack", "brick_stack" };
             for (int i = 0; i < target; i++)
             {
                 var pos = SamplePosition(hexScale, seed + 700 + i * 53, tokenClear, MaxPropRadiusFactor);
                 string sprite = sprites[PositiveMod(seed + i * 41, sprites.Length)];
-                float size = sprite == "clay_pit" ? 0.40f : sprite == "brick_kiln" ? 0.38f : 0.34f;
+                float size = sprite == "clay_pit" ? Mathf.Lerp(0.36f, 0.44f, Hash01(seed + i * 29)) : 0.32f;
                 // Only the round clay mound spins freely: a brick pallet turned ~90° reads as a faint
-                // brick wall (v106 review), so stacks and kiln stay upright within ±12°.
+                // brick wall (v106 review), so stacks stay upright within ±12°.
                 float yaw = sprite != "clay_pit"
                     ? PositiveMod(seed + i * 91, 24) - 12f
                     : PositiveMod(seed + i * 91, 360);
@@ -154,7 +157,7 @@ namespace CatanRoguelike.Game
             int seed,
             float tokenClear)
         {
-            int boulderTarget = 6 + PositiveMod(seed, 3);
+            int boulderTarget = 10 + PositiveMod(seed, 4);
             float maxR = MaxPropCenterRadius(hexScale);
             string[] rocks = { "rock_cluster_a", "rock_cluster_b", "rock_cluster_c" };
             for (int i = 0; i < boulderTarget; i++)
@@ -176,27 +179,29 @@ namespace CatanRoguelike.Game
         {
             float maxR = MaxPropCenterRadius(hexScale);
             string[] fields = { "wheat_field_a", "wheat_field_b", "wheat_field_c" };
-            for (int r = 0; r < fields.Length; r++)
+            int fieldPatches = 7 + PositiveMod(seed, 3);
+            for (int r = 0; r < fieldPatches; r++)
             {
                 var pos = SamplePosition(hexScale, seed + 400 + r * 59, tokenClear, MaxPropRadiusFactor);
-                float size = Mathf.Lerp(0.28f, 0.38f, Hash01(seed + r * 29));
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, fields[r], size,
+                string fieldSprite = fields[PositiveMod(seed + r, fields.Length)];
+                float size = Mathf.Lerp(0.30f, 0.42f, Hash01(seed + r * 29));
+                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, fieldSprite, size,
                     PositiveMod(seed + r * 40, 360), $"WheatField_{r}", tokenClear, maxR);
             }
 
-            for (int row = 0; row < 2; row++)
+            for (int row = 0; row < 4; row++)
             {
                 var pos = SamplePosition(hexScale, seed + 430 + row * 61, tokenClear, MaxPropRadiusFactor);
-                float size = Mathf.Lerp(0.36f, 0.44f, Hash01(seed + row * 23));
+                float size = Mathf.Lerp(0.34f, 0.46f, Hash01(seed + row * 23));
                 PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, "wheat_rows", size,
                     PositiveMod(seed + row * 47, 360), $"WheatRows_{row}", tokenClear, maxR);
             }
 
-            for (int s = 0; s < 3; s++)
+            for (int s = 0; s < 5; s++)
             {
                 var pos = SamplePosition(hexScale, seed + 460 + s * 63, tokenClear, MaxPropRadiusFactor);
                 PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, "wheat_sheaf",
-                    Mathf.Lerp(0.34f, 0.42f, Hash01(seed + s * 31)),
+                    Mathf.Lerp(0.32f, 0.44f, Hash01(seed + s * 31)),
                     PositiveMod(seed + 461 + s * 17, 360), $"WheatSheaf_{s}", tokenClear, maxR);
             }
 
@@ -212,18 +217,21 @@ namespace CatanRoguelike.Game
             int seed,
             float tokenClear)
         {
-            ScatterModels(hexRoot, propsRoot, hexScale, seed, 4, BushModels, 0.18f, 0.26f, tokenClear,
-                ResourceType.Sheep);
+            ScatterModels(hexRoot, propsRoot, hexScale, seed, 8 + PositiveMod(seed, 3), BushModels, 0.16f, 0.28f,
+                tokenClear, ResourceType.Sheep);
             float maxR = MaxPropCenterRadius(hexScale);
-            var fencePos = SamplePosition(hexScale, seed + 600, tokenClear, MaxPropRadiusFactor);
-            PlaceTopDown(hexRoot, propsRoot.transform, hexScale, fencePos, "fence", 0.44f,
-                PositiveMod(seed, 24) - 12f, "SheepFence_0", tokenClear, maxR);
-            var fencePos2 = SamplePosition(hexScale, seed + 640, tokenClear, MaxPropRadiusFactor);
-            PlaceTopDown(hexRoot, propsRoot.transform, hexScale, fencePos2, "fence", 0.38f,
-                PositiveMod(seed + 17, 24) - 12f, "SheepFence_1", tokenClear, maxR);
+            var fencePositions = new List<Vector3>(3);
+            for (int f = 0; f < 3; f++)
+            {
+                var fencePos = SamplePosition(hexScale, seed + 600 + f * 40, tokenClear, MaxPropRadiusFactor);
+                fencePositions.Add(fencePos);
+                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, fencePos, "fence",
+                    Mathf.Lerp(0.36f, 0.46f, Hash01(seed + f * 11)), PositiveMod(seed + f * 17, 24) - 12f,
+                    $"SheepFence_{f}", tokenClear, maxR);
+            }
 
-            float fenceKeepOut = hexScale * 0.30f;
-            int sheepCount = 5 + PositiveMod(seed, 2);
+            float fenceKeepOut = hexScale * 0.28f;
+            int sheepCount = 8 + PositiveMod(seed, 3);
             for (int s = 0; s < sheepCount; s++)
             {
                 Vector3 pos = Vector3.zero;
@@ -231,8 +239,18 @@ namespace CatanRoguelike.Game
                 for (int attempt = 0; attempt < 16; attempt++)
                 {
                     pos = SamplePosition(hexScale, seed + 500 + s * 71 + attempt * 19, tokenClear, MaxPropRadiusFactor);
-                    if (Vector2.Distance(new Vector2(pos.x, pos.z), new Vector2(fencePos.x, fencePos.z)) >= fenceKeepOut
-                        && Vector2.Distance(new Vector2(pos.x, pos.z), new Vector2(fencePos2.x, fencePos2.z)) >= fenceKeepOut)
+                    var flat = new Vector2(pos.x, pos.z);
+                    bool clearOfFences = true;
+                    foreach (var fence in fencePositions)
+                    {
+                        if (Vector2.Distance(flat, new Vector2(fence.x, fence.z)) < fenceKeepOut)
+                        {
+                            clearOfFences = false;
+                            break;
+                        }
+                    }
+
+                    if (clearOfFences)
                     {
                         found = true;
                         break;

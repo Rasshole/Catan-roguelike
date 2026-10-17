@@ -23,6 +23,7 @@ namespace CatanRoguelike.Game
         private GameObject _colonistTurnBanner;
         private ColonistHudBankStrip.Widget _colonistBankStrip;
         private RectTransform _colonistBankStripRoot;
+        private ColonistRoguelikeCardHandView _colonistRoguelikeCardHand;
         private GamePhase _turnCountdownLastPhase;
         private float _turnCountdownSeconds = 90f;
 
@@ -32,8 +33,9 @@ namespace CatanRoguelike.Game
                 return;
 
             _canvas = RunHudUiFactory.CreateCanvas(transform);
-            BuildColonistBottomHand(_canvas.transform);
             BuildActionBarChrome(_canvas.transform);
+            BuildColonistBottomHand(_canvas.transform);
+            _colonistRoguelikeCardHand = ColonistRoguelikeCardHandView.Build(_canvas.transform);
             BuildColonistRightRail(_canvas.transform);
             BuildColonistTurnBanner(_canvas.transform);
             EnsureTradeDialogBuilt();
@@ -47,16 +49,17 @@ namespace CatanRoguelike.Game
 
         private void ApplyColonistHandAndBarInsets()
         {
-            float handBottom = RunHudLayout.GetHandRowBottomInset();
+            float deckBottom = RunHudLayout.GetColonistDeckBandBottom();
             float actionBottom = RunHudLayout.GetActionBarBottomInset();
             float left = RunHudLayout.GetContentLeftInset();
             float right = RunHudLayout.GetContentRightInset();
-            float handHeight = RunHudLayout.GetBottomHandHeight();
 
             if (_handPanel != null)
             {
-                _handPanel.offsetMin = new Vector2(left, handBottom);
-                _handPanel.offsetMax = new Vector2(left + RunHudLayout.ColonistResourceHandWidth, handBottom + handHeight);
+                _handPanel.offsetMin = new Vector2(left, deckBottom);
+                _handPanel.offsetMax = new Vector2(
+                    left + RunHudLayout.ColonistResourceHandWidth,
+                    deckBottom + RunHudLayout.ColonistResourceHandHeight);
             }
 
             if (_actionBar != null)
@@ -211,7 +214,7 @@ namespace CatanRoguelike.Game
                 new Vector2(1f, 0f),
                 new Vector2(1f, 1f),
                 new Vector2(-(width + margin), margin),
-                new Vector2(-margin, -(RunHudLayout.GetBottomHandHeight() + RunHudLayout.GetBottomActionBarHeight() + margin * 2f)));
+                new Vector2(-margin, -(RunHudLayout.GetColonistBottomChromeHeight() + margin * 2f)));
 
             var layout = _colonistRightRail.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(12, 12, 12, 12);
@@ -337,7 +340,25 @@ namespace CatanRoguelike.Game
 
             RefreshColonistTurnTimer(state);
             RefreshColonistChrome(state);
+            _colonistRoguelikeCardHand?.Refresh(state, OnColonistRoguelikeCardPlayRequested);
         }
+
+        private void OnColonistRoguelikeCardPlayRequested(int handIndex)
+        {
+            _selectedCardIndex = handIndex;
+            if (_controller.State.Phase == GamePhase.NightPlayCard)
+            {
+                PlaySelectedCard();
+                return;
+            }
+
+            // TODO: support playing roguelike cards outside NightPlayCard when day rules allow it.
+        }
+
+        public ColonistRoguelikeCardHandView.LayoutProbe GetRoguelikeCardHandLayoutForTests() =>
+            _colonistRoguelikeCardHand != null
+                ? _colonistRoguelikeCardHand.GatherLayoutProbe(_actionBar)
+                : default;
 
         private static RectTransform BuildColonistPlayerPanel(
             RectTransform parent,

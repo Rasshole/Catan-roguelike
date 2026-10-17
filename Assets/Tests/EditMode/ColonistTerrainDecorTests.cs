@@ -42,11 +42,11 @@ namespace CatanRoguelike.Tests
                     Assert.IsNotNull(props, $"Desert hex {tile.Coord} should spawn TileNatureProps.");
                     Assert.GreaterOrEqual(
                         ColonistHexTileNatureDecor.CountDescendantsNamed(props, "Cactus"),
-                        5,
+                        8,
                         $"Desert hex {tile.Coord} needs cacti around pond/token (found cactus parts).");
                     Assert.GreaterOrEqual(
                         ColonistHexTileNatureDecor.CountDescendantsNamed(props, "DesertRock"),
-                        2,
+                        4,
                         $"Desert hex {tile.Coord} needs desert rocks.");
                     Object.DestroyImmediate(hexGo);
                     continue;
@@ -57,11 +57,15 @@ namespace CatanRoguelike.Tests
                 {
                     case ResourceType.Brick:
                         sawBrick = true;
-                        Assert.GreaterOrEqual(count, 6, $"Brick hex {tile.Coord} needs clay/brick props (found {count}).");
+                        Assert.GreaterOrEqual(count, 10, $"Brick hex {tile.Coord} needs clay/brick props (found {count}).");
+                        Assert.AreEqual(
+                            0,
+                            ColonistHexTileNatureDecor.CountDescendantsNamed(props, "kiln"),
+                            $"Brick hex {tile.Coord} should not use kiln/oven props.");
                         break;
                     case ResourceType.Stone:
                         sawStone = true;
-                        Assert.GreaterOrEqual(count, 6, $"Stone hex {tile.Coord} needs boulder props (found {count}).");
+                        Assert.GreaterOrEqual(count, 10, $"Stone hex {tile.Coord} needs boulder props (found {count}).");
                         Assert.AreEqual(
                             0,
                             ColonistHexTileNatureDecor.CountDescendantsNamed(props, "Peak"),
@@ -69,11 +73,11 @@ namespace CatanRoguelike.Tests
                         break;
                     case ResourceType.Wheat:
                         sawWheat = true;
-                        Assert.GreaterOrEqual(count, 6, $"Wheat hex {tile.Coord} needs field props (found {count}).");
+                        Assert.GreaterOrEqual(count, 12, $"Wheat hex {tile.Coord} needs field props (found {count}).");
                         break;
                     case ResourceType.Sheep:
                         sawSheep = true;
-                        Assert.GreaterOrEqual(count, 8, $"Sheep hex {tile.Coord} needs flock props (found {count}).");
+                        Assert.GreaterOrEqual(count, 14, $"Sheep hex {tile.Coord} needs flock props (found {count}).");
                         break;
                 }
 
