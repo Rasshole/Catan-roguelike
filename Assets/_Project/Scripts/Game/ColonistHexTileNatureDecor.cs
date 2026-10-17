@@ -62,49 +62,34 @@ namespace CatanRoguelike.Game
             int seed,
             float tokenClear)
         {
-            int treeTarget = 12 + PositiveMod(seed, 5); // dense wood: 12-16 smaller trees
-            float minR = tokenClear;
+            // Dense wood: 4-5 Kenney tree clumps (4-6 trees each) around the ring, then single trees
+            // fill the gaps. Single tall-narrow trees alone left most of the hex bare green.
+            int clumpTarget = 4 + PositiveMod(seed, 2);
+            int treeTarget = 12 + PositiveMod(seed, 5);
             float maxR = MaxPropCenterRadius(hexScale);
-            float minSep = hexScale * 0.075f;
-            var ring = SamplePoissonAnnulus(seed, treeTarget, minR, maxR, minSep, treeTarget * 90);
-            if (ring.Count < treeTarget)
-            {
-                var relaxed = SamplePoissonAnnulus(seed + 911, treeTarget, minR, maxR, minSep * 0.72f, treeTarget * 120);
-                foreach (var p in relaxed)
-                {
-                    if (ring.Count >= treeTarget)
-                        break;
-                    if (IsSeparated(ring, p, minSep * 0.72f))
-                        ring.Add(p);
-                }
-            }
-
+            float phase = PositiveMod(seed * 7, 360);
             int placed = 0;
-            int attempt = 0;
-            foreach (var ringPoint in ring)
+            for (int c = 0; c < clumpTarget; c++)
             {
-                if (placed >= treeTarget)
-                    break;
-                var localXZ = new Vector3(ringPoint.x, 0f, ringPoint.y);
-                string sprite = ForestTreeSprites[PositiveMod(seed + attempt, ForestTreeSprites.Length)];
-                float size = Mathf.Lerp(0.24f, 0.36f, Hash01(seed + attempt * 19));
-                float yaw = PositiveMod(seed + attempt * 137, 360);
-                if (PlaceTopDown(hexRoot, propsRoot.transform, hexScale, localXZ, sprite, size, yaw,
-                        $"ForestTree_{sprite}_{attempt}", tokenClear, maxR))
+                float angle = (phase + c * 360f / clumpTarget) * Mathf.Deg2Rad;
+                var localXZ = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * maxR;
+                string sprite = PositiveMod(seed + c, 2) == 0 ? "tree_cluster_a" : "tree_cluster_b";
+                float size = Mathf.Lerp(0.46f, 0.54f, Hash01(seed + c * 23));
+                if (PlaceTopDown(hexRoot, propsRoot.transform, hexScale, localXZ, sprite, size, 0f,
+                        $"ForestTree_{sprite}_{c}", tokenClear, maxR))
                     placed++;
-                attempt++;
             }
 
-            for (int i = placed; i < treeTarget; i++)
+            for (int i = 0; placed < treeTarget && i < treeTarget * 3; i++)
             {
-                float angle = (i * 37f + PositiveMod(seed, 360)) * Mathf.Deg2Rad;
-                float r = Mathf.Lerp(minR, maxR, 0.45f + Hash01(seed + i * 31) * 0.5f);
+                float angle = (phase + 180f / clumpTarget + i * 47f) * Mathf.Deg2Rad;
+                float r = Mathf.Lerp(tokenClear, maxR, 0.5f + Hash01(seed + i * 31) * 0.5f);
                 var localXZ = new Vector3(Mathf.Cos(angle) * r, 0f, Mathf.Sin(angle) * r);
                 string sprite = ForestTreeSprites[PositiveMod(seed + i, ForestTreeSprites.Length)];
-                float size = Mathf.Lerp(0.24f, 0.36f, Hash01(seed + i * 19));
-                float yaw = PositiveMod(seed + i * 137, 360);
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, localXZ, sprite, size, yaw,
-                    $"ForestTree_{sprite}_{i}", tokenClear, maxR);
+                float size = Mathf.Lerp(0.34f, 0.44f, Hash01(seed + i * 19));
+                if (PlaceTopDown(hexRoot, propsRoot.transform, hexScale, localXZ, sprite, size, 0f,
+                        $"ForestTree_{sprite}_{i}", tokenClear, maxR))
+                    placed++;
             }
         }
 
@@ -206,7 +191,7 @@ namespace CatanRoguelike.Game
             for (int s = 0; s < 2; s++)
             {
                 var pos = SamplePosition(hexScale, seed + 460 + s * 63, tokenClear, MaxPropRadiusFactor);
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, "wheat_sheaf", Mathf.Lerp(0.14f, 0.20f, Hash01(seed + s * 31)),
+                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, "wheat_sheaf", Mathf.Lerp(0.26f, 0.32f, Hash01(seed + s * 31)),
                     PositiveMod(seed + 461 + s * 17, 360), $"WheatSheaf_{s}", tokenClear, maxR);
             }
 

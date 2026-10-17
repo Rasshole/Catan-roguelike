@@ -52,13 +52,13 @@ namespace CatanRoguelike.Game
                 float angle = (i == 0 ? 35f : 215f) * Mathf.Deg2Rad;
                 float ring = pondRadius * 1.05f;
                 var pos = new Vector3(Mathf.Cos(angle) * ring, top + 0.012f, Mathf.Sin(angle) * ring);
-                float reedSize = hexScale * 0.10f;
+                float reedSize = hexScale * 0.20f; // square cattail clump art; 0.10 read as a speck
                 ColonistFlatBoardQuad.Create(
                     hexRoot.transform,
                     $"DesertPondReed_{i}",
                     pos,
                     reedSize,
-                    reedSize * 1.4f,
+                    reedSize,
                     reedTex,
                     3191,
                     alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);

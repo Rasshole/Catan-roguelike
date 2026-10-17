@@ -207,25 +207,59 @@ def make_desert_pond_water(zf: zipfile.ZipFile) -> Image.Image:
 
 
 def make_pond_reed() -> Image.Image:
+    """Cattail clump: blade leaves + brown heads, outlined like the Kenney art."""
     s = 4
-    W = 48 * s
+    W = 96 * s
     im = Image.new("RGBA", (W, W), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
-    green = (48, 128, 62, 255)
-    for x, lean in ((W // 2 - 6 * s, -2 * s), (W // 2 + 8 * s, 3 * s)):
-        d.line((x, W - 8 * s, x + lean, 12 * s), fill=green, width=3 * s)
-        d.ellipse((x - 4 * s, 8 * s, x + 4 * s, 18 * s), fill=(72, 160, 82, 255))
-    return im.resize((48, 48), Image.LANCZOS)
+    dark, leaf, head = (30, 92, 46, 255), (70, 160, 78, 255), (124, 78, 40, 255)
+    base = (W // 2, 88 * s)
+    for tip, w in (((22, 34), 6), ((74, 30), 6), ((36, 20), 5), ((62, 16), 5), ((50, 8), 5)):
+        tx, ty = tip[0] * s, tip[1] * s
+        d.line((base[0], base[1], tx, ty), fill=dark, width=(w + 3) * s)
+        d.line((base[0], base[1], tx, ty), fill=leaf, width=w * s)
+    for hx, hy in ((36, 24), (62, 20)):
+        d.rounded_rectangle(((hx - 6) * s, (hy - 2) * s, (hx + 6) * s, (hy + 22) * s), radius=6 * s,
+                            fill=head, outline=OUTLINE, width=2 * s)
+    return im.resize((96, 96), Image.LANCZOS)
 
 
 def make_wheat_sheaf(zf: zipfile.ZipFile) -> Image.Image:
-    im = cut_plot(Image.open(BytesIO(zf.read(R + "Tile/medievalTile_54.png"))))
-    bbox = im.getchannel("A").getbbox()
-    if bbox:
-        im = im.crop(bbox)
-    inset = int(min(im.size) * 0.18)
-    im = im.crop((inset, inset, im.width - inset, im.height - inset))
-    return gold(im, 0.35)
+    """Tied sheaf: fanned golden stalks with ear tips and a brown band."""
+    import math
+    s = 4
+    W = 128 * s
+    im = Image.new("RGBA", (W, W), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    stalk, ear, band = (226, 168, 60, 255), (244, 196, 84, 255), (140, 88, 40, 255)
+    cx, tie_y, foot = W // 2, 74 * s, 116 * s
+    for i in range(-4, 5):
+        a = math.radians(i * 9)
+        tx, ty = cx + math.sin(a) * 56 * s, tie_y - math.cos(a) * 58 * s
+        fx = cx + i * 3 * s
+        for x0, y0, x1, y1 in ((cx, tie_y, tx, ty), (cx, tie_y, fx, foot)):
+            d.line((x0, y0, x1, y1), fill=OUTLINE, width=9 * s)
+        for x0, y0, x1, y1 in ((cx, tie_y, tx, ty), (cx, tie_y, fx, foot)):
+            d.line((x0, y0, x1, y1), fill=stalk, width=5 * s)
+        d.ellipse((tx - 7 * s, ty - 11 * s, tx + 7 * s, ty + 11 * s), fill=ear, outline=OUTLINE, width=2 * s)
+    d.rounded_rectangle((cx - 18 * s, tie_y - 6 * s, cx + 18 * s, tie_y + 6 * s), radius=4 * s,
+                        fill=band, outline=OUTLINE, width=2 * s)
+    return im.resize((128, 128), Image.LANCZOS)
+
+
+GRASS = {(39, 174, 96), (36, 161, 89), (41, 184, 101)}
+
+
+def make_tree_cluster(zf: zipfile.ZipFile, src: str) -> Image.Image:
+    """Kenney forest tile with its grass ground removed: a clump of 4-6 trees."""
+    im = Image.open(BytesIO(zf.read(src))).convert("RGBA")
+    px = im.load()
+    for y in range(im.height):
+        for x in range(im.width):
+            r, g, b, a = px[x, y]
+            if (r, g, b) in GRASS:
+                px[x, y] = (r, g, b, 0)
+    return im
 
 
 def make_fence() -> Image.Image:
@@ -275,6 +309,8 @@ def main() -> None:
         save("mountain_peak.png", make_peak(zf))
         save("desert_pond_water.png", make_desert_pond_water(zf))
         save("wheat_sheaf.png", make_wheat_sheaf(zf))
+        save("tree_cluster_a.png", make_tree_cluster(zf, R + "Tile/medievalTile_44.png"))  # cypress clump
+        save("tree_cluster_b.png", make_tree_cluster(zf, R + "Tile/medievalTile_48.png"))  # pine clump
     save("cactus_tall.png", make_cactus(True))
     save("pond_reed.png", make_pond_reed())
     save("cactus_short.png", make_cactus(False))

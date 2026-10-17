@@ -64,14 +64,14 @@ namespace CatanRoguelike.Game
             // BoardPitchOnly ignored the yaw and showed every sprite turned 90 deg under the yawed table
             // camera (kiln/cactus lying sideways, fence vertical). Face the camera, then spin in-plane:
             // Kenney art is lit from the top-left, so keep it near-upright except crop fields.
-            float spin = spriteName.StartsWith("wheat_field") || spriteName.StartsWith("wheat_sheaf")
+            float spin = spriteName.StartsWith("wheat_field")
                 ? yawDeg
                 : Mathf.Repeat(yawDeg, 24f) - 12f;
             quad.transform.rotation = Quaternion.AngleAxis(spin, Vector3.up) * quad.transform.rotation;
 
             // Circular footprint: the art is roughly round, but the yawed square quad's AABB is up to
             // 1.41x wider, so the bounds-based nudge rejected every mid/large sprite (no windmill/peak).
-            float artRadius = worldSize * 0.42f;
+            float artRadius = worldSize * FootprintFactor(spriteName);
             var start = new Vector2(localXZ.x, localXZ.z);
             if (start.sqrMagnitude < 1e-6f)
                 start = Vector2.right * 0.01f;
@@ -103,6 +103,12 @@ namespace CatanRoguelike.Game
             return false;
         }
 
+        /// <summary>Visible radius / quad size: single trees are tall and narrow, clumps and mounds round.</summary>
+        private static float FootprintFactor(string spriteName) =>
+            spriteName != null && spriteName.StartsWith("tree_canopy") ? 0.22f
+            : spriteName != null && spriteName.StartsWith("tree_cluster") ? 0.38f
+            : 0.42f;
+
         private static bool OverlapsPlacedSprite(Transform propsParent, Transform self, Vector2 p, float radius)
         {
             foreach (Transform other in propsParent)
@@ -112,7 +118,8 @@ namespace CatanRoguelike.Game
                 var quad = other.Find("Sprite");
                 if (quad == null)
                     continue;
-                float otherRadius = quad.localScale.x * 0.42f;
+                var tex = quad.GetComponent<Renderer>()?.sharedMaterial?.mainTexture;
+                float otherRadius = quad.localScale.x * FootprintFactor(tex != null ? tex.name : string.Empty);
                 var q = new Vector2(other.localPosition.x, other.localPosition.z);
                 if ((q - p).magnitude < (radius + otherRadius) * 0.82f)
                     return true;
