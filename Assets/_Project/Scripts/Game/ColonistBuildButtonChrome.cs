@@ -148,7 +148,8 @@ namespace CatanRoguelike.Game
                 return;
 
             costLabel.text = BuildCostFormatter.FormatBankStyleChips(cost);
-            costLabel.color = canAfford ? RunHudUiFactory.TextMuted : new Color(0.95f, 0.45f, 0.42f, 1f);
+            // Dark ink on the warm/green Kenney buttons; light pink was unreadable on green.
+            costLabel.color = canAfford ? RunHudUiFactory.ColonistTextOnPanel : new Color(0.58f, 0.10f, 0.08f, 1f);
         }
 
         public static Color IconTintFor(string shortTitle) => shortTitle switch

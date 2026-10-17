@@ -175,7 +175,9 @@ namespace CatanRoguelike.Game
 
                 PruneAndStyleRenderers(prop, resource, hexScale);
 
-                if (!PropFootprintClearsToken(hexRoot, prop, tokenClear))
+                // Nudge outward (same angle) until the XZ footprint clears the token, rather than
+                // dropping the prop: dropping emptied forest hexes since tree bounds always reached in.
+                if (!NudgeOutwardUntilClear(hexRoot, prop.transform, tokenClear, hexScale))
                 {
                     ColonistSceneDestroy.SafeDestroy(prop);
                     continue;
@@ -195,17 +197,8 @@ namespace CatanRoguelike.Game
             holder.transform.localPosition = localPos;
             build(holder.transform);
 
-            if (!PropFootprintClearsToken(hexRoot, holder, TokenKeepOutCenterRadius(hexScale)))
-            {
-                float angle = Mathf.Atan2(localPos.z, localPos.x);
-                float push = TokenKeepOutCenterRadius(hexScale) + hexScale * 0.12f;
-                holder.transform.localPosition = new Vector3(
-                    Mathf.Cos(angle) * push,
-                    localPos.y,
-                    Mathf.Sin(angle) * push);
-                if (!PropFootprintClearsToken(hexRoot, holder, TokenKeepOutCenterRadius(hexScale)))
-                    ColonistSceneDestroy.SafeDestroy(holder.gameObject);
-            }
+            if (!NudgeOutwardUntilClear(hexRoot, holder.transform, TokenKeepOutCenterRadius(hexScale), hexScale))
+                ColonistSceneDestroy.SafeDestroy(holder.gameObject);
         }
 
         private static bool TryFindClearPosition(
@@ -228,9 +221,47 @@ namespace CatanRoguelike.Game
 
         private static Vector3 SamplePosition(float hexScale, int seed, float tokenClear, float maxRadiusFactor)
         {
-            float angle = PositiveMod(seed, 360) * Mathf.Deg2Rad;
-            float r = tokenClear + hexScale * (0.06f + Hash01(seed) * maxRadiusFactor);
-            return new Vector3(Mathf.Cos(angle) * r, 0f, Mathf.Sin(angle) * r);
+            // Keep centres within MaxPropCenterRadius so props don't spill over hex edges / into the sea.
+            float maxR = MaxPropCenterRadius(hexScale);
+            float angle = 0f;
+            for (int attempt = 0; attempt < 12; attempt++)
+            {
+                int s = seed + attempt * 47;
+                angle = PositiveMod(s, 360) * Mathf.Deg2Rad;
+                float r = tokenClear + hexScale * (0.06f + Hash01(s) * maxRadiusFactor);
+                if (r <= maxR)
+                    return new Vector3(Mathf.Cos(angle) * r, 0f, Mathf.Sin(angle) * r);
+            }
+
+            float fallback = Mathf.Min(maxR, tokenClear + hexScale * 0.12f);
+            return new Vector3(Mathf.Cos(angle) * fallback, 0f, Mathf.Sin(angle) * fallback);
+        }
+
+        private static float MaxPropCenterRadius(float hexScale) => hexScale * 0.70f;
+
+        private static bool NudgeOutwardUntilClear(GameObject hexRoot, Transform prop, float keepOut, float hexScale)
+        {
+            if (PropFootprintClearsToken(hexRoot, prop.gameObject, keepOut))
+                return true;
+
+            var start = prop.localPosition;
+            var flat = new Vector2(start.x, start.z);
+            if (flat.sqrMagnitude < 1e-6f)
+                flat = Vector2.right * 0.01f;
+            float r0 = flat.magnitude;
+            var dir = flat / r0;
+            float maxR = MaxPropCenterRadius(hexScale);
+            const int steps = 6;
+            for (int i = 1; i <= steps; i++)
+            {
+                float r = Mathf.Lerp(r0, maxR, i / (float)steps);
+                prop.localPosition = new Vector3(dir.x * r, start.y, dir.y * r);
+                if (PropFootprintClearsToken(hexRoot, prop.gameObject, keepOut))
+                    return true;
+            }
+
+            prop.localPosition = start;
+            return false;
         }
 
         private static bool PropFootprintClearsToken(GameObject hexRoot, GameObject prop, float keepOutCenterRadius)
