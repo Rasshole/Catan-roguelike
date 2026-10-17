@@ -85,6 +85,11 @@ namespace CatanRoguelike.Tests.PlayMode
             for (int i = 0; i < 4; i++)
                 yield return null;
 
+            // The canvas built during EnsureRunHudReady can be torn down in the frames after
+            // scene load; Refresh rebuilds it if needed so we measure the live HUD.
+            hud.Refresh(gameManager.Controller.State);
+            Canvas.ForceUpdateCanvases();
+            Assert.IsTrue(hud.HudCanvas != null, "HUD canvas should exist after Refresh.");
             ColonistHudTextFit.AssertAllColonistRailTextsFit(hud.HudCanvas.transform);
         }
 

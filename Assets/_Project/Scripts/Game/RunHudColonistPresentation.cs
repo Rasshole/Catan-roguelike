@@ -371,6 +371,9 @@ namespace CatanRoguelike.Game
             rowLayout.childAlignment = TextAnchor.UpperLeft;
             rowLayout.childForceExpandHeight = true;
             rowLayout.childControlHeight = true;
+            // Without these the row force-expands the avatar swatch and squeezes the stats text.
+            rowLayout.childControlWidth = true;
+            rowLayout.childForceExpandWidth = false;
 
             var avatarGo = new GameObject("Avatar");
             avatarGo.transform.SetParent(row.transform, false);

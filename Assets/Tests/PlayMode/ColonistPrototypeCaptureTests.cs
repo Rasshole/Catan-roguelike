@@ -20,6 +20,9 @@ namespace CatanRoguelike.Tests.PlayMode
         // Matches ColonistKenneyHudArt wood bar tint (hand row panel).
         private static readonly Color HandBarReference = new(0.84f, 0.72f, 0.54f);
 
+        // Matches ColonistKenneyHudArt.ApplyPanelImage parchment (right rail reaches the bottom band).
+        private static readonly Color ParchmentPanelReference = new(0.94f, 0.88f, 0.74f);
+
         [Timeout(90000)]
         [UnityTest]
         public IEnumerator ColonistPrototype_CaptureWithHud_WritesPng()
@@ -269,7 +272,8 @@ namespace CatanRoguelike.Tests.PlayMode
                     if (ColorDistance(hudPixel, boardPixel) > 0.04f)
                         differingFromBoard++;
 
-                    if (ColorDistance(hudPixel, HandBarReference) < 0.35f)
+                    if (ColorDistance(hudPixel, HandBarReference) < 0.35f
+                        || ColorDistance(hudPixel, ParchmentPanelReference) < 0.25f)
                         matchingHudBar++;
                     samples++;
                 }
@@ -280,7 +284,7 @@ namespace CatanRoguelike.Tests.PlayMode
             // Kenney HUD: the hand bar spans only the left ~quarter (action bar sits above it), so
             // require a smaller share of the full-width bottom band than the old edge-to-edge bar.
             Assert.Greater(matchingHudBar, samples / 8,
-                $"Bottom band should include hand-bar backdrop color from the colonist HUD (matched={matchingHudBar}/{samples}).");
+                $"Bottom band should include warm HUD chrome (wood bar / parchment panel) color from the colonist HUD (matched={matchingHudBar}/{samples}).");
         }
 
         private static float ColorDistance(Color a, Color b)

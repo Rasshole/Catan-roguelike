@@ -53,7 +53,7 @@ namespace CatanRoguelike.Game
                 {
                     throw new UnityEngine.Assertions.AssertionException(
                         $"Colonist rail text '{text.name}' preferredWidth={text.preferredWidth:F1} exceeds rect width={text.rectTransform.rect.width:F1} (text='{text.text}')",
-                        text.gameObject);
+                        text.gameObject.name);
                 }
             }
         }
