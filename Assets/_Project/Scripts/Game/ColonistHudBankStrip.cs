@@ -68,8 +68,8 @@ namespace CatanRoguelike.Game
             var iconGo = new GameObject("Icon");
             iconGo.transform.SetParent(cardGo.transform, false);
             var iconRect = iconGo.AddComponent<RectTransform>();
-            iconRect.anchorMin = new Vector2(0.12f, 0.18f);
-            iconRect.anchorMax = new Vector2(0.88f, 0.88f);
+            iconRect.anchorMin = new Vector2(0.10f, 0.28f);
+            iconRect.anchorMax = new Vector2(0.90f, 0.96f);
             iconRect.offsetMin = Vector2.zero;
             iconRect.offsetMax = Vector2.zero;
             var iconImg = iconGo.AddComponent<Image>();
@@ -78,11 +78,11 @@ namespace CatanRoguelike.Game
             var badgeGo = new GameObject("Count");
             badgeGo.transform.SetParent(cardGo.transform, false);
             var badgeRect = badgeGo.AddComponent<RectTransform>();
-            badgeRect.anchorMin = new Vector2(1f, 1f);
-            badgeRect.anchorMax = new Vector2(1f, 1f);
-            badgeRect.pivot = new Vector2(1f, 1f);
-            badgeRect.anchoredPosition = new Vector2(-1f, -1f);
-            badgeRect.sizeDelta = new Vector2(20f, 16f);
+            badgeRect.anchorMin = new Vector2(0.5f, 0f);
+            badgeRect.anchorMax = new Vector2(0.5f, 0f);
+            badgeRect.pivot = new Vector2(0.5f, 0f);
+            badgeRect.anchoredPosition = new Vector2(0f, 1f);
+            badgeRect.sizeDelta = new Vector2(24f, 14f);
             var badgeImg = badgeGo.AddComponent<Image>();
             ColonistKenneyHudArt.ApplyColonistCountBadge(badgeImg);
 

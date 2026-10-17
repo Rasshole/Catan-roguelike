@@ -43,8 +43,7 @@ namespace CatanRoguelike.Game
             switch (data.Resource)
             {
                 case ResourceType.Wood:
-                    ScatterModels(hexRoot, propsRoot, hexScale, seed, 6 + PositiveMod(seed, 4), TreeModels, 0.26f, 0.35f,
-                        tokenClear, ResourceType.Wood);
+                    ApplyForest(hexRoot, propsRoot, hexScale, seed, tokenClear);
                     break;
                 case ResourceType.Wheat:
                     int wheatClumps = 5 + PositiveMod(seed, 4);
@@ -119,6 +118,61 @@ namespace CatanRoguelike.Game
             }
         }
 
+        private static void ApplyForest(
+            GameObject hexRoot,
+            GameObject propsRoot,
+            float hexScale,
+            int seed,
+            float tokenClear)
+        {
+            int treeTarget = 7 + PositiveMod(seed, 4);
+            float minR = tokenClear;
+            float maxR = MaxPropCenterRadius(hexScale);
+            float minSep = hexScale * 0.10f;
+            var ring = SamplePoissonAnnulus(seed, treeTarget, minR, maxR, minSep, treeTarget * 90);
+            if (ring.Count < treeTarget)
+            {
+                var relaxed = SamplePoissonAnnulus(seed + 911, treeTarget, minR, maxR, minSep * 0.72f, treeTarget * 120);
+                foreach (var p in relaxed)
+                {
+                    if (ring.Count >= treeTarget)
+                        break;
+                    if (IsSeparated(ring, p, minSep * 0.72f))
+                        ring.Add(p);
+                }
+            }
+
+            int placed = 0;
+            int attempt = 0;
+            foreach (var localXZ in ring)
+            {
+                if (placed >= treeTarget)
+                    break;
+                string modelName = TreeModels[PositiveMod(seed + attempt, TreeModels.Length)];
+                float scaleFactor = Mathf.Lerp(0.18f, 0.22f, Hash01(seed + attempt * 19));
+                float yaw = PositiveMod(seed + attempt * 137, 360) + 22f;
+                if (TryPlaceNatureModel(hexRoot, propsRoot.transform, hexScale, modelName, localXZ, scaleFactor, yaw,
+                        ResourceType.Wood, attempt))
+                    placed++;
+                attempt++;
+            }
+
+            for (int i = placed; i < treeTarget; i++)
+            {
+                float angle = (i * 37f + PositiveMod(seed, 360)) * Mathf.Deg2Rad;
+                float r = Mathf.Lerp(minR, maxR, 0.45f + Hash01(seed + i * 31) * 0.5f);
+                var localXZ = new Vector3(Mathf.Cos(angle) * r, 0f, Mathf.Sin(angle) * r);
+                string modelName = TreeModels[PositiveMod(seed + i, TreeModels.Length)];
+                float scaleFactor = Mathf.Lerp(0.18f, 0.22f, Hash01(seed + i * 19));
+                float yaw = PositiveMod(seed + i * 137, 360) + 22f;
+                TryPlaceNatureModel(hexRoot, propsRoot.transform, hexScale, modelName, localXZ, scaleFactor, yaw,
+                    ResourceType.Wood, i);
+            }
+
+            ScatterModels(hexRoot, propsRoot, hexScale, seed + 1200, 2, BushModels, 0.14f, 0.18f, tokenClear,
+                ResourceType.Wood);
+        }
+
         private static void ApplyDesert(GameObject hexRoot, HexTileData data, float hexScale)
         {
             if (data.IsFishTile)
@@ -152,37 +206,106 @@ namespace CatanRoguelike.Game
         {
             for (int i = 0; i < count; i++)
             {
-                string modelName = modelNames[PositiveMod(seed + i, modelNames.Count)];
-                var prefab = Resources.Load<GameObject>($"{ModelRoot}/{modelName}");
-                if (prefab == null)
-                    continue;
-
                 if (!TryFindClearPosition(hexScale, seed + i * 137, tokenClear, MaxPropRadiusFactor, out var pos))
                     continue;
 
-                float angle = PositiveMod(seed + i * 137, 360);
+                string modelName = modelNames[PositiveMod(seed + i, modelNames.Count)];
                 float scaleFactor = Mathf.Lerp(minScaleFactor, maxScaleFactor, Hash01(seed + i * 17));
-                float scale = scaleFactor * hexScale;
-
-                var prop = Object.Instantiate(prefab, propsRoot.transform, false);
-                prop.name = $"NatureProp_{modelName}_{i}";
-                prop.transform.localPosition = pos + Vector3.up * (HexPrismMesh.TopY + LiftAboveTop);
-                prop.transform.localRotation = Quaternion.Euler(0f, angle + 22f, 0f);
-                prop.transform.localScale = Vector3.one * scale;
-
-                foreach (var collider in prop.GetComponentsInChildren<Collider>())
-                    ColonistSceneDestroy.SafeDestroy(collider);
-
-                PruneAndStyleRenderers(prop, resource, hexScale);
-
-                // Nudge outward (same angle) until the XZ footprint clears the token, rather than
-                // dropping the prop: dropping emptied forest hexes since tree bounds always reached in.
-                if (!NudgeOutwardUntilClear(hexRoot, prop.transform, tokenClear, hexScale))
-                {
-                    ColonistSceneDestroy.SafeDestroy(prop);
-                    continue;
-                }
+                float yaw = PositiveMod(seed + i * 137, 360) + 22f;
+                TryPlaceNatureModel(hexRoot, propsRoot.transform, hexScale, modelName, pos, scaleFactor, yaw, resource,
+                    i);
             }
+        }
+
+        private static bool TryPlaceNatureModel(
+            GameObject hexRoot,
+            Transform propsParent,
+            float hexScale,
+            string modelName,
+            Vector3 localXZ,
+            float scaleFactor,
+            float yawDeg,
+            ResourceType resource,
+            int index)
+        {
+            var prefab = Resources.Load<GameObject>($"{ModelRoot}/{modelName}");
+            if (prefab == null)
+                return false;
+
+            float scale = scaleFactor * hexScale;
+            var prop = Object.Instantiate(prefab, propsParent, false);
+            prop.name = $"NatureProp_{modelName}_{index}";
+            prop.transform.localPosition = localXZ + Vector3.up * (HexPrismMesh.TopY + LiftAboveTop);
+            prop.transform.localRotation = Quaternion.Euler(0f, yawDeg, 0f);
+            prop.transform.localScale = Vector3.one * scale;
+
+            foreach (var collider in prop.GetComponentsInChildren<Collider>())
+                ColonistSceneDestroy.SafeDestroy(collider);
+
+            PruneAndStyleRenderers(prop, resource, hexScale);
+
+            if (!NudgeOutwardUntilClear(hexRoot, prop.transform, TokenKeepOutCenterRadius(hexScale), hexScale))
+            {
+                ColonistSceneDestroy.SafeDestroy(prop);
+                return false;
+            }
+
+            var flat = new Vector2(prop.transform.localPosition.x, prop.transform.localPosition.z);
+            if (flat.magnitude > MaxPropCenterRadius(hexScale))
+            {
+                ColonistSceneDestroy.SafeDestroy(prop);
+                return false;
+            }
+
+            return true;
+        }
+
+        private static List<Vector2> SamplePoissonAnnulus(
+            int seed,
+            int targetCount,
+            float minR,
+            float maxR,
+            float minSep,
+            int maxAttempts)
+        {
+            var points = new List<Vector2>(targetCount);
+            for (int attempt = 0; attempt < maxAttempts && points.Count < targetCount; attempt++)
+            {
+                int s = seed + attempt * 53;
+                float angle = Hash01(s) * Mathf.PI * 2f;
+                float r = Mathf.Sqrt(Mathf.Lerp(minR * minR, maxR * maxR, Hash01(s + 17)));
+                var candidate = new Vector2(Mathf.Cos(angle) * r, Mathf.Sin(angle) * r);
+                if (IsSeparated(points, candidate, minSep))
+                    points.Add(candidate);
+            }
+
+            return points;
+        }
+
+        private static bool IsSeparated(List<Vector2> points, Vector2 candidate, float minSep)
+        {
+            float minSepSq = minSep * minSep;
+            for (int i = 0; i < points.Count; i++)
+            {
+                if ((points[i] - candidate).sqrMagnitude < minSepSq)
+                    return false;
+            }
+
+            return true;
+        }
+
+        internal static bool IsForestTreePropName(string propName)
+        {
+            if (string.IsNullOrEmpty(propName))
+                return false;
+
+            foreach (var tree in TreeModels)
+            {
+                if (propName.Contains(tree))
+                    return true;
+            }
+
+            return propName.Contains("Tree");
         }
 
         private static void PlacePrimitive(

@@ -315,6 +315,11 @@ namespace CatanRoguelike.Game
 
             var longestRoad = RouteCalculator.GetLongestRoadOwner(state.Board);
 
+            if (_colonistHumanNameText != null)
+                _colonistHumanNameText.text = ColonistHudCopy.You;
+            if (_colonistAiNameText != null)
+                _colonistAiNameText.text = ColonistHudCopy.Opponent;
+
             if (_colonistHumanPanelText != null)
             {
                 int roads = state.Board.CountRoads(PlayerId.Human);
@@ -397,8 +402,8 @@ namespace CatanRoguelike.Game
 
             var nameGo = new GameObject("Name");
             nameGo.transform.SetParent(nameRow.transform, false);
-            var nameLayout = nameGo.AddComponent<LayoutElement>();
-            nameLayout.flexibleWidth = 1f;
+            var nameLayout = RunHudUiFactory.AddLayoutElement(nameGo, 22f, 1f);
+            nameLayout.minWidth = 64f;
             nameText = RunHudUiFactory.CreateText(
                 nameGo.transform,
                 "Label",
