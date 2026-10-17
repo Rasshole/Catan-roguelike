@@ -96,27 +96,44 @@ namespace CatanRoguelike.Game
             float hexHeightScale,
             float hexScale)
         {
-            var texture = Resources.Load<Texture2D>(FishIconResourcePath) ?? ColonistFishIconTextures.BoldOrangeFish();
-            if (boardRoot == null)
+            var texture = Resources.Load<Texture2D>(FishIconResourcePath);
+            if (texture == null || boardRoot == null)
                 return;
 
             float iconSize = HexTileView.TokenWorldFaceDiameter * 0.9f;
             float boardY = boardRoot.position.y + hexHeightScale * CoastalFishShoalMesh.TopLocalY + 0.04f;
             float bandT = SeaFrameSlotLayout.FishChevronBandThicknessFactor * hexScale;
+            float tokenRadius = HexTileView.TokenWorldFaceDiameter * 0.5f;
+            float minCenterDist = tokenRadius + iconSize * 0.48f;
 
             var armMidLeft = (placement.CoastArmLeft + placement.InlandTip) / 2f
                 + placement.Outward * (bandT * 0.42f);
             var armMidRight = (placement.CoastArmRight + placement.InlandTip) / 2f
                 + placement.Outward * (bandT * 0.42f);
-            var tokenSea = new MapPlaneXz(
-                placement.TokenCenter.X + placement.Outward.X * (bandT * 0.35f),
-                placement.TokenCenter.Z + placement.Outward.Z * (bandT * 0.35f));
-            var centers = new[] { armMidLeft, armMidRight, tokenSea };
+            var centers = new[] { armMidLeft, armMidRight };
+            var halo = ColonistFishIconTextures.DarkIconHalo();
 
             for (int i = 0; i < centers.Length; i++)
             {
                 var xz = centers[i];
+                float dist = Vector2.Distance(
+                    new Vector2(xz.X, xz.Z),
+                    new Vector2(placement.TokenCenter.X, placement.TokenCenter.Z));
+                if (dist < minCenterDist)
+                    continue;
+
                 var boardLocal = boardRoot.InverseTransformPoint(new Vector3(xz.X, boardY, xz.Z));
+                var haloQuad = ColonistFlatBoardQuad.Create(
+                    boardRoot,
+                    $"FishIconHalo_{placement.TokenCenter.X:F0}_{placement.TokenCenter.Z:F0}_{i}",
+                    boardLocal,
+                    iconSize * 1.12f,
+                    iconSize * 1.12f,
+                    halo,
+                    renderQueue: 2002,
+                    zWrite: false,
+                    alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);
+
                 var icon = ColonistFlatBoardQuad.Create(
                     boardRoot,
                     $"FishIcon_{placement.TokenCenter.X:F0}_{placement.TokenCenter.Z:F0}_{i}",
@@ -132,10 +149,12 @@ namespace CatanRoguelike.Game
 
                 float swimYaw = Mathf.Atan2(placement.Outward.X, placement.Outward.Z) * Mathf.Rad2Deg;
                 float side = i == 0 ? -22f : 22f;
-                icon.transform.rotation = Quaternion.Euler(
+                var rot = Quaternion.Euler(
                     ColonistFlatBoardQuad.BoardPitchDegrees,
                     swimYaw + 180f + side,
                     0f);
+                icon.transform.rotation = rot;
+                haloQuad.transform.rotation = rot;
             }
         }
     }

@@ -23,8 +23,8 @@ namespace CatanRoguelike.Game
             row.transform.SetParent(parent, false);
             row.transform.localPosition = localPos;
             row.transform.localRotation = Quaternion.Euler(0f, yawDeg, 0f);
-            var stalkColor = new Color(0.78f, 0.62f, 0.12f);
-            var headColor = new Color(0.94f, 0.82f, 0.22f);
+            var stalkColor = new Color(0.48f, 0.32f, 0.12f);
+            var headColor = new Color(0.96f, 0.58f, 0.14f);
             float w = hexScale * 0.05f;
             float h = hexScale * 0.46f;
             for (int i = 0; i < 7; i++)
@@ -42,8 +42,8 @@ namespace CatanRoguelike.Game
             var sheaf = new GameObject("WheatSheaf");
             sheaf.transform.SetParent(parent, false);
             sheaf.transform.localPosition = localPos;
-            var gold = new Color(0.94f, 0.80f, 0.18f);
-            var straw = new Color(0.72f, 0.58f, 0.14f);
+            var gold = new Color(0.95f, 0.52f, 0.12f);
+            var straw = new Color(0.42f, 0.28f, 0.12f);
             float s = hexScale * 0.26f;
             for (int i = 0; i < 6; i++)
             {
@@ -199,9 +199,9 @@ namespace CatanRoguelike.Game
         {
             float s = hexScale * 0.24f;
             CreatePart(parent, "HayBale", localPos + Vector3.up * s * 0.35f, PrimitiveType.Cylinder,
-                new Vector3(s * 1.1f, s * 0.7f, s * 1.1f), new Color(0.86f, 0.72f, 0.28f));
+                new Vector3(s * 1.1f, s * 0.7f, s * 1.1f), new Color(0.94f, 0.62f, 0.16f));
             CreatePart(parent, "HayBand", localPos + Vector3.up * s * 0.35f, PrimitiveType.Cylinder,
-                new Vector3(s * 1.15f, s * 0.12f, s * 1.15f), new Color(0.62f, 0.48f, 0.18f));
+                new Vector3(s * 1.15f, s * 0.12f, s * 1.15f), new Color(0.44f, 0.28f, 0.12f));
         }
 
         public static void CreateWindmill(Transform parent, Vector3 localPos, float hexScale)
@@ -215,6 +215,8 @@ namespace CatanRoguelike.Game
                 new Vector3(s * 1.4f, s * 0.08f, s * 0.22f), wood);
             CreatePart(parent, "MillBladesB", localPos + Vector3.up * s * 1.05f, PrimitiveType.Cube,
                 new Vector3(s * 0.22f, s * 0.08f, s * 1.4f), wood);
+            CreatePart(parent, "MillRoof", localPos + Vector3.up * (s * 1.22f), PrimitiveType.Cylinder,
+                new Vector3(s * 0.55f, s * 0.22f, s * 0.55f), new Color(0.62f, 0.26f, 0.16f));
         }
 
         public static void CreateCactus(Transform parent, Vector3 localPos, float hexScale)

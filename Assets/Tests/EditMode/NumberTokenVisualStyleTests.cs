@@ -34,6 +34,15 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
+        public void FishGroundTokens_UseDarkBlueChipAndWhiteLabel()
+        {
+            Assert.AreEqual(NumberTokenVisualStyle.ChipFaceFishGround, NumberTokenVisualStyle.GetChipFace(4, fishGround: true));
+            Assert.AreEqual(NumberTokenVisualStyle.ChipRimFishGround, NumberTokenVisualStyle.GetChipRim(4, fishGround: true));
+            Assert.AreEqual(NumberTokenVisualStyle.LabelFishGround, NumberTokenVisualStyle.GetLabel(4, fishGround: true));
+            Assert.AreEqual(NumberTokenVisualStyle.LabelRed, NumberTokenVisualStyle.GetLabel(6, fishGround: true));
+        }
+
+        [Test]
         public void GetLabelCharacterSize_TwoDigitTokens_AreSmaller()
         {
             Assert.AreEqual(0.62f, NumberTokenVisualStyle.GetLabelCharacterSize(9), 1e-4f);

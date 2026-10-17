@@ -185,13 +185,13 @@ namespace CatanRoguelike.Game
             EnsureTokenChip();
             EnsureTokenLabel();
             SetTokenVisible(true);
-            ApplyTokenChipStyle(token);
+            ApplyTokenChipStyle(token, data.IsFishTile);
             UpdateTokenChipGeometry();
             SyncLabelElevationAboveChip();
             LogTokenChipRimDiagnosticsOnce(token);
 
             _tokenLabel.text = token.ToString();
-            var labelRgb = NumberTokenVisualStyle.GetLabel(token);
+            var labelRgb = NumberTokenVisualStyle.GetLabel(token, data.IsFishTile);
             _tokenLabel.color = new Color(labelRgb.R, labelRgb.G, labelRgb.B);
             _tokenLabel.characterSize = NumberTokenVisualStyle.GetLabelCharacterSize(token);
             ApplyTokenLabelFontMaterial();
@@ -343,10 +343,10 @@ namespace CatanRoguelike.Game
                 $"layerVisible={layerVisible} meshAvgNormal={avgNormal}");
         }
 
-        private void ApplyTokenChipStyle(int token)
+        private void ApplyTokenChipStyle(int token, bool fishGround)
         {
-            var faceRgb = NumberTokenVisualStyle.GetChipFace(token);
-            var rimRgb = NumberTokenVisualStyle.GetChipRim(token);
+            var faceRgb = NumberTokenVisualStyle.GetChipFace(token, fishGround);
+            var rimRgb = NumberTokenVisualStyle.GetChipRim(token, fishGround);
             _chipFaceRenderer.sharedMaterial = BuiltInMaterials.CreateUnlit(
                 new Color(faceRgb.R, faceRgb.G, faceRgb.B, 1f));
             _chipRimRenderer.sharedMaterial = BuiltInMaterials.CreateUnlit(

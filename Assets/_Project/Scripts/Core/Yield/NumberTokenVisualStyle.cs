@@ -12,15 +12,34 @@ namespace CatanRoguelike.Core.Yield
         public static readonly Rgb ChipRimRedAccent = new(0.58f, 0.12f, 0.08f);
         public static readonly Rgb LabelStandard = new(0.08f, 0.08f, 0.08f);
         public static readonly Rgb LabelRed = new(0.82f, 0.12f, 0.10f);
+        public static readonly Rgb ChipFaceFishGround = new(0.14f, 0.34f, 0.58f);
+        public static readonly Rgb ChipRimFishGround = new(0.08f, 0.20f, 0.42f);
+        public static readonly Rgb LabelFishGround = new(0.98f, 0.98f, 0.96f);
 
-        public static Rgb GetChipFace(int token) =>
-            NumberTokenLibrary.IsRedNumber(token) ? ChipFaceRedAccent : ChipFaceStandard;
+        public static bool UsesFishGroundChip(bool isFishTile) => isFishTile;
 
-        public static Rgb GetChipRim(int token) =>
-            NumberTokenLibrary.IsRedNumber(token) ? ChipRimRedAccent : ChipRimStandard;
+        public static Rgb GetChipFace(int token, bool fishGround = false)
+        {
+            if (fishGround)
+                return ChipFaceFishGround;
+            return NumberTokenLibrary.IsRedNumber(token) ? ChipFaceRedAccent : ChipFaceStandard;
+        }
 
-        public static Rgb GetLabel(int token) =>
-            NumberTokenLibrary.IsRedNumber(token) ? LabelRed : LabelStandard;
+        public static Rgb GetChipRim(int token, bool fishGround = false)
+        {
+            if (fishGround)
+                return ChipRimFishGround;
+            return NumberTokenLibrary.IsRedNumber(token) ? ChipRimRedAccent : ChipRimStandard;
+        }
+
+        public static Rgb GetLabel(int token, bool fishGround = false)
+        {
+            if (NumberTokenLibrary.IsRedNumber(token))
+                return LabelRed;
+            if (fishGround)
+                return LabelFishGround;
+            return LabelStandard;
+        }
 
         /// <summary>Smaller glyphs so two-digit tokens (10–12) fit on the chip (TextMesh local units).</summary>
         public static float GetLabelCharacterSize(int token) =>

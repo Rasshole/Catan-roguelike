@@ -129,8 +129,9 @@ namespace CatanRoguelike.Game
             float tokenClear = TokenKeepOutCenterRadius(hexScale);
             if (data.IsFishTile)
                 tokenClear = Mathf.Max(tokenClear, hexScale * HexMath.OuterRadius * 2f * 0.35f * 0.59f + hexScale * 0.04f);
-            ScatterModels(hexRoot, propsRoot, hexScale, seed, 3, DesertPlantModels, 0.22f, 0.32f, tokenClear, ResourceType.Wheat);
-            for (int c = 0; c < 3; c++)
+
+            int cactusTarget = 5 + PositiveMod(seed, 2);
+            for (int c = 0; c < cactusTarget; c++)
             {
                 var pos = SamplePosition(hexScale, seed + 300 + c * 61, tokenClear, MaxPropRadiusFactor);
                 PlacePrimitive(hexRoot, propsRoot.transform, pos + Vector3.up * HexPrismMesh.TopY, hexScale,
@@ -188,34 +189,32 @@ namespace CatanRoguelike.Game
             int seed,
             float tokenClear)
         {
-            int target = 5 + PositiveMod(seed, 3);
-            for (int i = 0; i < target; i++)
+            int boulderTarget = 4 + PositiveMod(seed, 2);
+            int peakTarget = 1 + PositiveMod(seed + 11, 2);
+            int index = 0;
+            for (int i = 0; i < boulderTarget; i++)
             {
                 var pos = SamplePosition(hexScale, seed + 800 + i * 67, tokenClear, MaxPropRadiusFactor);
-                int kind = PositiveMod(seed + i * 37, 4);
+                int kind = PositiveMod(seed + i * 37, 3);
                 if (kind == 0)
                 {
                     PlacePrimitive(hexRoot, propsRoot.transform,
                         pos + Vector3.up * (HexPrismMesh.TopY + LiftAboveTop), hexScale,
                         parent => ColonistHexTilePropPrimitives.CreateRockPile(parent, Vector3.zero, hexScale));
                 }
-                else if (kind == 1)
-                {
-                    PlacePrimitive(hexRoot, propsRoot.transform,
-                        pos + Vector3.up * (HexPrismMesh.TopY + LiftAboveTop), hexScale,
-                        parent => ColonistHexTilePropPrimitives.CreateMountainPeak(parent, Vector3.zero, hexScale));
-                }
-                else if (kind == 2)
-                {
-                    PlacePrimitive(hexRoot, propsRoot.transform,
-                        pos + Vector3.up * (HexPrismMesh.TopY + LiftAboveTop), hexScale,
-                        parent => ColonistHexTilePropPrimitives.CreateMineEntrance(parent, Vector3.zero, hexScale));
-                }
                 else
                 {
-                    TryPlaceNatureModel(hexRoot, propsRoot.transform, hexScale, RockModels[0], pos, 0.24f,
-                        PositiveMod(seed + i * 113, 360), ResourceType.Stone, i);
+                    TryPlaceNatureModel(hexRoot, propsRoot.transform, hexScale, RockModels[0], pos, 0.22f,
+                        PositiveMod(seed + i * 113, 360), ResourceType.Stone, index++);
                 }
+            }
+
+            for (int p = 0; p < peakTarget; p++)
+            {
+                var pos = SamplePosition(hexScale, seed + 880 + p * 73, tokenClear, MaxPropRadiusFactor);
+                PlacePrimitive(hexRoot, propsRoot.transform,
+                    pos + Vector3.up * (HexPrismMesh.TopY + LiftAboveTop), hexScale,
+                    parent => ColonistHexTilePropPrimitives.CreateMountainPeak(parent, Vector3.zero, hexScale));
             }
         }
 
@@ -289,6 +288,21 @@ namespace CatanRoguelike.Game
 
         internal static int CountDecorProps(Transform propsRoot) =>
             propsRoot != null ? propsRoot.childCount : 0;
+
+        internal static int CountDescendantsNamed(Transform propsRoot, string namePart)
+        {
+            if (propsRoot == null || string.IsNullOrEmpty(namePart))
+                return 0;
+
+            int count = 0;
+            foreach (var t in propsRoot.GetComponentsInChildren<Transform>(true))
+            {
+                if (t.name.Contains(namePart))
+                    count++;
+            }
+
+            return count;
+        }
 
         /// <summary>Minimum center distance before prop footprint (XZ projected bounds) may approach the token.</summary>
         private static float TokenKeepOutCenterRadius(float hexScale) =>

@@ -21,18 +21,33 @@ namespace CatanRoguelike.Tests
             bool sawStone = false;
             bool sawWheat = false;
             bool sawSheep = false;
+            bool sawDesert = false;
 
             foreach (var kvp in board.Tiles)
             {
                 var tile = kvp.Value;
-                if (tile.IsDesert)
-                    continue;
-
                 var hexGo = new GameObject($"DecorHex_{tile.Coord.Q}_{tile.Coord.R}");
                 ColonistHexTileNatureDecor.Apply(hexGo, tile, TestHexScale);
                 var props = hexGo.transform.Find("TileNatureProps");
                 if (props == null)
                 {
+                    Object.DestroyImmediate(hexGo);
+                    if (!tile.IsDesert)
+                        continue;
+                }
+
+                if (tile.IsDesert)
+                {
+                    sawDesert = true;
+                    Assert.IsNotNull(props, $"Desert hex {tile.Coord} should spawn TileNatureProps.");
+                    Assert.GreaterOrEqual(
+                        ColonistHexTileNatureDecor.CountDescendantsNamed(props, "Cactus"),
+                        5,
+                        $"Desert hex {tile.Coord} needs cacti around pond/token (found cactus parts).");
+                    Assert.GreaterOrEqual(
+                        ColonistHexTileNatureDecor.CountDescendantsNamed(props, "DesertRock"),
+                        2,
+                        $"Desert hex {tile.Coord} needs desert rocks.");
                     Object.DestroyImmediate(hexGo);
                     continue;
                 }
@@ -46,7 +61,11 @@ namespace CatanRoguelike.Tests
                         break;
                     case ResourceType.Stone:
                         sawStone = true;
-                        Assert.GreaterOrEqual(count, 5, $"Stone hex {tile.Coord} needs boulders/peak props (found {count}).");
+                        Assert.GreaterOrEqual(count, 5, $"Stone hex {tile.Coord} needs boulders/peaks (found {count}).");
+                        Assert.GreaterOrEqual(
+                            ColonistHexTileNatureDecor.CountDescendantsNamed(props, "Peak"),
+                            1,
+                            $"Stone hex {tile.Coord} needs at least one snow peak.");
                         break;
                     case ResourceType.Wheat:
                         sawWheat = true;
@@ -74,7 +93,9 @@ namespace CatanRoguelike.Tests
                 Object.DestroyImmediate(hexGo);
             }
 
-            Assert.IsTrue(sawBrick && sawStone && sawWheat && sawSheep, "Large map should include all productive terrains.");
+            Assert.IsTrue(
+                sawBrick && sawStone && sawWheat && sawSheep && sawDesert,
+                "Large map should include all productive terrains and desert.");
         }
     }
 }

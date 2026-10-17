@@ -6,6 +6,7 @@ namespace CatanRoguelike.Game
     {
         private const int Size = 96;
         private static Texture2D _boldFish;
+        private static Texture2D _darkHalo;
 
         /// <summary>High-contrast orange fish with dark outline for top-down readability.</summary>
         public static Texture2D BoldOrangeFish()
@@ -65,6 +66,40 @@ namespace CatanRoguelike.Game
             tex.Apply(false, true);
             _boldFish = tex;
             return _boldFish;
+        }
+
+        /// <summary>Dark ring behind fish icons for contrast on the light-blue chevron.</summary>
+        public static Texture2D DarkIconHalo()
+        {
+            if (_darkHalo != null)
+                return _darkHalo;
+
+            var tex = new Texture2D(Size, Size, TextureFormat.RGBA32, false)
+            {
+                name = "FishIconHalo",
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+
+            float cx = Size * 0.5f;
+            float cy = Size * 0.5f;
+            float outer = Size * 0.46f;
+            float inner = Size * 0.30f;
+            var pixels = new Color32[Size * Size];
+            for (int y = 0; y < Size; y++)
+            {
+                for (int x = 0; x < Size; x++)
+                {
+                    float d = Vector2.Distance(new Vector2(x, y), new Vector2(cx, cy));
+                    float a = d <= outer && d >= inner ? 0.88f : (d < inner ? 0.35f : 0f);
+                    pixels[y * Size + x] = new Color(0.08f, 0.14f, 0.22f, a);
+                }
+            }
+
+            tex.SetPixels32(pixels);
+            tex.Apply(false, true);
+            _darkHalo = tex;
+            return _darkHalo;
         }
     }
 }
