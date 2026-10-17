@@ -129,16 +129,17 @@ namespace CatanRoguelike.Game
             int seed,
             float tokenClear)
         {
-            int target = 4 + PositiveMod(seed, 3);
+            int target = 6 + PositiveMod(seed, 2);
             float maxR = MaxPropCenterRadius(hexScale);
-            string[] sprites = { "clay_pit", "brick_stack", "brick_crates", "smelter" };
+            string[] sprites = { "clay_pit", "clay_pit", "brick_stack", "brick_crates", "brick_kiln", "brick_stack" };
             for (int i = 0; i < target; i++)
             {
                 var pos = SamplePosition(hexScale, seed + 700 + i * 53, tokenClear, MaxPropRadiusFactor);
                 string sprite = sprites[PositiveMod(seed + i * 41, sprites.Length)];
-                float size = sprite == "clay_pit" ? 0.42f : sprite == "smelter" ? 0.36f : 0.34f;
-                // Side-view sprites (kiln tower) stay upright; mounds can spin freely.
-                float yaw = sprite == "smelter" ? PositiveMod(seed + i * 91, 24) - 12f : PositiveMod(seed + i * 91, 360);
+                float size = sprite == "clay_pit" ? 0.40f : sprite == "brick_kiln" ? 0.38f : 0.34f;
+                float yaw = sprite == "brick_kiln"
+                    ? PositiveMod(seed + i * 91, 24) - 12f
+                    : PositiveMod(seed + i * 91, 360);
                 PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, sprite, size,
                     yaw, $"BrickProp_{sprite}_{i}", tokenClear, maxR);
             }
@@ -151,7 +152,7 @@ namespace CatanRoguelike.Game
             int seed,
             float tokenClear)
         {
-            int boulderTarget = 4 + PositiveMod(seed, 2);
+            int boulderTarget = 5 + PositiveMod(seed, 2);
             int peakTarget = 1 + PositiveMod(seed + 11, 2);
             float maxR = MaxPropCenterRadius(hexScale);
             string[] rocks = { "rock_cluster_a", "rock_cluster_b", "rock_cluster_c" };
@@ -159,15 +160,15 @@ namespace CatanRoguelike.Game
             {
                 var pos = SamplePosition(hexScale, seed + 800 + i * 67, tokenClear, MaxPropRadiusFactor);
                 string sprite = rocks[PositiveMod(seed + i * 37, rocks.Length)];
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, sprite, 0.34f,
+                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, sprite, 0.32f,
                     PositiveMod(seed + i * 113, 360), $"StoneBoulder_{i}", tokenClear, maxR);
             }
 
             for (int p = 0; p < peakTarget; p++)
             {
                 var pos = SamplePosition(hexScale, seed + 880 + p * 73, tokenClear, MaxPropRadiusFactor);
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, "mountain_peak", 0.55f,
-                    PositiveMod(seed + p * 127, 360), $"StonePeak_{p}", tokenClear, maxR);
+                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, "mountain_peak", 0.48f,
+                    PositiveMod(seed + p * 127, 24) - 12f, $"StonePeak_{p}", tokenClear, maxR);
             }
         }
 
@@ -179,27 +180,33 @@ namespace CatanRoguelike.Game
             float tokenClear)
         {
             float maxR = MaxPropCenterRadius(hexScale);
-            string[] fields = { "wheat_field_a", "wheat_field_b", "wheat_field_c", "wheat_field_a", "wheat_field_b" };
+            string[] fields = { "wheat_field_a", "wheat_field_b", "wheat_field_c" };
             for (int r = 0; r < fields.Length; r++)
             {
                 var pos = SamplePosition(hexScale, seed + 400 + r * 59, tokenClear, MaxPropRadiusFactor);
-                float size = Mathf.Lerp(0.30f, 0.44f, Hash01(seed + r * 29));
+                float size = Mathf.Lerp(0.28f, 0.38f, Hash01(seed + r * 29));
                 PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, fields[r], size,
                     PositiveMod(seed + r * 40, 360), $"WheatField_{r}", tokenClear, maxR);
             }
 
-            for (int s = 0; s < 2; s++)
+            for (int row = 0; row < 2; row++)
+            {
+                var pos = SamplePosition(hexScale, seed + 430 + row * 61, tokenClear, MaxPropRadiusFactor);
+                float size = Mathf.Lerp(0.36f, 0.44f, Hash01(seed + row * 23));
+                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, "wheat_rows", size,
+                    PositiveMod(seed + row * 47, 360), $"WheatRows_{row}", tokenClear, maxR);
+            }
+
+            for (int s = 0; s < 3; s++)
             {
                 var pos = SamplePosition(hexScale, seed + 460 + s * 63, tokenClear, MaxPropRadiusFactor);
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, "wheat_sheaf", Mathf.Lerp(0.26f, 0.32f, Hash01(seed + s * 31)),
+                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, "wheat_sheaf",
+                    Mathf.Lerp(0.34f, 0.42f, Hash01(seed + s * 31)),
                     PositiveMod(seed + 461 + s * 17, 360), $"WheatSheaf_{s}", tokenClear, maxR);
             }
 
             PlaceTopDown(hexRoot, propsRoot.transform, hexScale,
-                SamplePosition(hexScale, seed + 480, tokenClear, MaxPropRadiusFactor), "hay_bale", 0.26f,
-                PositiveMod(seed + 481, 360), "HayBale_0", tokenClear, maxR);
-            PlaceTopDown(hexRoot, propsRoot.transform, hexScale,
-                SamplePosition(hexScale, seed + 520, tokenClear, MaxPropRadiusFactor), "windmill", 0.50f,
+                SamplePosition(hexScale, seed + 520, tokenClear, MaxPropRadiusFactor), "windmill", 0.42f,
                 PositiveMod(seed + 521, 24) - 12f, "Windmill_0", tokenClear, maxR);
         }
 

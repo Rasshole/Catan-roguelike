@@ -9,6 +9,7 @@ The pack has no fence or cactus, so those are drawn here in the same flat outlin
 from __future__ import annotations
 
 import argparse
+import math
 import zipfile
 from io import BytesIO
 from pathlib import Path
@@ -36,14 +37,7 @@ COPIES: tuple[tuple[str, str], ...] = (
     (R + "Environment/medievalEnvironment_18.png", "clay_pit.png"),        # flecked clay mound
     (R + "Environment/medievalEnvironment_15.png", "brick_stack.png"),     # clay boulders
     (R + "Environment/medievalEnvironment_17.png", "brick_crates.png"),
-    (R + "Structure/medievalStructure_01.png", "smelter.png"),             # terracotta kiln tower
     (R + "Environment/medievalEnvironment_14.png", "desert_rock.png"),     # sandstone rock
-)
-# Big grey outcrop composed from three boulders (the pack has no mountain sprite).
-PEAK_PARTS = (
-    (R + "Environment/medievalEnvironment_07.png", 1.35, (8, -6)),
-    (R + "Environment/medievalEnvironment_10.png", 1.0, (-34, 26)),
-    (R + "Environment/medievalEnvironment_06.png", 1.0, (40, 34)),
 )
 # Plots cut out of grass tiles (grass removed): (zip path, output name, gold tint)
 # gold: 0 = original colours, >0 = ripe-wheat tint strength (cream field reads as a crate on the yellow hex)
@@ -53,10 +47,11 @@ PLOTS: tuple[tuple[str, str, float], ...] = (
     (R + "Tile/medievalTile_55.png", "wheat_field_c.png", 0.0),   # ploughed furrows
     (R + "Tile/medievalTile_54.png", "hay_bale.png", 0.0),
 )
-MILL_BODY = R + "Structure/medievalStructure_11.png"
-MILL_SAILS = R + "Structure/medievalStructure_14.png"
-
 OUTLINE = (92, 58, 30, 255)
+SNOW = (245, 248, 252, 255)
+ROCK_DARK = (58, 62, 70, 255)
+ROCK_MID = (98, 104, 112, 255)
+ROCK_LIGHT = (138, 144, 152, 255)
 
 
 def trim_pad(im: Image.Image, margin: float = 0.04) -> Image.Image:
@@ -148,22 +143,105 @@ def bleed(im: Image.Image) -> Image.Image:
     return out
 
 
-def make_windmill(zf: zipfile.ZipFile) -> Image.Image:
-    body = Image.open(BytesIO(zf.read(MILL_BODY))).convert("RGBA")
-    sails = Image.open(BytesIO(zf.read(MILL_SAILS))).convert("RGBA")
-    canvas = Image.new("RGBA", (192, 192), (0, 0, 0, 0))
-    canvas.alpha_composite(body, (32, 44))
-    canvas.alpha_composite(sails.resize((150, 150), Image.LANCZOS), (21, 4))
-    return canvas
+def make_windmill_topdown() -> Image.Image:
+    """Tower + four sails seen from above; wide stone cap reads as a building at board zoom."""
+    s = 4
+    W = 128 * s
+    im = Image.new("RGBA", (W, W), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    cx, cy = W // 2, W // 2
+    stone, roof = (168, 162, 150, 255), (196, 88, 58, 255)
+    sail = (248, 244, 232, 255)
+    # Thick tower body (most of the sprite) so the hex is not “just an X”.
+    d.ellipse((cx - 34 * s, cy - 34 * s, cx + 34 * s, cy + 34 * s), fill=stone, outline=OUTLINE, width=4 * s)
+    d.ellipse((cx - 26 * s, cy - 26 * s, cx + 26 * s, cy + 26 * s), fill=(188, 182, 172, 255), outline=(120, 108, 96, 255), width=2 * s)
+    d.ellipse((cx - 10 * s, cy - 10 * s, cx + 10 * s, cy + 10 * s), fill=(148, 142, 132, 255))
+    d.pieslice((cx - 36 * s, cy - 40 * s, cx + 36 * s, cy + 8 * s), 200, 340, fill=roof, outline=OUTLINE)
+    sail_len = 34 * s
+    for ang in (0, 90, 180, 270):
+        rad = math.radians(ang)
+        ex = cx + math.cos(rad) * sail_len
+        ey = cy + math.sin(rad) * sail_len
+        bx = cx + math.cos(rad) * 20 * s
+        by = cy + math.sin(rad) * 20 * s
+        d.line((bx, by, ex, ey), fill=OUTLINE, width=9 * s)
+        d.line((bx, by, ex, ey), fill=sail, width=5 * s)
+    return im.resize((128, 128), Image.LANCZOS)
 
 
-def make_peak(zf: zipfile.ZipFile) -> Image.Image:
-    canvas = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
-    for src, scale, (dx, dy) in PEAK_PARTS:
-        im = Image.open(BytesIO(zf.read(src))).convert("RGBA")
-        im = trim_pad(im, 0.0).resize((int(96 * scale),) * 2, Image.LANCZOS)
-        canvas.alpha_composite(im, (128 - im.width // 2 + dx, 128 - im.height // 2 + dy))
-    return canvas
+def make_peak() -> Image.Image:
+    """Top-down mountain: grey slopes + white snow cap (opaque, no shadow blob)."""
+    s = 4
+    W = 160 * s
+    im = Image.new("RGBA", (W, W), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    cx = W // 2
+    base_y = 118 * s
+    peak_y = 18 * s
+    d.polygon([(cx, peak_y), (cx - 58 * s, base_y), (cx + 58 * s, base_y)], fill=ROCK_DARK, outline=OUTLINE)
+    d.polygon([(cx, peak_y + 8 * s), (cx - 42 * s, base_y - 4 * s), (cx + 42 * s, base_y - 4 * s)], fill=ROCK_MID)
+    d.polygon([(cx, peak_y + 4 * s), (cx - 22 * s, peak_y + 38 * s), (cx + 22 * s, peak_y + 38 * s)], fill=ROCK_LIGHT)
+    d.polygon([(cx, peak_y), (cx - 20 * s, peak_y + 32 * s), (cx + 20 * s, peak_y + 32 * s)], fill=SNOW, outline=(200, 210, 220, 255))
+    return im.resize((128, 128), Image.LANCZOS)
+
+
+def make_wheat_rows() -> Image.Image:
+    s = 4
+    W = 128 * s
+    im = Image.new("RGBA", (W, W), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    soil = (168, 118, 52, 255)
+    stalk = (214, 178, 72, 255)
+    d.rounded_rectangle((8 * s, 8 * s, 120 * s, 120 * s), radius=12 * s, fill=soil, outline=OUTLINE, width=2 * s)
+    for row in range(7):
+        y = (18 + row * 14) * s
+        d.line((14 * s, y, 114 * s, y), fill=stalk, width=3 * s)
+        for x in range(16, 112, 10):
+            d.ellipse((x * s - 2 * s, y - 5 * s, x * s + 2 * s, y + 2 * s), fill=(236, 204, 96, 255))
+    return im.resize((128, 128), Image.LANCZOS)
+
+
+def outline_bricks(im: Image.Image) -> Image.Image:
+    im = im.convert("RGBA")
+    px = im.load()
+    w, h = im.size
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if a < 20:
+                continue
+            px[x, y] = (min(255, int(r * 0.85 + 40)), min(255, int(g * 0.55 + 18)), min(255, int(b * 0.45 + 12)), a)
+    # dark outline pass
+    out = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    out.paste(im, (0, 0), im)
+    alpha = im.getchannel("A")
+    edge = alpha.filter(ImageFilter.FIND_EDGES)
+    ep = edge.load()
+    op = out.load()
+    for y in range(h):
+        for x in range(w):
+            if ep[x, y] > 40:
+                r, g, b, a = op[x, y]
+                if a > 0:
+                    op[x, y] = (min(r, 80), min(g, 40), min(b, 30), a)
+    return out
+
+
+def make_brick_kiln() -> Image.Image:
+    """Round brick oven / kiln seen from above."""
+    s = 4
+    W = 128 * s
+    im = Image.new("RGBA", (W, W), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    cx, cy = W // 2, W // 2 + 6 * s
+    brick = (178, 82, 52, 255)
+    dark = (118, 48, 32, 255)
+    d.ellipse((cx - 44 * s, cy - 40 * s, cx + 44 * s, cy + 44 * s), fill=brick, outline=OUTLINE, width=4 * s)
+    d.ellipse((cx - 32 * s, cy - 28 * s, cx + 32 * s, cy + 32 * s), fill=(156, 68, 44, 255), outline=dark, width=2 * s)
+    d.ellipse((cx - 18 * s, cy - 14 * s, cx + 18 * s, cy + 18 * s), fill=(48, 32, 28, 255), outline=OUTLINE, width=2 * s)
+    d.ellipse((cx - 10 * s, cy - 6 * s, cx + 10 * s, cy + 10 * s), fill=(255, 168, 72, 220))
+    d.rectangle((cx - 6 * s, cy - 52 * s, cx + 6 * s, cy - 36 * s), fill=(96, 96, 100, 255), outline=OUTLINE, width=2 * s)
+    return im.resize((128, 128), Image.LANCZOS)
 
 
 def make_cactus(tall: bool) -> Image.Image:
@@ -299,18 +377,22 @@ def main() -> None:
             im = Image.open(BytesIO(zf.read(src)))
             if dest.startswith("rock_cluster"):
                 im = slate_boulder(im)
+            if dest == "brick_stack.png":
+                im = outline_bricks(im)
             save(dest, im)
         for src, dest, tint in PLOTS:
             plot = cut_plot(Image.open(BytesIO(zf.read(src))))
             if dest.startswith("wheat_field"):
                 plot = strip_frame(plot)
             save(dest, gold(plot, tint) if tint else plot)
-        save("windmill.png", make_windmill(zf))
-        save("mountain_peak.png", make_peak(zf))
         save("desert_pond_water.png", make_desert_pond_water(zf))
         save("wheat_sheaf.png", make_wheat_sheaf(zf))
         save("tree_cluster_a.png", make_tree_cluster(zf, R + "Tile/medievalTile_44.png"))  # cypress clump
         save("tree_cluster_b.png", make_tree_cluster(zf, R + "Tile/medievalTile_48.png"))  # pine clump
+    save("windmill.png", make_windmill_topdown())
+    save("mountain_peak.png", make_peak())
+    save("wheat_rows.png", make_wheat_rows())
+    save("brick_kiln.png", make_brick_kiln())
     save("cactus_tall.png", make_cactus(True))
     save("pond_reed.png", make_pond_reed())
     save("cactus_short.png", make_cactus(False))

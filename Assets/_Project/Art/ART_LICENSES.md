@@ -32,7 +32,7 @@
 - **Files:** `Resources/Art/Board/TopDownDecor/*.png` (wheat fields, windmill, rocks, mountain, brick/clay, fence, desert rock)
 - **License:** CC0 1.0 — see `Art/ThirdParty/Kenney/medieval-rts-CC0.txt`
 - **Source:** [Kenney Medieval RTS](https://kenney.nl/assets/medieval-rts) (OpenGameArt mirror in `tools/import-kenney-topdown-decor.py`)
-- **Use:** Flat top-down props on wheat, stone, brick, desert, and sheep fence hexes (forest stays Quaternius 3D).
+- **Use:** Flat top-down props on forest, wheat, stone, brick, desert, sheep fence, and desert pond water.
 
 ## Kenney — Hexagon Kit / Nature Kit (3D, legacy import)
 

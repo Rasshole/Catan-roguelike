@@ -57,11 +57,11 @@ namespace CatanRoguelike.Tests
                 {
                     case ResourceType.Brick:
                         sawBrick = true;
-                        Assert.GreaterOrEqual(count, 4, $"Brick hex {tile.Coord} needs clay/brick props (found {count}).");
+                        Assert.GreaterOrEqual(count, 6, $"Brick hex {tile.Coord} needs clay/brick props (found {count}).");
                         break;
                     case ResourceType.Stone:
                         sawStone = true;
-                        Assert.GreaterOrEqual(count, 5, $"Stone hex {tile.Coord} needs boulders/peaks (found {count}).");
+                        Assert.GreaterOrEqual(count, 6, $"Stone hex {tile.Coord} needs boulders/peaks (found {count}).");
                         Assert.GreaterOrEqual(
                             ColonistHexTileNatureDecor.CountDescendantsNamed(props, "Peak"),
                             1,

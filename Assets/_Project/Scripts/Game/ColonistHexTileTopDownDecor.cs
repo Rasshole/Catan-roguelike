@@ -39,7 +39,8 @@ namespace CatanRoguelike.Game
             holder.transform.localRotation = Quaternion.identity;
 
             // Open sprites (fence rails) would show the dark disc through their gaps.
-            if (spriteName != "fence")
+            bool skipShadow = spriteName == "mountain_peak" || spriteName == "windmill";
+            if (spriteName != "fence" && !skipShadow)
             {
                 float shadowScale = spriteName.StartsWith("rock_cluster") ? 0.58f : 0.42f;
                 bool darkPatch = spriteName.StartsWith("rock_cluster");
@@ -64,7 +65,7 @@ namespace CatanRoguelike.Game
             // BoardPitchOnly ignored the yaw and showed every sprite turned 90 deg under the yawed table
             // camera (kiln/cactus lying sideways, fence vertical). Face the camera, then spin in-plane:
             // Kenney art is lit from the top-left, so keep it near-upright except crop fields.
-            float spin = spriteName.StartsWith("wheat_field")
+            float spin = spriteName.StartsWith("wheat_field") || spriteName == "wheat_rows"
                 ? yawDeg
                 : Mathf.Repeat(yawDeg, 24f) - 12f;
             quad.transform.rotation = Quaternion.AngleAxis(spin, Vector3.up) * quad.transform.rotation;
@@ -107,6 +108,7 @@ namespace CatanRoguelike.Game
         private static float FootprintFactor(string spriteName) =>
             spriteName != null && spriteName.StartsWith("tree_canopy") ? 0.22f
             : spriteName != null && spriteName.StartsWith("tree_cluster") ? 0.38f
+            : spriteName == "mountain_peak" ? 0.34f
             : 0.42f;
 
         private static bool OverlapsPlacedSprite(Transform propsParent, Transform self, Vector2 p, float radius)
