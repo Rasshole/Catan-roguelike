@@ -78,7 +78,7 @@ namespace CatanRoguelike.Game
             _fanRoot.pivot = new Vector2(0.5f, 0f);
             // Centre the fan under the board (play-area centre), not the band centre: the band
             // starts after the resource hand, which pushed the fan right of the board.
-            _fanRoot.anchoredPosition = new Vector2(-(RunHudLayout.ColonistResourceHandWidth + RunHudLayout.Margin) * 0.5f, 6f);
+            _fanRoot.anchoredPosition = new Vector2(-(RunHudLayout.ColonistResourceHandWidth + RunHudLayout.Margin) * 0.5f, 16f); // 6 let rotated outer corners dip into the build bar
             _fanRoot.sizeDelta = new Vector2(640f, ColonistRoguelikeCardHandLayout.CardHeight + 40f);
         }
 
@@ -246,8 +246,13 @@ namespace CatanRoguelike.Game
                 TextAnchor.UpperLeft,
                 RunHudUiFactory.ColonistTextMutedOnPanel,
                 FontStyle.Bold);
-            cost.rectTransform.offsetMin = new Vector2(9f, -21f);
-            cost.rectTransform.offsetMax = new Vector2(-9f, -8f);
+            // 11 px tall so best-fit cannot wrap to two lines and must shrink to one.
+            cost.rectTransform.offsetMin = new Vector2(6f, -20f);
+            cost.rectTransform.offsetMax = new Vector2(-6f, -9f);
+            // One line: "Sabotage · Night" wrapped onto the title at 92 px wide (v111 review);
+            // Bind() drops long category lines to 8 pt instead.
+            cost.horizontalOverflow = HorizontalWrapMode.Overflow;
+            cost.verticalOverflow = VerticalWrapMode.Overflow;
 
             var title = RunHudUiFactory.CreateText(
                 go.transform,
@@ -258,18 +263,21 @@ namespace CatanRoguelike.Game
                 RunHudUiFactory.ColonistTextOnPanel,
                 FontStyle.Bold);
             // Below the category line (they overlapped at -36..-8 vs -22..-6).
-            title.rectTransform.offsetMin = new Vector2(6f, -40f);
-            title.rectTransform.offsetMax = new Vector2(-6f, -22f);
+            // Two lines ("Year of / Plenty", "Master / Builder") must end above the art.
+            title.rectTransform.offsetMin = new Vector2(5f, -48f);
+            title.rectTransform.offsetMax = new Vector2(-5f, -21f);
             title.horizontalOverflow = HorizontalWrapMode.Wrap;
+            title.verticalOverflow = VerticalWrapMode.Truncate;
+            title.lineSpacing = 0.9f;
             title.resizeTextForBestFit = true;
-            title.resizeTextMinSize = 10;
+            title.resizeTextMinSize = 9;
             title.resizeTextMaxSize = 13;
 
             var iconGo = new GameObject("Icon");
             iconGo.transform.SetParent(go.transform, false);
             var iconRect = iconGo.AddComponent<RectTransform>();
-            iconRect.anchorMin = new Vector2(0.18f, 0.32f);
-            iconRect.anchorMax = new Vector2(0.82f, 0.72f);
+            iconRect.anchorMin = new Vector2(0.22f, 0.37f);
+            iconRect.anchorMax = new Vector2(0.78f, 0.59f);
             iconRect.offsetMin = Vector2.zero;
             iconRect.offsetMax = Vector2.zero;
             var iconImg = iconGo.AddComponent<Image>();
@@ -284,9 +292,12 @@ namespace CatanRoguelike.Game
                 RunHudUiFactory.ColonistTextOnPanel);
             body.horizontalOverflow = HorizontalWrapMode.Wrap;
             body.verticalOverflow = VerticalWrapMode.Truncate;
+            body.resizeTextForBestFit = true;
+            body.resizeTextMinSize = 8;
+            body.resizeTextMaxSize = 11;
             var bodyRect = body.rectTransform;
-            bodyRect.anchorMin = new Vector2(0.06f, 0.06f);
-            bodyRect.anchorMax = new Vector2(0.94f, 0.30f);
+            bodyRect.anchorMin = new Vector2(0.06f, 0.05f);
+            bodyRect.anchorMax = new Vector2(0.94f, 0.36f);
             bodyRect.offsetMin = Vector2.zero;
             bodyRect.offsetMax = Vector2.zero;
 
@@ -335,11 +346,18 @@ namespace CatanRoguelike.Game
                 _title.text = def.Name;
                 _body.text = def.Description;
                 _cost.text = $"{CategoryLabelEnglish(def.Category)} · Night";
+                _cost.fontSize = _cost.text.Length > 14 ? 8 : 10;
                 var rgb = CardVisualStyle.GetCategoryColor(def.Category);
                 _accent.color = new Color(rgb.R, rgb.G, rgb.B, 1f);
                 var sprite = ColonistRoguelikeCardArt.GetIcon(def.Id);
                 _icon.sprite = sprite;
-                _icon.color = sprite != null ? Color.white : new Color(rgb.R, rgb.G, rgb.B, 0.35f);
+                // Kenney HUD glyphs are white and vanished on the cream card (v111): ink them in a dark
+                // shade of the category colour. Full-colour art (golden wheat) keeps its own colours.
+                _icon.color = sprite == null
+                    ? new Color(rgb.R, rgb.G, rgb.B, 0.35f)
+                    : ColonistRoguelikeCardArt.IsFullColour(def.Id)
+                        ? Color.white
+                        : new Color(rgb.R * 0.62f, rgb.G * 0.62f, rgb.B * 0.62f, 1f);
                 _icon.preserveAspect = true;
                 _drag.Configure(index, hover, play);
             }

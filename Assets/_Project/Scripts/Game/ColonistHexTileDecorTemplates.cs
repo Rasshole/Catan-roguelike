@@ -60,18 +60,21 @@ namespace CatanRoguelike.Game
 
         private static readonly Slot[] WheatSlots =
         {
-            RingASlot(0, SlotKind.TopDownSprite, "wheat_field_a", 0.27f),
-            RingASlot(1, SlotKind.TopDownSprite, "wheat_field_b", 0.27f),
-            RingASlot(2, SlotKind.TopDownSprite, "wheat_field_c", 0.27f),
-            RingASlot(3, SlotKind.TopDownSprite, "wheat_rows", 0.27f),
-            RingASlot(4, SlotKind.TopDownSprite, "wheat_field_a", 0.27f),
+            // v111 review: 0.27/0.22 fields left big empty yellow gaps and the 0.34 mill read as bare
+            // sails. Fields grow to the keep-out/ring-gap limit; the two ring-A slots beside the mill
+            // (A4 at 270°, A5 at 330°) stay smaller so the 0.38 mill keeps its own corner.
+            RingASlot(0, SlotKind.TopDownSprite, "wheat_field_a", 0.32f),
+            RingASlot(1, SlotKind.TopDownSprite, "wheat_field_b", 0.32f),
+            RingASlot(2, SlotKind.TopDownSprite, "wheat_field_c", 0.32f),
+            RingASlot(3, SlotKind.TopDownSprite, "wheat_rows", 0.32f),
+            RingASlot(4, SlotKind.TopDownSprite, "wheat_field_a", 0.22f),
             RingASlot(5, SlotKind.TopDownSprite, "wheat_sheaf", 0.24f),
-            RingBSlot(0, SlotKind.TopDownSprite, "wheat_rows", 0.22f),
-            RingBSlot(1, SlotKind.TopDownSprite, "wheat_field_b", 0.22f),
-            RingBSlot(2, SlotKind.TopDownSprite, "wheat_sheaf", 0.22f),
-            RingBSlot(3, SlotKind.TopDownSprite, "wheat_field_c", 0.22f),
-            RingBSlot(4, SlotKind.TopDownSprite, "wheat_field_a", 0.22f),
-            RingBSlot(5, SlotKind.TopDownSprite, "windmill", 0.34f, -8f)
+            RingBSlot(0, SlotKind.TopDownSprite, "wheat_rows", 0.30f),
+            RingBSlot(1, SlotKind.TopDownSprite, "wheat_field_b", 0.30f),
+            RingBSlot(2, SlotKind.TopDownSprite, "wheat_sheaf", 0.28f),
+            RingBSlot(3, SlotKind.TopDownSprite, "wheat_field_c", 0.30f),
+            RingBSlot(4, SlotKind.TopDownSprite, "wheat_field_a", 0.28f),
+            RingBSlot(5, SlotKind.TopDownSprite, "windmill", 0.38f, -8f)
         };
 
         private static readonly Slot[] BrickSlots =
@@ -114,10 +117,11 @@ namespace CatanRoguelike.Game
             RingASlot(3, SlotKind.SheepFlock, "sheep", modelScale: 0.21f),
             RingASlot(4, SlotKind.SheepFlock, "sheep", modelScale: 0.22f),
             RingASlot(5, SlotKind.SheepFlock, "sheep", modelScale: 0.21f),
-            RingBSlot(0, SlotKind.NatureModel, "Bush_Flowers", modelScale: 0.20f),
-            RingBSlot(1, SlotKind.NatureModel, "Bush", modelScale: 0.19f),
-            RingBSlot(2, SlotKind.NatureModel, "Bush_Small_Flowers", modelScale: 0.18f),
-            RingBSlot(3, SlotKind.NatureModel, "Bush_Large", modelScale: 0.21f),
+            // Corner bushes were ~0.03 hex dots at 0.18-0.21 (v111 review); 0.30 still clears ring A.
+            RingBSlot(0, SlotKind.NatureModel, "Bush_Flowers", modelScale: 0.32f),
+            RingBSlot(1, SlotKind.NatureModel, "Bush", modelScale: 0.30f),
+            RingBSlot(2, SlotKind.NatureModel, "Bush_Small_Flowers", modelScale: 0.30f),
+            RingBSlot(3, SlotKind.NatureModel, "Bush_Large", modelScale: 0.30f),
             RingBSlot(4, SlotKind.TopDownSprite, "fence", 0.34f, -10f),
             RingBSlot(5, SlotKind.TopDownSprite, "fence", 0.32f, 10f)
         };
@@ -130,12 +134,12 @@ namespace CatanRoguelike.Game
             RingASlot(3, SlotKind.TopDownSprite, "cactus_tall", 0.26f, 8f),
             RingASlot(4, SlotKind.TopDownSprite, "cactus_short", 0.24f, -6f),
             RingASlot(5, SlotKind.TopDownSprite, "desert_rock", 0.24f),
-            RingBSlot(0, SlotKind.NatureModel, "Bush", modelScale: 0.16f),
+            RingBSlot(0, SlotKind.NatureModel, "Bush", modelScale: 0.26f),
             RingBSlot(1, SlotKind.TopDownSprite, "desert_rock", 0.22f),
-            RingBSlot(2, SlotKind.NatureModel, "Bush_Small_Flowers", modelScale: 0.15f),
+            RingBSlot(2, SlotKind.NatureModel, "Bush_Small_Flowers", modelScale: 0.26f),
             RingBSlot(3, SlotKind.TopDownSprite, "cactus_short", 0.22f, 4f),
             RingBSlot(4, SlotKind.TopDownSprite, "cactus_tall", 0.24f, -4f),
-            RingBSlot(5, SlotKind.NatureModel, "Bush", modelScale: 0.16f)
+            RingBSlot(5, SlotKind.NatureModel, "Bush", modelScale: 0.26f)
         };
 
         private static readonly Slot[] DesertFishSlots =

@@ -191,8 +191,10 @@ namespace CatanRoguelike.Game
                         break;
                     }
                     case ColonistHexTileDecorTemplates.SlotKind.NatureModel:
+                        // Ring-B corner slots sit at 0.76 hex: past the legacy 0.70 scatter cap, so pass the
+                        // outline-validated template cap or every corner bush is silently dropped (v111).
                         TryPlaceNatureModel(hexRoot, propsRoot.transform, hexScale, slot.Asset, localXZ,
-                            slot.ModelScale, templateRot + slot.YawDeg, natureStyle, i);
+                            slot.ModelScale, templateRot + slot.YawDeg, natureStyle, i, maxR);
                         break;
                     case ColonistHexTileDecorTemplates.SlotKind.SheepFlock:
                     {
@@ -288,7 +290,8 @@ namespace CatanRoguelike.Game
             float scaleFactor,
             float yawDeg,
             ResourceType resource,
-            int index)
+            int index,
+            float maxCenterRadius = -1f)
         {
             var prefab = Resources.Load<GameObject>($"{NatureModelRoot}/{modelName}");
             if (prefab == null)
@@ -313,7 +316,8 @@ namespace CatanRoguelike.Game
             }
 
             var flat = new Vector2(prop.transform.localPosition.x, prop.transform.localPosition.z);
-            if (flat.magnitude > MaxPropCenterRadius(hexScale))
+            float cap = maxCenterRadius > 0f ? maxCenterRadius : MaxPropCenterRadius(hexScale);
+            if (flat.magnitude > cap + hexScale * 0.001f)
             {
                 ColonistSceneDestroy.SafeDestroy(prop);
                 return false;

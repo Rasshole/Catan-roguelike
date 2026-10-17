@@ -27,6 +27,9 @@ namespace CatanRoguelike.Game
             }
         }
 
+        /// <summary>True when the art is already coloured (not a white Kenney glyph to tint).</summary>
+        public static bool IsFullColour(CardId cardId) => cardId == CardId.YearOfPlenty;
+
         private static Sprite GetWheatIcon()
         {
             if (_wheat != null)
