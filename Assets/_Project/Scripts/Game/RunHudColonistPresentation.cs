@@ -15,9 +15,9 @@ namespace CatanRoguelike.Game
         private bool _colonistLayoutBuilt;
         private RectTransform _colonistRightRail;
         private Text _colonistHumanNameText;
-        private Text _colonistHumanPanelText;
+        private ColonistHudPlayerStatsView _colonistHumanStats;
         private Text _colonistAiNameText;
-        private Text _colonistAiPanelText;
+        private ColonistHudPlayerStatsView _colonistAiStats;
         private Text _colonistTurnTimerText;
         private Text _colonistChatText;
         private GameObject _colonistTurnBanner;
@@ -225,18 +225,18 @@ namespace CatanRoguelike.Game
                 ColonistHudCopy.You,
                 new Color(0.22f, 0.55f, 0.95f, 1f),
                 out _colonistHumanNameText,
-                out _colonistHumanPanelText,
+                out _colonistHumanStats,
                 out _colonistTurnTimerText);
 
-            Text unusedTurnTimer;
+            Text unusedAiTurnTimer;
             BuildColonistPlayerPanel(
                 _colonistRightRail,
                 "PlayerAi",
                 ColonistHudCopy.Opponent,
                 new Color(0.92f, 0.32f, 0.28f, 1f),
                 out _colonistAiNameText,
-                out _colonistAiPanelText,
-                out unusedTurnTimer);
+                out _colonistAiStats,
+                out unusedAiTurnTimer);
 
             var logPanel = RunHudUiFactory.CreatePanel(
                 _colonistRightRail,
@@ -320,29 +320,16 @@ namespace CatanRoguelike.Game
             if (_colonistAiNameText != null)
                 _colonistAiNameText.text = ColonistHudCopy.Opponent;
 
-            if (_colonistHumanPanelText != null)
-            {
-                int roads = state.Board.CountRoads(PlayerId.Human);
-                _colonistHumanPanelText.fontSize = 14;
-                _colonistHumanPanelText.horizontalOverflow = HorizontalWrapMode.Wrap;
-                string fishPart = state.FishermenOfCatanEnabled
-                    ? $" · Fish {state.PlayerFish}"
-                    : string.Empty;
-                _colonistHumanPanelText.text =
-                    $"VP {state.PlayerVictoryPoints} · Res {state.PlayerInventory.Total} · Dv {state.PlayerHand.Count}\n" +
-                    $"Rd {roads}{fishPart}\n" +
-                    $"LR {(longestRoad == PlayerId.Human ? "✓" : "—")} · LA {(state.LargestArmyOwner == PlayerId.Human ? "✓" : "—")}";
-            }
-
-            if (_colonistAiPanelText != null)
-            {
-                int aiRoads = state.Board.CountRoads(PlayerId.Ai);
-                _colonistAiPanelText.fontSize = 14;
-                _colonistAiPanelText.horizontalOverflow = HorizontalWrapMode.Wrap;
-                _colonistAiPanelText.text =
-                    $"VP {state.AiVictoryPoints} · Dv {state.AiHand.Count} · Rd {aiRoads}\n" +
-                    $"LR {(longestRoad == PlayerId.Ai ? "✓" : "—")} · LA {(state.LargestArmyOwner == PlayerId.Ai ? "✓" : "—")}";
-            }
+            _colonistHumanStats?.RefreshHuman(
+                state,
+                longestRoad == PlayerId.Human,
+                state.LargestArmyOwner == PlayerId.Human,
+                state.FishermenOfCatanEnabled,
+                state.PlayerFish);
+            _colonistAiStats?.RefreshAi(
+                state,
+                longestRoad == PlayerId.Ai,
+                state.LargestArmyOwner == PlayerId.Ai);
 
             if (_colonistBankStrip != null)
                 ColonistHudBankStrip.RefreshCounts(_colonistBankStrip, state.Bank);
@@ -357,7 +344,7 @@ namespace CatanRoguelike.Game
             string displayName,
             Color avatarColor,
             out Text nameText,
-            out Text statsText,
+            out ColonistHudPlayerStatsView statsView,
             out Text turnTimerText)
         {
             var panel = RunHudUiFactory.CreatePanel(
@@ -437,16 +424,8 @@ namespace CatanRoguelike.Game
             statsGo.transform.SetParent(content.transform, false);
             var statsLayout = statsGo.AddComponent<LayoutElement>();
             statsLayout.flexibleHeight = 1f;
-            statsLayout.minHeight = 52f;
-            statsText = RunHudUiFactory.CreateText(
-                statsGo.transform,
-                "Text",
-                string.Empty,
-                14,
-                TextAnchor.UpperLeft,
-                RunHudUiFactory.ColonistTextOnPanel);
-            statsText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            statsText.verticalOverflow = VerticalWrapMode.Truncate;
+            statsLayout.minHeight = 72f;
+            statsView = ColonistHudPlayerStatsView.Attach(statsGo.transform);
 
             return panel;
         }

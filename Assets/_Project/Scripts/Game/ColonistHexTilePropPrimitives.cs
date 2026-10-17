@@ -14,12 +14,13 @@ namespace CatanRoguelike.Game
             pivot.transform.SetParent(parent, false);
             pivot.transform.localPosition = localPos;
             pivot.transform.localRotation = Quaternion.Euler(0f, seed * 37f, 0f);
+            var wool = new Color(0.98f, 0.98f, 0.96f);
             var body = CreatePart(pivot.transform, "SheepBody", Vector3.zero, PrimitiveType.Sphere,
-                new Vector3(scale * 1.1f, scale * 0.85f, scale * 1.35f),
-                new Color(0.95f, 0.95f, 0.93f));
+                new Vector3(scale * 1.05f, scale * 0.82f, scale * 1.28f),
+                wool);
             var face = new Color(0.20f, 0.18f, 0.18f);
-            CreatePart(pivot.transform, "SheepHead", new Vector3(0f, scale * 0.25f, scale * 0.72f),
-                PrimitiveType.Sphere, new Vector3(scale * 0.46f, scale * 0.46f, scale * 0.56f), face);
+            CreatePart(pivot.transform, "SheepHead", new Vector3(0f, scale * 0.22f, scale * 0.68f),
+                PrimitiveType.Sphere, new Vector3(scale * 0.42f, scale * 0.42f, scale * 0.50f), face);
             for (int side = -1; side <= 1; side += 2)
                 CreatePart(pivot.transform, "SheepEar", new Vector3(side * scale * 0.28f, scale * 0.32f, scale * 0.66f),
                     PrimitiveType.Sphere, new Vector3(scale * 0.26f, scale * 0.10f, scale * 0.14f), face);

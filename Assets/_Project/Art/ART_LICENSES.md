@@ -7,9 +7,9 @@
 - **Source:** [Kenney Hexagon Pack](https://kenney.nl/assets/hexagon-pack) (OpenGameArt mirror used in `tools/import-kenney-board-art.py`)
 - **Attribution:** Not required.
 
-## Kenney — Board Game Icons (optional; board uses procedural icons)
+## Kenney — Board Game Icons (HUD + port badges)
 
-- **Files:** `Resources/Art/Icons/*.png` (bundled for reference; **hex and port icons use procedural v87-style art** in `ColonistResourceIconTextures`)
+- **Files:** `Resources/Art/Icons/*.png` (colored 128px Kenney icons for HUD cards and port badges), `Resources/Art/HudIcons/*.png` (VP, dev card, road, build buttons, awards)
 - **License:** CC0 1.0
 - **Source:** [Kenney Board Game Icons](https://kenney.nl/assets/board-game-icons)
 

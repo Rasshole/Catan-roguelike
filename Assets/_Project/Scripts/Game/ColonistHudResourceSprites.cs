@@ -14,7 +14,8 @@ namespace CatanRoguelike.Game
             if (Cache.TryGetValue(resource, out var sprite) && sprite != null)
                 return sprite;
 
-            var texture = ColonistResourceIconTextures.GetForHud(resource);
+            var texture = ColonistKenneyResourceIcons.TryGet(resource)
+                ?? ColonistResourceIconTextures.GetForHud(resource);
             sprite = Sprite.Create(
                 texture,
                 new Rect(0f, 0f, texture.width, texture.height),

@@ -43,8 +43,17 @@ namespace CatanRoguelike.Game
 
             var iconGo = new GameObject("Icon");
             iconGo.transform.SetParent(titleRow.transform, false);
-            RunHudUiFactory.AddLayoutElement(iconGo, 18f).preferredWidth = 18f;
-            iconGo.AddComponent<Image>().color = iconTint;
+            RunHudUiFactory.AddLayoutElement(iconGo, 22f).preferredWidth = 22f;
+            var iconImg = iconGo.AddComponent<Image>();
+            iconImg.preserveAspect = true;
+            var buildSprite = ColonistKenneyHudIcons.BuildIconFor(shortTitle);
+            if (buildSprite != null)
+            {
+                iconImg.sprite = buildSprite;
+                iconImg.color = Color.white;
+            }
+            else
+                iconImg.color = iconTint;
 
             var title = RunHudUiFactory.CreateText(
                 titleRow.transform,
@@ -68,7 +77,19 @@ namespace CatanRoguelike.Game
                 TextAnchor.MiddleCenter,
                 RunHudUiFactory.TextMuted);
             cost.horizontalOverflow = HorizontalWrapMode.Overflow;
+            cost.gameObject.SetActive(false);
             RunHudUiFactory.AddLayoutElement(cost.gameObject, 14f);
+
+            var costIcons = new GameObject("CostIcons");
+            costIcons.transform.SetParent(button.transform, false);
+            var costRow = costIcons.AddComponent<HorizontalLayoutGroup>();
+            costRow.spacing = 3f;
+            costRow.childAlignment = TextAnchor.MiddleCenter;
+            costRow.childForceExpandWidth = false;
+            costRow.childControlWidth = true;
+            costRow.childForceExpandHeight = false;
+            costRow.childControlHeight = true;
+            RunHudUiFactory.AddLayoutElement(costIcons, 20f);
 
             var chipGo = new GameObject("Chip");
             chipGo.transform.SetParent(button.transform, false);
@@ -91,7 +112,7 @@ namespace CatanRoguelike.Game
             pieceCountChip.raycastTarget = false;
 
             float buttonWidth = shortTitle == ColonistHudCopy.Settlement ? 116f : 94f;
-            RunHudUiFactory.AddLayoutElement(button.gameObject, 56f).preferredWidth = buttonWidth;
+            RunHudUiFactory.AddLayoutElement(button.gameObject, 72f).preferredWidth = buttonWidth;
 
             labelModel.SetTitle(shortTitle);
             return button;
@@ -143,13 +164,50 @@ namespace CatanRoguelike.Game
             if (button == null)
                 return;
 
-            var costLabel = button.transform.Find("Cost")?.GetComponent<Text>();
-            if (costLabel == null)
+            var costIcons = button.transform.Find("CostIcons");
+            if (costIcons == null)
                 return;
 
-            costLabel.text = BuildCostFormatter.FormatBankStyleChips(cost);
-            // Dark ink on the warm/green Kenney buttons; light pink was unreadable on green.
-            costLabel.color = canAfford ? RunHudUiFactory.ColonistTextOnPanel : new Color(0.58f, 0.10f, 0.08f, 1f);
+            for (int i = costIcons.childCount - 1; i >= 0; i--)
+                ColonistSceneDestroy.SafeDestroy(costIcons.GetChild(i).gameObject);
+
+            void AddChip(ResourceType resource, int amount)
+            {
+                if (amount <= 0)
+                    return;
+
+                var chip = new GameObject($"Cost_{resource}");
+                chip.transform.SetParent(costIcons, false);
+                var row = chip.AddComponent<HorizontalLayoutGroup>();
+                row.spacing = 1f;
+                row.childAlignment = TextAnchor.MiddleCenter;
+                row.childForceExpandWidth = false;
+                row.childControlWidth = true;
+                RunHudUiFactory.AddLayoutElement(chip, 18f);
+
+                var iconGo = new GameObject("Icon");
+                iconGo.transform.SetParent(chip.transform, false);
+                RunHudUiFactory.AddLayoutElement(iconGo, 14f).preferredWidth = 14f;
+                var img = iconGo.AddComponent<Image>();
+                ColonistHudIconGraphic.ApplyCardIcon(img, ColonistHudResourceSprites.Get(resource), fill: 0.92f);
+
+                var amt = RunHudUiFactory.CreateText(
+                    chip.transform,
+                    "Amt",
+                    amount.ToString(),
+                    10,
+                    TextAnchor.MiddleLeft,
+                    canAfford ? RunHudUiFactory.ColonistTextOnPanel : new Color(0.58f, 0.10f, 0.08f, 1f),
+                    FontStyle.Bold);
+                amt.raycastTarget = false;
+                RunHudUiFactory.AddLayoutElement(amt.gameObject, 14f).preferredWidth = 12f;
+            }
+
+            AddChip(ResourceType.Wood, cost.Wood);
+            AddChip(ResourceType.Brick, cost.Brick);
+            AddChip(ResourceType.Wheat, cost.Wheat);
+            AddChip(ResourceType.Sheep, cost.Sheep);
+            AddChip(ResourceType.Stone, cost.Stone);
         }
 
         public static Color IconTintFor(string shortTitle) => shortTitle switch

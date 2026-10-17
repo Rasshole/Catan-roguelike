@@ -73,7 +73,7 @@ namespace CatanRoguelike.Tests
                         break;
                     case ResourceType.Sheep:
                         sawSheep = true;
-                        Assert.GreaterOrEqual(count, 4, $"Sheep hex {tile.Coord} needs flock props (found {count}).");
+                        Assert.GreaterOrEqual(count, 8, $"Sheep hex {tile.Coord} needs flock props (found {count}).");
                         break;
                 }
 

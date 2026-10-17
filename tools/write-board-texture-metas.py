@@ -6,6 +6,7 @@ import secrets
 ROOT = Path(__file__).resolve().parents[1] / "Assets/_Project"
 BOARD = ROOT / "Resources/Art/Board"
 ICONS = ROOT / "Resources/Art/Icons"
+HUD_ICONS = ROOT / "Resources/Art/HudIcons"
 BOARDGAME = ROOT / "Resources/Art/Boardgame"
 
 TEXTURE_META = """fileFormatVersion: 2
@@ -164,6 +165,7 @@ def main() -> None:
     write_folder(BOARD)
     write_folder(BOARD / "TopDownDecor")
     write_folder(ICONS)
+    write_folder(HUD_ICONS)
     write_folder(BOARDGAME)
     write_folder(BOARDGAME / "Dice")
     write_folder(BOARDGAME / "Cards")
@@ -177,6 +179,7 @@ def main() -> None:
 
     write_png_metas(BOARD)
     write_png_metas(ICONS)
+    write_png_metas(HUD_ICONS)
     write_png_metas(BOARDGAME / "Dice")
     write_png_metas(BOARDGAME / "Cards")
     write_png_metas(ROOT / "Resources" / "Art" / "Models" / "Nature" / "Textures")

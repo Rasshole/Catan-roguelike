@@ -39,7 +39,7 @@ namespace CatanRoguelike.Game
             holder.transform.localRotation = Quaternion.identity;
 
             // Open sprites (fence rails) would show the dark disc through their gaps.
-            bool skipShadow = spriteName == "mountain_peak" || spriteName == "windmill";
+            bool skipShadow = spriteName == "mountain_peak";
             if (spriteName != "fence" && !skipShadow)
             {
                 float shadowScale = spriteName.StartsWith("rock_cluster") ? 0.58f : 0.42f;

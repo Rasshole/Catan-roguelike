@@ -35,7 +35,6 @@ COPIES: tuple[tuple[str, str], ...] = (
     (R + "Environment/medievalEnvironment_09.png", "rock_cluster_b.png"),  # flecked (ore)
     (R + "Environment/medievalEnvironment_11.png", "rock_cluster_c.png"),
     (R + "Environment/medievalEnvironment_18.png", "clay_pit.png"),        # flecked clay mound
-    (R + "Environment/medievalEnvironment_17.png", "brick_crates.png"),
     (R + "Environment/medievalEnvironment_14.png", "desert_rock.png"),     # sandstone rock
 )
 # Plots cut out of grass tiles (grass removed): (zip path, output name, gold tint)
@@ -281,14 +280,25 @@ def make_brick_pallet() -> Image.Image:
     return im.resize((128, 128), Image.LANCZOS)
 
 
-def make_windmill_kenney(zf: zipfile.ZipFile) -> Image.Image:
-    """Kenney mill body (Structure_11) with sails (Structure_14) on the roof."""
-    body = Image.open(BytesIO(zf.read(R + "Structure/medievalStructure_11.png"))).convert("RGBA")
-    sails = Image.open(BytesIO(zf.read(R + "Structure/medievalStructure_14.png"))).convert("RGBA")
-    canvas = Image.new("RGBA", (192, 192), (0, 0, 0, 0))
-    canvas.alpha_composite(body, (32, 44))
-    canvas.alpha_composite(sails.resize((150, 150), Image.LANCZOS), (21, 4))
-    return canvas
+def make_windmill_oblique() -> Image.Image:
+    """Stone tower + cap + crossed sails (upright), dark outlines — reads on yellow wheat hex."""
+    s = 4
+    W, H = 140 * s, 156 * s
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.ellipse((26 * s, 128 * s, 114 * s, 146 * s), fill=(0, 0, 0, 48))
+    stone, stone_hi = (102, 94, 82, 255), (132, 124, 112, 255)
+    roof, sail = (188, 72, 44, 255), (248, 240, 224, 255)
+    # tapered tower (three-quarter view)
+    d.polygon([(70 * s, 120 * s), (40 * s, 54 * s), (100 * s, 54 * s)], fill=stone, outline=OUTLINE)
+    d.polygon([(70 * s, 118 * s), (46 * s, 60 * s), (94 * s, 60 * s)], fill=stone_hi)
+    d.rounded_rectangle((58 * s, 92 * s, 82 * s, 118 * s), radius=4 * s, fill=(72, 64, 58, 255), outline=OUTLINE, width=2 * s)
+    d.polygon([(70 * s, 30 * s), (36 * s, 56 * s), (104 * s, 56 * s)], fill=roof, outline=OUTLINE)
+    cx, cy = 70 * s, 46 * s
+    d.rectangle((cx - 3 * s, cy - 38 * s, cx + 3 * s, cy + 10 * s), fill=sail, outline=OUTLINE, width=3 * s)
+    d.rectangle((cx - 34 * s, cy - 3 * s, cx + 34 * s, cy + 3 * s), fill=sail, outline=OUTLINE, width=3 * s)
+    d.ellipse((cx - 7 * s, cy - 7 * s, cx + 7 * s, cy + 7 * s), fill=(78, 72, 66, 255), outline=OUTLINE, width=2 * s)
+    return im
 
 
 def make_cactus(tall: bool) -> Image.Image:
@@ -434,10 +444,9 @@ def main() -> None:
         save("wheat_sheaf.png", make_wheat_sheaf(zf))
         save("tree_cluster_a.png", make_tree_cluster(zf, R + "Tile/medievalTile_44.png"))  # cypress clump
         save("tree_cluster_b.png", make_tree_cluster(zf, R + "Tile/medievalTile_48.png"))  # pine clump
-    # The procedural disc+cap mill read as a life buoy; the Kenney body+sails reads as a windmill.
-    with zipfile.ZipFile(a.zip) as zf2:
-        save("windmill.png", make_windmill_kenney(zf2))
+    save("windmill.png", make_windmill_oblique())
     save("brick_stack.png", make_brick_pallet())
+    save("brick_crates.png", make_brick_pallet())
     save("mountain_peak.png", make_peak())
     save("wheat_rows.png", make_wheat_rows())
     save("brick_kiln.png", make_brick_kiln())

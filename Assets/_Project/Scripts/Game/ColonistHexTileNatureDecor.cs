@@ -13,7 +13,7 @@ namespace CatanRoguelike.Game
         private const float LiftAboveTop = 0.04f;
         private const float MaxPropRadiusFactor = 0.65f;
         private static readonly string[] ForestTreeSprites =
-            { "tree_canopy_a", "tree_canopy_b", "tree_canopy_c", "tree_canopy_b", "tree_canopy_a" };
+            { "tree_canopy_b", "tree_canopy_c", "tree_canopy_b", "tree_canopy_c", "tree_canopy_b" };
         private static readonly string[] BushModels = { "Bush_Flowers", "Bush", "Bush_Small_Flowers", "Bush_Large" };
         public static void Apply(GameObject hexRoot, HexTileData data, float hexScale)
         {
@@ -131,7 +131,7 @@ namespace CatanRoguelike.Game
         {
             int target = 6 + PositiveMod(seed, 2);
             float maxR = MaxPropCenterRadius(hexScale);
-            string[] sprites = { "clay_pit", "clay_pit", "brick_stack", "brick_crates", "brick_kiln", "brick_stack" };
+            string[] sprites = { "clay_pit", "clay_pit", "brick_stack", "brick_stack", "brick_kiln", "brick_stack" };
             for (int i = 0; i < target; i++)
             {
                 var pos = SamplePosition(hexScale, seed + 700 + i * 53, tokenClear, MaxPropRadiusFactor);
@@ -206,7 +206,7 @@ namespace CatanRoguelike.Game
             }
 
             PlaceTopDown(hexRoot, propsRoot.transform, hexScale,
-                SamplePosition(hexScale, seed + 520, tokenClear, MaxPropRadiusFactor), "windmill", 0.42f,
+                SamplePosition(hexScale, seed + 520, tokenClear, MaxPropRadiusFactor), "windmill", 0.32f,
                 PositiveMod(seed + 521, 24) - 12f, "Windmill_0", tokenClear, maxR);
         }
 
@@ -217,15 +217,18 @@ namespace CatanRoguelike.Game
             int seed,
             float tokenClear)
         {
-            ScatterModels(hexRoot, propsRoot, hexScale, seed, 2, BushModels, 0.18f, 0.26f, tokenClear,
+            ScatterModels(hexRoot, propsRoot, hexScale, seed, 4, BushModels, 0.18f, 0.26f, tokenClear,
                 ResourceType.Sheep);
             float maxR = MaxPropCenterRadius(hexScale);
             var fencePos = SamplePosition(hexScale, seed + 600, tokenClear, MaxPropRadiusFactor);
             PlaceTopDown(hexRoot, propsRoot.transform, hexScale, fencePos, "fence", 0.44f,
                 PositiveMod(seed, 24) - 12f, "SheepFence_0", tokenClear, maxR);
+            var fencePos2 = SamplePosition(hexScale, seed + 640, tokenClear, MaxPropRadiusFactor);
+            PlaceTopDown(hexRoot, propsRoot.transform, hexScale, fencePos2, "fence", 0.38f,
+                PositiveMod(seed + 17, 24) - 12f, "SheepFence_1", tokenClear, maxR);
 
-            float fenceKeepOut = hexScale * 0.34f;
-            int sheepCount = 3 + PositiveMod(seed, 2);
+            float fenceKeepOut = hexScale * 0.30f;
+            int sheepCount = 5 + PositiveMod(seed, 2);
             for (int s = 0; s < sheepCount; s++)
             {
                 Vector3 pos = Vector3.zero;
@@ -233,7 +236,8 @@ namespace CatanRoguelike.Game
                 for (int attempt = 0; attempt < 16; attempt++)
                 {
                     pos = SamplePosition(hexScale, seed + 500 + s * 71 + attempt * 19, tokenClear, MaxPropRadiusFactor);
-                    if (Vector2.Distance(new Vector2(pos.x, pos.z), new Vector2(fencePos.x, fencePos.z)) >= fenceKeepOut)
+                    if (Vector2.Distance(new Vector2(pos.x, pos.z), new Vector2(fencePos.x, fencePos.z)) >= fenceKeepOut
+                        && Vector2.Distance(new Vector2(pos.x, pos.z), new Vector2(fencePos2.x, fencePos2.z)) >= fenceKeepOut)
                     {
                         found = true;
                         break;
@@ -243,11 +247,13 @@ namespace CatanRoguelike.Game
                 if (!found)
                     continue;
 
+                float lift = HexPrismMesh.TopY + LiftAboveTop + s * 0.008f;
+                float sheepScale = hexScale * Mathf.Lerp(0.20f, 0.24f, Hash01(seed + s * 41));
                 PlacePrimitive(hexRoot, propsRoot.transform,
-                    pos + Vector3.up * (HexPrismMesh.TopY + LiftAboveTop), hexScale,
+                    pos + Vector3.up * lift, hexScale,
                     parent =>
                         ColonistHexTilePropPrimitives.CreateSheep(
-                            parent, Vector3.zero, hexScale * 0.22f, seed + s));
+                            parent, Vector3.zero, sheepScale, seed + s));
             }
         }
 

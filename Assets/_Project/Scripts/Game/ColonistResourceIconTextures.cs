@@ -19,8 +19,41 @@ namespace CatanRoguelike.Game
 
         public static Texture2D GetForHud(ResourceType resource) => GetTexture(HudCache, resource, forHud: true);
 
-        public static Texture2D GetForPortBadge(ResourceType resource) =>
-            GetTexture(PortBadgeCache, resource, forHud: true, inkOverride: GetPortBadgeInk(resource));
+        private static readonly Dictionary<ResourceType, Texture2D> PortDecorCache = new();
+
+        public static Texture2D GetForPortBadge(ResourceType resource)
+        {
+            if (PortDecorCache.TryGetValue(resource, out var cached) && cached != null)
+                return cached;
+
+            string sprite = resource switch
+            {
+                ResourceType.Wood => "tree_canopy_b",
+                ResourceType.Wheat => "wheat_sheaf",
+                ResourceType.Brick => "brick_stack",
+                ResourceType.Stone => "rock_cluster_b",
+                _ => null
+            };
+
+            if (sprite != null)
+            {
+                var decor = Resources.Load<Texture2D>($"Art/Board/TopDownDecor/{sprite}");
+                if (decor != null)
+                {
+                    PortDecorCache[resource] = decor;
+                    return decor;
+                }
+            }
+
+            var kenney = ColonistKenneyResourceIcons.TryGet(resource);
+            if (kenney != null)
+            {
+                PortDecorCache[resource] = kenney;
+                return kenney;
+            }
+
+            return GetTexture(PortBadgeCache, resource, forHud: true, inkOverride: GetPortBadgeInk(resource));
+        }
 
         private static Color32 GetPortBadgeInk(ResourceType resource) =>
             resource == ResourceType.Wood
