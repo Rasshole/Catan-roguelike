@@ -57,6 +57,8 @@ namespace CatanRoguelike.Core.Save
         public bool IsDesert { get; set; }
         /// <summary>Optional v1 — classic number token 2–12.</summary>
         public int? NumberToken { get; set; }
+        public bool IsFishTile { get; set; }
+        public int FishValue { get; set; }
     }
 
     public sealed class RoadSaveData
@@ -72,9 +74,18 @@ namespace CatanRoguelike.Core.Save
         public PlayerId Owner { get; set; }
     }
 
+    public sealed class PortSeaSlotSaveData
+    {
+        public VertexSaveData Vertex { get; set; }
+        public int SeaQ { get; set; }
+        public int SeaR { get; set; }
+    }
+
     public sealed class BoardSaveData
     {
         public List<HexTileSaveData> Tiles { get; set; } = new();
+        public List<HexTileSaveData> SeaFishGrounds { get; set; } = new();
+        public List<PortSeaSlotSaveData> PortSeaSlots { get; set; } = new();
         public List<RoadSaveData> Roads { get; set; } = new();
         public List<VertexBuildingSaveData> VertexBuildings { get; set; } = new();
         public List<EdgeSaveData> DisabledRoads { get; set; } = new();
@@ -161,5 +172,10 @@ namespace CatanRoguelike.Core.Save
         public bool EventStoneDouble { get; set; }
         public int EventShopBonus { get; set; }
         public BoardSaveData Board { get; set; }
+        public bool FishermenOfCatanEnabled { get; set; }
+        public int FishermenRunSeed { get; set; }
+        public int PlayerFish { get; set; }
+        public int AiFish { get; set; }
+        public List<int> FishBagRemaining { get; set; }
     }
 }

@@ -1,0 +1,523 @@
+using System.Collections.Generic;
+using CatanRoguelike.Core;
+using CatanRoguelike.Core.Hex;
+using CatanRoguelike.Core.Map;
+using UnityEngine;
+
+namespace CatanRoguelike.Game
+{
+    /// <summary>Kenney top-down sprites on terrain hexes; Quaternius bushes on sheep pastures only.</summary>
+    public static class ColonistHexTileNatureDecor
+    {
+        private const string NatureModelRoot = "Art/Models/Nature";
+        private const float LiftAboveTop = 0.04f;
+        private const float MaxPropRadiusFactor = 0.65f;
+        private const float TemplateMaxCenterRadiusHex = 0.92f;
+        private static readonly string[] ForestTreeSprites =
+            { "tree_canopy_b", "tree_canopy_c", "tree_canopy_b", "tree_canopy_c", "tree_canopy_b" };
+        private static readonly string[] BushModels = { "Bush_Flowers", "Bush", "Bush_Small_Flowers", "Bush_Large" };
+        public static void Apply(GameObject hexRoot, HexTileData data, float hexScale)
+        {
+            if (hexRoot == null || data == null || BoardState.IsSeaFishGround(data))
+                return;
+
+            if (hexRoot.transform.Find("TileNatureProps") != null)
+                return;
+
+            if (data.IsDesert)
+            {
+                ApplyDesert(hexRoot, data, hexScale);
+                return;
+            }
+
+            var propsRoot = new GameObject("TileNatureProps");
+            propsRoot.transform.SetParent(hexRoot.transform, false);
+
+            int seed = data.Coord.Q * 73 + data.Coord.R * 41;
+            float tokenClear = TokenKeepOutCenterRadius(hexScale);
+
+            switch (data.Resource)
+            {
+                case ResourceType.Wood:
+                    ApplyForest(hexRoot, propsRoot, hexScale, seed, tokenClear);
+                    break;
+                case ResourceType.Wheat:
+                    ApplyWheat(hexRoot, propsRoot, hexScale, seed, tokenClear);
+                    break;
+                case ResourceType.Sheep:
+                    ApplySheep(hexRoot, propsRoot, hexScale, seed, tokenClear);
+                    break;
+                case ResourceType.Stone:
+                    ApplyStone(hexRoot, propsRoot, hexScale, seed, tokenClear);
+                    break;
+                case ResourceType.Brick:
+                    ApplyBrick(hexRoot, propsRoot, hexScale, seed, tokenClear);
+                    break;
+            }
+        }
+
+        private static void ApplyForest(
+            GameObject hexRoot,
+            GameObject propsRoot,
+            float hexScale,
+            int seed,
+            float tokenClear)
+        {
+            // Dense wood: 4-5 Kenney tree clumps (4-6 trees each) around the ring, then single trees
+            // fill the gaps. Single tall-narrow trees alone left most of the hex bare green.
+            int clumpTarget = 4 + PositiveMod(seed, 2);
+            int treeTarget = 12 + PositiveMod(seed, 5);
+            float maxR = MaxPropCenterRadius(hexScale);
+            float phase = PositiveMod(seed * 7, 360);
+            int placed = 0;
+            for (int c = 0; c < clumpTarget; c++)
+            {
+                float angle = (phase + c * 360f / clumpTarget) * Mathf.Deg2Rad;
+                var localXZ = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * maxR;
+                string sprite = PositiveMod(seed + c, 2) == 0 ? "tree_cluster_a" : "tree_cluster_b";
+                float size = Mathf.Lerp(0.46f, 0.54f, Hash01(seed + c * 23));
+                if (PlaceTopDown(hexRoot, propsRoot.transform, hexScale, localXZ, sprite, size, 0f,
+                        $"ForestTree_{sprite}_{c}", tokenClear, maxR))
+                    placed++;
+            }
+
+            for (int i = 0; placed < treeTarget && i < treeTarget * 3; i++)
+            {
+                float angle = (phase + 180f / clumpTarget + i * 47f) * Mathf.Deg2Rad;
+                float r = Mathf.Lerp(tokenClear, maxR, 0.5f + Hash01(seed + i * 31) * 0.5f);
+                var localXZ = new Vector3(Mathf.Cos(angle) * r, 0f, Mathf.Sin(angle) * r);
+                string sprite = ForestTreeSprites[PositiveMod(seed + i, ForestTreeSprites.Length)];
+                float size = Mathf.Lerp(0.34f, 0.44f, Hash01(seed + i * 19));
+                if (PlaceTopDown(hexRoot, propsRoot.transform, hexScale, localXZ, sprite, size, 0f,
+                        $"ForestTree_{sprite}_{i}", tokenClear, maxR))
+                    placed++;
+            }
+        }
+
+        private static void ApplyDesert(GameObject hexRoot, HexTileData data, float hexScale)
+        {
+            // Desert lake (Fishermen) tiles also get cacti/rocks: the keep-out radius already
+            // clears the pond + shore (pond shore radius ~0.21 * hex diameter).
+            var propsRoot = new GameObject("TileNatureProps");
+            propsRoot.transform.SetParent(hexRoot.transform, false);
+            int seed = data.Coord.Q * 19 + data.Coord.R * 53;
+            float tokenClear = TokenKeepOutCenterRadius(hexScale);
+            if (data.IsFishTile)
+                tokenClear = Mathf.Max(tokenClear, hexScale * HexMath.OuterRadius * 2f * 0.35f * 0.59f + hexScale * 0.04f);
+
+            var template = data.IsFishTile
+                ? ColonistHexTileDecorTemplates.DesertFishPond
+                : ColonistHexTileDecorTemplates.Desert;
+            ApplyDecorTemplate(hexRoot, propsRoot, hexScale, seed, tokenClear, template, ResourceType.Sheep);
+        }
+
+        private static void ApplyBrick(
+            GameObject hexRoot,
+            GameObject propsRoot,
+            float hexScale,
+            int seed,
+            float tokenClear) =>
+            ApplyDecorTemplate(
+                hexRoot, propsRoot, hexScale, seed, tokenClear,
+                ColonistHexTileDecorTemplates.Brick, ResourceType.Brick);
+
+        private static void ApplyStone(
+            GameObject hexRoot,
+            GameObject propsRoot,
+            float hexScale,
+            int seed,
+            float tokenClear) =>
+            ApplyDecorTemplate(
+                hexRoot, propsRoot, hexScale, seed, tokenClear,
+                ColonistHexTileDecorTemplates.Stone, ResourceType.Stone);
+
+        private static void ApplyWheat(
+            GameObject hexRoot,
+            GameObject propsRoot,
+            float hexScale,
+            int seed,
+            float tokenClear) =>
+            ApplyDecorTemplate(
+                hexRoot, propsRoot, hexScale, seed, tokenClear,
+                ColonistHexTileDecorTemplates.Wheat, ResourceType.Wheat);
+
+        private static void ApplySheep(
+            GameObject hexRoot,
+            GameObject propsRoot,
+            float hexScale,
+            int seed,
+            float tokenClear) =>
+            ApplyDecorTemplate(
+                hexRoot, propsRoot, hexScale, seed, tokenClear,
+                ColonistHexTileDecorTemplates.Sheep, ResourceType.Sheep);
+
+        private static void ApplyDecorTemplate(
+            GameObject hexRoot,
+            GameObject propsRoot,
+            float hexScale,
+            int seed,
+            float tokenClear,
+            IReadOnlyList<ColonistHexTileDecorTemplates.Slot> template,
+            ResourceType natureStyle)
+        {
+            // Template slots are validated on the flat-top hex outline (ring B ~0.76); the old 0.70 circular cap clipped corners.
+            float maxR = hexScale * TemplateMaxCenterRadiusHex;
+            float tokenKeepOutHex = tokenClear / hexScale;
+            float templateRot = PositiveMod(seed, 6) * 60f;
+            for (int i = 0; i < template.Count; i++)
+            {
+                var slot = template[i];
+                Vector2 flat = ColonistHexTileDecorTemplates.LocalPositionHex(slot, templateRot, seed + i * 17);
+                float footprintHex = ColonistHexTileDecorTemplates.VisibleFootprintRadiusHex(slot);
+                if (!ColonistHexTileDecorTemplates.CanPlaceSlot(flat, footprintHex, tokenKeepOutHex))
+                    continue;
+
+                var localXZ = new Vector3(flat.x * hexScale, 0f, flat.y * hexScale);
+
+                switch (slot.Kind)
+                {
+                    case ColonistHexTileDecorTemplates.SlotKind.TopDownSprite:
+                    {
+                        float yaw = slot.YawDeg;
+                        if (slot.Asset == "clay_pit" || slot.Asset == "windmill")
+                            yaw += templateRot;
+                        else if (slot.Asset == "fence" || slot.Asset == "brick_stack")
+                            yaw += PositiveMod(seed + i * 91, 24) - 12f;
+                        else
+                            yaw += templateRot * 0.25f;
+                        string objectName = $"{slot.Asset}_{i}";
+                        PlaceTopDown(hexRoot, propsRoot.transform, hexScale, localXZ, slot.Asset, slot.DiameterHex,
+                            yaw, objectName, tokenClear, maxR);
+                        break;
+                    }
+                    case ColonistHexTileDecorTemplates.SlotKind.NatureModel:
+                        // Ring-B corner slots sit at 0.76 hex: past the legacy 0.70 scatter cap, so pass the
+                        // outline-validated template cap or every corner bush is silently dropped (v111).
+                        TryPlaceNatureModel(hexRoot, propsRoot.transform, hexScale, slot.Asset, localXZ,
+                            slot.ModelScale, templateRot + slot.YawDeg, natureStyle, i, maxR);
+                        break;
+                    case ColonistHexTileDecorTemplates.SlotKind.SheepFlock:
+                    {
+                        float lift = HexPrismMesh.TopY + LiftAboveTop;
+                        float sheepScale = hexScale * slot.ModelScale;
+                        PlacePrimitive(hexRoot, propsRoot.transform, localXZ + Vector3.up * lift, hexScale,
+                            parent => ColonistHexTilePropPrimitives.CreateSheep(
+                                parent, Vector3.zero, sheepScale, seed + i));
+                        break;
+                    }
+                }
+            }
+        }
+
+        private static bool PlaceTopDown(
+            GameObject hexRoot,
+            Transform propsParent,
+            float hexScale,
+            Vector3 localXZ,
+            string spriteName,
+            float diameterInHexUnits,
+            float yawDeg,
+            string objectName,
+            float tokenClear,
+            float maxCenterRadius) =>
+            ColonistHexTileTopDownDecor.TryPlace(
+                hexRoot, propsParent, hexScale, localXZ, spriteName, diameterInHexUnits, yawDeg, objectName,
+                tokenClear, maxCenterRadius);
+
+        internal static bool NudgePropOutwardUntilClear(
+            GameObject hexRoot,
+            Transform prop,
+            float keepOut,
+            float hexScale) =>
+            NudgeOutwardUntilClear(hexRoot, prop, keepOut, hexScale);
+
+        internal static int CountDecorProps(Transform propsRoot) =>
+            propsRoot != null ? propsRoot.childCount : 0;
+
+        internal static int CountDescendantsNamed(Transform propsRoot, string namePart)
+        {
+            if (propsRoot == null || string.IsNullOrEmpty(namePart))
+                return 0;
+
+            int count = 0;
+            foreach (var t in propsRoot.GetComponentsInChildren<Transform>(true))
+            {
+                if (t.name.Contains(namePart))
+                    count++;
+            }
+
+            return count;
+        }
+
+        /// <summary>Minimum center distance before prop footprint (XZ projected bounds) may approach the token.</summary>
+        private static float TokenKeepOutCenterRadius(float hexScale) =>
+            HexTileView.TokenWorldFaceDiameter * 0.5f + hexScale * 0.08f;
+
+        private static int PositiveMod(int value, int modulus) =>
+            ((value % modulus) + modulus) % modulus;
+
+        private static void ScatterModels(
+            GameObject hexRoot,
+            GameObject propsRoot,
+            float hexScale,
+            int seed,
+            int count,
+            IReadOnlyList<string> modelNames,
+            float minScaleFactor,
+            float maxScaleFactor,
+            float tokenClear,
+            ResourceType resource)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (!TryFindClearPosition(hexScale, seed + i * 137, tokenClear, MaxPropRadiusFactor, out var pos))
+                    continue;
+
+                string modelName = modelNames[PositiveMod(seed + i, modelNames.Count)];
+                float scaleFactor = Mathf.Lerp(minScaleFactor, maxScaleFactor, Hash01(seed + i * 17));
+                float yaw = PositiveMod(seed + i * 137, 360) + 22f;
+                TryPlaceNatureModel(hexRoot, propsRoot.transform, hexScale, modelName, pos, scaleFactor, yaw, resource,
+                    i);
+            }
+        }
+
+        private static bool TryPlaceNatureModel(
+            GameObject hexRoot,
+            Transform propsParent,
+            float hexScale,
+            string modelName,
+            Vector3 localXZ,
+            float scaleFactor,
+            float yawDeg,
+            ResourceType resource,
+            int index,
+            float maxCenterRadius = -1f)
+        {
+            var prefab = Resources.Load<GameObject>($"{NatureModelRoot}/{modelName}");
+            if (prefab == null)
+                return false;
+
+            float scale = scaleFactor * hexScale;
+            var prop = Object.Instantiate(prefab, propsParent, false);
+            prop.name = $"NatureProp_{modelName}_{index}";
+            prop.transform.localPosition = localXZ + Vector3.up * (HexPrismMesh.TopY + LiftAboveTop);
+            prop.transform.localRotation = Quaternion.Euler(0f, yawDeg, 0f);
+            prop.transform.localScale = Vector3.one * scale;
+
+            foreach (var collider in prop.GetComponentsInChildren<Collider>())
+                ColonistSceneDestroy.SafeDestroy(collider);
+
+            PruneAndStyleRenderers(prop, resource, hexScale);
+
+            if (!NudgeOutwardUntilClear(hexRoot, prop.transform, TokenKeepOutCenterRadius(hexScale), hexScale))
+            {
+                ColonistSceneDestroy.SafeDestroy(prop);
+                return false;
+            }
+
+            var flat = new Vector2(prop.transform.localPosition.x, prop.transform.localPosition.z);
+            float cap = maxCenterRadius > 0f ? maxCenterRadius : MaxPropCenterRadius(hexScale);
+            if (flat.magnitude > cap + hexScale * 0.001f)
+            {
+                ColonistSceneDestroy.SafeDestroy(prop);
+                return false;
+            }
+
+            return true;
+        }
+
+        private static List<Vector2> SamplePoissonAnnulus(
+            int seed,
+            int targetCount,
+            float minR,
+            float maxR,
+            float minSep,
+            int maxAttempts)
+        {
+            var points = new List<Vector2>(targetCount);
+            for (int attempt = 0; attempt < maxAttempts && points.Count < targetCount; attempt++)
+            {
+                int s = seed + attempt * 53;
+                float angle = Hash01(s) * Mathf.PI * 2f;
+                float r = Mathf.Sqrt(Mathf.Lerp(minR * minR, maxR * maxR, Hash01(s + 17)));
+                var candidate = new Vector2(Mathf.Cos(angle) * r, Mathf.Sin(angle) * r);
+                if (IsSeparated(points, candidate, minSep))
+                    points.Add(candidate);
+            }
+
+            return points;
+        }
+
+        private static bool IsSeparated(List<Vector2> points, Vector2 candidate, float minSep)
+        {
+            float minSepSq = minSep * minSep;
+            for (int i = 0; i < points.Count; i++)
+            {
+                if ((points[i] - candidate).sqrMagnitude < minSepSq)
+                    return false;
+            }
+
+            return true;
+        }
+
+        internal static bool IsForestTreePropName(string propName) =>
+            !string.IsNullOrEmpty(propName) && propName.Contains("ForestTree");
+
+        private static void PlacePrimitive(
+            GameObject hexRoot,
+            Transform propsParent,
+            Vector3 localPos,
+            float hexScale,
+            System.Action<Transform> build)
+        {
+            var holder = new GameObject("PrimitiveProp");
+            holder.transform.SetParent(propsParent, false);
+            holder.transform.localPosition = localPos;
+            build(holder.transform);
+
+            if (!NudgeOutwardUntilClear(hexRoot, holder.transform, TokenKeepOutCenterRadius(hexScale), hexScale))
+                ColonistSceneDestroy.SafeDestroy(holder.gameObject);
+        }
+
+        private static bool TryFindClearPosition(
+            float hexScale,
+            int seed,
+            float tokenClear,
+            float maxRadiusFactor,
+            out Vector3 pos)
+        {
+            for (int attempt = 0; attempt < 20; attempt++)
+            {
+                pos = SamplePosition(hexScale, seed + attempt * 47, tokenClear, maxRadiusFactor);
+                if (pos.magnitude <= hexScale * 0.70f && pos.magnitude >= tokenClear)
+                    return true;
+            }
+
+            pos = new Vector3(tokenClear + hexScale * 0.15f, 0f, 0f);
+            return true;
+        }
+
+        private static Vector3 SamplePosition(float hexScale, int seed, float tokenClear, float maxRadiusFactor)
+        {
+            // Keep centres within MaxPropCenterRadius so props don't spill over hex edges / into the sea.
+            float maxR = MaxPropCenterRadius(hexScale);
+            float angle = 0f;
+            for (int attempt = 0; attempt < 12; attempt++)
+            {
+                int s = seed + attempt * 47;
+                angle = PositiveMod(s, 360) * Mathf.Deg2Rad;
+                float r = tokenClear + hexScale * (0.06f + Hash01(s) * maxRadiusFactor);
+                if (r <= maxR)
+                    return new Vector3(Mathf.Cos(angle) * r, 0f, Mathf.Sin(angle) * r);
+            }
+
+            float fallback = Mathf.Min(maxR, tokenClear + hexScale * 0.12f);
+            return new Vector3(Mathf.Cos(angle) * fallback, 0f, Mathf.Sin(angle) * fallback);
+        }
+
+        private static float MaxPropCenterRadius(float hexScale) => hexScale * 0.70f;
+
+        private static bool NudgeOutwardUntilClear(GameObject hexRoot, Transform prop, float keepOut, float hexScale)
+        {
+            if (PropFootprintClearsToken(hexRoot, prop.gameObject, keepOut))
+                return true;
+
+            var start = prop.localPosition;
+            var flat = new Vector2(start.x, start.z);
+            if (flat.sqrMagnitude < 1e-6f)
+                flat = Vector2.right * 0.01f;
+            float r0 = flat.magnitude;
+            var dir = flat / r0;
+            float maxR = MaxPropCenterRadius(hexScale);
+            const int steps = 6;
+            for (int i = 1; i <= steps; i++)
+            {
+                float r = Mathf.Lerp(r0, maxR, i / (float)steps);
+                prop.localPosition = new Vector3(dir.x * r, start.y, dir.y * r);
+                if (PropFootprintClearsToken(hexRoot, prop.gameObject, keepOut))
+                    return true;
+            }
+
+            prop.localPosition = start;
+            return false;
+        }
+
+        private static bool PropFootprintClearsToken(GameObject hexRoot, GameObject prop, float keepOutCenterRadius)
+        {
+            if (prop == null || hexRoot == null)
+                return true;
+
+            float closest = float.MaxValue;
+            foreach (var renderer in prop.GetComponentsInChildren<Renderer>(true))
+            {
+                if (renderer == null || !renderer.enabled)
+                    continue;
+
+                closest = Mathf.Min(closest, ClosestXZDistanceToOrigin(hexRoot.transform, renderer.bounds));
+            }
+
+            return closest >= keepOutCenterRadius;
+        }
+
+        private static float ClosestXZDistanceToOrigin(Transform hexRoot, Bounds worldBounds)
+        {
+            var min = hexRoot.InverseTransformPoint(worldBounds.min);
+            var max = hexRoot.InverseTransformPoint(worldBounds.max);
+            float minX = Mathf.Min(min.x, max.x);
+            float maxX = Mathf.Max(min.x, max.x);
+            float minZ = Mathf.Min(min.z, max.z);
+            float maxZ = Mathf.Max(min.z, max.z);
+
+            float dx = minX > 0f ? minX : (maxX < 0f ? -maxX : 0f);
+            float dz = minZ > 0f ? minZ : (maxZ < 0f ? -maxZ : 0f);
+            return Mathf.Sqrt(dx * dx + dz * dz);
+        }
+
+        private static float Hash01(int seed) => (seed * 1103515245 + 12345 & 0x7fffffff) / (float)0x7fffffff;
+
+        private static void PruneAndStyleRenderers(GameObject prop, ResourceType resource, float hexScale)
+        {
+            float maxExtent = hexScale * 0.85f;
+            foreach (var renderer in prop.GetComponentsInChildren<Renderer>(true))
+            {
+                string n = renderer.gameObject.name.ToLowerInvariant();
+                if (resource == ResourceType.Wood && (IsRockLikeName(n) || UsesRockAlbedo(renderer)))
+                {
+                    renderer.enabled = false;
+                    continue;
+                }
+
+                if (n.Contains("rock") && resource != ResourceType.Stone)
+                {
+                    renderer.enabled = false;
+                    continue;
+                }
+
+                var bounds = renderer.bounds;
+                if (bounds.size.magnitude > maxExtent * 3f || bounds.extents.y > hexScale * 0.9f)
+                {
+                    renderer.enabled = false;
+                    continue;
+                }
+
+                ColonistNaturePropMaterials.ApplyToRenderer(renderer, resource);
+            }
+        }
+
+        private static bool IsRockLikeName(string n) =>
+            n.Contains("rock") || n.Contains("stone") || n.Contains("boulder");
+
+        private static bool UsesRockAlbedo(Renderer renderer)
+        {
+            var mats = renderer.sharedMaterials;
+            for (int i = 0; i < mats.Length; i++)
+            {
+                var tex = mats[i]?.mainTexture;
+                if (tex != null && tex.name.ToLowerInvariant().Contains("rock"))
+                    return true;
+            }
+
+            return false;
+        }
+    }
+}

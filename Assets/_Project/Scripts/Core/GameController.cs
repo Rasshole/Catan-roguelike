@@ -10,6 +10,8 @@ using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Progression;
 using CatanRoguelike.Core.Shop;
+using CatanRoguelike.Core.Trade;
+using CatanRoguelike.Core.UI;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Core.Save;
 using CatanRoguelike.Core.Victory;
@@ -37,6 +39,7 @@ namespace CatanRoguelike.Core
         /// (production applied, shop generated; not mid-card picker).
         /// </summary>
         public event Action OnAutosavePoint;
+        public event Action<ResourceBundle> HumanBuildCostPaid;
 
         public int RunSeed { get; }
         public MetaProgression Meta { get; private set; }
@@ -44,6 +47,9 @@ namespace CatanRoguelike.Core
         private readonly Random _random;
         private Vertex? _lastPlacedSettlement;
         private bool _metaStartCardGranted;
+
+        /// <summary>When true, new maps include Seafarers fish hexes and fish spend rules.</summary>
+        public bool FishermenMapOption { get; set; } = true;
 
         public GameController(int? seed = null, MapSize mapSize = MapSize.Small, MetaProgression meta = null)
         {
@@ -116,8 +122,13 @@ namespace CatanRoguelike.Core
                 return;
             }
 
-            var board = MapPresets.CreateBoard(mapSize, RunSeed);
+            var gen = new MapGenerationOptions(FishermenMapOption);
+            var board = MapPresets.CreateBoard(mapSize, RunSeed, gen);
             State.ResetForNewMap(board, mapSize);
+            State.FishermenOfCatanEnabled = FishermenMapOption;
+            State.FishermenRunSeed = RunSeed;
+            if (FishermenMapOption)
+                FishTokenBag.EnsureInitialized(State, RunSeed);
             State.Ports = PortAccess.DiscoverPorts(board);
             State.StatusMessage = "Vælg din leader.";
             _lastPlacedSettlement = null;
@@ -136,6 +147,7 @@ namespace CatanRoguelike.Core
             if (!Placement.CanPlaceSettlement(State.Board, vertex, player, setup))
                 return false;
 
+            ResourceBundle paidCost = ResourceBundle.Zero;
             if (!setup)
             {
                 var baseCost = BalanceConfig.GetSettlementCost(State.Board, player,
@@ -144,6 +156,7 @@ namespace CatanRoguelike.Core
                     isSettlement: true, isCity: false, isRoad: false);
                 var cost = GetEffectiveCost(player, baseCost);
                 if (!TryPay(player, cost)) return false;
+                paidCost = cost;
             }
 
             bool grantSetupBonus = setup && (
@@ -165,6 +178,8 @@ namespace CatanRoguelike.Core
 
             AdvanceSetupAfterSettlement(player);
             VictoryCalculator.RefreshVictoryPoints(State);
+            if (!setup && player == PlayerId.Human && paidCost.Total > 0)
+                HumanBuildCostPaid?.Invoke(paidCost);
             NotifyChanged();
             return true;
         }
@@ -181,12 +196,14 @@ namespace CatanRoguelike.Core
                 State.PendingCard == CardId.RoadBuilder && State.FreeRoadCharges > 0
                 || State.Leader == LeaderId.Pioneer && State.PioneerFreeRoadAvailable);
 
+            ResourceBundle paidCost = ResourceBundle.Zero;
             if (!setup && !freeRoad)
             {
                 var baseCost = ModifierService.ApplyLeaderCostModifiers(State, player,
                     BalanceConfig.GetRoadCost(State.Board, player), false, false, true);
                 var cost = GetEffectiveCost(player, baseCost);
                 if (!TryPay(player, cost)) return false;
+                paidCost = cost;
             }
 
             State.Board.Roads[edge] = player;
@@ -204,6 +221,8 @@ namespace CatanRoguelike.Core
 
             AdvanceSetupAfterRoad(player);
             VictoryCalculator.RefreshVictoryPoints(State);
+            if (!setup && player == PlayerId.Human && paidCost.Total > 0)
+                HumanBuildCostPaid?.Invoke(paidCost);
             NotifyChanged();
             return true;
         }
@@ -219,6 +238,8 @@ namespace CatanRoguelike.Core
             if (!TryPay(player, cost)) return false;
 
             State.Board.VertexBuildings[vertex] = (BuildingType.City, player);
+            if (player == PlayerId.Human && cost.Total > 0)
+                HumanBuildCostPaid?.Invoke(cost);
 
             if (player == PlayerId.Human && !State.FirstCityBuiltThisRun)
             {
@@ -277,7 +298,17 @@ namespace CatanRoguelike.Core
             if (State.Phase != GamePhase.DayPlayerActions) return;
             State.Phase = GamePhase.DayAiTurn;
             State.StatusMessage = "AI is taking its turn...";
+            GameLog.Append(State, "You ended your turn.");
+            NotifyChanged();
+        }
+
+        /// <summary>Called after paced AI presentation (see GameplayFeelController).</summary>
+        public void CompleteAiDayTurn()
+        {
+            if (State.Phase != GamePhase.DayAiTurn)
+                return;
             Ai.ExecuteDayTurn(this);
+            GameLog.Append(State, "AI finished its turn.");
             EndDay();
             NotifyChanged();
         }
@@ -490,13 +521,195 @@ namespace CatanRoguelike.Core
             State.TodayRolls = new Dictionary<ResourceType, int>(State.TomorrowRolls);
             State.TodayDiceRolls = new List<int>(State.TomorrowDiceRolls);
             State.Phase = GamePhase.DayProduction;
-            ApplyProduction();
+            State.StatusMessage = "Press Roll (Space) to roll the dice.";
+            NotifyChanged();
+        }
 
+        /// <summary>Applies morning production and opens the player day. Call after roll presentation.</summary>
+        public void ResolveDayProduction()
+        {
+            if (State.Phase != GamePhase.DayProduction)
+                return;
+
+            if (SevenRollRules.RolledSeven(State.TodayDiceRolls))
+            {
+                GameLog.Append(State, "Rolled 7 — no production.");
+                State.PendingSevenDiscard = SevenRollRules.GetDiscardCount(State.PlayerInventory.Total);
+                if (State.PendingSevenDiscard > 0)
+                {
+                    State.Phase = GamePhase.DayDiscardForSeven;
+                    State.StatusMessage = $"Discard {State.PendingSevenDiscard} resources (hand > 7).";
+                    NotifyChanged();
+                    return;
+                }
+
+                BeginRobberPlacementAfterSeven();
+                return;
+            }
+
+            ApplyProduction();
+            LogProductionGains();
+            OpenPlayerDay();
+        }
+
+        public bool SubmitSevenDiscard(ResourceBundle discard)
+        {
+            if (State.Phase != GamePhase.DayDiscardForSeven)
+                return false;
+            if (!SevenRollRules.ValidateDiscardTotal(State.PendingSevenDiscard, discard))
+                return false;
+
+            var inv = State.PlayerInventory;
+            inv.Pay(discard);
+            State.PlayerInventory = inv;
+            State.PendingSevenDiscard = 0;
+            GameLog.Append(State, $"Discarded {discard.Total} cards for seven.");
+            BeginRobberPlacementAfterSeven();
+            return true;
+        }
+
+        public bool PlaceRobberForSeven(HexCoord tile)
+        {
+            if (State.Phase != GamePhase.DayPlaceRobberSeven)
+                return false;
+            if (!State.Board.TryGetTile(tile, out _))
+                return false;
+
+            State.Board.PlaceRobber(tile);
+            int stolen = RobberSteal.StealFromHex(State, tile, PlayerId.Human, _random);
+            GameLog.Append(State, stolen > 0
+                ? $"Robber placed — stole {stolen} resource(s)."
+                : "Robber placed — no steal.");
+            OpenPlayerDay();
+            return true;
+        }
+
+        private void BeginRobberPlacementAfterSeven()
+        {
+            State.Phase = GamePhase.DayPlaceRobberSeven;
+            State.StatusMessage = "Place the robber (click a hex).";
+            NotifyChanged();
+        }
+
+        private void OpenPlayerDay()
+        {
             State.ShopDeals = Shop.GenerateDailyDeals(State);
             State.Phase = GamePhase.DayPlayerActions;
-            State.StatusMessage = "Day: build, shop, or end turn.";
+            State.StatusMessage = "Day: build, trade, or end turn.";
+            if (AiTradeOfferGenerator.TryCreateOffer(State, _random, out var incoming))
+            {
+                State.IncomingAiTrade = incoming;
+                GameLog.Append(State, "AI sent a trade offer.");
+            }
             OnAutosavePoint?.Invoke();
             NotifyChanged();
+        }
+
+        private void LogProductionGains()
+        {
+            var rolls = State.TodayRolls;
+            var gained = ProductionCalculator.CalculateForPlayer(State, PlayerId.Human, rolls);
+            foreach (var pair in gained.EnumerateNonZero())
+                GameLog.Append(State, $"+{pair.amount} {pair.type} from production.");
+        }
+
+        public bool TryBankTrade(ResourceType give, ResourceType receive, int receiveAmount = 1)
+        {
+            if (State.Phase != GamePhase.DayPlayerActions || State.Winner.HasValue)
+                return false;
+            if (!BankTradeCalculator.CanTrade(State, PlayerId.Human, give, receive, receiveAmount))
+            {
+                HudToastBuffer.Push(State, "Ugyldigt bytte — tjek havn/bank-forhold.");
+                NotifyChanged();
+                return false;
+            }
+
+            if (!State.Bank.TryWithdraw(receive, receiveAmount))
+            {
+                HudToastBuffer.Push(State, "Banken har ikke nok af den ressource.");
+                NotifyChanged();
+                return false;
+            }
+
+            if (!BankTradeCalculator.TryExecute(State, PlayerId.Human, give, receive, receiveAmount))
+            {
+                State.Bank.Deposit(receive, receiveAmount);
+                State.StatusMessage = "Trade failed.";
+                NotifyChanged();
+                return false;
+            }
+
+            int rate = BankTradeCalculator.GetGiveRateForResource(State, PlayerId.Human, give);
+            int pay = rate * receiveAmount;
+            State.Bank.Deposit(give, pay);
+
+            GameLog.Append(State, $"Bank trade: {pay} {give} → {receiveAmount} {receive}.");
+            HudToastBuffer.Push(State, "Bankbytte gennemført.");
+            NotifyChanged();
+            return true;
+        }
+
+        public bool ProposePlayerTrade(PlayerTradeOffer offer)
+        {
+            if (State.Phase != GamePhase.DayPlayerActions)
+                return false;
+            if (!State.PlayerInventory.CanAfford(offer.Give))
+                return false;
+
+            State.PendingPlayerTrade = offer;
+            State.PendingAiTradeResponses = PlayerTradeResolver.EvaluateAiResponses(State, offer);
+            GameLog.Append(State, "Trade offer sent to AI.");
+            NotifyChanged();
+            return true;
+        }
+
+        public bool AcceptPlayerTradeWith(PlayerId acceptor)
+        {
+            if (!State.PendingPlayerTrade.HasValue)
+                return false;
+            var offer = State.PendingPlayerTrade.Value;
+            if (!PlayerTradeResolver.TryExecute(State, acceptor, offer))
+                return false;
+
+            State.PendingPlayerTrade = null;
+            State.PendingAiTradeResponses = Array.Empty<AiTradeResponse>();
+            GameLog.Append(State, "Player trade completed.");
+            NotifyChanged();
+            return true;
+        }
+
+        public bool RespondToIncomingAiTrade(bool accept)
+        {
+            if (!State.IncomingAiTrade.HasValue)
+                return false;
+            var offer = State.IncomingAiTrade.Value;
+            if (!accept)
+            {
+                State.IncomingAiTrade = null;
+                GameLog.Append(State, "Declined AI trade.");
+                NotifyChanged();
+                return true;
+            }
+
+            if (!State.PlayerInventory.CanAfford(offer.Receive))
+            {
+                HudToastBuffer.Push(State, "Du har ikke råd til AI-buddet.");
+                NotifyChanged();
+                return false;
+            }
+
+            State.IncomingAiTrade = null;
+            var human = State.PlayerInventory;
+            human.Pay(offer.Receive);
+            human.Add(offer.Give);
+            State.PlayerInventory = human;
+            var ai = State.AiInventory;
+            ai.Pay(offer.Give);
+            ai.Add(offer.Receive);
+            State.AiInventory = ai;
+            GameLog.Append(State, "Accepted AI trade.");
+            NotifyChanged();
+            return true;
         }
 
         private void ApplyProduction()
@@ -511,7 +724,18 @@ namespace CatanRoguelike.Core
             var aInv = State.AiInventory;
             aInv.Add(aiProd);
             State.AiInventory = aInv;
+
+            if (FishermenRules.IsEnabled(State))
+            {
+                State.PlayerFish += FishProductionCalculator.CalculateForPlayer(
+                    State, PlayerId.Human, State.TodayDiceRolls);
+                State.AiFish += FishProductionCalculator.CalculateForPlayer(
+                    State, PlayerId.Ai, State.TodayDiceRolls);
+            }
         }
+
+        public bool TrySpendFish(FishermenSpendAction action) =>
+            FishermenFishActions.TrySpend(State, PlayerId.Human, action);
 
         private void GrantSetupBonus(Vertex vertex, PlayerId player)
         {

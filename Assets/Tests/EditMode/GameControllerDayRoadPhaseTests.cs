@@ -22,7 +22,7 @@ namespace CatanRoguelike.Tests
                 game.State.TodayRolls = new System.Collections.Generic.Dictionary<ResourceType, int>(game.State.TomorrowRolls);
             if (game.State.TodayDiceRolls.Count == 0 && game.State.TomorrowDiceRolls.Count > 0)
                 game.State.TodayDiceRolls = new System.Collections.Generic.List<int>(game.State.TomorrowDiceRolls);
-            game.SkipNightCard();
+            GameControllerTestHelpers.SkipNightAndResolveMorning(game);
 
             Assert.AreEqual(GamePhase.DayPlayerActions, game.State.Phase);
 

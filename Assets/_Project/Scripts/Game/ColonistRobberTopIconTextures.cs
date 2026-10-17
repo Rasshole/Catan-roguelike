@@ -1,0 +1,75 @@
+using UnityEngine;
+
+namespace CatanRoguelike.Game
+{
+    /// <summary>Top-down hooded robber on a cream disc for colonist board markers.</summary>
+    public static class ColonistRobberTopIconTextures
+    {
+        private const int Size = 64;
+        private static Texture2D _cached;
+
+        public static Texture2D Get()
+        {
+            if (_cached != null)
+                return _cached;
+
+            var tex = new Texture2D(Size, Size, TextureFormat.RGBA32, false)
+            {
+                name = "ColonistRobberTopIcon",
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+
+            var pixels = new Color32[Size * Size];
+            for (int i = 0; i < pixels.Length; i++)
+                pixels[i] = new Color32(0, 0, 0, 0);
+
+            var disc = new Color32(238, 232, 214, 255);
+            var fill = new Color32(34, 36, 42, 255);
+            var outline = new Color32(250, 252, 255, 255);
+
+            FillCircle(pixels, 32, 32, 28, disc);
+            FillCircle(pixels, 32, 36, 20, outline);
+            FillCircle(pixels, 32, 36, 17, fill);
+            FillRect(pixels, 22, 14, 20, 18, fill);
+            FillRect(pixels, 20, 12, 24, 4, outline);
+            FillCircle(pixels, 32, 44, 9, outline);
+            FillCircle(pixels, 32, 44, 7, fill);
+
+            tex.SetPixels32(pixels);
+            tex.Apply(false, false);
+            _cached = tex;
+            return tex;
+        }
+
+        private static void FillCircle(Color32[] px, int cx, int cy, int r, Color32 c)
+        {
+            int r2 = r * r;
+            for (int y = cy - r; y <= cy + r; y++)
+            {
+                for (int x = cx - r; x <= cx + r; x++)
+                {
+                    if (x < 0 || x >= Size || y < 0 || y >= Size)
+                        continue;
+                    int dx = x - cx;
+                    int dy = y - cy;
+                    if (dx * dx + dy * dy <= r2)
+                        px[y * Size + x] = c;
+                }
+            }
+        }
+
+        private static void FillRect(Color32[] px, int x, int y, int w, int h, Color32 c)
+        {
+            for (int py = y; py < y + h; py++)
+            {
+                for (int pxX = x; pxX < x + w; pxX++)
+                {
+                    if (pxX < 0 || pxX >= Size || py < 0 || py >= Size)
+                        continue;
+                    px[py * Size + pxX] = c;
+                }
+            }
+        }
+    }
+}

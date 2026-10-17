@@ -162,14 +162,13 @@ namespace CatanRoguelike.Core.Events
         {
             var inv = state.PlayerInventory;
             int maxCount = 0;
-            foreach (ResourceType resource in Enum.GetValues(typeof(ResourceType)))
+            foreach (ResourceType resource in ResourceTypes.Productive)
                 maxCount = Math.Max(maxCount, inv[resource]);
 
             if (maxCount <= 0)
                 return;
 
-            ResourceType taxed = Enum.GetValues(typeof(ResourceType))
-                .Cast<ResourceType>()
+            ResourceType taxed = ResourceTypes.Productive
                 .Where(resource => inv[resource] == maxCount)
                 .OrderByDescending(resource => resource)
                 .First();

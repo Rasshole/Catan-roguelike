@@ -24,8 +24,9 @@ namespace CatanRoguelike.Core.Hex
         /// <summary>World position for pointy-top hex center (XZ plane, Y up).</summary>
         public static (float x, float z) ToWorldPosition(HexCoord hex, float scale = 1f)
         {
-            float x = scale * InnerRadius * (hex.Q + hex.R * 0.5f) * 2f / 1.7320508f;
-            float z = scale * OuterRadius * 1.5f * hex.R;
+            float size = scale * OuterRadius;
+            float x = size * 1.7320508f * (hex.Q + hex.R * 0.5f);
+            float z = size * 1.5f * hex.R;
             return (x, z);
         }
 
@@ -144,6 +145,17 @@ namespace CatanRoguelike.Core.Hex
             int c0 = edgeIndex % 6;
             int c1 = (edgeIndex + 1) % 6;
             return new Edge(new Vertex(hex, c0), new Vertex(hex, c1));
+        }
+
+        /// <summary>
+        /// Edge on <paramref name="hex"/> that borders <see cref="GetNeighbor"/>(hex, direction).
+        /// <see cref="GetEdge"/>(hex, d) lies between corners d and d+1 and faces neighbor (d+5)%6;
+        /// the coast toward neighbor d uses edge index (d+1)%6.
+        /// </summary>
+        public static Edge GetEdgeFacing(HexCoord hex, int direction)
+        {
+            direction = ((direction % 6) + 6) % 6;
+            return GetEdge(hex, (direction + 1) % 6);
         }
     }
 }

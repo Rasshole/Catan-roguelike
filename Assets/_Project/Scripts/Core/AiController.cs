@@ -114,6 +114,9 @@ namespace CatanRoguelike.Core
         {
             _hiddenIntent = "Expand economy";
 
+            if (FishermenRules.IsEnabled(game.State))
+                TrySpendFishHeuristic(game);
+
             int act = ActProgression.GetAct(game.State.Board.DayNumber);
             TryShopPurchases(game);
 
@@ -347,6 +350,24 @@ namespace CatanRoguelike.Core
                     return tile.Resource.ToString();
             }
             return "position";
+        }
+
+        private void TrySpendFishHeuristic(GameController game)
+        {
+            var state = game.State;
+            if (state.Board.RobberTile.HasValue
+                && FishermenRules.CanSpend(state.AiFish, FishermenSpendAction.MoveRobberOffBoard))
+            {
+                FishermenFishActions.TrySpend(state, PlayerId.Ai, FishermenSpendAction.MoveRobberOffBoard);
+                _hiddenIntent = "Spend fish — clear robber";
+                return;
+            }
+
+            if (FishermenRules.CanSpend(state.AiFish, FishermenSpendAction.FreeRoad))
+            {
+                FishermenFishActions.TrySpend(state, PlayerId.Ai, FishermenSpendAction.FreeRoad);
+                _hiddenIntent = "Spend fish — road charge";
+            }
         }
     }
 }

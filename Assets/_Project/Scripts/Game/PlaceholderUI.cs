@@ -29,6 +29,7 @@ namespace CatanRoguelike.Game
         private int _selectedHexIndex;
         private int _selectedRoadIndex;
         private bool _showUnlockPanel;
+        private bool _fishermenMapToggle = true;
         private bool _runRewardGranted;
         private int _lastRunStarsEarned;
 
@@ -37,6 +38,7 @@ namespace CatanRoguelike.Game
             _controller = controller;
             _meta = meta;
             _boardInput = boardInput;
+            _fishermenMapToggle = controller.FishermenMapOption;
             _runRewardGranted = false;
         }
 
@@ -46,6 +48,9 @@ namespace CatanRoguelike.Game
         {
             if (_controller == null) return;
             var state = _controller.State;
+            if (!PlaceholderHudLayout.IsPreGamePhase(state.Phase))
+                return;
+
             var panelRect = PlaceholderHudLayout.GetPanelRect(state.Phase, Screen.width, Screen.height);
             PlaceholderHudLayout.SetActivePanelWidth(panelRect.width);
 
@@ -83,104 +88,6 @@ namespace CatanRoguelike.Game
                 return;
             }
 
-            DrawTipsToggle();
-            if (!state.Winner.HasValue)
-                DrawOnboardingBanner(state);
-            GUILayout.Label($"<b>Day {state.Board.DayNumber}</b> — {MapPresets.GetDisplayName(state.MapSize)}");
-            GUILayout.Label($"<b>{ActProgression.GetActLabel(ActProgression.GetAct(state.Board.DayNumber))}</b>");
-            if (!string.IsNullOrEmpty(state.ActUnlockMessage))
-                GUILayout.Label($"<color=cyan>{state.ActUnlockMessage}</color>");
-            GUILayout.Label($"{state.Phase}");
-            GUILayout.Label($"<b>Leader:</b> {LeaderLibrary.Get(state.Leader).Name}");
-            if (state.DraftedUniques.Count > 0)
-                GUILayout.Label($"<b>Uniques:</b> {string.Join(", ", state.DraftedUniques)}");
-            GUILayout.Label(state.StatusMessage);
-
-            if (state.ActiveEvent != EventId.None)
-                GUILayout.Label($"<color=orange><b>Event:</b> {state.EventMessage}</color>");
-
-            if (state.PendingCard.HasValue)
-                GUILayout.Label($"<color=yellow>Pending: {CardLibrary.Get(state.PendingCard.Value).Name}</color>");
-
-            if (PendingStatusDisplay.TryGetHarborCharterLine(state, out var harborLine))
-                GUILayout.Label($"<color=cyan>{harborLine}</color>");
-
-            if (PendingStatusDisplay.TryGetEmbargoLine(state, out var embargoLine))
-                GUILayout.Label($"<color=red>{embargoLine}</color>");
-
-            if (PendingStatusDisplay.TryGetLevelUpPreviewLine(state, _controller.RunSeed, out var levelUpPreviewLine))
-                GUILayout.Label($"<color=lime>{levelUpPreviewLine}</color>");
-
-            if (state.Winner.HasValue)
-            {
-                TryGrantRunReward(state);
-
-                if (RunSummaryDisplay.TryGetSummaryLines(state, _controller.RunSeed, out var summaryLines))
-                {
-                    for (int i = 0; i < summaryLines.Count; i++)
-                    {
-                        if (i == 0)
-                        {
-                            var color = state.Winner == PlayerId.Human ? "green" : "red";
-                            GUILayout.Label($"<color={color}>{summaryLines[i]}</color>");
-                        }
-                        else
-                        {
-                            GUILayout.Label(summaryLines[i]);
-                        }
-                    }
-                }
-                else
-                {
-                    GUILayout.Label(state.Winner == PlayerId.Human ? "<color=green>You Win!</color>" : "<color=red>AI Wins!</color>");
-                }
-
-                if (_meta != null)
-                {
-                    GUILayout.Label($"<b>Stars:</b> {_meta.Stars}");
-                }
-
-                DrawOnboardingBanner(state, forceGameOver: true);
-
-                DrawUnlockPanelIfOpen();
-                if (GUILayout.Button(_showUnlockPanel ? "Hide Unlocks" : "Spend Stars / Unlocks"))
-                    _showUnlockPanel = !_showUnlockPanel;
-
-                if (GUILayout.Button("Restart (reload scene)"))
-                    UnityEngine.SceneManagement.SceneManager.LoadScene(
-                        UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
-                GUILayout.EndScrollView();
-                GUILayout.EndArea();
-                return;
-            }
-
-            GUILayout.Space(8);
-            GUILayout.Label($"<b>VP:</b> You {state.PlayerVictoryPoints} | AI {state.AiVictoryPoints}");
-            var humanVp = VictoryCalculator.GetBreakdown(state, PlayerId.Human);
-            var aiVp = VictoryCalculator.GetBreakdown(state, PlayerId.Ai);
-            GUILayout.Label($"  You: {humanVp.FormatLine()}");
-            GUILayout.Label($"  AI: {aiVp.FormatLine()}");
-            GUILayout.Label($"<b>Level ups:</b> {state.LevelUpsTaken}/{RunProgression.MaxLevelUpsPerRun}");
-            GUILayout.Label(FormatResources("You", state.PlayerInventory));
-            GUILayout.Label(FormatResources("AI", state.AiInventory));
-
-            DrawRolls(state);
-
-            if (state.Phase == GamePhase.NightPlayCard)
-                DrawNightCards(state);
-
-            if (state.IsSetupPhase)
-                DrawSetupActions();
-
-            if (state.Phase == GamePhase.DayPlayerActions)
-                DrawDayActions(state);
-
-            if (state.Phase == GamePhase.LevelUpChoice)
-                DrawLevelUp();
-
-            if (!state.Winner.HasValue)
-                DrawSaveLoadButtons();
-
             GUILayout.EndScrollView();
             GUILayout.EndArea();
         }
@@ -192,6 +99,8 @@ namespace CatanRoguelike.Game
                 GUILayout.Label($"<b>Stars:</b> {_meta.Stars}");
             GUILayout.Label($"Nuværende forhåndsvisning: {MapPresets.GetDisplayName(state.MapSize)}");
             GUILayout.Space(8);
+            _fishermenMapToggle = GUILayout.Toggle(_fishermenMapToggle, "Seafarers — Fishermen of Catan (fish hexes)");
+            _controller.FishermenMapOption = _fishermenMapToggle;
 
             if (_meta == null)
             {

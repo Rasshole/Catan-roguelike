@@ -148,7 +148,10 @@ namespace CatanRoguelike.Tests
         public void ApplyEvent_BanditRaid_PlacesRobberOnHumanBestTile()
         {
             var state = CreateState();
+            Assert.AreEqual(ResourceType.Brick, state.Board.Tiles[BrickHex].Resource,
+                "BanditRaid test pins Small map layout — brick at (1,0).");
             PlaceTwoSettlementsOnHex(state.Board, BrickHex, PlayerId.Human);
+            state.Board.Tiles[BrickHex].NumberToken = 8;
             var engine = new EventEngine(14);
 
             engine.ApplyEvent(state, EventId.BanditRaid);
@@ -284,7 +287,7 @@ namespace CatanRoguelike.Tests
             game.Events.ApplyEvent(game.State, EventId.MarketDay);
             Assert.AreEqual(1, game.State.EventShopBonus);
 
-            game.EndPlayerDay();
+            GameControllerTestHelpers.EndDayWithAi(game);
 
             Assert.AreEqual(EventId.None, game.State.ActiveEvent);
             Assert.AreEqual(0, game.State.EventShopBonus);

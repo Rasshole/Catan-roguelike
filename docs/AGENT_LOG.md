@@ -1,5 +1,63 @@
 # Agent log
 
+## 2026-10-16 (UTC) — PR #109 v72 hex UVs (`1e36030`)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Black land — `HexPrismMesh` top-down UVs; EditMode uv count test | Done |
+| 2 | Diagnostics — no `mainTexture` on Unlit | Done |
+| 3 | Medium 4 specifics — `EnsureSpecificTargets` + small-map dupes | Done |
+| 4 | Ports vs fish — badge uses `TryComputeBadgeCenter`; extra fish clearance | Done |
+
+## 2026-10-16 (UTC) — PR #109 v71 land dimming + ports (`HEAD` after `5a6c8e9`)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Black land — per-hex terrain material instance; colonist `SetDimmed` no-op; diag `HasProperty` | Done |
+| 2 | Ports — `PortFrameLayout` + spacing; badges avoid fish hexes | Done |
+| 3 | Framing — sea fish + badge extent in samples | Done |
+| 4 | Desert lake — ripple overlay on center fish desert | Done |
+
+## 2026-10-16 (UTC) — PR #109 v70 terrain bisect (`HEAD` after `ed700da`)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Black hexes — revert v66 `CreateOpaque` / `Create(texture)` Standard path; drop Unlit/Texture | Done |
+| 2 | Fishermen only in colonist capture harness; Game scene icons fixed | Done |
+| 3 | Ports — v66 `PortAccess` + land-only frame vertices (fish excluded) | Done |
+| 4 | Sea fish — per-instance light-blue Standard; framing uses land coords only | Done |
+
+## 2026-10-16 (UTC) — PR #109 v69 board shape/terrain/ports (`HEAD` after `ae9069e`)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Black hexes — skip colonist Standard outlines; terrain diag logs; visible unlit fallback | Done |
+| 2 | 19-hex shape — sea fish as `SeaFishGround` discs; land coords only for outlines; EditMode test | Done |
+| 3 | Nine ports — even frame pick fill; land-only badge collision; short colonist piers; assert before hex | Done |
+| 4 | Fish HUD — hand + bank strip cards; lake/sea visuals | Done |
+
+## 2026-10-16 (UTC) — PR #109 v67 board fixes (`9280c66` on `edfda26`)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Black land hexes — `CreateTerrainSurface` uses Unlit/Texture + `_MainTex`; unlit flat fallback; procedural try/catch | Done |
+| 2 | Token numbers — `font.material` on TextMesh `MeshRenderer`; label character sizes restored | Done |
+| 3 | Nine harbors — `PortFrameLayout` even frame spacing; `AssertRenderedPortBadgeDiscCount(9)` PlayMode | Done |
+| 4 | Fishermen visible — harness `FishermenMapOption=true`; fish icons on lake/grounds; `AssertFishermenHarnessBoardAndHud` | Done |
+
+## 2026-10-16 (UTC) — PR #109 Rasmus feedback (post af67f29)
+
+Checklist (branch `cursor/colonist-style-ui-e52d`):
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Remove sand/beach ring — land meets water; `ColonistCoastSandMesh.SandSkirtEnabled=false`; surfaces skip skirt; tests updated | Done |
+| 2 | Number token font — Roboto Slab Bold (Apache-2.0) in `Resources/Fonts`; `ColonistNumberTokenFont`; bold TextMesh, no pips | Done |
+| 3 | Official harbor spacing — 9 ports on 19-hex (5×2:1, 4×3:1); `PortSpacingRules`; no adjacent harbor vertices; `PortSpacingTests` | Done |
+| 4 | Fishermen of Catan — fish bag draw on production; desert lake; HUD fish spend panel; AI fish spend; save/load fish+bag; coastal fish icon | Done (boot steal UX minimal; fish icon placeholder) |
+| 5 | Painted board look — procedural terrain textures; warmer port badges; top-down layout kept | Done (optional `Resources/Art/Board/*` PNGs; table/holders later) |
+
+
 ## 2026-08-26 (PT) — Fase 0 uden Unity-licens
 
 Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.meta` / `Game.unity`):
@@ -222,3 +280,25 @@ Landet på `main` (ingen Unity `.ulf`, så 0.1/0.2/0.7 ikke rørt; ingen fake `.
 
 - **`TableCamera.ApplyPoseForCapture`:** edit-mode CLI/menu calls orbit + HUD framing (`ApplyOrbitPose` + `ApplyBoardFramingOffset` at 1920×1080) before `GameSceneCapture.CaptureMainCameraToPng`; Play Mode `Start`/`Update` path unchanged.
 - **Tests:** `GameSceneCaptureTests.ApplyPoseForCapture_MovesCameraOffSceneDefault_WhenBoardHasData`. No v0.1 tag.
+
+## 2026-10-15 (UTC) — Colonist.io-inspired board + uGUI run HUD
+
+- **Board:** saturated `BoardResourcePalette`, dark edge strips + top bevel cap (`HexCartoonTileDecor`), cream number chips with pip dots (`NumberTokenPipLayout` / `HexTileView`).
+- **HUD:** `RunHudController` (uGUI) — left resource panel (`3 Korn`, swatches), VP/rolls/shop; bottom card hand row (roguelike frames via `CardVisualStyle`); action bar above hand. Pre-run flow stays IMGUI (`PlaceholderUI`).
+- **Prototype:** committed `Assets/_Project/Scenes/ColonistStylePrototype.unity` + menu **Catan Roguelike → Build Colonist Style Prototype Scene**.
+- **Tests:** `NumberTokenPipLayoutTests`, `HudResourceFormattingTests`, `CardVisualStyleTests`. Screenshot not captured in cloud VM (no Unity binary). No v0.1 tag.
+
+## 2026-10-15 (UTC) — Colonist-like interaction feel pass
+
+- **Morning roll:** `DayProduction` waits for Space / **Rul**; `GameplayFeelController` runs ~0.5s dice overlay, hex pulse (`ProductionHexResolver`), resource count tween (`SimpleTweens`).
+- **Placement:** day builds require HUD mode (not click-everywhere auto); Esc / RMB cancel; placement scale pop on new pieces (`BoardView`).
+- **HUD:** pinned **Afslut dag**; build buttons show costs + grey when unaffordable; side **Bytte** panel (`BankTradeCalculator` 4:1 / port rates).
+- **Tests:** `BankTradeCalculatorTests`, `BuildCostFormatterTests`, `GameControllerTestHelpers.ResolveMorningRollIfNeeded`. No v0.1 tag.
+
+## 2026-10-15 (UTC) — PR #109 review: compile + colonist mechanics scaffold
+
+- Fixed `BankTradeCalculator` / Core usings (`PlayerId` in `Core.Map`).
+- `CaptureColonistAndQuit` + HUD Screen Space Camera capture (`GAME_VIEW_SHOT`).
+- Seven flow (`DayDiscardForSeven`, `DayPlaceRobberSeven`), player/AI trade offers, bank stock, game log, AI paced turn (`CompleteAiDayTurn`).
+- HUD chrome: log top-right, bank strip, opponent row, roll prompt glow.
+- EditMode: `SevenRollRulesTests`, `PlayerTradeResolverTests`, `AiPacingPlannerTests`.

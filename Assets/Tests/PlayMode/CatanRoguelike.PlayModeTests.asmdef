@@ -3,7 +3,8 @@
     "rootNamespace": "CatanRoguelike.Tests.PlayMode",
     "references": [
         "CatanRoguelike.Core",
-        "CatanRoguelike.Game"
+        "CatanRoguelike.Game",
+        "UnityEngine.ImageConversionModule"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

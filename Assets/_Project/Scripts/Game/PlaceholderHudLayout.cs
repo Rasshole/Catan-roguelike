@@ -7,7 +7,7 @@ namespace CatanRoguelike.Game
     {
         public const float Margin = 10f;
         public const float PreGamePanelWidth = 400f;
-        public const float InRunPanelWidth = 260f;
+        public const float InRunPanelWidth = RunHudLayout.SidePanelWidth;
         public const float MaxInRunPanelHeight = 580f;
 
         public static float LastPanelWidth { get; private set; } = InRunPanelWidth;
@@ -50,10 +50,20 @@ namespace CatanRoguelike.Game
         /// <summary>
         /// Horizontal screen offset (pixels) from screen center where the board origin should appear.
         /// </summary>
-        public static float GetBoardScreenOffsetX(float panelWidth, int screenWidth)
+        public static float GetBoardScreenOffsetX(float panelWidth, int screenWidth, float rightPanelWidth = 0f)
         {
-            float hudRight = Margin + panelWidth + Margin;
-            float unobstructedCenter = hudRight + (screenWidth - hudRight) * 0.5f;
+            float hudLeft = Margin + panelWidth + Margin;
+            float unobstructedCenter;
+            if (rightPanelWidth <= 0f)
+            {
+                unobstructedCenter = hudLeft + (screenWidth - hudLeft) * 0.5f;
+            }
+            else
+            {
+                float hudRight = Margin + rightPanelWidth + Margin;
+                unobstructedCenter = hudLeft + (screenWidth - hudLeft - hudRight) * 0.5f;
+            }
+
             return unobstructedCenter - screenWidth * 0.5f;
         }
     }

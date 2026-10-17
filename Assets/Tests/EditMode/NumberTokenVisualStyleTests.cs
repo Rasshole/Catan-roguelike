@@ -34,11 +34,20 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
+        public void FishGroundTokens_UseDarkBlueChipAndWhiteLabel()
+        {
+            Assert.AreEqual(NumberTokenVisualStyle.ChipFaceFishGround, NumberTokenVisualStyle.GetChipFace(4, fishGround: true));
+            Assert.AreEqual(NumberTokenVisualStyle.ChipRimFishGround, NumberTokenVisualStyle.GetChipRim(4, fishGround: true));
+            Assert.AreEqual(NumberTokenVisualStyle.LabelFishGround, NumberTokenVisualStyle.GetLabel(4, fishGround: true));
+            Assert.AreEqual(NumberTokenVisualStyle.LabelRed, NumberTokenVisualStyle.GetLabel(6, fishGround: true));
+        }
+
+        [Test]
         public void GetLabelCharacterSize_TwoDigitTokens_AreSmaller()
         {
-            Assert.AreEqual(0.5f, NumberTokenVisualStyle.GetLabelCharacterSize(9));
-            Assert.AreEqual(0.42f, NumberTokenVisualStyle.GetLabelCharacterSize(10));
-            Assert.AreEqual(0.42f, NumberTokenVisualStyle.GetLabelCharacterSize(12));
+            Assert.AreEqual(0.62f, NumberTokenVisualStyle.GetLabelCharacterSize(9), 1e-4f);
+            Assert.AreEqual(0.52f, NumberTokenVisualStyle.GetLabelCharacterSize(10), 1e-4f);
+            Assert.AreEqual(0.52f, NumberTokenVisualStyle.GetLabelCharacterSize(12), 1e-4f);
         }
 
         [Test]
@@ -46,8 +55,9 @@ namespace CatanRoguelike.Tests
         {
             Assert.AreEqual(new NumberTokenVisualStyle.Rgb(0.92f, 0.86f, 0.72f), NumberTokenVisualStyle.ChipFaceStandard);
             Assert.AreEqual(new NumberTokenVisualStyle.Rgb(0.94f, 0.84f, 0.72f), NumberTokenVisualStyle.ChipFaceRedAccent);
-            Assert.AreEqual(new NumberTokenVisualStyle.Rgb(0.68f, 0.58f, 0.40f), NumberTokenVisualStyle.ChipRimStandard);
-            Assert.AreEqual(new NumberTokenVisualStyle.Rgb(0.72f, 0.22f, 0.14f), NumberTokenVisualStyle.ChipRimRedAccent);
+            Assert.AreEqual(new NumberTokenVisualStyle.Rgb(0.36f, 0.26f, 0.14f), NumberTokenVisualStyle.ChipRimStandard);
+            Assert.AreEqual(new NumberTokenVisualStyle.Rgb(0.58f, 0.12f, 0.08f), NumberTokenVisualStyle.ChipRimRedAccent);
+            Assert.That(NumberTokenVisualStyle.ChipRimStandard.ToString(), Does.Contain("0.360"));
             Assert.AreEqual(new NumberTokenVisualStyle.Rgb(0.08f, 0.08f, 0.08f), NumberTokenVisualStyle.LabelStandard);
             Assert.AreEqual(new NumberTokenVisualStyle.Rgb(0.82f, 0.12f, 0.10f), NumberTokenVisualStyle.LabelRed);
         }

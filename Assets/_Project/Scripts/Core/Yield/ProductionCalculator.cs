@@ -28,7 +28,7 @@ namespace CatanRoguelike.Core.Yield
                 foreach (var hex in VertexGraph.GetHexesForVertex(kvp.Key))
                 {
                     if (!board.TryGetTile(hex, out var tile)) continue;
-                    if (tile.IsDesert || !tile.NumberToken.HasValue) continue;
+                    if (tile.IsDesert || tile.IsFishTile || !tile.NumberToken.HasValue) continue;
                     if (IsBlocked(state, hex, player)) continue;
                     if (state.EventStormTile.HasValue && state.EventStormTile.Value.Equals(hex)) continue;
                     if (!resourceRolls.TryGetValue(tile.Resource, out int rollValue)) continue;
@@ -64,7 +64,7 @@ namespace CatanRoguelike.Core.Yield
                     foreach (var hex in VertexGraph.GetHexesForVertex(kvp.Key))
                     {
                         if (!board.TryGetTile(hex, out var tile)) continue;
-                        if (tile.IsDesert || !tile.NumberToken.HasValue) continue;
+                        if (tile.IsDesert || tile.IsFishTile || !tile.NumberToken.HasValue) continue;
                         if (!resourceRolls.TryGetValue(tile.Resource, out int rv) || rv <= 0) continue;
                         if (CountDiceHits(tile.NumberToken.Value, state.TodayDiceRolls) <= 0) continue;
                         int amt = (int)Math.Ceiling(rv * 1.5);

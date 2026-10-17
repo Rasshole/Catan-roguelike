@@ -237,7 +237,7 @@ namespace CatanRoguelike.Tests
             game.State.Board.DayNumber = 4;
             game.State.Phase = GamePhase.DayPlayerActions;
 
-            game.EndPlayerDay();
+            GameControllerTestHelpers.EndDayWithAi(game);
 
             if (game.State.Phase == GamePhase.LevelUpChoice)
                 game.ChooseLevelUpPerk(game.State.PendingLevelUpChoices[0]);
