@@ -24,6 +24,22 @@ namespace CatanRoguelike.Game
             image.color = new Color(0.94f, 0.88f, 0.74f, 0.96f);
         }
 
+        /// <summary>Warm wood/parchment tint for bottom hand and action bars.</summary>
+        public static void ApplyWoodBarImage(Image image)
+        {
+            if (image == null)
+                return;
+
+            var sprite = PanelSprite();
+            if (sprite != null)
+            {
+                image.sprite = sprite;
+                image.type = Image.Type.Sliced;
+            }
+
+            image.color = new Color(0.84f, 0.72f, 0.54f, 0.94f);
+        }
+
         public static void ApplyPrimaryButtonImage(Image image)
         {
             if (image == null)

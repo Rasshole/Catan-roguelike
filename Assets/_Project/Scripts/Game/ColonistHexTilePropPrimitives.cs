@@ -23,14 +23,17 @@ namespace CatanRoguelike.Game
             row.transform.SetParent(parent, false);
             row.transform.localPosition = localPos;
             row.transform.localRotation = Quaternion.Euler(0f, yawDeg, 0f);
-            var stalkColor = new Color(0.90f, 0.76f, 0.16f);
-            float w = hexScale * 0.06f;
-            float h = hexScale * 0.32f;
-            for (int i = 0; i < 6; i++)
+            var stalkColor = new Color(0.78f, 0.62f, 0.12f);
+            var headColor = new Color(0.94f, 0.82f, 0.22f);
+            float w = hexScale * 0.05f;
+            float h = hexScale * 0.46f;
+            for (int i = 0; i < 7; i++)
             {
-                float t = (i - 2.5f) * hexScale * 0.11f;
-                CreatePart(row.transform, $"Stalk_{i}", new Vector3(t, h * 0.5f, 0f), PrimitiveType.Cube,
-                    new Vector3(w, h, w), stalkColor);
+                float t = (i - 3f) * hexScale * 0.10f;
+                CreatePart(row.transform, $"Stalk_{i}", new Vector3(t, h * 0.42f, 0f), PrimitiveType.Cube,
+                    new Vector3(w, h * 0.85f, w), stalkColor);
+                CreatePart(row.transform, $"Head_{i}", new Vector3(t, h * 0.88f, 0f), PrimitiveType.Sphere,
+                    new Vector3(w * 2.4f, w * 2.2f, w * 2.4f), headColor);
             }
         }
 
@@ -39,17 +42,26 @@ namespace CatanRoguelike.Game
             var sheaf = new GameObject("WheatSheaf");
             sheaf.transform.SetParent(parent, false);
             sheaf.transform.localPosition = localPos;
-            var gold = new Color(0.92f, 0.78f, 0.14f);
-            float s = hexScale * 0.22f;
-            CreatePart(sheaf.transform, "SheafCore", Vector3.up * s * 0.4f, PrimitiveType.Cylinder,
-                new Vector3(s, s * 1.1f, s), gold);
+            var gold = new Color(0.94f, 0.80f, 0.18f);
+            var straw = new Color(0.72f, 0.58f, 0.14f);
+            float s = hexScale * 0.26f;
+            for (int i = 0; i < 6; i++)
+            {
+                float a = i * 60f + 12f;
+                var off = new Vector3(Mathf.Cos(a * Mathf.Deg2Rad) * s * 0.22f, s * 0.55f,
+                    Mathf.Sin(a * Mathf.Deg2Rad) * s * 0.22f);
+                CreatePart(sheaf.transform, $"Bundle_{i}", off, PrimitiveType.Cylinder,
+                    new Vector3(s * 0.22f, s * 1.35f, s * 0.22f), gold);
+            }
+            CreatePart(sheaf.transform, "Tie", Vector3.up * s * 0.35f, PrimitiveType.Cylinder,
+                new Vector3(s * 0.55f, s * 0.18f, s * 0.55f), straw);
             for (int i = 0; i < 5; i++)
             {
                 float a = i * 72f;
-                var off = new Vector3(Mathf.Cos(a * Mathf.Deg2Rad) * s * 0.5f, s * 0.35f,
-                    Mathf.Sin(a * Mathf.Deg2Rad) * s * 0.5f);
+                var off = new Vector3(Mathf.Cos(a * Mathf.Deg2Rad) * s * 0.38f, s * 0.95f,
+                    Mathf.Sin(a * Mathf.Deg2Rad) * s * 0.38f);
                 CreatePart(sheaf.transform, $"Head_{i}", off, PrimitiveType.Sphere,
-                    Vector3.one * s * 0.35f, gold);
+                    Vector3.one * s * 0.32f, gold);
             }
         }
 
@@ -58,30 +70,71 @@ namespace CatanRoguelike.Game
             var stack = new GameObject("BrickStack");
             stack.transform.SetParent(parent, false);
             stack.transform.localPosition = localPos;
-            var brick = new Color(0.78f, 0.34f, 0.20f);
-            float bw = hexScale * 0.18f;
-            float bh = hexScale * 0.08f;
-            float bd = hexScale * 0.12f;
-            for (int i = 0; i < 3; i++)
+            var brick = new Color(0.62f, 0.26f, 0.16f);
+            var mortar = new Color(0.48f, 0.22f, 0.14f);
+            float bw = hexScale * 0.16f;
+            float bh = hexScale * 0.07f;
+            float bd = hexScale * 0.11f;
+            for (int layer = 0; layer < 4; layer++)
             {
-                CreatePart(stack.transform, $"Brick_{i}", new Vector3(i * bw * 0.45f - bw * 0.45f, i * bh, 0f),
-                    PrimitiveType.Cube, new Vector3(bw, bh, bd), brick);
+                int count = layer % 2 == 0 ? 3 : 2;
+                float y = layer * bh;
+                float xShift = layer % 2 == 0 ? 0f : bw * 0.5f;
+                for (int i = 0; i < count; i++)
+                {
+                    float x = (i - (count - 1) * 0.5f) * bw * 0.95f + xShift;
+                    CreatePart(stack.transform, $"Brick_{layer}_{i}", new Vector3(x, y + bh * 0.5f, 0f),
+                        PrimitiveType.Cube, new Vector3(bw, bh, bd), brick);
+                }
+                if (layer > 0)
+                {
+                    CreatePart(stack.transform, $"Mortar_{layer}", new Vector3(0f, y, 0f), PrimitiveType.Cube,
+                        new Vector3(bw * 2.1f, bh * 0.12f, bd * 1.05f), mortar);
+                }
             }
         }
 
         public static void CreateKiln(Transform parent, Vector3 localPos, float hexScale)
         {
-            float s = hexScale * 0.28f;
-            CreatePart(parent, "Kiln", localPos, PrimitiveType.Cylinder,
+            float s = hexScale * 0.30f;
+            CreatePart(parent, "Kiln", localPos + Vector3.up * s * 0.45f, PrimitiveType.Cylinder,
                 new Vector3(s, s * 0.9f, s),
-                new Color(0.52f, 0.30f, 0.22f));
+                new Color(0.48f, 0.26f, 0.18f));
+            CreatePart(parent, "Chimney", localPos + Vector3.up * (s * 1.35f), PrimitiveType.Cylinder,
+                new Vector3(s * 0.28f, s * 0.85f, s * 0.28f),
+                new Color(0.18f, 0.18f, 0.20f));
+        }
+
+        public static void CreateRockPile(Transform parent, Vector3 localPos, float hexScale)
+        {
+            var pile = new GameObject("RockPile");
+            pile.transform.SetParent(parent, false);
+            pile.transform.localPosition = localPos;
+            float r = hexScale * 0.30f;
+            var greyA = new Color(0.58f, 0.60f, 0.62f);
+            var greyB = new Color(0.48f, 0.50f, 0.54f);
+            CreatePart(pile.transform, "BoulderA", new Vector3(-r * 0.22f, r * 0.22f, r * 0.08f),
+                PrimitiveType.Sphere, Vector3.one * r * 0.55f, greyA);
+            CreatePart(pile.transform, "BoulderB", new Vector3(r * 0.18f, r * 0.18f, -r * 0.12f),
+                PrimitiveType.Sphere, new Vector3(r * 0.48f, r * 0.38f, r * 0.52f), greyB);
+            CreatePart(pile.transform, "BoulderC", new Vector3(0f, r * 0.32f, r * 0.2f),
+                PrimitiveType.Sphere, Vector3.one * r * 0.42f, greyA);
+            CreatePart(pile.transform, "BoulderD", new Vector3(r * 0.05f, r * 0.12f, -r * 0.28f),
+                PrimitiveType.Cube, new Vector3(r * 0.5f, r * 0.28f, r * 0.45f), greyB);
         }
 
         public static void CreateMineEntrance(Transform parent, Vector3 localPos, float hexScale)
         {
-            float w = hexScale * 0.22f;
-            CreatePart(parent, "MineArch", localPos + Vector3.up * w * 0.35f, PrimitiveType.Cube,
-                new Vector3(w * 1.2f, w * 0.7f, w * 0.35f), new Color(0.22f, 0.22f, 0.26f));
+            float w = hexScale * 0.26f;
+            var timber = new Color(0.46f, 0.34f, 0.22f);
+            CreatePart(parent, "MineFrameL", localPos + new Vector3(-w * 0.55f, w * 0.42f, 0f), PrimitiveType.Cube,
+                new Vector3(w * 0.18f, w * 0.85f, w * 0.22f), timber);
+            CreatePart(parent, "MineFrameR", localPos + new Vector3(w * 0.55f, w * 0.42f, 0f), PrimitiveType.Cube,
+                new Vector3(w * 0.18f, w * 0.85f, w * 0.22f), timber);
+            CreatePart(parent, "MineLint", localPos + new Vector3(0f, w * 0.78f, 0f), PrimitiveType.Cube,
+                new Vector3(w * 1.35f, w * 0.16f, w * 0.24f), timber);
+            CreatePart(parent, "MineArch", localPos + new Vector3(0f, w * 0.32f, -w * 0.06f), PrimitiveType.Cube,
+                new Vector3(w * 0.95f, w * 0.55f, w * 0.32f), new Color(0.14f, 0.14f, 0.16f));
         }
 
         public static void CreateFenceSegment(Transform parent, Vector3 localPos, float length, float yawDeg)
@@ -101,15 +154,17 @@ namespace CatanRoguelike.Game
 
         public static void CreateReedClump(Transform parent, Vector3 localPos, float hexScale)
         {
-            var green = new Color(0.28f, 0.58f, 0.24f);
-            float h = hexScale * 0.32f;
-            for (int i = 0; i < 5; i++)
+            var green = new Color(0.22f, 0.62f, 0.26f);
+            var greenDark = new Color(0.18f, 0.48f, 0.20f);
+            float h = hexScale * 0.42f;
+            for (int i = 0; i < 7; i++)
             {
-                float a = i * 48f;
-                var offset = new Vector3(Mathf.Cos(a * Mathf.Deg2Rad) * hexScale * 0.06f, 0f,
-                    Mathf.Sin(a * Mathf.Deg2Rad) * hexScale * 0.06f);
+                float a = i * 42f;
+                var offset = new Vector3(Mathf.Cos(a * Mathf.Deg2Rad) * hexScale * 0.07f, 0f,
+                    Mathf.Sin(a * Mathf.Deg2Rad) * hexScale * 0.07f);
+                var color = i % 2 == 0 ? green : greenDark;
                 CreatePart(parent, $"Reed_{i}", localPos + offset, PrimitiveType.Cube,
-                    new Vector3(hexScale * 0.04f, h, hexScale * 0.04f), green);
+                    new Vector3(hexScale * 0.045f, h * (0.85f + i * 0.03f), hexScale * 0.045f), color);
             }
         }
 

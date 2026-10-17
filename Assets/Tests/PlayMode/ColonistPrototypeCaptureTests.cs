@@ -17,8 +17,8 @@ namespace CatanRoguelike.Tests.PlayMode
         private const string ColonistSceneName = "ColonistStylePrototype";
         private const int HudReadyMaxFrames = 120;
 
-        // Matches RunHudUiFactory.HandBackdrop (hand row panel).
-        private static readonly Color HandBarReference = new(0.10f, 0.12f, 0.16f);
+        // Matches ColonistKenneyHudArt wood bar tint (hand row panel).
+        private static readonly Color HandBarReference = new(0.84f, 0.72f, 0.54f);
 
         [Timeout(90000)]
         [UnityTest]

@@ -28,7 +28,10 @@ namespace CatanRoguelike.Game
                 new Vector2(1f, 0f),
                 new Vector2(RunHudLayout.GetContentLeftInset(), bottom),
                 new Vector2(-RunHudLayout.GetContentRightInset(), bottom + barHeight));
-            _actionBar.GetComponent<Image>().color = new Color(0.08f, 0.10f, 0.14f, 0.92f);
+            if (ColonistPresentation.IsActive)
+                ColonistKenneyHudArt.ApplyWoodBarImage(_actionBar.GetComponent<Image>());
+            else
+                _actionBar.GetComponent<Image>().color = new Color(0.08f, 0.10f, 0.14f, 0.92f);
 
             var rootLayout = _actionBar.gameObject.AddComponent<HorizontalLayoutGroup>();
             rootLayout.spacing = 10f;

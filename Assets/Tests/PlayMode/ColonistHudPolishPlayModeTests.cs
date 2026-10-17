@@ -60,6 +60,36 @@ namespace CatanRoguelike.Tests.PlayMode
 
         [Timeout(90000)]
         [UnityTest]
+        public IEnumerator ColonistRail_PlayerAndSectionLabelsFitInsidePanels()
+        {
+            if (!File.Exists(ColonistScenePath))
+            {
+                Assert.Inconclusive($"Colonist prototype not found at {ColonistScenePath}.");
+                yield break;
+            }
+
+            var loadOp = SceneManager.LoadSceneAsync(ColonistSceneName, LoadSceneMode.Single);
+            yield return loadOp;
+            for (int i = 0; i < 8; i++)
+                yield return null;
+
+            var gameManager = Object.FindFirstObjectByType<GameManager>();
+            if (gameManager.Controller.State.Phase == GamePhase.RunSelectMap)
+                GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
+            GameScenePlayHarness.AdvanceToDayPlayerActions(gameManager.Controller);
+            gameManager.EnsureRunHudReady();
+            var hud = gameManager.GetComponent<RunHudController>();
+            Assert.IsNotNull(hud);
+            hud.Refresh(gameManager.Controller.State);
+            Canvas.ForceUpdateCanvases();
+            for (int i = 0; i < 4; i++)
+                yield return null;
+
+            ColonistHudTextFit.AssertAllColonistRailTextsFit(hud.HudCanvas.transform);
+        }
+
+        [Timeout(90000)]
+        [UnityTest]
         public IEnumerator RobberMarker_IsReadablePawnOffsetFromToken()
         {
             if (!File.Exists(ColonistScenePath))

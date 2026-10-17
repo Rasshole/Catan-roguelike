@@ -39,15 +39,14 @@ namespace CatanRoguelike.Game
                 3190,
                 alignment: ColonistFlatBoardQuad.AlignmentMode.BoardPitchOnly);
 
-            float edge = pondDiameter * 0.55f;
-            ColonistHexTilePropPrimitives.CreateReedClump(
-                hexRoot.transform,
-                new Vector3(-edge * 0.35f, top + 0.01f, edge * 0.2f),
-                hexScale);
-            ColonistHexTilePropPrimitives.CreateReedClump(
-                hexRoot.transform,
-                new Vector3(edge * 0.4f, top + 0.01f, -edge * 0.15f),
-                hexScale);
+            float pondRadius = pondDiameter * 0.5f;
+            for (int i = 0; i < 8; i++)
+            {
+                float angle = i * 45f * Mathf.Deg2Rad;
+                float ring = pondRadius * 1.02f;
+                var pos = new Vector3(Mathf.Cos(angle) * ring, top + 0.01f, Mathf.Sin(angle) * ring);
+                ColonistHexTilePropPrimitives.CreateReedClump(hexRoot.transform, pos, hexScale);
+            }
             ColonistHexTilePropPrimitives.CreateBoat(
                 hexRoot.transform,
                 new Vector3(0.08f, top + 0.02f, 0.05f),

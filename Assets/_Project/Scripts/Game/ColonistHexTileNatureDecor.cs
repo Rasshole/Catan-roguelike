@@ -81,8 +81,16 @@ namespace CatanRoguelike.Game
                         PositiveMod(seed, 120));
                     break;
                 case ResourceType.Stone:
-                    ScatterModels(propsRoot, hexScale, seed, 4, RockModels, 0.28f, 0.36f, tokenClear,
+                    ScatterModels(propsRoot, hexScale, seed, 2, RockModels, 0.28f, 0.36f, tokenClear,
                         ResourceType.Stone);
+                    for (int p = 0; p < 4; p++)
+                    {
+                        var pilePos = SamplePosition(hexScale, seed + 820 + p * 67, tokenClear, MaxPropRadiusFactor);
+                        ColonistHexTilePropPrimitives.CreateRockPile(
+                            propsRoot.transform,
+                            pilePos + Vector3.up * (HexPrismMesh.TopY + LiftAboveTop),
+                            hexScale);
+                    }
                     var minePos = SamplePosition(hexScale, seed + 800, tokenClear, MaxPropRadiusFactor);
                     ColonistHexTilePropPrimitives.CreateMineEntrance(
                         propsRoot.transform,

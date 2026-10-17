@@ -76,7 +76,7 @@ namespace CatanRoguelike.Game
                 new Vector2(0f, 0f),
                 new Vector2(left, bottom),
                 new Vector2(left + RunHudLayout.ColonistResourceHandWidth, bottom + handHeight));
-            _handPanel.GetComponent<Image>().color = RunHudUiFactory.HandBackdrop;
+            ColonistKenneyHudArt.ApplyWoodBarImage(_handPanel.GetComponent<Image>());
 
             var layout = _handPanel.gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.padding = new RectOffset(8, 8, 6, 6);
@@ -240,21 +240,14 @@ namespace CatanRoguelike.Game
                 Vector2.zero,
                 Vector2.zero);
             RunHudUiFactory.AddLayoutElement(logPanel.gameObject, 220f, 1f);
-            RunHudUiFactory.CreateText(
-                logPanel,
-                "Title",
-                ColonistHudCopy.GameLog,
-                15,
-                TextAnchor.UpperLeft,
-                RunHudUiFactory.TextMuted,
-                FontStyle.Bold);
+            RunHudUiFactory.CreateRailSectionTitle(logPanel, ColonistHudCopy.GameLog);
             var logScrollGo = new GameObject("LogScroll");
             logScrollGo.transform.SetParent(logPanel, false);
             var logScrollRect = logScrollGo.AddComponent<RectTransform>();
             logScrollRect.anchorMin = Vector2.zero;
             logScrollRect.anchorMax = Vector2.one;
-            logScrollRect.offsetMin = new Vector2(0f, 0f);
-            logScrollRect.offsetMax = new Vector2(0f, -22f);
+            logScrollRect.offsetMin = new Vector2(8f, 6f);
+            logScrollRect.offsetMax = new Vector2(-8f, -34f);
             var scroll = logScrollGo.AddComponent<ScrollRect>();
             scroll.horizontal = false;
             var viewport = new GameObject("Viewport");
@@ -271,7 +264,7 @@ namespace CatanRoguelike.Game
                 string.Empty,
                 12,
                 TextAnchor.UpperLeft,
-                RunHudUiFactory.TextMuted);
+                RunHudUiFactory.ColonistTextOnPanel);
             _gameLogText.horizontalOverflow = HorizontalWrapMode.Wrap;
             scroll.content = _gameLogText.rectTransform;
             scroll.viewport = viewportRect;
@@ -284,24 +277,17 @@ namespace CatanRoguelike.Game
                 Vector2.zero,
                 Vector2.zero);
             RunHudUiFactory.AddLayoutElement(chatPanel.gameObject, 120f);
-            RunHudUiFactory.CreateText(
-                chatPanel,
-                "Title",
-                ColonistHudCopy.Chat,
-                15,
-                TextAnchor.UpperLeft,
-                RunHudUiFactory.TextMuted,
-                FontStyle.Bold);
+            RunHudUiFactory.CreateRailSectionTitle(chatPanel, ColonistHudCopy.Chat);
             _colonistChatText = RunHudUiFactory.CreateText(
                 chatPanel,
                 "Placeholder",
                 ColonistHudCopy.ChatPlaceholder,
                 13,
-                TextAnchor.LowerLeft,
-                RunHudUiFactory.TextMuted);
+                TextAnchor.UpperLeft,
+                RunHudUiFactory.ColonistTextMutedOnPanel);
             var chatBody = _colonistChatText.rectTransform;
-            chatBody.offsetMin = new Vector2(0f, 8f);
-            chatBody.offsetMax = new Vector2(0f, -24f);
+            chatBody.offsetMin = new Vector2(10f, 10f);
+            chatBody.offsetMax = new Vector2(-10f, -36f);
 
             var bankStrip = RunHudUiFactory.CreatePanel(
                 _colonistRightRail,
@@ -326,24 +312,28 @@ namespace CatanRoguelike.Game
             if (_colonistHumanPanelText != null)
             {
                 int roads = state.Board.CountRoads(PlayerId.Human);
-                _colonistHumanPanelText.fontSize = 11;
-                _colonistHumanPanelText.horizontalOverflow = HorizontalWrapMode.Overflow;
-                string fishLine = state.FishermenOfCatanEnabled ? $"  ·  Fish {state.PlayerFish}" : string.Empty;
+                _colonistHumanPanelText.fontSize = 10;
+                _colonistHumanPanelText.horizontalOverflow = HorizontalWrapMode.Wrap;
+                string fishLine = state.FishermenOfCatanEnabled
+                    ? $"\nRd {roads} · Fish {state.PlayerFish}"
+                    : $"\nRd {roads}";
                 _colonistHumanPanelText.text =
                     $"{ColonistHudCopy.You}\n" +
-                    $"VP {state.PlayerVictoryPoints}  ·  Res {state.PlayerInventory.Total}  ·  Dev {state.PlayerHand.Count}  ·  Rd {roads}{fishLine}\n" +
-                    $"LR {(longestRoad == PlayerId.Human ? "✓" : "—")}  ·  LA {(state.LargestArmyOwner == PlayerId.Human ? "✓" : "—")}";
+                    $"VP {state.PlayerVictoryPoints} · Res {state.PlayerInventory.Total} · Dv {state.PlayerHand.Count}" +
+                    fishLine + "\n" +
+                    $"LR {(longestRoad == PlayerId.Human ? "✓" : "—")} · LA {(state.LargestArmyOwner == PlayerId.Human ? "✓" : "—")}";
             }
 
             if (_colonistAiPanelText != null)
             {
                 int aiRoads = state.Board.CountRoads(PlayerId.Ai);
-                _colonistAiPanelText.fontSize = 11;
-                _colonistAiPanelText.horizontalOverflow = HorizontalWrapMode.Overflow;
+                _colonistAiPanelText.fontSize = 10;
+                _colonistAiPanelText.horizontalOverflow = HorizontalWrapMode.Wrap;
                 _colonistAiPanelText.text =
                     $"{ColonistHudCopy.Opponent}\n" +
-                    $"VP {state.AiVictoryPoints}  ·  Dev {state.AiHand.Count}  ·  Rd {aiRoads}\n" +
-                    $"LR {(longestRoad == PlayerId.Ai ? "✓" : "—")}  ·  LA {(state.LargestArmyOwner == PlayerId.Ai ? "✓" : "—")}";
+                    $"VP {state.AiVictoryPoints} · Dv {state.AiHand.Count}\n" +
+                    $"Rd {aiRoads}\n" +
+                    $"LR {(longestRoad == PlayerId.Ai ? "✓" : "—")} · LA {(state.LargestArmyOwner == PlayerId.Ai ? "✓" : "—")}";
             }
 
             if (_colonistBankStrip != null)
@@ -367,7 +357,7 @@ namespace CatanRoguelike.Game
                 Vector2.one,
                 Vector2.zero,
                 Vector2.zero);
-            RunHudUiFactory.AddLayoutElement(panel.gameObject, 96f);
+            RunHudUiFactory.AddLayoutElement(panel.gameObject, 108f);
 
             var row = new GameObject("Row");
             row.transform.SetParent(panel, false);
@@ -396,11 +386,11 @@ namespace CatanRoguelike.Game
                 bodyGo.transform,
                 "Text",
                 string.Empty,
-                12,
+                10,
                 TextAnchor.UpperLeft,
-                RunHudUiFactory.TextPrimary);
+                RunHudUiFactory.ColonistTextOnPanel);
             bodyText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            bodyText.verticalOverflow = VerticalWrapMode.Overflow;
+            bodyText.verticalOverflow = VerticalWrapMode.Truncate;
 
             turnTimerText = null;
             var timerGo = new GameObject("TurnTimer");
@@ -410,9 +400,9 @@ namespace CatanRoguelike.Game
                 timerGo.transform,
                 "Timer",
                 string.Empty,
-                14,
+                13,
                 TextAnchor.UpperRight,
-                RunHudUiFactory.TextPrimary,
+                RunHudUiFactory.ColonistTextOnPanel,
                 FontStyle.Bold);
             turnTimerText.alignment = TextAnchor.UpperRight;
             if (name != "PlayerYou")
