@@ -12,7 +12,6 @@ namespace CatanRoguelike.Game
         public static readonly Color ChevronWaterBlue = new(0.58f, 0.78f, 0.91f, 1f);
         public static readonly Color ChevronOutlineBlue = new(0.22f, 0.38f, 0.58f, 1f);
 
-        private const string FishIconResourcePath = "Art/Board/FishIcon";
         private static Material _chevronMaterial;
         private static Material _outlineMaterial;
 
@@ -96,8 +95,8 @@ namespace CatanRoguelike.Game
             float hexHeightScale,
             float hexScale)
         {
-            var texture = Resources.Load<Texture2D>(FishIconResourcePath);
-            if (texture == null || boardRoot == null)
+            var texture = ColonistFishIconTextures.SilverBlueFish();
+            if (boardRoot == null)
                 return;
 
             float iconSize = HexTileView.TokenWorldFaceDiameter * 0.9f;
@@ -112,6 +111,7 @@ namespace CatanRoguelike.Game
             var armLeft = FishArmPointClearOfToken(placement, placement.CoastArmLeft, bandT, minCenterDist);
             var armRight = FishArmPointClearOfToken(placement, placement.CoastArmRight, bandT, minCenterDist);
             var centers = new[] { armLeft, armRight };
+            var armEnds = new[] { placement.CoastArmLeft, placement.CoastArmRight };
             var halo = ColonistFishIconTextures.DarkIconHalo();
 
             for (int i = 0; i < centers.Length; i++)
@@ -148,11 +148,11 @@ namespace CatanRoguelike.Game
                     zWrite: false,
                     alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);
 
-                float swimYaw = Mathf.Atan2(placement.Outward.X, placement.Outward.Z) * Mathf.Rad2Deg;
-                float side = i == 0 ? -22f : 22f;
+                var armDir = armEnds[i] - placement.InlandTip;
+                float armYaw = Mathf.Atan2(armDir.X, armDir.Z) * Mathf.Rad2Deg;
                 var rot = Quaternion.Euler(
                     ColonistFlatBoardQuad.BoardPitchDegrees,
-                    swimYaw + 180f + side,
+                    armYaw,
                     0f);
                 icon.transform.rotation = rot;
                 haloQuad.transform.rotation = rot;

@@ -13,6 +13,10 @@ namespace CatanRoguelike.Game
         private static Material _terracotta;
         private static Material _flower;
         private static Material _grass;
+        private static Material _wheatGold;
+        private static Material _cactus;
+        private static Material _snow;
+        private static Material _brickRed;
 
         public static void ApplyToRenderer(Renderer renderer, ResourceType resource)
         {
@@ -27,7 +31,8 @@ namespace CatanRoguelike.Game
                 ResourceType.Stone => RockDark(),
                 ResourceType.Brick => Terracotta(),
                 ResourceType.Wheat when name.Contains("flower") || name.Contains("petal") => Flower(),
-                ResourceType.Wheat => Grass(),
+                ResourceType.Wheat => WheatGold(),
+                ResourceType.Sheep when name.Contains("fence") || name.Contains("plank") => TreeBark(),
                 _ => null
             };
 
@@ -85,5 +90,58 @@ namespace CatanRoguelike.Game
 
         private static Material Grass() =>
             _grass ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.40f, 0.72f, 0.30f));
+
+        private static Material WheatGold() =>
+            _wheatGold ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.88f, 0.68f, 0.22f));
+
+        private static Material CactusGreen() =>
+            _cactus ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.22f, 0.52f, 0.28f));
+
+        private static Material SnowCap() =>
+            _snow ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.94f, 0.96f, 0.98f));
+
+        private static Material BrickRed() =>
+            _brickRed ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.58f, 0.22f, 0.14f));
+
+        public static void ApplyDesertToRenderer(Renderer renderer)
+        {
+            if (renderer == null)
+                return;
+
+            string name = renderer.gameObject.name.ToLowerInvariant();
+            var mat = name.Contains("rock") || name.Contains("stone") ? Rock() : CactusGreen();
+            var mats = renderer.sharedMaterials;
+            for (int i = 0; i < mats.Length; i++)
+                mats[i] = mat;
+            renderer.sharedMaterials = mats;
+        }
+
+        public static void ApplyStoneMountainRenderer(Renderer renderer, float snowMinWorldY)
+        {
+            if (renderer == null)
+                return;
+
+            bool snow = renderer.bounds.max.y >= snowMinWorldY;
+            var mat = snow ? SnowCap() : RockDark();
+            var mats = renderer.sharedMaterials;
+            for (int i = 0; i < mats.Length; i++)
+                mats[i] = mat;
+            renderer.sharedMaterials = mats;
+        }
+
+        public static void ApplyBrickToRenderer(Renderer renderer)
+        {
+            if (renderer == null)
+                return;
+
+            string name = renderer.gameObject.name.ToLowerInvariant();
+            Material mat = name.Contains("brick") || name.Contains("smelt") || name.Contains("mine")
+                ? BrickRed()
+                : Terracotta();
+            var mats = renderer.sharedMaterials;
+            for (int i = 0; i < mats.Length; i++)
+                mats[i] = mat;
+            renderer.sharedMaterials = mats;
+        }
     }
 }

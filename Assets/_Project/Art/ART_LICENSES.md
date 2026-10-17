@@ -22,10 +22,24 @@
 
 ## Quaternius — Ultimate Nature (3D props)
 
-- **Files:** `Resources/Art/Models/Nature/NormalTree_2.fbx`, `Rock_3.fbx`, `Flower_2_Clump.fbx`
+- **Files:** `Resources/Art/Models/Nature/NormalTree_2.fbx`, `BirchTree_*.fbx`, `Rock_3.fbx`, `Bush_*.fbx`
 - **License:** CC0 1.0
-- **Source:** [Quaternius Ultimate Nature](https://quaternius.com/packs/ultimatenature.html) (FBX via community Godot bundle mirror in import script)
-- **Use:** Small props on forest, mountain, and wheat hex tops.
+- **Source:** [Quaternius Ultimate Nature](https://quaternius.com/packs/ultimatenature.html) (FBX via community Godot bundle mirror in `tools/import-kenney-board-art.py`)
+- **Use:** Forest trees and sheep pasture bushes.
+
+## Kenney — Hexagon Kit (terrain buildings & geology)
+
+- **Files:** `Resources/Art/Models/Kenney/building-mill.fbx`, `building-farm.fbx`, `building-mine.fbx`, `building-smelter.fbx`, `stone-mountain.fbx`, `stone-rocks.fbx`, `dirt-lumber.fbx`, `sand-rocks.fbx`, …
+- **License:** CC0 1.0 — see `Art/ThirdParty/Kenney/hexagon-kit-CC0.txt`
+- **Source:** [Kenney Hexagon Kit](https://kenney.nl/assets/hexagon-kit) (`tools/import-kenney-hex-decor.py`, zip at `assets-eval/kenney_hexagon-kit.zip`)
+- **Use:** Wheat mill/farm, brick quarry, stone peaks and boulders, desert rocks.
+
+## Kenney — Nature Kit (crops, cacti, fences)
+
+- **Files:** `Resources/Art/Models/Kenney/crops_wheatStageA.fbx`, `cactus_tall.fbx`, `fence_planksDouble.fbx`, `rock_largeA.fbx`, `campfire_bricks.fbx`, …
+- **License:** CC0 1.0 — see `Art/ThirdParty/Kenney/nature-kit-CC0.txt`
+- **Source:** [Kenney Nature Kit](https://kenney.nl/assets/nature-kit) (`tools/import-kenney-hex-decor.py`)
+- **Use:** Golden wheat rows, desert cacti, sheep fences, brick stacks.
 
 ## Fishermen fishing-ground art
 

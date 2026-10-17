@@ -283,17 +283,17 @@ def build_terrain_slot(src: Path, slot: str) -> Image.Image:
 
 
 def make_fish_icon_albedo() -> Image.Image:
-    """Square fish sprite (fills frame) for colonist camera-aligned quads."""
+    """Pale silver-blue fish with dark outline for Fishermen-style chevron icons."""
     w = h = 256
     im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(im)
-    fish = (32, 92, 132, 255)
+    outline = (26, 36, 56, 255)
+    fish = (184, 210, 230, 255)
+    belly = (220, 235, 245, 255)
     cx, cy = w // 2, h // 2
-    # Body + tail centered in square (readable at top-down camera).
-    draw.ellipse((cx - 72, cy - 36, cx + 72, cy + 36), fill=fish)
-    draw.polygon([(cx + 72, cy), (cx + 108, cy - 44), (cx + 108, cy + 44)], fill=fish)
-    draw.ellipse((cx - 28, cy - 12, cx - 8, cy + 8), fill=(228, 240, 248, 255))
-    draw.ellipse((cx + 18, cy - 6, cx + 34, cy + 6), fill=(20, 72, 108, 200))
+    draw.ellipse((cx - 72, cy - 36, cx + 72, cy + 36), fill=fish, outline=outline, width=6)
+    draw.polygon([(cx + 72, cy), (cx + 108, cy - 44), (cx + 108, cy + 44)], fill=fish, outline=outline)
+    draw.ellipse((cx - 28, cy - 8, cx - 6, cy + 10), fill=belly)
     return im
 
 
