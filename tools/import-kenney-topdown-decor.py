@@ -35,7 +35,6 @@ COPIES: tuple[tuple[str, str], ...] = (
     (R + "Environment/medievalEnvironment_09.png", "rock_cluster_b.png"),  # flecked (ore)
     (R + "Environment/medievalEnvironment_11.png", "rock_cluster_c.png"),
     (R + "Environment/medievalEnvironment_18.png", "clay_pit.png"),        # flecked clay mound
-    (R + "Environment/medievalEnvironment_15.png", "brick_stack.png"),     # clay boulders
     (R + "Environment/medievalEnvironment_17.png", "brick_crates.png"),
     (R + "Environment/medievalEnvironment_14.png", "desert_rock.png"),     # sandstone rock
 )
@@ -228,20 +227,68 @@ def outline_bricks(im: Image.Image) -> Image.Image:
 
 
 def make_brick_kiln() -> Image.Image:
-    """Round brick oven / kiln seen from above."""
+    """Beehive brick kiln (front-on, like the other upright Kenney structures): coursed brick
+    dome, glowing arched firing door, chimney stack."""
     s = 4
     W = 128 * s
     im = Image.new("RGBA", (W, W), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
-    cx, cy = W // 2, W // 2 + 6 * s
-    brick = (178, 82, 52, 255)
-    dark = (118, 48, 32, 255)
-    d.ellipse((cx - 44 * s, cy - 40 * s, cx + 44 * s, cy + 44 * s), fill=brick, outline=OUTLINE, width=4 * s)
-    d.ellipse((cx - 32 * s, cy - 28 * s, cx + 32 * s, cy + 32 * s), fill=(156, 68, 44, 255), outline=dark, width=2 * s)
-    d.ellipse((cx - 18 * s, cy - 14 * s, cx + 18 * s, cy + 18 * s), fill=(48, 32, 28, 255), outline=OUTLINE, width=2 * s)
-    d.ellipse((cx - 10 * s, cy - 6 * s, cx + 10 * s, cy + 10 * s), fill=(255, 168, 72, 220))
-    d.rectangle((cx - 6 * s, cy - 52 * s, cx + 6 * s, cy - 36 * s), fill=(96, 96, 100, 255), outline=OUTLINE, width=2 * s)
+    brick, mortar, shade = (196, 92, 56, 255), (120, 54, 34, 255), (160, 70, 44, 255)
+    # chimney
+    d.rectangle((82 * s, 10 * s, 98 * s, 50 * s), fill=(150, 66, 42, 255), outline=OUTLINE, width=3 * s)
+    d.rectangle((78 * s, 6 * s, 102 * s, 14 * s), fill=(110, 50, 32, 255), outline=OUTLINE, width=3 * s)
+    # dome + base
+    d.pieslice((14 * s, 24 * s, 114 * s, 124 * s), 180, 360, fill=brick, outline=OUTLINE, width=4 * s)
+    d.rectangle((14 * s, 72 * s, 114 * s, 116 * s), fill=brick, outline=OUTLINE, width=4 * s)
+    d.rectangle((18 * s, 74 * s, 110 * s, 76 * s), fill=brick)
+    for k, y in enumerate(range(40, 114, 10)):  # brick courses
+        y *= s
+        d.line((18 * s, y, 110 * s, y), fill=mortar, width=s * 2)
+        off = (k % 2) * 8
+        for x in range(18 + off, 110, 16):
+            d.line((x * s, y, x * s, y + 10 * s), fill=mortar, width=s * 2)
+    d.pieslice((14 * s, 24 * s, 114 * s, 124 * s), 180, 360, outline=OUTLINE, width=4 * s)
+    d.rectangle((14 * s, 112 * s, 114 * s, 118 * s), fill=shade, outline=OUTLINE, width=3 * s)
+    # firing door
+    d.pieslice((46 * s, 70 * s, 82 * s, 106 * s), 180, 360, fill=(52, 30, 24, 255), outline=OUTLINE, width=3 * s)
+    d.rectangle((46 * s, 88 * s, 82 * s, 112 * s), fill=(52, 30, 24, 255), outline=OUTLINE, width=3 * s)
+    d.rectangle((49 * s, 88 * s, 79 * s, 109 * s), fill=(52, 30, 24, 255))
+    d.ellipse((54 * s, 92 * s, 74 * s, 110 * s), fill=(255, 160, 60, 255))
+    d.ellipse((59 * s, 98 * s, 69 * s, 108 * s), fill=(255, 226, 120, 255))
     return im.resize((128, 128), Image.LANCZOS)
+
+
+def make_brick_pallet() -> Image.Image:
+    """Stack of fired bricks on a wooden pallet, light mortar lines so it reads on the clay hex."""
+    s = 4
+    W = 128 * s
+    im = Image.new("RGBA", (W, W), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    brick, hi = (214, 104, 62, 255), (238, 146, 98, 255)
+    d.rectangle((12 * s, 100 * s, 116 * s, 116 * s), fill=(150, 100, 52, 255), outline=OUTLINE, width=3 * s)
+    for x in (22, 60, 98):
+        d.rectangle(((x - 6) * s, 106 * s, (x + 6) * s, 116 * s), fill=(110, 72, 36, 255))
+    rows = [(16, 112, 4), (24, 104, 4), (34, 94, 3), (44, 84, 2)]
+    y = 100
+    for x0, x1, n in rows:
+        h = 16
+        w = (x1 - x0) / n
+        for k in range(n):
+            bx0, bx1 = x0 + k * w, x0 + (k + 1) * w
+            d.rectangle((bx0 * s, (y - h) * s, bx1 * s, y * s), fill=brick, outline=OUTLINE, width=3 * s)
+            d.line(((bx0 + 3) * s, (y - h + 4) * s, (bx1 - 3) * s, (y - h + 4) * s), fill=hi, width=2 * s)
+        y -= h
+    return im.resize((128, 128), Image.LANCZOS)
+
+
+def make_windmill_kenney(zf: zipfile.ZipFile) -> Image.Image:
+    """Kenney mill body (Structure_11) with sails (Structure_14) on the roof."""
+    body = Image.open(BytesIO(zf.read(R + "Structure/medievalStructure_11.png"))).convert("RGBA")
+    sails = Image.open(BytesIO(zf.read(R + "Structure/medievalStructure_14.png"))).convert("RGBA")
+    canvas = Image.new("RGBA", (192, 192), (0, 0, 0, 0))
+    canvas.alpha_composite(body, (32, 44))
+    canvas.alpha_composite(sails.resize((150, 150), Image.LANCZOS), (21, 4))
+    return canvas
 
 
 def make_cactus(tall: bool) -> Image.Image:
@@ -377,8 +424,6 @@ def main() -> None:
             im = Image.open(BytesIO(zf.read(src)))
             if dest.startswith("rock_cluster"):
                 im = slate_boulder(im)
-            if dest == "brick_stack.png":
-                im = outline_bricks(im)
             save(dest, im)
         for src, dest, tint in PLOTS:
             plot = cut_plot(Image.open(BytesIO(zf.read(src))))
@@ -389,7 +434,10 @@ def main() -> None:
         save("wheat_sheaf.png", make_wheat_sheaf(zf))
         save("tree_cluster_a.png", make_tree_cluster(zf, R + "Tile/medievalTile_44.png"))  # cypress clump
         save("tree_cluster_b.png", make_tree_cluster(zf, R + "Tile/medievalTile_48.png"))  # pine clump
-    save("windmill.png", make_windmill_topdown())
+    # The procedural disc+cap mill read as a life buoy; the Kenney body+sails reads as a windmill.
+    with zipfile.ZipFile(a.zip) as zf2:
+        save("windmill.png", make_windmill_kenney(zf2))
+    save("brick_stack.png", make_brick_pallet())
     save("mountain_peak.png", make_peak())
     save("wheat_rows.png", make_wheat_rows())
     save("brick_kiln.png", make_brick_kiln())

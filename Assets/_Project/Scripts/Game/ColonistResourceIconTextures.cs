@@ -43,6 +43,18 @@ namespace CatanRoguelike.Game
             if (cache.TryGetValue(resource, out var cached) && cached != null)
                 return cached;
 
+            // The flat grey ore silhouette on the grey stone hex read as a see-through blob: on the
+            // board use the Kenney ore boulder (flecked rock) instead; HUD/port icons keep silhouettes.
+            if (resource == ResourceType.Stone && !forHud && !inkOverride.HasValue)
+            {
+                var ore = Resources.Load<Texture2D>("Art/Board/TopDownDecor/rock_cluster_c");
+                if (ore != null)
+                {
+                    cache[resource] = ore;
+                    return ore;
+                }
+            }
+
             bool isPortBadge = inkOverride.HasValue && ReferenceEquals(cache, PortBadgeCache);
             var tex = new Texture2D(Size, Size, TextureFormat.RGBA32, false)
             {

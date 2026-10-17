@@ -8,6 +8,7 @@ namespace CatanRoguelike.Game
     {
         private const int FontSize = 52;
         private const int Padding = 10;
+        private const int PaddingY = 4; // keep the quad inside the badge disc bounds
 
         private static readonly Dictionary<string, Texture2D> Cache = new();
 
@@ -44,19 +45,35 @@ namespace CatanRoguelike.Game
                 return null;
 
             font.RequestCharactersInTexture(text, FontSize, FontStyle.Bold);
-            var atlas = font.material.mainTexture as Texture2D;
+            var gpuAtlas = font.material.mainTexture as Texture2D;
+            if (gpuAtlas == null)
+                return null;
+            // The dynamic font atlas is GPU-only (GetPixel threw "Font Texture is not readable" and
+            // broke every board build); copy it through a RenderTexture first.
+            var atlas = ReadableCopy(gpuAtlas);
             if (atlas == null)
                 return null;
 
+            // Size to the real glyph box: the baseline used to sit at the top edge (Padding + FontSize),
+            // so only the descender-side sliver of each glyph landed inside the texture.
             int width = Padding * 2;
-            int height = FontSize + Padding * 2;
+            int minY = int.MaxValue, maxY = int.MinValue;
             foreach (char ch in text)
             {
                 if (!font.GetCharacterInfo(ch, out var ci, FontSize, FontStyle.Bold))
                     continue;
                 width += ci.advance;
+                minY = Mathf.Min(minY, ci.minY);
+                maxY = Mathf.Max(maxY, ci.maxY);
             }
 
+            if (minY > maxY)
+            {
+                DestroyTexture(atlas);
+                return null;
+            }
+
+            int height = maxY - minY + PaddingY * 2;
             width = Mathf.Max(width, 48);
             var tex = new Texture2D(width, height, TextureFormat.RGBA32, false)
             {
@@ -70,7 +87,7 @@ namespace CatanRoguelike.Game
                 pixels[i] = new Color32(0, 0, 0, 0);
 
             int cursorX = Padding;
-            int baselineY = Padding + FontSize;
+            int baselineY = PaddingY - minY;
             var ink = new Color32(28, 32, 40, 255);
             foreach (char ch in text)
             {
@@ -80,9 +97,51 @@ namespace CatanRoguelike.Game
                 cursorX += ci.advance;
             }
 
+            DestroyTexture(atlas);
+            bool anyInk = false;
+            for (int i = 0; i < pixels.Length && !anyInk; i++)
+                anyInk = pixels[i].a > 0;
+            if (!anyInk)
+            {
+                DestroyTexture(tex); // e.g. null graphics device in batch EditMode: use bitmap glyphs
+                return null;
+            }
+
             tex.SetPixels32(pixels);
             tex.Apply(false, false);
             return tex;
+        }
+
+        private static Texture2D ReadableCopy(Texture2D source)
+        {
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+                return null;
+            var rt = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGB32);
+            var previous = RenderTexture.active;
+            try
+            {
+                Graphics.Blit(source, rt);
+                RenderTexture.active = rt;
+                var copy = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
+                copy.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0, false);
+                copy.Apply(false, false);
+                return copy;
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                RenderTexture.ReleaseTemporary(rt);
+            }
+        }
+
+        private static void DestroyTexture(Texture2D tex)
+        {
+            if (tex == null)
+                return;
+            if (Application.isPlaying)
+                Object.Destroy(tex);
+            else
+                Object.DestroyImmediate(tex);
         }
 
         private static void BlitGlyph(
@@ -95,36 +154,33 @@ namespace CatanRoguelike.Game
             int destY,
             Color32 ink)
         {
-            int gw = ci.glyphWidth;
-            int gh = ci.glyphHeight;
+            int gw = ci.maxX - ci.minX;
+            int gh = ci.maxY - ci.minY;
             if (gw <= 0 || gh <= 0)
                 return;
 
-            float u0 = ci.uvBottomLeft.x;
-            float v0 = ci.uvBottomLeft.y;
-            float u1 = ci.uvTopRight.x;
-            float v1 = ci.uvTopRight.y;
-
+            // Interpolate across all four UV corners: dynamic atlases store some glyphs rotated.
+            Vector2 bl = ci.uvBottomLeft, br = ci.uvBottomRight, tl = ci.uvTopLeft;
             for (int py = 0; py < gh; py++)
             {
-                float v = Mathf.Lerp(v0, v1, py / (float)Mathf.Max(gh - 1, 1));
-                int atlasY = Mathf.Clamp((int)(v * atlas.height), 0, atlas.height - 1);
-                int dy = destY + py + ci.minY;
+                int dy = destY + ci.minY + py;
                 if (dy < 0 || dy >= destH)
                     continue;
-
+                float t = (py + 0.5f) / gh;
                 for (int px = 0; px < gw; px++)
                 {
-                    float u = Mathf.Lerp(u0, u1, px / (float)Mathf.Max(gw - 1, 1));
-                    int atlasX = Mathf.Clamp((int)(u * atlas.width), 0, atlas.width - 1);
-                    int dx = destX + px + ci.minX;
+                    int dx = destX + ci.minX + px;
                     if (dx < 0 || dx >= destW)
                         continue;
-
-                    Color src = atlas.GetPixel(atlasX, atlasY);
-                    if (src.a < 0.08f)
+                    float u = (px + 0.5f) / gw;
+                    Vector2 uv = bl + (br - bl) * u + (tl - bl) * t;
+                    float a = atlas.GetPixelBilinear(uv.x, uv.y).a;
+                    if (a < 0.35f)
                         continue;
-                    dest[dy * destW + dx] = ink;
+                    var c = ink;
+                    c.a = (byte)Mathf.Clamp(Mathf.RoundToInt(Mathf.InverseLerp(0.35f, 0.75f, a) * 255f), 0, 255);
+                    if (c.a > dest[dy * destW + dx].a)
+                        dest[dy * destW + dx] = c;
                 }
             }
         }
