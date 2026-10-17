@@ -4,6 +4,7 @@ using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Game;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
@@ -55,6 +56,27 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsFalse(
                 RectTransformsOverlap(handRoot.GetComponent<RectTransform>(), resourceHand.GetComponent<RectTransform>()),
                 "Roguelike hand should not overlap the resource hand strip.");
+
+            // Hover the middle card: it must lift, scale and come to the front.
+            var middle = GameObject.Find("RoguelikeCard_2");
+            Assert.IsNotNull(middle, "Middle roguelike card should exist.");
+            float restY = middle.GetComponent<RectTransform>().anchoredPosition.y;
+            ExecuteEvents.Execute(middle, new PointerEventData(EventSystem.current), ExecuteEvents.pointerEnterHandler);
+            Canvas.ForceUpdateCanvases();
+            yield return null;
+            var middleRect = middle.GetComponent<RectTransform>();
+            Assert.Greater(middleRect.anchoredPosition.y, restY + 10f, "Hovered card should lift.");
+            Assert.Greater(middleRect.localScale.x, 1.05f, "Hovered card should scale up.");
+            Assert.AreEqual(middleRect.parent.childCount - 1, middleRect.GetSiblingIndex(), "Hovered card should draw on top.");
+
+            // Optional review capture of the hovered fan (COLONIST_CARD_HOVER_SHOT=/path.png).
+            string hoverShot = System.Environment.GetEnvironmentVariable("COLONIST_CARD_HOVER_SHOT");
+            if (!string.IsNullOrEmpty(hoverShot))
+            {
+                var tex = GameSceneCapture.CaptureMainCameraWithHudComposite(
+                    hud, GameSceneCapture.CaptureWidth, GameSceneCapture.CaptureHeight);
+                File.WriteAllBytes(hoverShot, tex.EncodeToPNG());
+            }
         }
 
         private static bool RectTransformsOverlap(RectTransform a, RectTransform b)

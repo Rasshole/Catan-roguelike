@@ -20,8 +20,11 @@ namespace CatanRoguelike.Tests
         public void FanPoses_OuterCardsRotateOutward()
         {
             var poses = ColonistRoguelikeCardHandLayout.ComputeFanPoses(5);
-            Assert.Less(poses[0].RotationZ, 0f);
-            Assert.Greater(poses[4].RotationZ, 0f);
+            // UI +Z rotation is counter-clockwise: in a held fan the left card's top leans left
+            // (positive Z) and the right card's top leans right (negative Z). The previous signs
+            // produced an inverted fan with the tops converging.
+            Assert.Greater(poses[0].RotationZ, 0f, "Left card should lean left (CCW).");
+            Assert.Less(poses[4].RotationZ, 0f, "Right card should lean right (CW).");
         }
     }
 }

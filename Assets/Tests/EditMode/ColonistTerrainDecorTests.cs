@@ -42,11 +42,11 @@ namespace CatanRoguelike.Tests
                     sawDesert = true;
                     Assert.IsNotNull(props, $"Desert hex {tile.Coord} should spawn TileNatureProps.");
                     Assert.GreaterOrEqual(
-                        ColonistHexTileNatureDecor.CountDescendantsNamed(props, "Cactus"),
+                        ColonistHexTileNatureDecor.CountDescendantsNamed(props, "cactus"), // template props are named after the sprite (cactus_tall_3)
                         5,
                         $"Desert hex {tile.Coord} needs cacti around pond/token (found cactus parts).");
                     Assert.GreaterOrEqual(
-                        ColonistHexTileNatureDecor.CountDescendantsNamed(props, "DesertRock"),
+                        ColonistHexTileNatureDecor.CountDescendantsNamed(props, "desert_rock"),
                         3,
                         $"Desert hex {tile.Coord} needs desert rocks.");
                     Assert.GreaterOrEqual(

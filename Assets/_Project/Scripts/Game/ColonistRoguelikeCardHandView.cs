@@ -42,6 +42,15 @@ namespace CatanRoguelike.Game
                 new Vector2(1f, 0f),
                 new Vector2(left, bottom),
                 new Vector2(-right, bottom + height));
+            // The band is only a layout region: an opaque parchment strip here hid the bottom of the
+            // board (v109 review). Cards float over the board like Slay the Spire / Balatro.
+            var panelImage = panel.GetComponent<Image>();
+            if (panelImage != null)
+            {
+                panelImage.color = new Color(0f, 0f, 0f, 0f);
+                panelImage.raycastTarget = false;
+            }
+
             var view = panel.gameObject.AddComponent<ColonistRoguelikeCardHandView>();
             view.Initialize(panel);
             return view;
@@ -55,33 +64,11 @@ namespace CatanRoguelike.Game
             pileRect.anchorMin = new Vector2(0.5f, 0f);
             pileRect.anchorMax = new Vector2(0.5f, 0f);
             pileRect.pivot = new Vector2(0.5f, 0f);
-            pileRect.anchoredPosition = new Vector2(-120f, 4f);
-            pileRect.sizeDelta = new Vector2(100f, 36f);
-            _drawPileText = RunHudUiFactory.CreateText(
-                pileRow.transform,
-                "Draw",
-                "Draw\n0",
-                11,
-                TextAnchor.LowerLeft,
-                RunHudUiFactory.ColonistTextOnPanel,
-                FontStyle.Bold);
-
-            var discardGo = new GameObject("Discard");
-            discardGo.transform.SetParent(pileRow.transform, false);
-            var discardRect = discardGo.AddComponent<RectTransform>();
-            discardRect.anchorMin = new Vector2(1f, 0f);
-            discardRect.anchorMax = new Vector2(1f, 0f);
-            discardRect.pivot = new Vector2(1f, 0f);
-            discardRect.anchoredPosition = new Vector2(0f, 0f);
-            discardRect.sizeDelta = new Vector2(100f, 36f);
-            _discardPileText = RunHudUiFactory.CreateText(
-                discardGo.transform,
-                "Label",
-                "Discard\n0",
-                11,
-                TextAnchor.LowerRight,
-                RunHudUiFactory.ColonistTextMutedOnPanel,
-                FontStyle.Bold);
+            pileRect.anchoredPosition = new Vector2(-(RunHudLayout.ColonistResourceHandWidth + RunHudLayout.Margin) * 0.5f, 6f);
+            pileRect.sizeDelta = new Vector2(640f, 44f);
+            // Parchment chips either side of the fan so the counters stay readable over the sea.
+            _drawPileText = CreatePileChip(pileRow.transform, "Draw", "Draw\n0", leftSide: true);
+            _discardPileText = CreatePileChip(pileRow.transform, "Discard", "Discard\n0", leftSide: false);
 
             var fanGo = new GameObject("FanRoot");
             fanGo.transform.SetParent(panel, false);
@@ -89,8 +76,34 @@ namespace CatanRoguelike.Game
             _fanRoot.anchorMin = new Vector2(0.5f, 0f);
             _fanRoot.anchorMax = new Vector2(0.5f, 0f);
             _fanRoot.pivot = new Vector2(0.5f, 0f);
-            _fanRoot.anchoredPosition = new Vector2(0f, 18f);
+            // Centre the fan under the board (play-area centre), not the band centre: the band
+            // starts after the resource hand, which pushed the fan right of the board.
+            _fanRoot.anchoredPosition = new Vector2(-(RunHudLayout.ColonistResourceHandWidth + RunHudLayout.Margin) * 0.5f, 20f);
             _fanRoot.sizeDelta = new Vector2(640f, ColonistRoguelikeCardHandLayout.CardHeight + 40f);
+        }
+
+        private static Text CreatePileChip(Transform parent, string name, string text, bool leftSide)
+        {
+            var chipGo = new GameObject(name);
+            chipGo.transform.SetParent(parent, false);
+            var rect = chipGo.AddComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = new Vector2(leftSide ? 0f : 1f, 0f);
+            rect.pivot = new Vector2(leftSide ? 0f : 1f, 0f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(72f, 44f);
+            var bg = chipGo.AddComponent<Image>();
+            ColonistKenneyHudArt.ApplyColonistCountBadge(bg);
+            bg.raycastTarget = false;
+            var label = RunHudUiFactory.CreateText(
+                chipGo.transform,
+                "Label",
+                text,
+                13,
+                TextAnchor.MiddleCenter,
+                RunHudUiFactory.ColonistTextOnPanel,
+                FontStyle.Bold);
+            label.raycastTarget = false;
+            return label;
         }
 
         public void Refresh(GameState state, Action<int> playRequested)
@@ -192,6 +205,10 @@ namespace CatanRoguelike.Game
                 ColonistRoguelikeCardHandLayout.CardWidth,
                 ColonistRoguelikeCardHandLayout.CardHeight);
             rect.pivot = new Vector2(0.5f, 0f);
+            // Anchor to the fan root's bottom edge: with the default centre anchor every card sat
+            // ~100 px higher, over the bottom hexes (v109 review).
+            rect.anchorMin = new Vector2(0.5f, 0f);
+            rect.anchorMax = new Vector2(0.5f, 0f);
 
             var bg = go.AddComponent<Image>();
             ColonistKenneyHudArt.ApplyColonistResourceCardBackground(bg, new Color(0.94f, 0.88f, 0.74f, 1f));
@@ -203,16 +220,13 @@ namespace CatanRoguelike.Game
             frameRect.anchorMax = Vector2.one;
             frameRect.offsetMin = Vector2.zero;
             frameRect.offsetMax = Vector2.zero;
+            // Warm inner parchment over the framed background (the CardBack_blue frame made every
+            // card blue, v109 review).
             var frame = frameGo.AddComponent<Image>();
-            var frameSprite = ColonistKenneyHudArt.CardFrameSprite();
-            if (frameSprite != null)
-            {
-                frame.sprite = frameSprite;
-                frame.type = Image.Type.Sliced;
-            }
-
-            frame.color = new Color(1f, 1f, 1f, 0.92f);
+            frame.color = new Color(0.99f, 0.95f, 0.85f, 1f);
             frame.raycastTarget = false;
+            frameRect.offsetMin = new Vector2(5f, 5f);
+            frameRect.offsetMax = new Vector2(-5f, -5f);
 
             var border = new GameObject("Accent");
             border.transform.SetParent(go.transform, false);
@@ -232,8 +246,8 @@ namespace CatanRoguelike.Game
                 TextAnchor.UpperLeft,
                 RunHudUiFactory.ColonistTextMutedOnPanel,
                 FontStyle.Bold);
-            cost.rectTransform.offsetMin = new Vector2(8f, -22f);
-            cost.rectTransform.offsetMax = new Vector2(-8f, -6f);
+            cost.rectTransform.offsetMin = new Vector2(9f, -21f);
+            cost.rectTransform.offsetMax = new Vector2(-9f, -8f);
 
             var title = RunHudUiFactory.CreateText(
                 go.transform,
@@ -243,8 +257,13 @@ namespace CatanRoguelike.Game
                 TextAnchor.UpperCenter,
                 RunHudUiFactory.ColonistTextOnPanel,
                 FontStyle.Bold);
-            title.rectTransform.offsetMin = new Vector2(6f, -36f);
-            title.rectTransform.offsetMax = new Vector2(-6f, -8f);
+            // Below the category line (they overlapped at -36..-8 vs -22..-6).
+            title.rectTransform.offsetMin = new Vector2(6f, -40f);
+            title.rectTransform.offsetMax = new Vector2(-6f, -22f);
+            title.horizontalOverflow = HorizontalWrapMode.Wrap;
+            title.resizeTextForBestFit = true;
+            title.resizeTextMinSize = 10;
+            title.resizeTextMaxSize = 13;
 
             var iconGo = new GameObject("Icon");
             iconGo.transform.SetParent(go.transform, false);
@@ -260,7 +279,7 @@ namespace CatanRoguelike.Game
                 go.transform,
                 "Body",
                 string.Empty,
-                10,
+                11,
                 TextAnchor.LowerCenter,
                 RunHudUiFactory.ColonistTextOnPanel);
             body.horizontalOverflow = HorizontalWrapMode.Wrap;
