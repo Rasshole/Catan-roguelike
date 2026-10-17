@@ -89,7 +89,7 @@ namespace CatanRoguelike.Game
             costRow.childControlWidth = true;
             costRow.childForceExpandHeight = false;
             costRow.childControlHeight = true;
-            RunHudUiFactory.AddLayoutElement(costIcons, 20f);
+            RunHudUiFactory.AddLayoutElement(costIcons, 26f);
 
             var chipGo = new GameObject("Chip");
             chipGo.transform.SetParent(button.transform, false);
@@ -112,7 +112,7 @@ namespace CatanRoguelike.Game
             pieceCountChip.raycastTarget = false;
 
             float buttonWidth = shortTitle == ColonistHudCopy.Settlement ? 116f : 94f;
-            RunHudUiFactory.AddLayoutElement(button.gameObject, 72f).preferredWidth = buttonWidth;
+            RunHudUiFactory.AddLayoutElement(button.gameObject, 78f).preferredWidth = buttonWidth;
 
             labelModel.SetTitle(shortTitle);
             return button;
@@ -183,11 +183,11 @@ namespace CatanRoguelike.Game
                 row.childAlignment = TextAnchor.MiddleCenter;
                 row.childForceExpandWidth = false;
                 row.childControlWidth = true;
-                RunHudUiFactory.AddLayoutElement(chip, 18f);
+                RunHudUiFactory.AddLayoutElement(chip, 22f);
 
                 var iconGo = new GameObject("Icon");
                 iconGo.transform.SetParent(chip.transform, false);
-                RunHudUiFactory.AddLayoutElement(iconGo, 14f).preferredWidth = 14f;
+                RunHudUiFactory.AddLayoutElement(iconGo, 18f).preferredWidth = 18f;
                 var img = iconGo.AddComponent<Image>();
                 ColonistHudIconGraphic.ApplyCardIcon(img, ColonistHudResourceSprites.Get(resource), fill: 0.92f);
 
@@ -195,12 +195,12 @@ namespace CatanRoguelike.Game
                     chip.transform,
                     "Amt",
                     amount.ToString(),
-                    10,
+                    12,
                     TextAnchor.MiddleLeft,
                     canAfford ? RunHudUiFactory.ColonistTextOnPanel : new Color(0.58f, 0.10f, 0.08f, 1f),
                     FontStyle.Bold);
                 amt.raycastTarget = false;
-                RunHudUiFactory.AddLayoutElement(amt.gameObject, 14f).preferredWidth = 12f;
+                RunHudUiFactory.AddLayoutElement(amt.gameObject, 16f).preferredWidth = 14f;
             }
 
             AddChip(ResourceType.Wood, cost.Wood);
@@ -208,6 +208,16 @@ namespace CatanRoguelike.Game
             AddChip(ResourceType.Wheat, cost.Wheat);
             AddChip(ResourceType.Sheep, cost.Sheep);
             AddChip(ResourceType.Stone, cost.Stone);
+        }
+
+        /// <summary>Standard dev-card purchase cost chips (1 wool, 1 grain, 1 ore).</summary>
+        public static void SetDevPurchaseCost(Button button, bool canAfford)
+        {
+            if (button == null)
+                return;
+
+            var bundle = new ResourceBundle { Sheep = 1, Wheat = 1, Stone = 1 };
+            SetCost(button, bundle, canAfford);
         }
 
         public static Color IconTintFor(string shortTitle) => shortTitle switch

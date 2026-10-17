@@ -208,7 +208,7 @@ namespace CatanRoguelike.Game
             }
 
             PlaceTopDown(hexRoot, propsRoot.transform, hexScale,
-                SamplePosition(hexScale, seed + 520, tokenClear, MaxPropRadiusFactor), "windmill", 0.42f,
+                SamplePosition(hexScale, seed + 520, tokenClear, MaxPropRadiusFactor), "windmill", 0.50f,
                 PositiveMod(seed + 521, 24) - 12f, "Windmill_0", tokenClear, maxR);
         }
 

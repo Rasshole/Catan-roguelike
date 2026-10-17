@@ -271,6 +271,7 @@ namespace CatanRoguelike.Game
                 ColonistBuildButtonChrome.SetCost(_buildRoadButton, roadCost, roadOk);
                 ColonistBuildButtonChrome.SetCost(_buildSettlementButton, settlementCost, settlementOk);
                 ColonistBuildButtonChrome.SetCost(_buildCityButton, cityCost, cityOk);
+                ColonistBuildButtonChrome.SetDevPurchaseCost(_buildDevButton, interactable: true);
             }
         }
 

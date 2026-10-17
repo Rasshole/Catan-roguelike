@@ -111,7 +111,7 @@ namespace CatanRoguelike.Game
             RunHudUiFactory.AddLayoutElement(cardGo, cardH).preferredWidth = cardW;
 
             var bg = cardGo.AddComponent<Image>();
-            bg.color = BoardResourceColors.GetHudSwatch(resource);
+            ColonistKenneyHudArt.ApplyColonistResourceCardBackground(bg, BoardResourceColors.GetHudSwatch(resource));
 
             var iconGo = new GameObject("Icon");
             iconGo.transform.SetParent(cardGo.transform, false);
@@ -122,7 +122,7 @@ namespace CatanRoguelike.Game
             iconRect.offsetMax = Vector2.zero;
             var iconImg = iconGo.AddComponent<Image>();
             // Sit the glyph below the top-right count badge so the badge never covers it.
-            ColonistHudIconGraphic.ApplyCardIcon(iconImg, ColonistHudResourceSprites.Get(resource), fill: 0.56f, centerY: 0.46f);
+            ColonistHudIconGraphic.ApplyCardIcon(iconImg, ColonistHudResourceSprites.Get(resource), fill: 0.72f, centerY: 0.46f);
             _resourceSwatches.Add(iconImg);
 
             var badgeGo = new GameObject("Badge");
@@ -303,7 +303,7 @@ namespace CatanRoguelike.Game
                 Vector2.one,
                 Vector2.zero,
                 Vector2.zero);
-            RunHudUiFactory.AddLayoutElement(bankStrip.gameObject, 52f);
+            RunHudUiFactory.AddLayoutElement(bankStrip.gameObject, 64f);
             SetBankFlyTarget(bankStrip);
             _colonistBankStripRoot = bankStrip;
             _colonistBankStrip = ColonistHudBankStrip.Build(bankStrip);

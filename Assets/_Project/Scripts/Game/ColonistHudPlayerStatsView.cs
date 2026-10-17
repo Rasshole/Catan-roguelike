@@ -55,7 +55,7 @@ namespace CatanRoguelike.Game
             h.childControlWidth = true;
             h.childForceExpandHeight = false;
             h.childControlHeight = true;
-            RunHudUiFactory.AddLayoutElement(row, 20f);
+            RunHudUiFactory.AddLayoutElement(row, 24f);
             return row.transform;
         }
 
@@ -70,14 +70,14 @@ namespace CatanRoguelike.Game
             h.childControlWidth = true;
             h.childForceExpandHeight = false;
             h.childControlHeight = true;
-            var cellLayout = RunHudUiFactory.AddLayoutElement(cell, 20f);
-            cellLayout.minWidth = 58f; // aligned columns; grows with the value ("2 · Fish 0")
+            var cellLayout = RunHudUiFactory.AddLayoutElement(cell, 24f);
+            cellLayout.minWidth = 64f;
 
             var iconGo = new GameObject("Icon");
             iconGo.transform.SetParent(cell.transform, false);
-            var iconLayout = RunHudUiFactory.AddLayoutElement(iconGo, 16f);
-            iconLayout.preferredWidth = 16f;
-            iconLayout.minWidth = 16f;
+            var iconLayout = RunHudUiFactory.AddLayoutElement(iconGo, 22f);
+            iconLayout.preferredWidth = 22f;
+            iconLayout.minWidth = 22f;
             var img = iconGo.AddComponent<Image>();
             img.preserveAspect = true;
             img.sprite = icon;
@@ -87,7 +87,7 @@ namespace CatanRoguelike.Game
                 cell.transform,
                 "Value",
                 "\u2014",
-                13,
+                15,
                 TextAnchor.MiddleLeft,
                 RunHudUiFactory.ColonistTextOnPanel);
             text.horizontalOverflow = HorizontalWrapMode.Overflow;

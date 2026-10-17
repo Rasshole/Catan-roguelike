@@ -10,7 +10,7 @@ namespace CatanRoguelike.Game
     public static class ColonistHudBankStrip
     {
         public const int ExpectedCardCount = 5;
-        public const float ReferenceCardHeight = 48f;
+        public const float ReferenceCardHeight = 58f;
         public const float CardAspectWidthOverHeight = 0.7f;
 
         public sealed class Widget
@@ -63,7 +63,7 @@ namespace CatanRoguelike.Game
             RunHudUiFactory.AddLayoutElement(cardGo, height).preferredWidth = width;
 
             var bg = cardGo.AddComponent<Image>();
-            bg.color = BoardResourceColors.GetHudSwatch(resource);
+            ColonistKenneyHudArt.ApplyColonistResourceCardBackground(bg, BoardResourceColors.GetHudSwatch(resource));
 
             var iconGo = new GameObject("Icon");
             iconGo.transform.SetParent(cardGo.transform, false);
@@ -74,7 +74,7 @@ namespace CatanRoguelike.Game
             iconRect.offsetMax = Vector2.zero;
             var iconImg = iconGo.AddComponent<Image>();
             // Keep the glyph above the bottom count badge so the badge never covers it.
-            ColonistHudIconGraphic.ApplyCardIcon(iconImg, ColonistHudResourceSprites.Get(resource), fill: 0.52f, centerY: 0.62f);
+            ColonistHudIconGraphic.ApplyCardIcon(iconImg, ColonistHudResourceSprites.Get(resource), fill: 0.78f, centerY: 0.58f);
 
             var badgeGo = new GameObject("Count");
             badgeGo.transform.SetParent(cardGo.transform, false);
@@ -91,7 +91,7 @@ namespace CatanRoguelike.Game
                 badgeGo.transform,
                 "Label",
                 "0",
-                11,
+                13,
                 TextAnchor.MiddleCenter,
                 RunHudUiFactory.ColonistTextOnPanel,
                 FontStyle.Bold);

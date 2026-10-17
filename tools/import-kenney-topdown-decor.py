@@ -290,24 +290,54 @@ def make_windmill_kenney(zf: zipfile.ZipFile) -> Image.Image:
     return canvas
 
 
-def make_windmill_oblique() -> Image.Image:
-    """Stone tower + cap + crossed sails (upright), dark outlines — reads on yellow wheat hex."""
+def make_windmill_board() -> Image.Image:
+    """Tall 3/4 windmill: grey stone tower, orange cap, dark-wood lattice sails (reads on wheat hex)."""
     s = 4
-    W, H = 140 * s, 156 * s
+    W, H = 112 * s, 168 * s
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
-    d.ellipse((26 * s, 128 * s, 114 * s, 146 * s), fill=(0, 0, 0, 48))
-    stone, stone_hi = (102, 94, 82, 255), (132, 124, 112, 255)
-    roof, sail = (188, 72, 44, 255), (248, 240, 224, 255)
-    # tapered tower (three-quarter view)
-    d.polygon([(70 * s, 120 * s), (40 * s, 54 * s), (100 * s, 54 * s)], fill=stone, outline=OUTLINE)
-    d.polygon([(70 * s, 118 * s), (46 * s, 60 * s), (94 * s, 60 * s)], fill=stone_hi)
-    d.rounded_rectangle((58 * s, 92 * s, 82 * s, 118 * s), radius=4 * s, fill=(72, 64, 58, 255), outline=OUTLINE, width=2 * s)
-    d.polygon([(70 * s, 30 * s), (36 * s, 56 * s), (104 * s, 56 * s)], fill=roof, outline=OUTLINE)
-    cx, cy = 70 * s, 46 * s
-    d.rectangle((cx - 3 * s, cy - 38 * s, cx + 3 * s, cy + 10 * s), fill=sail, outline=OUTLINE, width=3 * s)
-    d.rectangle((cx - 34 * s, cy - 3 * s, cx + 34 * s, cy + 3 * s), fill=sail, outline=OUTLINE, width=3 * s)
-    d.ellipse((cx - 7 * s, cy - 7 * s, cx + 7 * s, cy + 7 * s), fill=(78, 72, 66, 255), outline=OUTLINE, width=2 * s)
+    cx = W // 2
+    base = H - 10 * s
+    d.ellipse((18 * s, base - 6 * s, W - 18 * s, base + 10 * s), fill=(0, 0, 0, 52))
+    stone_d, stone, stone_hi = (72, 68, 64, 255), (116, 108, 100, 255), (148, 140, 132, 255)
+    wood, wood_hi = (88, 54, 30, 255), (124, 78, 44, 255)
+    cloth = (232, 218, 188, 255)
+    roof = (186, 72, 44, 255)
+    top = 22 * s
+    d.polygon([(cx, top), (cx - 30 * s, base), (cx + 30 * s, base)], fill=stone_d, outline=OUTLINE)
+    d.polygon([(cx, top + 10 * s), (cx - 24 * s, base - 6 * s), (cx + 24 * s, base - 6 * s)], fill=stone)
+    d.polygon([(cx, top + 14 * s), (cx - 18 * s, base - 10 * s), (cx + 18 * s, base - 10 * s)], fill=stone_hi)
+    for xoff in (-14, 0, 14):
+        d.line((cx + xoff * s, top + 36 * s, cx + xoff * s, base - 14 * s), fill=stone_d, width=2 * s)
+    d.rounded_rectangle(
+        (cx - 10 * s, base - 28 * s, cx + 10 * s, base - 8 * s), radius=4 * s, fill=(48, 40, 36, 255), outline=OUTLINE, width=3 * s
+    )
+    d.polygon([(cx, top - 4 * s), (cx - 34 * s, top + 32 * s), (cx + 34 * s, top + 32 * s)], fill=roof, outline=OUTLINE)
+    hub_y = top + 38 * s
+    d.ellipse((cx - 11 * s, hub_y - 11 * s, cx + 11 * s, hub_y + 11 * s), fill=wood, outline=OUTLINE, width=3 * s)
+
+    def sail_arm(dx: float, dy: float) -> None:
+        length = 46 * s
+        ex = cx + dx * length
+        ey = hub_y + dy * length
+        d.line((cx, hub_y, ex, ey), fill=OUTLINE, width=16 * s)
+        d.line((cx, hub_y, ex, ey), fill=wood, width=11 * s)
+        d.line((cx, hub_y, ex, ey), fill=cloth, width=5 * s)
+        steps = 5
+        for i in range(1, steps):
+            t = i / steps
+            px = cx + dx * length * t
+            py = hub_y + dy * length * t
+            if abs(dx) > abs(dy):
+                d.line((px - 8 * s, py - 5 * s, px + 8 * s, py + 5 * s), fill=wood_hi, width=2 * s)
+            else:
+                d.line((px - 5 * s, py - 8 * s, px + 5 * s, py + 8 * s), fill=wood_hi, width=2 * s)
+
+    sail_arm(0, -1)
+    sail_arm(0, 1)
+    sail_arm(-1, 0)
+    sail_arm(1, 0)
+    d.ellipse((cx - 8 * s, hub_y - 8 * s, cx + 8 * s, hub_y + 8 * s), fill=wood_hi, outline=OUTLINE, width=2 * s)
     return im
 
 
@@ -454,10 +484,7 @@ def main() -> None:
         save("wheat_sheaf.png", make_wheat_sheaf(zf))
         save("tree_cluster_a.png", make_tree_cluster(zf, R + "Tile/medievalTile_44.png"))  # cypress clump
         save("tree_cluster_b.png", make_tree_cluster(zf, R + "Tile/medievalTile_48.png"))  # pine clump
-    # v106 review: the oblique tower rendered as a small dark funnel on the board; the Kenney
-    # body+sails composite reads as a windmill from the top-down camera.
-    with zipfile.ZipFile(a.zip) as zf2:
-        save("windmill.png", make_windmill_kenney(zf2))
+    save("windmill.png", make_windmill_board())
     save("brick_stack.png", make_brick_pallet())
     save("brick_crates.png", make_brick_pallet())
     save("mountain_peak.png", make_peak())

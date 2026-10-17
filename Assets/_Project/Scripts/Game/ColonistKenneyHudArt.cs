@@ -15,14 +15,13 @@ namespace CatanRoguelike.Game
             if (image == null)
                 return;
 
-            // Neutralised sprite: tinting the blue HudPanel fill parchment produced slate panels.
-            var sprite = NeutralPanelSprite();
+            var sprite = PanelSpriteSliced();
             if (sprite == null)
                 return;
 
             image.sprite = sprite;
             image.type = Image.Type.Sliced;
-            image.color = new Color(0.94f, 0.88f, 0.74f, 0.96f);
+            image.color = new Color(0.96f, 0.90f, 0.76f, 0.98f);
         }
 
         /// <summary>Warm wood/parchment tint for bottom hand and action bars.</summary>
@@ -31,16 +30,14 @@ namespace CatanRoguelike.Game
             if (image == null)
                 return;
 
-            // HudPanel.png has a blue interior, so tinting it warm produced dark teal.
-            // Use a neutralised copy (white fill, darker frame) so the tint reads as wood/parchment.
-            var sprite = NeutralPanelSprite();
+            var sprite = PanelSpriteSliced();
             if (sprite != null)
             {
                 image.sprite = sprite;
                 image.type = Image.Type.Sliced;
             }
 
-            image.color = new Color(0.84f, 0.72f, 0.54f, 0.94f);
+            image.color = new Color(0.92f, 0.80f, 0.58f, 0.98f);
         }
 
         public static void ApplyPrimaryButtonImage(Image image)
@@ -76,7 +73,7 @@ namespace CatanRoguelike.Game
             if (image == null)
                 return;
 
-            var sprite = NeutralButtonSprite();
+            var sprite = ButtonSpriteSliced();
             if (sprite != null)
             {
                 image.sprite = sprite;
@@ -84,8 +81,8 @@ namespace CatanRoguelike.Game
             }
 
             image.color = primaryGreen
-                ? new Color(0.48f, 0.68f, 0.36f, 1f)
-                : new Color(0.78f, 0.66f, 0.48f, 1f);
+                ? new Color(0.52f, 0.74f, 0.40f, 1f)
+                : new Color(0.82f, 0.70f, 0.52f, 1f);
         }
 
         public static void ApplyColonistEndTurnButton(Image image) => ApplyColonistWarmButton(image, primaryGreen: true);
@@ -95,14 +92,14 @@ namespace CatanRoguelike.Game
             if (image == null)
                 return;
 
-            var sprite = NeutralPanelSprite();
+            var sprite = PanelSpriteSliced();
             if (sprite != null)
             {
                 image.sprite = sprite;
                 image.type = Image.Type.Sliced;
             }
 
-            image.color = new Color(0.94f, 0.78f, 0.28f, 0.96f);
+            image.color = new Color(0.98f, 0.84f, 0.36f, 0.98f);
         }
 
         public static void ApplyColonistCountBadge(Image image)
@@ -110,17 +107,32 @@ namespace CatanRoguelike.Game
             if (image == null)
                 return;
 
-            var sprite = NeutralPanelSprite();
+            var sprite = PanelSpriteSliced();
             if (sprite != null)
             {
                 image.sprite = sprite;
                 image.type = Image.Type.Sliced;
             }
 
-            image.color = new Color(0.90f, 0.82f, 0.66f, 0.96f);
+            image.color = new Color(0.94f, 0.86f, 0.70f, 0.98f);
         }
 
-        public static Sprite CardFrameSprite() => _cardFrameSprite ??= LoadSprite("Art/Boardgame/Cards/CardBack_blue");
+        public static void ApplyColonistResourceCardBackground(Image image, Color resourceTint)
+        {
+            if (image == null)
+                return;
+
+            var sprite = PanelSpriteSliced();
+            if (sprite != null)
+            {
+                image.sprite = sprite;
+                image.type = Image.Type.Sliced;
+            }
+
+            image.color = Color.Lerp(resourceTint, new Color(0.98f, 0.94f, 0.86f, 1f), 0.22f);
+        }
+
+        public static Sprite CardFrameSprite() => CardFrameSpriteSliced();
 
         private static Sprite _neutralPanelSprite;
 
@@ -162,7 +174,16 @@ namespace CatanRoguelike.Game
             return _neutralPanelSprite;
         }
 
-        private static Sprite PanelSprite() => _panelSprite ??= LoadSprite("Art/UI/HudPanel");
+        private static Sprite PanelSpriteSliced() =>
+            _panelSprite ??= CreateSlicedSprite("Art/UI/HudPanel", new Vector4(14f, 14f, 14f, 14f));
+
+        private static Sprite ButtonSpriteSliced() =>
+            _buttonSprite ??= CreateSlicedSprite("Art/UI/HudButton", new Vector4(14f, 14f, 14f, 14f));
+
+        private static Sprite ButtonSprite() => ButtonSpriteSliced();
+
+        private static Sprite CardFrameSpriteSliced() =>
+            _cardFrameSprite ??= CreateSlicedSprite("Art/Boardgame/Cards/CardBack_blue", new Vector4(12f, 12f, 12f, 12f));
 
         private static Sprite _neutralButtonSprite;
 
@@ -203,15 +224,20 @@ namespace CatanRoguelike.Game
             return _neutralButtonSprite;
         }
 
-        private static Sprite ButtonSprite() => _buttonSprite ??= LoadSprite("Art/UI/HudButton");
-
-        private static Sprite LoadSprite(string resourcesPath)
+        private static Sprite CreateSlicedSprite(string resourcesPath, Vector4 border)
         {
             var tex = Resources.Load<Texture2D>(resourcesPath);
             if (tex == null)
                 return null;
 
-            return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+            return Sprite.Create(
+                tex,
+                new Rect(0, 0, tex.width, tex.height),
+                new Vector2(0.5f, 0.5f),
+                100f,
+                0,
+                SpriteMeshType.FullRect,
+                border);
         }
     }
 }

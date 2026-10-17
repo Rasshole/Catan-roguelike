@@ -65,7 +65,7 @@ namespace CatanRoguelike.Game
             y -= 34f;
 
             var image = buttonGo.AddComponent<Image>();
-            ColonistKenneyHudArt.ApplyColonistWarmButton(image);
+            ColonistKenneyHudArt.ApplyColonistWarmButton(image, primaryGreen: false);
             var button = buttonGo.AddComponent<Button>();
             button.targetGraphic = image;
             button.onClick.AddListener(() =>
