@@ -10,7 +10,7 @@ namespace CatanRoguelike.Game
 
         /// <summary>Physical fishermen tile blue (unlit chevron fill).</summary>
         public static readonly Color ChevronWaterBlue = new(0.58f, 0.78f, 0.91f, 1f);
-        public static readonly Color ChevronOutlineBlue = new(0.40f, 0.58f, 0.74f, 1f);
+        public static readonly Color ChevronOutlineBlue = new(0.22f, 0.38f, 0.58f, 1f);
 
         private const string FishIconResourcePath = "Art/Board/FishIcon";
         private static Material _chevronMaterial;
@@ -65,7 +65,10 @@ namespace CatanRoguelike.Game
             if (_chevronMaterial != null)
                 return _chevronMaterial;
 
-            _chevronMaterial = CreateDoubleSidedUnlit(ChevronWaterBlue);
+            _chevronMaterial = BuiltInMaterials.CreateUnlitTextured(
+                ColonistFishChevronTextures.ChevronFill(),
+                ChevronWaterBlue);
+            _chevronMaterial.SetInt("_Cull", (int)CullMode.Off);
             _chevronMaterial.renderQueue = 2002;
             return _chevronMaterial;
         }
@@ -93,19 +96,22 @@ namespace CatanRoguelike.Game
             float hexHeightScale,
             float hexScale)
         {
-            var texture = Resources.Load<Texture2D>(FishIconResourcePath);
-            if (texture == null || boardRoot == null)
+            var texture = Resources.Load<Texture2D>(FishIconResourcePath) ?? ColonistFishIconTextures.BoldOrangeFish();
+            if (boardRoot == null)
                 return;
 
-            float iconSize = HexTileView.TokenWorldFaceDiameter * 0.42f;
-            float boardY = boardRoot.position.y + hexHeightScale * CoastalFishShoalMesh.TopLocalY + 0.03f;
+            float iconSize = HexTileView.TokenWorldFaceDiameter * 0.9f;
+            float boardY = boardRoot.position.y + hexHeightScale * CoastalFishShoalMesh.TopLocalY + 0.04f;
             float bandT = SeaFrameSlotLayout.FishChevronBandThicknessFactor * hexScale;
 
             var armMidLeft = (placement.CoastArmLeft + placement.InlandTip) / 2f
-                + placement.Outward * (bandT * 0.38f);
+                + placement.Outward * (bandT * 0.42f);
             var armMidRight = (placement.CoastArmRight + placement.InlandTip) / 2f
-                + placement.Outward * (bandT * 0.38f);
-            var centers = new[] { armMidLeft, armMidRight };
+                + placement.Outward * (bandT * 0.42f);
+            var tokenSea = new MapPlaneXz(
+                placement.TokenCenter.X + placement.Outward.X * (bandT * 0.35f),
+                placement.TokenCenter.Z + placement.Outward.Z * (bandT * 0.35f));
+            var centers = new[] { armMidLeft, armMidRight, tokenSea };
 
             for (int i = 0; i < centers.Length; i++)
             {

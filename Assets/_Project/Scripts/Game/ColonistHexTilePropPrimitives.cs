@@ -168,6 +168,72 @@ namespace CatanRoguelike.Game
             }
         }
 
+        public static void CreateTreeShadowDisc(Transform parent, Vector3 localPos, float hexScale)
+        {
+            float y = HexPrismMesh.TopY + 0.012f;
+            CreatePart(parent, "TreeShadow", new Vector3(localPos.x, y, localPos.z), PrimitiveType.Cylinder,
+                new Vector3(hexScale * 0.15f, 0.01f, hexScale * 0.15f), new Color(0.10f, 0.14f, 0.10f));
+        }
+
+        public static void CreateClayPit(Transform parent, Vector3 localPos, float hexScale)
+        {
+            float s = hexScale * 0.28f;
+            CreatePart(parent, "ClayBowl", localPos + Vector3.up * s * 0.12f, PrimitiveType.Cylinder,
+                new Vector3(s, s * 0.22f, s), new Color(0.58f, 0.30f, 0.20f));
+            CreatePart(parent, "ClayRim", localPos + Vector3.up * s * 0.22f, PrimitiveType.Cylinder,
+                new Vector3(s * 1.08f, s * 0.06f, s * 1.08f), new Color(0.48f, 0.24f, 0.16f));
+        }
+
+        public static void CreateMountainPeak(Transform parent, Vector3 localPos, float hexScale)
+        {
+            float s = hexScale * 0.32f;
+            CreatePart(parent, "PeakBase", localPos + Vector3.up * s * 0.22f, PrimitiveType.Cylinder,
+                new Vector3(s * 0.9f, s * 0.35f, s * 0.9f), new Color(0.42f, 0.44f, 0.48f));
+            var top = CreatePart(parent, "PeakTop", localPos + Vector3.up * s * 0.62f, PrimitiveType.Cube,
+                new Vector3(s * 0.55f, s * 0.55f, s * 0.55f), new Color(0.50f, 0.52f, 0.56f));
+            top.transform.localRotation = Quaternion.Euler(0f, 18f, 0f);
+        }
+
+        public static void CreateHayBale(Transform parent, Vector3 localPos, float hexScale)
+        {
+            float s = hexScale * 0.24f;
+            CreatePart(parent, "HayBale", localPos + Vector3.up * s * 0.35f, PrimitiveType.Cylinder,
+                new Vector3(s * 1.1f, s * 0.7f, s * 1.1f), new Color(0.86f, 0.72f, 0.28f));
+            CreatePart(parent, "HayBand", localPos + Vector3.up * s * 0.35f, PrimitiveType.Cylinder,
+                new Vector3(s * 1.15f, s * 0.12f, s * 1.15f), new Color(0.62f, 0.48f, 0.18f));
+        }
+
+        public static void CreateWindmill(Transform parent, Vector3 localPos, float hexScale)
+        {
+            float s = hexScale * 0.26f;
+            var wood = new Color(0.52f, 0.38f, 0.22f);
+            var white = new Color(0.92f, 0.90f, 0.84f);
+            CreatePart(parent, "MillTower", localPos + Vector3.up * s * 0.55f, PrimitiveType.Cylinder,
+                new Vector3(s * 0.35f, s * 1.1f, s * 0.35f), white);
+            CreatePart(parent, "MillBlades", localPos + Vector3.up * s * 1.05f, PrimitiveType.Cube,
+                new Vector3(s * 1.4f, s * 0.08f, s * 0.22f), wood);
+            CreatePart(parent, "MillBladesB", localPos + Vector3.up * s * 1.05f, PrimitiveType.Cube,
+                new Vector3(s * 0.22f, s * 0.08f, s * 1.4f), wood);
+        }
+
+        public static void CreateCactus(Transform parent, Vector3 localPos, float hexScale)
+        {
+            var green = new Color(0.22f, 0.58f, 0.30f);
+            float h = hexScale * 0.34f;
+            float w = hexScale * 0.07f;
+            CreatePart(parent, "CactusStem", localPos + Vector3.up * h * 0.5f, PrimitiveType.Cylinder,
+                new Vector3(w, h, w), green);
+            CreatePart(parent, "CactusArm", localPos + new Vector3(w * 1.6f, h * 0.55f, 0f), PrimitiveType.Cylinder,
+                new Vector3(w * 0.85f, h * 0.35f, w * 0.85f), green);
+        }
+
+        public static void CreateDesertRock(Transform parent, Vector3 localPos, float hexScale)
+        {
+            float s = hexScale * 0.16f;
+            CreatePart(parent, "DesertRock", localPos + Vector3.up * s * 0.35f, PrimitiveType.Sphere,
+                new Vector3(s * 1.2f, s * 0.7f, s), new Color(0.62f, 0.56f, 0.48f));
+        }
+
         public static void CreateBoat(Transform parent, Vector3 localPos, float hexScale)
         {
             float len = hexScale * 0.22f;
