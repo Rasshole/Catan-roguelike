@@ -195,7 +195,7 @@ namespace CatanRoguelike.Game
                 float rim = BadgeDiscWorldRadius;
                 var coastAWorld = new Vector3(coastA.X, y, coastA.Z);
                 var coastBWorld = new Vector3(coastB.X, y, coastB.Z);
-                const float plankSeaInset = 0.25f;
+                const float plankSeaInset = 0.012f;
                 var plankStartA = PierPlankStartInSea(coastAWorld, badgeWorld, plankSeaInset);
                 var plankStartB = PierPlankStartInSea(coastBWorld, badgeWorld, plankSeaInset);
                 CreateWorldPlank(

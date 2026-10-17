@@ -7,8 +7,8 @@ namespace CatanRoguelike.Game
     public static class CoastalFishShoalMesh
     {
         public const float TopLocalY = 1.06f;
-        private const float SeawardVisualInsetFactor = 0.04f;
-        private const float OutlineExpandFactor = 0.038f;
+        private const float InlandSeawardNudgeFactor = 0.018f;
+        private const float OutlineExpandFactor = 0.032f;
 
         public static Mesh CreateLocal(FishShoalPlacement placement, MapPlaneXz origin, float hexScale)
         {
@@ -31,16 +31,16 @@ namespace CatanRoguelike.Game
         {
             float ox = origin.X;
             float oz = origin.Z;
-            float push = SeawardVisualInsetFactor * hexScale;
             Vector3 outward = new Vector3(placement.Outward.X, 0f, placement.Outward.Z);
             if (outward.sqrMagnitude > 1e-8f)
                 outward.Normalize();
 
-            Vector3 inland = PushSeaward(ToLocal(placement.InlandTip, ox, oz), outward, push * 0.12f);
-            Vector3 armL = PushSeaward(ToLocal(placement.CoastArmLeft, ox, oz), outward, push * 1.15f);
-            Vector3 armR = PushSeaward(ToLocal(placement.CoastArmRight, ox, oz), outward, push * 1.15f);
-            Vector3 seaL = PushSeaward(ToLocal(placement.SeaFlatLeft, ox, oz), outward, push * 1.35f);
-            Vector3 seaR = PushSeaward(ToLocal(placement.SeaFlatRight, ox, oz), outward, push * 1.35f);
+            float nudge = InlandSeawardNudgeFactor * hexScale;
+            Vector3 inland = ToLocal(placement.InlandTip, ox, oz) + outward * nudge;
+            Vector3 armL = ToLocal(placement.CoastArmLeft, ox, oz);
+            Vector3 armR = ToLocal(placement.CoastArmRight, ox, oz);
+            Vector3 seaL = ToLocal(placement.SeaFlatLeft, ox, oz);
+            Vector3 seaR = ToLocal(placement.SeaFlatRight, ox, oz);
 
             var vertices = new[] { inland, armL, armR, seaL, seaR };
             if (SignedAreaXZ(inland, armL, armR, seaL, seaR) < 0f)
@@ -101,9 +101,6 @@ namespace CatanRoguelike.Game
 
             return expanded;
         }
-
-        private static Vector3 PushSeaward(Vector3 v, Vector3 outward, float distance) =>
-            outward.sqrMagnitude < 1e-8f ? v : v + outward * distance;
 
         private static Vector3 ToLocal(MapPlaneXz p, float ox, float oz) =>
             new Vector3(p.X - ox, TopLocalY, p.Z - oz);

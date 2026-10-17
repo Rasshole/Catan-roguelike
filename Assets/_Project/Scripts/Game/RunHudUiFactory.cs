@@ -50,6 +50,7 @@ namespace CatanRoguelike.Game
 
             var image = go.AddComponent<Image>();
             image.color = PanelFill;
+            ColonistKenneyHudArt.ApplyPanelImage(image);
             return rect;
         }
 
@@ -89,6 +90,10 @@ namespace CatanRoguelike.Game
             go.transform.SetParent(parent, false);
             var image = go.AddComponent<Image>();
             image.color = fill;
+            if (fill == ButtonFill)
+                ColonistKenneyHudArt.ApplyPrimaryButtonImage(image);
+            else
+                ColonistKenneyHudArt.ApplySecondaryButtonImage(image);
 
             var button = go.AddComponent<Button>();
             var colors = button.colors;

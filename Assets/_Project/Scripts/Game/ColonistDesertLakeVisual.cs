@@ -38,6 +38,20 @@ namespace CatanRoguelike.Game
                 ColonistProceduralBoardTextures.CreateRoundPondMask(PondColor),
                 3190,
                 alignment: ColonistFlatBoardQuad.AlignmentMode.BoardPitchOnly);
+
+            float edge = pondDiameter * 0.55f;
+            ColonistHexTilePropPrimitives.CreateReedClump(
+                hexRoot.transform,
+                new Vector3(-edge * 0.35f, top + 0.01f, edge * 0.2f),
+                0.9f);
+            ColonistHexTilePropPrimitives.CreateReedClump(
+                hexRoot.transform,
+                new Vector3(edge * 0.4f, top + 0.01f, -edge * 0.15f),
+                0.85f);
+            ColonistHexTilePropPrimitives.CreateBoat(
+                hexRoot.transform,
+                new Vector3(0.08f, top + 0.02f, 0.05f),
+                pondDiameter * 0.35f);
         }
     }
 }

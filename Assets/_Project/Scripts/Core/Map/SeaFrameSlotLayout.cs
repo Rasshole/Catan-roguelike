@@ -19,10 +19,10 @@ namespace CatanRoguelike.Core.Map
         /// <summary>Extra radius so clearance matches drawn hex outline + badge rim (world units).</summary>
         public const float BadgeRenderedLandInset = 0.055f;
         public const float FishShoalLandClearance = 0.05f;
-        private const float FishChevronCoastArmFactor = 0.62f;
+        /// <summary>Fraction along each land hex edge from inland V to outer coastal corner (1 = full edge).</summary>
+        private const float FishChevronEdgeAlongLand = 0.98f;
         private const float FishChevronSeaDepthFactor = 0.80f;
-        private const float FishChevronTokenDepthFactor = 0.42f;
-        private const float FishChevronSeawardShiftFactor = 0.11f;
+        private const float FishChevronTokenDepthFactor = 0.40f;
         private const float BadgeClearanceEpsilon = 0.004f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 
@@ -260,20 +260,16 @@ namespace CatanRoguelike.Core.Map
                 var outerLeftXz = new MapPlaneXz(olx, olz);
                 var outerRightXz = new MapPlaneXz(orx, orz);
 
-                float arm = FishChevronCoastArmFactor * hexScale;
-                var coastArmLeft = inlandTip + (outerLeftXz - inlandTip).Normalized * arm;
-                var coastArmRight = inlandTip + (outerRightXz - inlandTip).Normalized * arm;
+                // Arms follow the two land hex edges; elbows at outer coastal corners.
+                var coastArmLeft = LerpMapPlane(inlandTip, outerLeftXz, FishChevronEdgeAlongLand);
+                var coastArmRight = LerpMapPlane(inlandTip, outerRightXz, FishChevronEdgeAlongLand);
 
                 MapPlaneXz outward = (seaCenter - inlandTip).Normalized;
-                float shift = FishChevronSeawardShiftFactor * hexScale;
-                coastArmLeft += outward * shift;
-                coastArmRight += outward * shift;
-
                 float depth = FishChevronSeaDepthFactor * hexScale;
                 var seaFlatLeft = coastArmLeft + outward * depth;
                 var seaFlatRight = coastArmRight + outward * depth;
                 float tokenDepth = FishChevronTokenDepthFactor * hexScale;
-                var tokenCenter = inlandTip + outward * (tokenDepth + shift * 0.65f);
+                var tokenCenter = inlandTip + outward * (tokenDepth + depth * 0.22f);
 
                 placement = new FishShoalPlacement(
                     inlandTip,
@@ -291,6 +287,9 @@ namespace CatanRoguelike.Core.Map
 
             return false;
         }
+
+        private static MapPlaneXz LerpMapPlane(MapPlaneXz from, MapPlaneXz to, float t) =>
+            from + (to - from) * t;
 
         private static int DirectionToNeighbor(HexCoord from, HexCoord to)
         {

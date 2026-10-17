@@ -336,7 +336,21 @@ def main() -> None:
     nature_out = ROOT / "Assets/_Project/Resources/Art/Models/Nature"
     nature_out.mkdir(parents=True, exist_ok=True)
     fbx_dir = args.quaternius / "FBX"
-    for name in ("NormalTree_2.fbx", "Rock_3.fbx", "Flower_2_Clump.fbx"):
+    for name in (
+        "NormalTree_2.fbx",
+        "BirchTree_1.fbx",
+        "BirchTree_2.fbx",
+        "BirchTree_3.fbx",
+        "Rock_3.fbx",
+        "Flower_2_Clump.fbx",
+        "Bush.fbx",
+        "Bush_Flowers.fbx",
+        "Bush_Small.fbx",
+        "Bush_Small_Flowers.fbx",
+        "Bush_Large.fbx",
+        "DeadTree_3.fbx",
+        "DeadTree_5.fbx",
+    ):
         fbx = fbx_dir / name
         if not fbx.is_file():
             raise SystemExit(f"Missing Quaternius model: {fbx}")
@@ -356,6 +370,13 @@ def main() -> None:
         if src.is_file():
             save_png(tex_out / name, Image.open(src).convert("RGBA"))
 
+    ui_out = ROOT / "Assets/_Project/Resources/Art/UI"
+    ui_out.mkdir(parents=True, exist_ok=True)
+    card = BOARDGAME / "Cards" / "CardBack_blue.png"
+    if card.is_file():
+        im = Image.open(card).convert("RGBA")
+        save_png(ui_out / "HudPanel.png", im)
+        save_png(ui_out / "HudButton.png", im)
     print("done")
 
 
