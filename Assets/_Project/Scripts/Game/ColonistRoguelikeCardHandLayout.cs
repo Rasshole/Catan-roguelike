@@ -8,11 +8,13 @@ namespace CatanRoguelike.Game
     {
         public const float CardWidth = 92f;
         public const float CardHeight = 122f;
-        public const float HorizontalStep = 58f;
+        public const float HorizontalStep = 54f;
         public const float RotationPerCard = 5f;
-        public const float ArcDropPerStep = 2.5f;
-        public const float HoverLift = 28f;
-        public const float HoverScale = 1.12f;
+        public const float ArcDropPerStep = 2f;
+        /// <summary>Resting fan scale; hover multiplies by <see cref="HoverScale"/>.</summary>
+        public const float RestScale = 0.74f;
+        public const float HoverLift = 32f;
+        public const float HoverScale = 1.18f;
 
         public readonly struct CardPose
         {

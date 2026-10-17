@@ -360,6 +360,8 @@ namespace CatanRoguelike.Game
                 ? _colonistRoguelikeCardHand.GatherLayoutProbe(_actionBar)
                 : default;
 
+        public ColonistRoguelikeCardHandView GetRoguelikeCardHandViewForTests() => _colonistRoguelikeCardHand;
+
         private static RectTransform BuildColonistPlayerPanel(
             RectTransform parent,
             string panelName,

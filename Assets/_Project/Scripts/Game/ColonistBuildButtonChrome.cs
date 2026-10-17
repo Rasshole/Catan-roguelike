@@ -89,7 +89,7 @@ namespace CatanRoguelike.Game
             costRow.childControlWidth = true;
             costRow.childForceExpandHeight = false;
             costRow.childControlHeight = true;
-            RunHudUiFactory.AddLayoutElement(costIcons, 26f);
+            RunHudUiFactory.AddLayoutElement(costIcons, 40f);
 
             var chipGo = new GameObject("Chip");
             chipGo.transform.SetParent(button.transform, false);
@@ -112,7 +112,7 @@ namespace CatanRoguelike.Game
             pieceCountChip.raycastTarget = false;
 
             float buttonWidth = shortTitle == ColonistHudCopy.Settlement ? 116f : 94f;
-            RunHudUiFactory.AddLayoutElement(button.gameObject, 78f).preferredWidth = buttonWidth;
+            RunHudUiFactory.AddLayoutElement(button.gameObject, 88f).preferredWidth = buttonWidth;
 
             labelModel.SetTitle(shortTitle);
             return button;
@@ -183,24 +183,24 @@ namespace CatanRoguelike.Game
                 row.childAlignment = TextAnchor.MiddleCenter;
                 row.childForceExpandWidth = false;
                 row.childControlWidth = true;
-                RunHudUiFactory.AddLayoutElement(chip, 22f);
+                RunHudUiFactory.AddLayoutElement(chip, 38f);
 
                 var iconGo = new GameObject("Icon");
                 iconGo.transform.SetParent(chip.transform, false);
-                RunHudUiFactory.AddLayoutElement(iconGo, 18f).preferredWidth = 18f;
+                RunHudUiFactory.AddLayoutElement(iconGo, 34f).preferredWidth = 34f;
                 var img = iconGo.AddComponent<Image>();
-                ColonistHudIconGraphic.ApplyCardIcon(img, ColonistHudResourceSprites.Get(resource), fill: 0.92f);
+                ColonistHudIconGraphic.ApplyCardIcon(img, ColonistHudResourceSprites.Get(resource), fill: 0.94f);
 
                 var amt = RunHudUiFactory.CreateText(
                     chip.transform,
                     "Amt",
                     amount.ToString(),
-                    12,
+                    14,
                     TextAnchor.MiddleLeft,
                     canAfford ? RunHudUiFactory.ColonistTextOnPanel : new Color(0.58f, 0.10f, 0.08f, 1f),
                     FontStyle.Bold);
                 amt.raycastTarget = false;
-                RunHudUiFactory.AddLayoutElement(amt.gameObject, 16f).preferredWidth = 14f;
+                RunHudUiFactory.AddLayoutElement(amt.gameObject, 20f).preferredWidth = 16f;
             }
 
             AddChip(ResourceType.Wood, cost.Wood);

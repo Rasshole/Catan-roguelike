@@ -49,6 +49,47 @@ namespace CatanRoguelike.Tests.PlayMode
                 probe.ActionBarTopScreen.y + 2f,
                 "Fanned cards should sit above the build/action bar.");
 
+            int width = GameSceneCapture.CaptureWidth;
+            int height = GameSceneCapture.CaptureHeight;
+            Screen.SetResolution(width, height, false);
+            var tableCamera = Object.FindFirstObjectByType<TableCamera>();
+            var camera = Camera.main;
+            Assert.IsNotNull(tableCamera);
+            Assert.IsNotNull(camera);
+            ColonistBoardFraming.GetLayoutPixelSize(camera, width, height, out int layoutW, out int layoutH);
+            tableCamera.ApplyCapturePose(layoutW, layoutH);
+            camera.pixelRect = new Rect(0f, 0f, layoutW, layoutH);
+            Canvas.ForceUpdateCanvases();
+            yield return null;
+
+            var handView = hud.GetRoguelikeCardHandViewForTests();
+            Assert.IsNotNull(handView);
+            Assert.IsTrue(
+                handView.TryGetRestingFanScreenRect(out float fanMinX, out float fanMaxX, out float fanMinY, out float fanMaxY),
+                "Resting fan should have a screen bounds.");
+
+            foreach (var renderer in Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+            {
+                if (renderer == null || renderer.gameObject.name != "BadgeDisc")
+                    continue;
+                Assert.IsFalse(
+                    ScreenBoundsOverlap(renderer.bounds, camera, fanMinX, fanMaxX, fanMinY, fanMaxY, padding: 4f),
+                    $"Resting card fan should not cover port badge at {renderer.bounds.center}.");
+            }
+
+            float tokenCutoffY = fanMaxY + 6f;
+            foreach (var chip in Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+            {
+                if (chip == null || chip.gameObject.name != "NumberTokenChip")
+                    continue;
+                var center = camera.WorldToScreenPoint(chip.bounds.center);
+                if (center.y > tokenCutoffY)
+                    continue;
+                Assert.IsFalse(
+                    ScreenBoundsOverlap(chip.bounds, camera, fanMinX, fanMaxX, fanMinY, fanMaxY, padding: 4f),
+                    $"Resting card fan should not cover bottom-row token chip at {chip.bounds.center}.");
+            }
+
             var handRoot = GameObject.Find("RoguelikeCardHand");
             Assert.IsNotNull(handRoot, "Roguelike card hand panel should exist.");
             var resourceHand = GameObject.Find("ResourceHand");
@@ -66,7 +107,11 @@ namespace CatanRoguelike.Tests.PlayMode
             yield return null;
             var middleRect = middle.GetComponent<RectTransform>();
             Assert.Greater(middleRect.anchoredPosition.y, restY + 10f, "Hovered card should lift.");
-            Assert.Greater(middleRect.localScale.x, 1.05f, "Hovered card should scale up.");
+            float restScale = ColonistRoguelikeCardHandLayout.RestScale;
+            Assert.Greater(
+                middleRect.localScale.x,
+                restScale * 1.05f,
+                "Hovered card should scale up from the resting fan size.");
             Assert.AreEqual(middleRect.parent.childCount - 1, middleRect.GetSiblingIndex(), "Hovered card should draw on top.");
 
             // Optional review capture of the hovered fan (COLONIST_CARD_HOVER_SHOT=/path.png).
@@ -77,6 +122,48 @@ namespace CatanRoguelike.Tests.PlayMode
                     hud, GameSceneCapture.CaptureWidth, GameSceneCapture.CaptureHeight);
                 File.WriteAllBytes(hoverShot, tex.EncodeToPNG());
             }
+        }
+
+        private static bool ScreenBoundsOverlap(
+            Bounds worldBounds,
+            Camera camera,
+            float fanMinX,
+            float fanMaxX,
+            float fanMinY,
+            float fanMaxY,
+            float padding)
+        {
+            var center = worldBounds.center;
+            var extents = worldBounds.extents;
+            float bMinX = float.MaxValue;
+            float bMaxX = float.MinValue;
+            float bMinY = float.MaxValue;
+            float bMaxY = float.MinValue;
+            for (int sx = -1; sx <= 1; sx += 2)
+            {
+                for (int sy = -1; sy <= 1; sy += 2)
+                {
+                    for (int sz = -1; sz <= 1; sz += 2)
+                    {
+                        var p = camera.WorldToScreenPoint(center + new Vector3(
+                            extents.x * sx,
+                            extents.y * sy,
+                            extents.z * sz));
+                        bMinX = Mathf.Min(bMinX, p.x);
+                        bMaxX = Mathf.Max(bMaxX, p.x);
+                        bMinY = Mathf.Min(bMinY, p.y);
+                        bMaxY = Mathf.Max(bMaxY, p.y);
+                    }
+                }
+              }
+
+            fanMinX -= padding;
+            fanMaxX += padding;
+            fanMinY -= padding;
+            fanMaxY += padding;
+            bool overlapX = fanMinX < bMaxX && fanMaxX > bMinX;
+            bool overlapY = fanMinY < bMaxY && fanMaxY > bMinY;
+            return overlapX && overlapY;
         }
 
         private static bool RectTransformsOverlap(RectTransform a, RectTransform b)

@@ -78,7 +78,9 @@ namespace CatanRoguelike.Game
             _fanRoot.pivot = new Vector2(0.5f, 0f);
             // Centre the fan under the board (play-area centre), not the band centre: the band
             // starts after the resource hand, which pushed the fan right of the board.
-            _fanRoot.anchoredPosition = new Vector2(-(RunHudLayout.ColonistResourceHandWidth + RunHudLayout.Margin) * 0.5f, 16f); // 6 let rotated outer corners dip into the build bar
+            _fanRoot.anchoredPosition = new Vector2(
+                -(RunHudLayout.ColonistResourceHandWidth + RunHudLayout.Margin) * 0.5f,
+                2f);
             _fanRoot.sizeDelta = new Vector2(640f, ColonistRoguelikeCardHandLayout.CardHeight + 40f);
         }
 
@@ -189,11 +191,53 @@ namespace CatanRoguelike.Game
         private static void ApplyPose(CardWidget card, ColonistRoguelikeCardHandLayout.CardPose pose, bool hovered)
         {
             var rect = card.Root;
-            float scale = hovered ? ColonistRoguelikeCardHandLayout.HoverScale : 1f;
+            float rest = ColonistRoguelikeCardHandLayout.RestScale;
+            float scale = hovered
+                ? rest * ColonistRoguelikeCardHandLayout.HoverScale
+                : rest;
             float lift = hovered ? ColonistRoguelikeCardHandLayout.HoverLift : 0f;
-            rect.anchoredPosition = new Vector2(pose.X, pose.Y + lift);
+            rect.anchoredPosition = new Vector2(pose.X * rest, pose.Y * rest + lift);
             rect.localRotation = Quaternion.Euler(0f, 0f, pose.RotationZ);
             rect.localScale = Vector3.one * scale;
+        }
+
+        /// <summary>Axis-aligned screen rect (origin bottom-left) of all resting cards.</summary>
+        public bool TryGetRestingFanScreenRect(out float minX, out float maxX, out float minY, out float maxY)
+        {
+            minX = minY = float.MaxValue;
+            maxX = maxY = float.MinValue;
+            if (_cards.Count == 0)
+                return false;
+
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                if (i == _hoverIndex)
+                    continue;
+                AccumulateScreenRect(_cards[i].Root, ref minX, ref maxX, ref minY, ref maxY);
+            }
+
+            return minX < maxX && minY < maxY;
+        }
+
+        internal static void AccumulateScreenRect(
+            RectTransform rect,
+            ref float minX,
+            ref float maxX,
+            ref float minY,
+            ref float maxY)
+        {
+            if (rect == null)
+                return;
+
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            for (int c = 0; c < 4; c++)
+            {
+                minX = Mathf.Min(minX, corners[c].x);
+                maxX = Mathf.Max(maxX, corners[c].x);
+                minY = Mathf.Min(minY, corners[c].y);
+                maxY = Mathf.Max(maxY, corners[c].y);
+            }
         }
 
         private CardWidget CreateCardWidget(int index)

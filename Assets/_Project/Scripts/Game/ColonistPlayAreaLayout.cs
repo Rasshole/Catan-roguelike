@@ -20,12 +20,14 @@ namespace CatanRoguelike.Game
                 RunHudLayout.GetContentLeftInset(), screenWidth, screenHeight);
             float right = ColonistUiScale.ScaleReferencePixels(
                 RunHudLayout.GetContentRightInset(), screenWidth, screenHeight);
-            float bottom = ColonistUiScale.ScaleReferencePixels(
-                RunHudLayout.GetBottomHandHeight()
+            float bottomInset = ColonistPresentation.IsActive
+                ? RunHudLayout.GetColonistDeckBandBottom()
+                + RunHudLayout.GetColonistDeckBandHeight()
+                + RunHudLayout.Margin * 0.75f
+                : RunHudLayout.GetBottomHandHeight()
                 + RunHudLayout.GetBottomActionBarHeight()
-                + RunHudLayout.Margin * (ColonistPresentation.IsActive ? 1.35f : 2f),
-                screenWidth,
-                screenHeight);
+                + RunHudLayout.Margin * 2f;
+            float bottom = ColonistUiScale.ScaleReferencePixels(bottomInset, screenWidth, screenHeight);
             float top = ColonistUiScale.ScaleReferencePixels(
                 RunHudLayout.Margin + RunHudLayout.ColonistYourTurnBannerHeight + RunHudLayout.Margin * 0.25f,
                 screenWidth,
