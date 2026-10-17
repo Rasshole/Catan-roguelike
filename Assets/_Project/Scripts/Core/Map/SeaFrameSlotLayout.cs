@@ -21,7 +21,7 @@ namespace CatanRoguelike.Core.Map
         public const float FishShoalLandClearance = 0.05f;
         public const float FishChevronBandThicknessFactor = 0.53f; // ~70% of v107 band; token + fish still nest in the coast corner
         public const float FishChevronBandCenterPushFactor = 0.90f;
-        private const float FishChevronTokenBiasFactor = 0.11f;
+        private const float FishChevronTokenBiasFactor = 0.26f; // token rim clears both coast edges (0.11 put it ~0.06 onto land)
         private const float BadgeClearanceEpsilon = 0.004f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 

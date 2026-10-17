@@ -104,9 +104,11 @@ namespace CatanRoguelike.Game
             if (boardRoot == null)
                 return;
 
-            float iconSize = HexTileView.TokenWorldFaceDiameter * 0.9f;
             float boardY = boardRoot.position.y + hexHeightScale * CoastalFishShoalMesh.TopLocalY + 0.04f;
             float bandT = SeaFrameSlotLayout.FishChevronBandThicknessFactor * hexScale;
+            // Fit fish + dark halo inside the (thinner, v108) band: at 0.9 token the halo poked out
+            // past the chevron edge as dark discs.
+            float iconSize = Mathf.Min(HexTileView.TokenWorldFaceDiameter * 0.9f, bandT * 0.78f);
             float tokenRadius = HexTileView.TokenWorldFaceDiameter * 0.5f;
             float minCenterDist = tokenRadius + iconSize * 0.48f;
 

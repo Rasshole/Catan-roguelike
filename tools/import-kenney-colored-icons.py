@@ -20,7 +20,8 @@ HUD = ROOT / "Assets/_Project/Resources/Art/HudIcons"
 RESOURCE_MAP = {
     # Wood.png, Sheep.png and Fish.png are hand-drawn glyphs (log pile, sheep, fish): the pack's
     # resource_wood reads as a ticket and it has no sheep (the barn stand-in was misleading).
-    "resource_wheat.png": "Wheat.png",
+    # Wheat.png is the pack's resource_wheat recoloured gold with a brown outline (v108): the white
+    # glyph vanished on the cream port badge. Re-running this script would revert it to white.
     "resource_planks.png": "Brick.png",
     "resource_iron.png": "Stone.png",
 }
