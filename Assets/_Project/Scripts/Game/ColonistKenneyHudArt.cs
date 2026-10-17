@@ -6,8 +6,6 @@ namespace CatanRoguelike.Game
     /// <summary>Kenney Boardgame Pack sprites for colonist HUD chrome.</summary>
     internal static class ColonistKenneyHudArt
     {
-        private static Sprite _panelSprite;
-        private static Sprite _buttonSprite;
         private static Sprite _cardFrameSprite;
 
         public static void ApplyPanelImage(Image image)
@@ -175,12 +173,15 @@ namespace CatanRoguelike.Game
         }
 
         private static Sprite PanelSpriteSliced() =>
-            _panelSprite ??= CreateSlicedSprite("Art/UI/HudPanel", new Vector4(14f, 14f, 14f, 14f));
+            NeutralPanelSprite()
+            ?? CreateSlicedSprite("Art/UI/HudPanel", new Vector4(14f, 14f, 14f, 14f));
 
         private static Sprite ButtonSpriteSliced() =>
-            _buttonSprite ??= CreateSlicedSprite("Art/UI/HudButton", new Vector4(14f, 14f, 14f, 14f));
+            NeutralButtonSprite()
+            ?? CreateSlicedSprite("Art/UI/HudButton", new Vector4(14f, 14f, 14f, 14f));
 
-        private static Sprite ButtonSprite() => ButtonSpriteSliced();
+        private static Sprite ButtonSprite() =>
+            CreateSlicedSprite("Art/UI/HudButton", new Vector4(14f, 14f, 14f, 14f));
 
         private static Sprite CardFrameSpriteSliced() =>
             _cardFrameSprite ??= CreateSlicedSprite("Art/Boardgame/Cards/CardBack_blue", new Vector4(12f, 12f, 12f, 12f));
@@ -194,7 +195,7 @@ namespace CatanRoguelike.Game
 
             var src = Resources.Load<Texture2D>("Art/UI/HudButton");
             if (src == null || !src.isReadable)
-                return ButtonSprite();
+                return CreateSlicedSprite("Art/UI/HudButton", new Vector4(14f, 14f, 14f, 14f));
 
             var pixels = src.GetPixels();
             for (int i = 0; i < pixels.Length; i++)

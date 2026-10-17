@@ -74,7 +74,7 @@ namespace CatanRoguelike.Game
             iconRect.offsetMax = Vector2.zero;
             var iconImg = iconGo.AddComponent<Image>();
             // Keep the glyph above the bottom count badge so the badge never covers it.
-            ColonistHudIconGraphic.ApplyCardIcon(iconImg, ColonistHudResourceSprites.Get(resource), fill: 0.78f, centerY: 0.58f);
+            ColonistHudIconGraphic.ApplyCardIcon(iconImg, ColonistHudResourceSprites.Get(resource), fill: 0.70f, centerY: 0.62f);
 
             var badgeGo = new GameObject("Count");
             badgeGo.transform.SetParent(cardGo.transform, false);
@@ -83,7 +83,7 @@ namespace CatanRoguelike.Game
             badgeRect.anchorMax = new Vector2(0.5f, 0f);
             badgeRect.pivot = new Vector2(0.5f, 0f);
             badgeRect.anchoredPosition = new Vector2(0f, 1f);
-            badgeRect.sizeDelta = new Vector2(24f, 14f);
+            badgeRect.sizeDelta = new Vector2(26f, 17f);
             var badgeImg = badgeGo.AddComponent<Image>();
             ColonistKenneyHudArt.ApplyColonistCountBadge(badgeImg);
 
@@ -96,6 +96,8 @@ namespace CatanRoguelike.Game
                 RunHudUiFactory.ColonistTextOnPanel,
                 FontStyle.Bold);
             countLabel.raycastTarget = false;
+            countLabel.verticalOverflow = VerticalWrapMode.Overflow;
+            countLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
             return cardGo;
         }
     }
