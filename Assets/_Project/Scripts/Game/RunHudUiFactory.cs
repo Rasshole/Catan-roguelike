@@ -5,7 +5,7 @@ namespace CatanRoguelike.Game
 {
     internal static class RunHudUiFactory
     {
-        public static readonly Color PanelFill = new(0.16f, 0.22f, 0.30f, 0.94f);
+        public static readonly Color PanelFill = new(0.92f, 0.86f, 0.72f, 0.94f);
         public static readonly Color PanelBorder = new(0.28f, 0.36f, 0.46f, 1f);
         public static readonly Color TextPrimary = new(0.95f, 0.96f, 0.98f, 1f);
         public static readonly Color TextMuted = new(0.72f, 0.78f, 0.86f, 1f);

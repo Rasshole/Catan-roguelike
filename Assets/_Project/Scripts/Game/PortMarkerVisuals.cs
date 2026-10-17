@@ -195,9 +195,9 @@ namespace CatanRoguelike.Game
                 float rim = BadgeDiscWorldRadius;
                 var coastAWorld = new Vector3(coastA.X, y, coastA.Z);
                 var coastBWorld = new Vector3(coastB.X, y, coastB.Z);
-                const float plankSeaInset = 0.012f;
-                var plankStartA = PierPlankStartInSea(coastAWorld, badgeWorld, plankSeaInset);
-                var plankStartB = PierPlankStartInSea(coastBWorld, badgeWorld, plankSeaInset);
+                const float plankCoastBisectorOffset = 0.07f;
+                var plankStartA = CoastPlankStart(board, vertex, coastA, hexScale, y, plankCoastBisectorOffset);
+                var plankStartB = CoastPlankStart(board, vertex, coastB, hexScale, y, plankCoastBisectorOffset);
                 CreateWorldPlank(
                     root.transform,
                     plankStartA,
@@ -228,6 +228,65 @@ namespace CatanRoguelike.Game
 
             LogChildRenderersOnce(root);
             return root;
+        }
+
+        public const float SeaSlotPlankCoastBisectorOffset = 0.07f;
+
+        /// <summary>Oriented pier plank footprint corners in XZ (for land-clearance tests).</summary>
+        public static MapPlaneXz[] GetPlankFootprintCorners(Transform plankTransform)
+        {
+            if (plankTransform == null)
+                return System.Array.Empty<MapPlaneXz>();
+
+            float halfWidth = plankTransform.localScale.x * 0.5f;
+            float halfLength = plankTransform.localScale.z * 0.5f;
+            Vector3 center = plankTransform.position;
+            Vector3 forward = plankTransform.forward * halfLength;
+            Vector3 right = plankTransform.right * halfWidth;
+            Vector3[] pts =
+            {
+                center - forward - right,
+                center - forward + right,
+                center + forward + right,
+                center + forward - right
+            };
+
+            var corners = new MapPlaneXz[4];
+            for (int i = 0; i < 4; i++)
+                corners[i] = new MapPlaneXz(pts[i].x, pts[i].z);
+            return corners;
+        }
+
+        private static Vector3 CoastPlankStart(
+            BoardState board,
+            Vertex portVertex,
+            MapPlaneXz coastCorner,
+            float hexScale,
+            float y,
+            float bisectorOffset)
+        {
+            Vector3 bisector = ComputeCoastCornerSeaBisector(board, portVertex, coastCorner, hexScale);
+            return new Vector3(coastCorner.X, y, coastCorner.Z) + bisector * bisectorOffset;
+        }
+
+        private static Vector3 ComputeCoastCornerSeaBisector(
+            BoardState board,
+            Vertex portVertex,
+            MapPlaneXz coastCorner,
+            float hexScale)
+        {
+            Vector3 sum = Vector3.zero;
+            foreach (var hex in VertexGraph.GetHexesForVertex(portVertex))
+            {
+                if (!board.Tiles.ContainsKey(hex))
+                    continue;
+                var (cx, cz) = HexMath.ToWorldPosition(hex, hexScale);
+                sum += new Vector3(coastCorner.X - cx, 0f, coastCorner.Z - cz);
+            }
+
+            if (sum.sqrMagnitude < 1e-8f)
+                return Vector3.forward;
+            return sum.normalized;
         }
 
         private static Vector3 PierPlankStartInSea(Vector3 coast, Vector3 badge, float inset)

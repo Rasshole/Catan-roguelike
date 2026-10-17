@@ -1,4 +1,5 @@
 using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Game;
 using NUnit.Framework;
@@ -11,7 +12,7 @@ namespace CatanRoguelike.Tests.EditMode
         private const float HexScale = 1.2f;
 
         [Test]
-        public void CreateLocal_ProducesFiveVertexChevron()
+        public void CreateLocal_ProducesSixVertexChevronBand()
         {
             var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
             FishShoalPlacement placement = default;
@@ -28,22 +29,31 @@ namespace CatanRoguelike.Tests.EditMode
             Assert.IsTrue(found, "Expected at least one fish shoal placement on the test board.");
 
             var mesh = CoastalFishShoalMesh.CreateLocal(placement, placement.TokenCenter, HexScale);
-            Assert.AreEqual(5, mesh.vertexCount, "Fish chevron mesh must be a pentagon (5 vertices).");
+            Assert.AreEqual(6, mesh.vertexCount, "Fish chevron mesh must be a 6-vertex band.");
 
             var verts = mesh.vertices;
-            float minX = float.MaxValue;
-            float maxX = float.MinValue;
-            for (int i = 0; i < verts.Length; i++)
-            {
-                minX = Mathf.Min(minX, verts[i].x);
-                maxX = Mathf.Max(maxX, verts[i].x);
-            }
+            float tol = HexScale * 0.02f;
+            AssertXZNear(verts[0], placement.CoastArmLeft, placement.TokenCenter, tol, "P1");
+            AssertXZNear(verts[1], placement.InlandTip, placement.TokenCenter, tol, "C");
+            AssertXZNear(verts[2], placement.CoastArmRight, placement.TokenCenter, tol, "P2");
 
-            float width = maxX - minX;
-            float tokenWidth = HexTileView.TokenWorldFaceDiameter;
-            Assert.Greater(width, tokenWidth * 1.2f,
-                $"Chevron should span ~1.3–1.5× token width (width={width:F2}, token={tokenWidth:F2}).");
-            Assert.Less(width, tokenWidth * 2.8f, "Chevron should not read as a full hex quad.");
+            float hexArea = 3f * Mathf.Sqrt(3f) * 0.5f * Mathf.Pow(HexScale * HexMath.OuterRadius, 2f);
+            float bandArea = CoastalFishShoalMesh.ComputePolygonAreaXZ(verts);
+            Assert.Less(bandArea, hexArea * 0.6f,
+                $"Chevron band area ({bandArea:F3}) should be < 60% of hex area ({hexArea:F3}).");
+        }
+
+        private static void AssertXZNear(
+            Vector3 local,
+            MapPlaneXz world,
+            MapPlaneXz origin,
+            float tol,
+            string label)
+        {
+            float x = world.X - origin.X;
+            float z = world.Z - origin.Z;
+            Assert.Less(Mathf.Abs(local.x - x), tol, $"{label} X");
+            Assert.Less(Mathf.Abs(local.z - z), tol, $"{label} Z");
         }
     }
 }

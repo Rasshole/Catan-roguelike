@@ -21,7 +21,7 @@ namespace CatanRoguelike.Game
 
             image.sprite = sprite;
             image.type = Image.Type.Sliced;
-            image.color = new Color(0.22f, 0.48f, 0.62f, 0.94f);
+            image.color = new Color(0.94f, 0.88f, 0.74f, 0.96f);
         }
 
         public static void ApplyPrimaryButtonImage(Image image)
@@ -35,7 +35,7 @@ namespace CatanRoguelike.Game
 
             image.sprite = sprite;
             image.type = Image.Type.Sliced;
-            image.color = new Color(0.28f, 0.72f, 0.46f, 1f);
+            image.color = new Color(0.42f, 0.76f, 0.48f, 1f);
         }
 
         public static void ApplySecondaryButtonImage(Image image)
@@ -49,7 +49,7 @@ namespace CatanRoguelike.Game
 
             image.sprite = sprite;
             image.type = Image.Type.Sliced;
-            image.color = new Color(0.34f, 0.52f, 0.68f, 1f);
+            image.color = new Color(0.55f, 0.72f, 0.82f, 1f);
         }
 
         public static Sprite CardFrameSprite() => _cardFrameSprite ??= LoadSprite("Art/Boardgame/Cards/CardBack_blue");

@@ -795,7 +795,12 @@ namespace CatanRoguelike.Game
                     continue;
 
                 float y = tile.ChipTopWorldY;
-                var probeXz = (placement.SeaFlatLeft + placement.SeaFlatRight) / 2f;
+                float bandT = SeaFrameSlotLayout.FishChevronBandThicknessFactor * hexScale;
+                var probeLeft = (placement.CoastArmLeft + placement.InlandTip) / 2f
+                    + placement.Outward * (bandT * 0.42f);
+                var probeRight = (placement.CoastArmRight + placement.InlandTip) / 2f
+                    + placement.Outward * (bandT * 0.42f);
+                var probeXz = (probeLeft + probeRight) / 2f;
                 var probeWorld = new Vector3(probeXz.X, y, probeXz.Z);
                 var pixel = ColonistCaptureProjection.WorldToTexturePixel(
                     probeWorld, camera, tableCamera, textureWidth, textureHeight);

@@ -52,7 +52,7 @@ namespace CatanRoguelike.Game
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
 
-            AddFishIconQuads(boardRoot, placement, hexHeightScale);
+            AddFishIconQuads(boardRoot, placement, hexHeightScale, hexScale);
 
             var view = root.AddComponent<HexTileView>();
             view.Initialize(data, renderer);
@@ -90,17 +90,21 @@ namespace CatanRoguelike.Game
         private static void AddFishIconQuads(
             Transform boardRoot,
             FishShoalPlacement placement,
-            float hexHeightScale)
+            float hexHeightScale,
+            float hexScale)
         {
             var texture = Resources.Load<Texture2D>(FishIconResourcePath);
             if (texture == null || boardRoot == null)
                 return;
 
-            float iconSize = HexTileView.TokenWorldFaceDiameter * 0.70f; // fish art ~70% of PNG width → ~0.3 hex fish
+            float iconSize = HexTileView.TokenWorldFaceDiameter * 0.42f;
             float boardY = boardRoot.position.y + hexHeightScale * CoastalFishShoalMesh.TopLocalY + 0.03f;
+            float bandT = SeaFrameSlotLayout.FishChevronBandThicknessFactor * hexScale;
 
-            var armMidLeft = placement.CoastArmLeft + (placement.SeaFlatLeft - placement.CoastArmLeft) * 0.32f;
-            var armMidRight = placement.CoastArmRight + (placement.SeaFlatRight - placement.CoastArmRight) * 0.32f;
+            var armMidLeft = (placement.CoastArmLeft + placement.InlandTip) / 2f
+                + placement.Outward * (bandT * 0.38f);
+            var armMidRight = (placement.CoastArmRight + placement.InlandTip) / 2f
+                + placement.Outward * (bandT * 0.38f);
             var centers = new[] { armMidLeft, armMidRight };
 
             for (int i = 0; i < centers.Length; i++)

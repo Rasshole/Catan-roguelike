@@ -19,10 +19,9 @@ namespace CatanRoguelike.Core.Map
         /// <summary>Extra radius so clearance matches drawn hex outline + badge rim (world units).</summary>
         public const float BadgeRenderedLandInset = 0.055f;
         public const float FishShoalLandClearance = 0.05f;
-        /// <summary>Fraction along each land hex edge from inland V to outer coastal corner (1 = full edge).</summary>
-        private const float FishChevronEdgeAlongLand = 0.98f;
-        private const float FishChevronSeaDepthFactor = 0.80f;
-        private const float FishChevronTokenDepthFactor = 0.40f;
+        public const float FishChevronBandThicknessFactor = 0.55f;
+        public const float FishChevronBandCenterPushFactor = 1.15f;
+        private const float FishChevronTokenBiasFactor = 0.26f;
         private const float BadgeClearanceEpsilon = 0.004f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 
@@ -260,23 +259,24 @@ namespace CatanRoguelike.Core.Map
                 var outerLeftXz = new MapPlaneXz(olx, olz);
                 var outerRightXz = new MapPlaneXz(orx, orz);
 
-                // Arms follow the two land hex edges; elbows at outer coastal corners.
-                var coastArmLeft = LerpMapPlane(inlandTip, outerLeftXz, FishChevronEdgeAlongLand);
-                var coastArmRight = LerpMapPlane(inlandTip, outerRightXz, FishChevronEdgeAlongLand);
-
-                MapPlaneXz outward = (seaCenter - inlandTip).Normalized;
-                float depth = FishChevronSeaDepthFactor * hexScale;
-                var seaFlatLeft = coastArmLeft + outward * depth;
-                var seaFlatRight = coastArmRight + outward * depth;
-                float tokenDepth = FishChevronTokenDepthFactor * hexScale;
-                var tokenCenter = inlandTip + outward * (tokenDepth + depth * 0.22f);
+                // Inner notch P1–C–P2 on land/sea coast edges; outer band offset seaward by t.
+                var p1 = outerLeftXz;
+                var p2 = outerRightXz;
+                var c = inlandTip;
+                MapPlaneXz outward = (seaCenter - c).Normalized;
+                float t = FishChevronBandThicknessFactor * hexScale;
+                var p1Prime = p1 + outward * t;
+                var p2Prime = p2 + outward * t;
+                var cPrime = c + outward * (t * FishChevronBandCenterPushFactor);
+                var tokenCenter = (c + cPrime) / 2f + outward * (t * FishChevronTokenBiasFactor);
 
                 placement = new FishShoalPlacement(
-                    inlandTip,
-                    coastArmLeft,
-                    coastArmRight,
-                    seaFlatLeft,
-                    seaFlatRight,
+                    c,
+                    p1,
+                    p2,
+                    p1Prime,
+                    p2Prime,
+                    cPrime,
                     tokenCenter,
                     outward,
                     inlandVertex,

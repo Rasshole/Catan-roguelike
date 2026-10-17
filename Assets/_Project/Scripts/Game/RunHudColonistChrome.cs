@@ -22,7 +22,7 @@ namespace CatanRoguelike.Game
                 new Vector2(1f, 1f),
                 new Vector2(1f, 1f),
                 new Vector2(-(RunHudLayout.RightChromePanelWidth + RunHudLayout.Margin), -RunHudLayout.Margin),
-                new Vector2(-RunHudLayout.Margin, -RunHudLayout.Margin));
+                new Vector2(-RunHudLayout.Margin, -(RunHudLayout.Margin + 132f)));
             _gameLogText = RunHudUiFactory.CreateText(
                 logPanel,
                 "Log",
@@ -36,8 +36,8 @@ namespace CatanRoguelike.Game
                 "BankStrip",
                 new Vector2(1f, 1f),
                 new Vector2(1f, 1f),
-                new Vector2(-(RunHudLayout.RightChromePanelWidth + RunHudLayout.Margin), -(RunHudLayout.Margin + 200f)),
-                new Vector2(-RunHudLayout.Margin, -(RunHudLayout.Margin + 172f)));
+                new Vector2(-(RunHudLayout.RightChromePanelWidth + RunHudLayout.Margin), -(RunHudLayout.Margin + 148f)),
+                new Vector2(-RunHudLayout.Margin, -(RunHudLayout.Margin + 128f)));
             SetBankFlyTarget(_bankStripPanel);
             _bankStripText = RunHudUiFactory.CreateText(
                 _bankStripPanel,
@@ -52,8 +52,8 @@ namespace CatanRoguelike.Game
                 "OpponentPanel",
                 new Vector2(1f, 1f),
                 new Vector2(1f, 1f),
-                new Vector2(-(RunHudLayout.RightChromePanelWidth + RunHudLayout.Margin), -(RunHudLayout.Margin + 320f)),
-                new Vector2(-RunHudLayout.Margin, -(RunHudLayout.Margin + 232f)));
+                new Vector2(-(RunHudLayout.RightChromePanelWidth + RunHudLayout.Margin), -(RunHudLayout.Margin + 248f)),
+                new Vector2(-RunHudLayout.Margin, -(RunHudLayout.Margin + 188f)));
             _opponentPanelText = RunHudUiFactory.CreateText(
                 oppPanel,
                 "Opp",

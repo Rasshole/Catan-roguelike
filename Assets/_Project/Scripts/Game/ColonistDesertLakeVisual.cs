@@ -43,15 +43,15 @@ namespace CatanRoguelike.Game
             ColonistHexTilePropPrimitives.CreateReedClump(
                 hexRoot.transform,
                 new Vector3(-edge * 0.35f, top + 0.01f, edge * 0.2f),
-                0.9f);
+                hexScale);
             ColonistHexTilePropPrimitives.CreateReedClump(
                 hexRoot.transform,
                 new Vector3(edge * 0.4f, top + 0.01f, -edge * 0.15f),
-                0.85f);
+                hexScale);
             ColonistHexTilePropPrimitives.CreateBoat(
                 hexRoot.transform,
                 new Vector3(0.08f, top + 0.02f, 0.05f),
-                pondDiameter * 0.35f);
+                hexScale);
         }
     }
 }

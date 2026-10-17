@@ -3,48 +3,38 @@ using UnityEngine;
 
 namespace CatanRoguelike.Game
 {
-    /// <summary>Fishermen fishing ground chevron (flat sea edge, V-notch into the coast).</summary>
+    /// <summary>Fishermen chevron band mesh: P1, C, P2, P2', C', P1'.</summary>
     public static class CoastalFishShoalMesh
     {
         public const float TopLocalY = 1.06f;
-        private const float InlandSeawardNudgeFactor = 0.018f;
-        private const float OutlineExpandFactor = 0.032f;
+        private const float OutlineExpandFactor = 0.028f;
 
         public static Mesh CreateLocal(FishShoalPlacement placement, MapPlaneXz origin, float hexScale)
         {
-            var vertices = BuildVertices(placement, origin, hexScale, outlineExpand: 0f);
-            return BuildChevronMesh(vertices);
+            var vertices = BuildVertices(placement, origin, outlineExpand: 0f);
+            return BuildBandMesh(vertices);
         }
 
         public static Mesh CreateOutlineLocal(FishShoalPlacement placement, MapPlaneXz origin, float hexScale)
         {
             float expand = OutlineExpandFactor * hexScale;
-            var vertices = BuildVertices(placement, origin, hexScale, outlineExpand: expand);
-            return BuildChevronMesh(vertices);
+            var vertices = BuildVertices(placement, origin, expand);
+            return BuildBandMesh(vertices);
         }
 
-        private static Vector3[] BuildVertices(
-            FishShoalPlacement placement,
-            MapPlaneXz origin,
-            float hexScale,
-            float outlineExpand)
+        private static Vector3[] BuildVertices(FishShoalPlacement placement, MapPlaneXz origin, float outlineExpand)
         {
             float ox = origin.X;
             float oz = origin.Z;
-            Vector3 outward = new Vector3(placement.Outward.X, 0f, placement.Outward.Z);
-            if (outward.sqrMagnitude > 1e-8f)
-                outward.Normalize();
-
-            float nudge = InlandSeawardNudgeFactor * hexScale;
-            Vector3 inland = ToLocal(placement.InlandTip, ox, oz) + outward * nudge;
-            Vector3 armL = ToLocal(placement.CoastArmLeft, ox, oz);
-            Vector3 armR = ToLocal(placement.CoastArmRight, ox, oz);
-            Vector3 seaL = ToLocal(placement.SeaFlatLeft, ox, oz);
-            Vector3 seaR = ToLocal(placement.SeaFlatRight, ox, oz);
-
-            var vertices = new[] { inland, armL, armR, seaL, seaR };
-            if (SignedAreaXZ(inland, armL, armR, seaL, seaR) < 0f)
-                vertices = new[] { inland, armR, armL, seaR, seaL };
+            var vertices = new[]
+            {
+                ToLocal(placement.CoastArmLeft, ox, oz),
+                ToLocal(placement.InlandTip, ox, oz),
+                ToLocal(placement.CoastArmRight, ox, oz),
+                ToLocal(placement.SeaFlatRight, ox, oz),
+                ToLocal(placement.SeaBandApex, ox, oz),
+                ToLocal(placement.SeaFlatLeft, ox, oz)
+            };
 
             if (outlineExpand > 1e-5f)
                 vertices = ExpandOutlineVertices(vertices, outlineExpand);
@@ -52,27 +42,30 @@ namespace CatanRoguelike.Game
             return vertices;
         }
 
-        private static Mesh BuildChevronMesh(Vector3[] vertices)
+        private static Mesh BuildBandMesh(Vector3[] vertices)
         {
             var mesh = new Mesh { name = "CoastalFishChevron" };
             mesh.vertices = vertices;
+            // Convex hex fan from inland tip C (index 1).
             mesh.triangles = new[]
             {
-                0, 1, 2, 2, 1, 0,
-                1, 3, 2, 2, 3, 1,
-                2, 3, 4, 4, 3, 2
+                1, 0, 5,
+                1, 5, 4,
+                1, 4, 3,
+                1, 3, 2
             };
             mesh.uv = new[]
             {
-                new Vector2(0.5f, 0.08f),
-                new Vector2(0.12f, 0.42f),
-                new Vector2(0.88f, 0.42f),
-                new Vector2(0.08f, 0.95f),
-                new Vector2(0.92f, 0.95f)
+                new Vector2(0.1f, 0.35f),
+                new Vector2(0.5f, 0.05f),
+                new Vector2(0.9f, 0.35f),
+                new Vector2(0.95f, 0.9f),
+                new Vector2(0.5f, 1f),
+                new Vector2(0.05f, 0.9f)
             };
             mesh.normals = new[]
             {
-                Vector3.up, Vector3.up, Vector3.up, Vector3.up, Vector3.up
+                Vector3.up, Vector3.up, Vector3.up, Vector3.up, Vector3.up, Vector3.up
             };
             mesh.RecalculateBounds();
             return mesh;
@@ -90,13 +83,9 @@ namespace CatanRoguelike.Game
             {
                 Vector3 delta = vertices[i] - centroid;
                 delta.y = 0f;
-                if (delta.sqrMagnitude < 1e-8f)
-                {
-                    expanded[i] = vertices[i];
-                    continue;
-                }
-
-                expanded[i] = vertices[i] + delta.normalized * expand;
+                expanded[i] = delta.sqrMagnitude < 1e-8f
+                    ? vertices[i]
+                    : vertices[i] + delta.normalized * expand;
             }
 
             return expanded;
@@ -105,15 +94,18 @@ namespace CatanRoguelike.Game
         private static Vector3 ToLocal(MapPlaneXz p, float ox, float oz) =>
             new Vector3(p.X - ox, TopLocalY, p.Z - oz);
 
-        private static float SignedAreaXZ(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 e)
+        public static float ComputePolygonAreaXZ(Vector3[] verts)
         {
+            if (verts == null || verts.Length < 3)
+                return 0f;
             float area = 0f;
-            area += a.x * b.z - b.x * a.z;
-            area += b.x * c.z - c.x * b.z;
-            area += c.x * d.z - d.x * c.z;
-            area += d.x * e.z - e.x * d.z;
-            area += e.x * a.z - a.x * e.z;
-            return area * 0.5f;
+            for (int i = 0; i < verts.Length; i++)
+            {
+                int j = (i + 1) % verts.Length;
+                area += verts[i].x * verts[j].z - verts[j].x * verts[i].z;
+            }
+
+            return Mathf.Abs(area) * 0.5f;
         }
     }
 }

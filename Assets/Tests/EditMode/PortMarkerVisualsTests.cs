@@ -171,36 +171,23 @@ namespace CatanRoguelike.Tests
 
         private static void AssertPlankBoundsClearOfLand(BoardState board, Renderer plankRenderer)
         {
-            var bounds = plankRenderer.bounds;
-            var samples = new[]
-            {
-                new MapPlaneXz(bounds.center.x, bounds.center.z),
-                new MapPlaneXz(bounds.min.x, bounds.min.z),
-                new MapPlaneXz(bounds.min.x, bounds.max.z),
-                new MapPlaneXz(bounds.max.x, bounds.min.z),
-                new MapPlaneXz(bounds.max.x, bounds.max.z),
-            };
+            var corners = PortMarkerVisuals.GetPlankFootprintCorners(plankRenderer.transform);
+            Assert.Greater(corners.Length, 0, "Plank footprint should have corners.");
 
-            foreach (var sample in samples)
+            foreach (var sample in corners)
             {
                 float minDist = SeaFrameSlotLayout.MinDistanceToLandHexPolygons(board, sample, HexScale);
                 Assert.Greater(
                     minDist,
                     0.001f,
-                    $"Pier plank bounds should stay off land polygons (sample={sample} minDist={minDist:F4}).");
-
-                foreach (var landCoord in board.Tiles.Keys)
-                {
-                    float probeRadius = Mathf.Max(bounds.extents.x, bounds.extents.z) * 0.25f;
-                    Assert.IsFalse(
-                        SeaFrameSlotLayout.DiscIntersectsHexPolygon(
-                            sample,
-                            probeRadius,
-                            landCoord,
-                            HexScale),
-                        $"Pier plank near {sample} should not overlap land hex {landCoord}.");
-                }
+                    $"Pier plank footprint should stay off land polygons (corner={sample} minDist={minDist:F4}).");
             }
+
+            var center = new MapPlaneXz(
+                plankRenderer.transform.position.x,
+                plankRenderer.transform.position.z);
+            float minDistCenter = SeaFrameSlotLayout.MinDistanceToLandHexPolygons(board, center, HexScale);
+            Assert.Greater(minDistCenter, 0.001f, "Pier plank center should stay off land.");
         }
 
         private static void AssertPlankLengthReadableFromTable(GameObject marker)

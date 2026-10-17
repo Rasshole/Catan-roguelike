@@ -4,7 +4,7 @@ using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 namespace CatanRoguelike.Core.Map
 {
     /// <summary>
-    /// Fishermen fishing ground: blue chevron frame with inland V-notch, flat outer edge toward open water.
+    /// Fishermen fishing ground: 6-vertex chevron band (coast V-notch + seaward offset).
     /// </summary>
     public readonly struct FishShoalPlacement
     {
@@ -14,6 +14,7 @@ namespace CatanRoguelike.Core.Map
             MapPlaneXz coastArmRight,
             MapPlaneXz seaFlatLeft,
             MapPlaneXz seaFlatRight,
+            MapPlaneXz seaBandApex,
             MapPlaneXz tokenCenter,
             MapPlaneXz outward,
             Vertex borderVertexInland,
@@ -25,6 +26,7 @@ namespace CatanRoguelike.Core.Map
             CoastArmRight = coastArmRight;
             SeaFlatLeft = seaFlatLeft;
             SeaFlatRight = seaFlatRight;
+            SeaBandApex = seaBandApex;
             TokenCenter = tokenCenter;
             Outward = outward;
             BorderVertexInland = borderVertexInland;
@@ -32,17 +34,27 @@ namespace CatanRoguelike.Core.Map
             BorderVertexRight = borderVertexRight;
         }
 
-        /// <summary>V-notch tip nesting into the coast between two land hexes.</summary>
+        /// <summary>Coastal vertex C between two land hexes.</summary>
         public MapPlaneXz InlandTip { get; }
 
+        /// <summary>Outer coast corner P1 on the A–S edge.</summary>
         public MapPlaneXz CoastArmLeft { get; }
+
+        /// <summary>Outer coast corner P2 on the B–S edge.</summary>
         public MapPlaneXz CoastArmRight { get; }
+
+        /// <summary>Seaward offset P1'.</summary>
         public MapPlaneXz SeaFlatLeft { get; }
+
+        /// <summary>Seaward offset P2'.</summary>
         public MapPlaneXz SeaFlatRight { get; }
+
+        /// <summary>Seaward apex C' (uniform band thickness).</summary>
+        public MapPlaneXz SeaBandApex { get; }
+
         public MapPlaneXz TokenCenter { get; }
         public MapPlaneXz Outward { get; }
 
-        /// <summary>Three intersections that receive fish when this ground produces.</summary>
         public Vertex BorderVertexInland { get; }
         public Vertex BorderVertexLeft { get; }
         public Vertex BorderVertexRight { get; }

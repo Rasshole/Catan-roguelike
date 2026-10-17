@@ -10,14 +10,15 @@ namespace CatanRoguelike.Game
     {
         private const string ModelRoot = "Art/Models/Nature";
         private const float LiftAboveTop = 0.04f;
+        private const float MaxPropRadiusFactor = 0.65f;
         private static readonly string[] TreeModels =
         {
-            "NormalTree_2", "BirchTree_1", "BirchTree_3", "NormalTree_2", "BirchTree_2"
+            "NormalTree_2", "BirchTree_1", "BirchTree_3", "BirchTree_2", "NormalTree_2"
         };
 
         private static readonly string[] RockModels = { "Rock_3", "Rock_3", "Rock_3" };
         private static readonly string[] BushModels = { "Bush_Flowers", "Bush", "Bush_Small_Flowers", "Bush_Large" };
-        private static readonly string[] DesertPlantModels = { "DeadTree_5", "Bush_Small", "DeadTree_3" };
+        private static readonly string[] DesertPlantModels = { "DeadTree_5", "Bush_Small", "DeadTree_3", "Rock_3" };
 
         public static void Apply(GameObject hexRoot, HexTileData data, float hexScale)
         {
@@ -42,51 +43,64 @@ namespace CatanRoguelike.Game
             switch (data.Resource)
             {
                 case ResourceType.Wood:
-                    ScatterModels(propsRoot, hexScale, seed, 6 + Mathf.Abs(seed % 4), TreeModels, 0.22f, 0.34f, tokenClear,
-                        ResourceType.Wood);
+                    ScatterModels(propsRoot, hexScale, seed, 6 + PositiveMod(seed, 4), TreeModels, 0.26f, 0.35f,
+                        tokenClear, ResourceType.Wood);
                     break;
                 case ResourceType.Wheat:
-                    ScatterModels(propsRoot, hexScale, seed, 2, new[] { "Flower_2_Clump" }, 0.18f, 0.26f, tokenClear,
-                        ResourceType.Wheat);
-                    for (int r = 0; r < 3; r++)
+                    int wheatClumps = 5 + PositiveMod(seed, 4);
+                    ScatterModels(propsRoot, hexScale, seed, wheatClumps, new[] { "Flower_2_Clump" }, 0.24f, 0.34f,
+                        tokenClear, ResourceType.Wheat);
+                    for (int r = 0; r < 4; r++)
                     {
-                        var pos = SamplePosition(hexScale, seed + 400 + r * 59, tokenClear, 0.42f);
+                        var pos = SamplePosition(hexScale, seed + 400 + r * 59, tokenClear, MaxPropRadiusFactor);
                         ColonistHexTilePropPrimitives.CreateWheatRow(
-                            propsRoot.transform, pos + Vector3.up * HexPrismMesh.TopY, 0.55f, seed + r * 40f);
+                            propsRoot.transform, pos + Vector3.up * HexPrismMesh.TopY, hexScale, seed + r * 40f);
+                    }
+                    for (int s = 0; s < 2; s++)
+                    {
+                        var pos = SamplePosition(hexScale, seed + 450 + s * 61, tokenClear, MaxPropRadiusFactor);
+                        ColonistHexTilePropPrimitives.CreateWheatSheaf(
+                            propsRoot.transform, pos + Vector3.up * HexPrismMesh.TopY, hexScale);
                     }
                     break;
                 case ResourceType.Sheep:
-                    ScatterModels(propsRoot, hexScale, seed, 4, BushModels, 0.16f, 0.24f, tokenClear,
+                    ScatterModels(propsRoot, hexScale, seed, 4, BushModels, 0.22f, 0.32f, tokenClear,
                         ResourceType.Sheep);
                     for (int s = 0; s < 2; s++)
                     {
-                        var pos = SamplePosition(hexScale, seed + 500 + s * 71, tokenClear, 0.38f);
+                        var pos = SamplePosition(hexScale, seed + 500 + s * 71, tokenClear, MaxPropRadiusFactor);
                         ColonistHexTilePropPrimitives.CreateSheep(
                             propsRoot.transform, pos + Vector3.up * (HexPrismMesh.TopY + LiftAboveTop),
-                            hexScale * 0.14f, seed + s);
+                            hexScale * 0.22f, seed + s);
                     }
                     ColonistHexTilePropPrimitives.CreateFenceSegment(
                         propsRoot.transform,
-                        SamplePosition(hexScale, seed + 600, tokenClear, 0.5f) + Vector3.up * HexPrismMesh.TopY,
-                        hexScale * 0.55f,
-                        seed % 120);
+                        SamplePosition(hexScale, seed + 600, tokenClear, MaxPropRadiusFactor)
+                            + Vector3.up * HexPrismMesh.TopY,
+                        hexScale * 0.62f,
+                        PositiveMod(seed, 120));
                     break;
                 case ResourceType.Stone:
-                    ScatterModels(propsRoot, hexScale, seed, 4, RockModels, 0.20f, 0.32f, tokenClear,
+                    ScatterModels(propsRoot, hexScale, seed, 4, RockModels, 0.28f, 0.36f, tokenClear,
                         ResourceType.Stone);
+                    var minePos = SamplePosition(hexScale, seed + 800, tokenClear, MaxPropRadiusFactor);
+                    ColonistHexTilePropPrimitives.CreateMineEntrance(
+                        propsRoot.transform,
+                        minePos + Vector3.up * (HexPrismMesh.TopY + LiftAboveTop),
+                        hexScale);
                     break;
                 case ResourceType.Brick:
                     for (int b = 0; b < 3; b++)
                     {
-                        var pos = SamplePosition(hexScale, seed + 700 + b * 53, tokenClear, 0.45f);
+                        var pos = SamplePosition(hexScale, seed + 700 + b * 53, tokenClear, MaxPropRadiusFactor);
                         ColonistHexTilePropPrimitives.CreateBrickStack(
-                            propsRoot.transform, pos + Vector3.up * HexPrismMesh.TopY, 0.9f + b * 0.1f);
+                            propsRoot.transform, pos + Vector3.up * HexPrismMesh.TopY, hexScale);
                     }
                     ColonistHexTilePropPrimitives.CreateKiln(
                         propsRoot.transform,
-                        SamplePosition(hexScale, seed + 750, tokenClear, 0.55f)
+                        SamplePosition(hexScale, seed + 750, tokenClear, MaxPropRadiusFactor)
                             + Vector3.up * (HexPrismMesh.TopY + LiftAboveTop),
-                        hexScale * 0.35f);
+                        hexScale);
                     break;
             }
         }
@@ -100,11 +114,14 @@ namespace CatanRoguelike.Game
             propsRoot.transform.SetParent(hexRoot.transform, false);
             int seed = data.Coord.Q * 19 + data.Coord.R * 53;
             float tokenClear = TokenClearRadius(hexScale);
-            ScatterModels(propsRoot, hexScale, seed, 3, DesertPlantModels, 0.14f, 0.22f, tokenClear, ResourceType.Wheat);
+            ScatterModels(propsRoot, hexScale, seed, 3, DesertPlantModels, 0.22f, 0.32f, tokenClear, ResourceType.Wheat);
         }
 
         private static float TokenClearRadius(float hexScale) =>
             HexTileView.TokenWorldFaceDiameter * 0.5f + hexScale * 0.14f;
+
+        private static int PositiveMod(int value, int modulus) =>
+            ((value % modulus) + modulus) % modulus;
 
         private static void ScatterModels(
             GameObject propsRoot,
@@ -119,13 +136,13 @@ namespace CatanRoguelike.Game
         {
             for (int i = 0; i < count; i++)
             {
-                string modelName = modelNames[((seed + i) % modelNames.Count + modelNames.Count) % modelNames.Count] /* seeds are negative for q/r < 0 */;
+                string modelName = modelNames[PositiveMod(seed + i, modelNames.Count)];
                 var prefab = Resources.Load<GameObject>($"{ModelRoot}/{modelName}");
                 if (prefab == null)
                     continue;
 
-                var pos = SamplePosition(hexScale, seed + i * 137, tokenClear, 0.92f);
-                float angle = (seed + i * 137) % 360;
+                var pos = SamplePosition(hexScale, seed + i * 137, tokenClear, MaxPropRadiusFactor);
+                float angle = PositiveMod(seed + i * 137, 360);
                 float scaleFactor = Mathf.Lerp(minScaleFactor, maxScaleFactor, Hash01(seed + i * 17));
                 float scale = scaleFactor * hexScale;
 
@@ -146,17 +163,14 @@ namespace CatanRoguelike.Game
         {
             for (int attempt = 0; attempt < 12; attempt++)
             {
-                float angle = (seed + attempt * 47) % 360;
-                float rad = angle * Mathf.Deg2Rad;
-                // Keep props inside the hex (apothem ~0.87 hexScale) so they don't spill onto neighbours/sea.
-                float rMax = Mathf.Max(tokenClear + 0.05f, hexScale * Mathf.Min(0.70f, 0.30f + maxRadiusFactor * 0.45f));
-                float r = Mathf.Lerp(tokenClear, rMax, Hash01(seed + attempt));
-                var pos = new Vector3(Mathf.Cos(rad) * r, 0f, Mathf.Sin(rad) * r);
-                if (pos.magnitude >= tokenClear)
+                float angle = PositiveMod(seed + attempt * 47, 360) * Mathf.Deg2Rad;
+                float r = tokenClear + hexScale * (0.06f + Hash01(seed + attempt) * maxRadiusFactor);
+                var pos = new Vector3(Mathf.Cos(angle) * r, 0f, Mathf.Sin(angle) * r);
+                if (pos.magnitude <= hexScale * 0.70f && pos.magnitude >= tokenClear)
                     return pos;
             }
 
-            return new Vector3(tokenClear + hexScale * 0.2f, 0f, 0f);
+            return new Vector3(tokenClear + hexScale * 0.15f, 0f, 0f);
         }
 
         private static float Hash01(int seed) => (seed * 1103515245 + 12345 & 0x7fffffff) / (float)0x7fffffff;
