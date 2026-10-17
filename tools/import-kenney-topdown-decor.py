@@ -225,38 +225,6 @@ def outline_bricks(im: Image.Image) -> Image.Image:
     return out
 
 
-def make_brick_kiln() -> Image.Image:
-    """Beehive brick kiln (front-on, like the other upright Kenney structures): coursed brick
-    dome, glowing arched firing door, chimney stack."""
-    s = 4
-    W = 128 * s
-    im = Image.new("RGBA", (W, W), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    brick, mortar, shade = (196, 92, 56, 255), (120, 54, 34, 255), (160, 70, 44, 255)
-    # chimney
-    d.rectangle((82 * s, 10 * s, 98 * s, 50 * s), fill=(150, 66, 42, 255), outline=OUTLINE, width=3 * s)
-    d.rectangle((78 * s, 6 * s, 102 * s, 14 * s), fill=(110, 50, 32, 255), outline=OUTLINE, width=3 * s)
-    # dome + base
-    d.pieslice((14 * s, 24 * s, 114 * s, 124 * s), 180, 360, fill=brick, outline=OUTLINE, width=4 * s)
-    d.rectangle((14 * s, 72 * s, 114 * s, 116 * s), fill=brick, outline=OUTLINE, width=4 * s)
-    d.rectangle((18 * s, 74 * s, 110 * s, 76 * s), fill=brick)
-    for k, y in enumerate(range(40, 114, 10)):  # brick courses
-        y *= s
-        d.line((18 * s, y, 110 * s, y), fill=mortar, width=s * 2)
-        off = (k % 2) * 8
-        for x in range(18 + off, 110, 16):
-            d.line((x * s, y, x * s, y + 10 * s), fill=mortar, width=s * 2)
-    d.pieslice((14 * s, 24 * s, 114 * s, 124 * s), 180, 360, outline=OUTLINE, width=4 * s)
-    d.rectangle((14 * s, 112 * s, 114 * s, 118 * s), fill=shade, outline=OUTLINE, width=3 * s)
-    # firing door
-    d.pieslice((46 * s, 70 * s, 82 * s, 106 * s), 180, 360, fill=(52, 30, 24, 255), outline=OUTLINE, width=3 * s)
-    d.rectangle((46 * s, 88 * s, 82 * s, 112 * s), fill=(52, 30, 24, 255), outline=OUTLINE, width=3 * s)
-    d.rectangle((49 * s, 88 * s, 79 * s, 109 * s), fill=(52, 30, 24, 255))
-    d.ellipse((54 * s, 92 * s, 74 * s, 110 * s), fill=(255, 160, 60, 255))
-    d.ellipse((59 * s, 98 * s, 69 * s, 108 * s), fill=(255, 226, 120, 255))
-    return im.resize((128, 128), Image.LANCZOS)
-
-
 def make_brick_pallet() -> Image.Image:
     """Stack of fired bricks on a wooden pallet, light mortar lines so it reads on the clay hex."""
     s = 4
