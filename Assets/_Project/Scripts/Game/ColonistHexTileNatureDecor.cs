@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CatanRoguelike.Core;
+using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using UnityEngine;
 
@@ -120,13 +121,14 @@ namespace CatanRoguelike.Game
 
         private static void ApplyDesert(GameObject hexRoot, HexTileData data, float hexScale)
         {
-            if (data.IsFishTile)
-                return;
-
+            // Desert lake (Fishermen) tiles also get cacti/rocks: the keep-out radius already
+            // clears the pond + shore (pond shore radius ~0.21 * hex diameter).
             var propsRoot = new GameObject("TileNatureProps");
             propsRoot.transform.SetParent(hexRoot.transform, false);
             int seed = data.Coord.Q * 19 + data.Coord.R * 53;
             float tokenClear = TokenKeepOutCenterRadius(hexScale);
+            if (data.IsFishTile)
+                tokenClear = Mathf.Max(tokenClear, hexScale * HexMath.OuterRadius * 2f * 0.35f * 0.59f + hexScale * 0.04f);
             ScatterModels(hexRoot, propsRoot, hexScale, seed, 3, DesertPlantModels, 0.22f, 0.32f, tokenClear, ResourceType.Wheat);
             for (int c = 0; c < 3; c++)
             {

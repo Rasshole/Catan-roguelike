@@ -525,7 +525,10 @@ namespace CatanRoguelike.Game
                     ColonistHexTileNatureDecor.Apply(go, data, hexScale);
                 }
                 if (data.IsDesert && data.IsFishTile)
+                {
                     ColonistDesertLakeVisual.Apply(go, hexScale);
+                    ColonistHexTileNatureDecor.Apply(go, data, hexScale); // cacti/rocks around the pond
+                }
                 if (data.IsFishTile)
                     ColonistFishTileVisual.Apply(go, data, hexScale);
             }

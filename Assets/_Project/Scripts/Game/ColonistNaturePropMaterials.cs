@@ -53,13 +53,13 @@ namespace CatanRoguelike.Game
         }
 
         private static Material TreeBark() =>
-            _treeBark ??= BuiltInMaterials.CreateOpaque(new Color(0.42f, 0.28f, 0.16f));
+            _treeBark ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.42f, 0.28f, 0.16f));
 
         private static Material TreeLeaves() =>
-            _treeLeaves ??= BuiltInMaterials.CreateOpaque(new Color(0.118f, 0.353f, 0.180f));
+            _treeLeaves ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.118f, 0.353f, 0.180f));
 
         private static Material TreeLeavesHighlight() =>
-            _treeLeavesHighlight ??= BuiltInMaterials.CreateOpaque(new Color(0.184f, 0.420f, 0.227f));
+            _treeLeavesHighlight ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.184f, 0.420f, 0.227f));
 
         private static Material PickTreeLeafMaterial(Renderer renderer)
         {
@@ -72,18 +72,18 @@ namespace CatanRoguelike.Game
         private static int PositiveHash(int value) => (value * 1103515245 + 12345) & 0x7fffffff;
 
         private static Material Rock() =>
-            _rock ??= BuiltInMaterials.CreateOpaque(new Color(0.55f, 0.57f, 0.60f));
+            _rock ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.55f, 0.57f, 0.60f));
 
         private static Material RockDark() =>
-            _rockDark ??= BuiltInMaterials.CreateOpaque(new Color(0.38f, 0.40f, 0.44f));
+            _rockDark ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.38f, 0.40f, 0.44f));
 
         private static Material Terracotta() =>
-            _terracotta ??= BuiltInMaterials.CreateOpaque(new Color(0.72f, 0.36f, 0.24f));
+            _terracotta ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.72f, 0.36f, 0.24f));
 
         private static Material Flower() =>
-            _flower ??= BuiltInMaterials.CreateOpaque(new Color(0.92f, 0.78f, 0.22f));
+            _flower ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.92f, 0.78f, 0.22f));
 
         private static Material Grass() =>
-            _grass ??= BuiltInMaterials.CreateOpaque(new Color(0.40f, 0.72f, 0.30f));
+            _grass ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.40f, 0.72f, 0.30f));
     }
 }

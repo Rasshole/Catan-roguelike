@@ -111,8 +111,9 @@ namespace CatanRoguelike.Game
             pile.transform.SetParent(parent, false);
             pile.transform.localPosition = localPos;
             float r = hexScale * 0.30f;
-            var greyA = new Color(0.58f, 0.60f, 0.62f);
-            var greyB = new Color(0.48f, 0.50f, 0.54f);
+            // Dark slate so boulders contrast with the light-grey mountain tile.
+            var greyA = new Color(0.32f, 0.34f, 0.38f);
+            var greyB = new Color(0.22f, 0.24f, 0.28f);
             CreatePart(pile.transform, "BoulderA", new Vector3(-r * 0.22f, r * 0.22f, r * 0.08f),
                 PrimitiveType.Sphere, Vector3.one * r * 0.55f, greyA);
             CreatePart(pile.transform, "BoulderB", new Vector3(r * 0.18f, r * 0.18f, -r * 0.12f),
@@ -188,9 +189,9 @@ namespace CatanRoguelike.Game
         {
             float s = hexScale * 0.32f;
             CreatePart(parent, "PeakBase", localPos + Vector3.up * s * 0.22f, PrimitiveType.Cylinder,
-                new Vector3(s * 0.9f, s * 0.35f, s * 0.9f), new Color(0.42f, 0.44f, 0.48f));
+                new Vector3(s * 0.9f, s * 0.35f, s * 0.9f), new Color(0.28f, 0.30f, 0.34f));
             var top = CreatePart(parent, "PeakTop", localPos + Vector3.up * s * 0.62f, PrimitiveType.Cube,
-                new Vector3(s * 0.55f, s * 0.55f, s * 0.55f), new Color(0.50f, 0.52f, 0.56f));
+                new Vector3(s * 0.55f, s * 0.55f, s * 0.55f), new Color(0.94f, 0.95f, 0.97f)); // snow cap
             top.transform.localRotation = Quaternion.Euler(0f, 18f, 0f);
         }
 
@@ -256,7 +257,7 @@ namespace CatanRoguelike.Game
             go.transform.SetParent(parent, false);
             go.transform.localPosition = localPos;
             go.transform.localScale = scale;
-            go.GetComponent<Renderer>().sharedMaterial = BuiltInMaterials.CreateOpaque(color);
+            go.GetComponent<Renderer>().sharedMaterial = BuiltInMaterials.CreateMatteOpaque(color);
             var col = go.GetComponent<Collider>();
             if (col != null)
                 ColonistSceneDestroy.SafeDestroy(col);

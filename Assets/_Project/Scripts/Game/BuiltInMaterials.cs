@@ -56,6 +56,26 @@ namespace CatanRoguelike.Game
             return mat;
         }
 
+        /// <summary>
+        /// Opaque Standard with gloss, specular highlights and reflections off. Default Standard
+        /// gloss reflected the sky and washed small props toward pale grey (low contrast on tiles).
+        /// </summary>
+        public static Material CreateMatteOpaque(Color color)
+        {
+            var mat = CreateOpaque(color);
+            if (mat.HasProperty("_Glossiness"))
+                mat.SetFloat("_Glossiness", 0f);
+            if (mat.HasProperty("_Metallic"))
+                mat.SetFloat("_Metallic", 0f);
+            if (mat.HasProperty("_SpecularHighlights"))
+                mat.SetFloat("_SpecularHighlights", 0f);
+            if (mat.HasProperty("_GlossyReflections"))
+                mat.SetFloat("_GlossyReflections", 0f);
+            mat.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
+            mat.EnableKeyword("_GLOSSYREFLECTIONS_OFF");
+            return mat;
+        }
+
         public static Material CreateUnlit(Color color, bool zWrite = true)
         {
             var shader = Shader.Find(UnlitColorShaderName);
