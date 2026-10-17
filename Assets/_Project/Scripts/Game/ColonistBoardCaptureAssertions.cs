@@ -799,10 +799,12 @@ namespace CatanRoguelike.Game
                 // Probe the band arms (toward the outer corners), not the axis: the token covers the notch.
                 var probes = new[]
                 {
-                    placement.InlandTip + (placement.CoastArmLeft - placement.InlandTip) * 0.75f
-                        + placement.Outward * (bandT * 0.5f),
-                    placement.InlandTip + (placement.CoastArmRight - placement.InlandTip) * 0.75f
-                        + placement.Outward * (bandT * 0.5f)
+                    // Inner band near the arm midpoint: clear of the token and of the fish icons/halos,
+                    // which now sit mid-band further out along each arm.
+                    placement.InlandTip + (placement.CoastArmLeft - placement.InlandTip) * 0.5f
+                        + placement.Outward * (bandT * 0.15f),
+                    placement.InlandTip + (placement.CoastArmRight - placement.InlandTip) * 0.5f
+                        + placement.Outward * (bandT * 0.15f)
                 };
 
                 foreach (var probeXz in probes)

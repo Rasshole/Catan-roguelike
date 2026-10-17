@@ -221,13 +221,20 @@ namespace CatanRoguelike.Game
 
         public static void CreateCactus(Transform parent, Vector3 localPos, float hexScale)
         {
-            var green = new Color(0.22f, 0.58f, 0.30f);
-            float h = hexScale * 0.34f;
-            float w = hexScale * 0.07f;
-            CreatePart(parent, "CactusStem", localPos + Vector3.up * h * 0.5f, PrimitiveType.Cylinder,
-                new Vector3(w, h, w), green);
-            CreatePart(parent, "CactusArm", localPos + new Vector3(w * 1.6f, h * 0.55f, 0f), PrimitiveType.Cylinder,
-                new Vector3(w * 0.85f, h * 0.35f, w * 0.85f), green);
+            // Readable from the top-down camera: a thick stem plus two arms lying sideways
+            // (a vertical thin cylinder only showed as a green dot).
+            var green = new Color(0.16f, 0.50f, 0.24f);
+            var greenLight = new Color(0.30f, 0.66f, 0.34f);
+            float h = hexScale * 0.26f;
+            float w = hexScale * 0.13f;
+            CreatePart(parent, "CactusStem", localPos + Vector3.up * h * 0.5f, PrimitiveType.Capsule,
+                new Vector3(w, h * 0.5f, w), green);
+            var armL = CreatePart(parent, "CactusArmL", localPos + new Vector3(-w * 0.95f, h * 0.55f, 0f),
+                PrimitiveType.Capsule, new Vector3(w * 0.62f, w * 0.75f, w * 0.62f), greenLight);
+            armL.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+            var armR = CreatePart(parent, "CactusArmR", localPos + new Vector3(w * 0.95f, h * 0.70f, w * 0.2f),
+                PrimitiveType.Capsule, new Vector3(w * 0.62f, w * 0.75f, w * 0.62f), greenLight);
+            armR.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
         }
 
         public static void CreateDesertRock(Transform parent, Vector3 localPos, float hexScale)

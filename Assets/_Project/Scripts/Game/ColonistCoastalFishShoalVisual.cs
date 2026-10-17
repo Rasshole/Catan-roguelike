@@ -106,11 +106,12 @@ namespace CatanRoguelike.Game
             float tokenRadius = HexTileView.TokenWorldFaceDiameter * 0.5f;
             float minCenterDist = tokenRadius + iconSize * 0.48f;
 
-            var armMidLeft = (placement.CoastArmLeft + placement.InlandTip) / 2f
-                + placement.Outward * (bandT * 0.42f);
-            var armMidRight = (placement.CoastArmRight + placement.InlandTip) / 2f
-                + placement.Outward * (bandT * 0.42f);
-            var centers = new[] { armMidLeft, armMidRight };
+            // Arm midpoints sit ~0.5 world from the token, inside minCenterDist, so both icons were
+            // skipped (no fish drawn). Slide each icon outward along its arm, mid-band, until it
+            // clears the token.
+            var armLeft = FishArmPointClearOfToken(placement, placement.CoastArmLeft, bandT, minCenterDist);
+            var armRight = FishArmPointClearOfToken(placement, placement.CoastArmRight, bandT, minCenterDist);
+            var centers = new[] { armLeft, armRight };
             var halo = ColonistFishIconTextures.DarkIconHalo();
 
             for (int i = 0; i < centers.Length; i++)
@@ -156,6 +157,27 @@ namespace CatanRoguelike.Game
                 icon.transform.rotation = rot;
                 haloQuad.transform.rotation = rot;
             }
+        }
+    
+        private static MapPlaneXz FishArmPointClearOfToken(
+            FishShoalPlacement placement,
+            MapPlaneXz armEnd,
+            float bandT,
+            float minCenterDist)
+        {
+            MapPlaneXz best = placement.InlandTip;
+            for (float f = 0.5f; f <= 0.86f; f += 0.04f)
+            {
+                var onArm = placement.InlandTip + (armEnd - placement.InlandTip) * f;
+                best = onArm + placement.Outward * (bandT * 0.5f);
+                float dist = Vector2.Distance(
+                    new Vector2(best.X, best.Z),
+                    new Vector2(placement.TokenCenter.X, placement.TokenCenter.Z));
+                if (dist >= minCenterDist)
+                    return best;
+            }
+
+            return best;
         }
     }
 }
