@@ -42,7 +42,7 @@ namespace CatanRoguelike.Game
             switch (data.Resource)
             {
                 case ResourceType.Wood:
-                    ScatterModels(propsRoot, hexScale, seed, 6 + seed % 4, TreeModels, 0.22f, 0.34f, tokenClear,
+                    ScatterModels(propsRoot, hexScale, seed, 6 + Mathf.Abs(seed % 4), TreeModels, 0.22f, 0.34f, tokenClear,
                         ResourceType.Wood);
                     break;
                 case ResourceType.Wheat:
@@ -119,7 +119,7 @@ namespace CatanRoguelike.Game
         {
             for (int i = 0; i < count; i++)
             {
-                string modelName = modelNames[(seed + i) % modelNames.Count];
+                string modelName = modelNames[((seed + i) % modelNames.Count + modelNames.Count) % modelNames.Count] /* seeds are negative for q/r < 0 */;
                 var prefab = Resources.Load<GameObject>($"{ModelRoot}/{modelName}");
                 if (prefab == null)
                     continue;
@@ -148,7 +148,9 @@ namespace CatanRoguelike.Game
             {
                 float angle = (seed + attempt * 47) % 360;
                 float rad = angle * Mathf.Deg2Rad;
-                float r = tokenClear + hexScale * (0.08f + Hash01(seed + attempt) * maxRadiusFactor);
+                // Keep props inside the hex (apothem ~0.87 hexScale) so they don't spill onto neighbours/sea.
+                float rMax = Mathf.Max(tokenClear + 0.05f, hexScale * Mathf.Min(0.70f, 0.30f + maxRadiusFactor * 0.45f));
+                float r = Mathf.Lerp(tokenClear, rMax, Hash01(seed + attempt));
                 var pos = new Vector3(Mathf.Cos(rad) * r, 0f, Mathf.Sin(rad) * r);
                 if (pos.magnitude >= tokenClear)
                     return pos;

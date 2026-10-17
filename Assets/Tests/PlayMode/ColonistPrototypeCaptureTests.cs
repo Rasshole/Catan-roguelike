@@ -277,8 +277,10 @@ namespace CatanRoguelike.Tests.PlayMode
 
             Assert.Greater(differingFromBoard, samples / 8,
                 "Bottom band (texture y near 0) should differ between HUD and board-only captures.");
-            Assert.Greater(matchingHudBar, samples / 4,
-                "Bottom band should include hand-bar backdrop color from the colonist HUD.");
+            // Kenney HUD: the hand bar spans only the left ~quarter (action bar sits above it), so
+            // require a smaller share of the full-width bottom band than the old edge-to-edge bar.
+            Assert.Greater(matchingHudBar, samples / 8,
+                $"Bottom band should include hand-bar backdrop color from the colonist HUD (matched={matchingHudBar}/{samples}).");
         }
 
         private static float ColorDistance(Color a, Color b)
