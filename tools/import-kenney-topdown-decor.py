@@ -210,8 +210,8 @@ def outline_bricks(im: Image.Image) -> Image.Image:
             r, g, b, a = px[x, y]
             if a < 20:
                 continue
-            px[x, y] = (min(255, int(r * 0.85 + 40)), min(255, int(g * 0.55 + 18)), min(255, int(b * 0.45 + 12)), a)
-    # dark outline pass
+            # Light brick faces + mortar gaps so stacks read on the orange brick hex.
+            px[x, y] = (min(255, int(r * 0.55 + 110)), min(255, int(g * 0.45 + 48)), min(255, int(b * 0.40 + 36)), a)
     out = Image.new("RGBA", im.size, (0, 0, 0, 0))
     out.paste(im, (0, 0), im)
     alpha = im.getchannel("A")
@@ -220,10 +220,10 @@ def outline_bricks(im: Image.Image) -> Image.Image:
     op = out.load()
     for y in range(h):
         for x in range(w):
-            if ep[x, y] > 40:
+            if ep[x, y] > 28:
                 r, g, b, a = op[x, y]
                 if a > 0:
-                    op[x, y] = (min(r, 80), min(g, 40), min(b, 30), a)
+                    op[x, y] = (48, 28, 22, a)
     return out
 
 
