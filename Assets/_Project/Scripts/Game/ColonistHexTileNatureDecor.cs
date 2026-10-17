@@ -6,18 +6,14 @@ using UnityEngine;
 
 namespace CatanRoguelike.Game
 {
-    /// <summary>Quaternius forest + top-down Kenney sprites on other terrains.</summary>
+    /// <summary>Kenney top-down sprites on terrain hexes; Quaternius bushes on sheep pastures only.</summary>
     public static class ColonistHexTileNatureDecor
     {
         private const string NatureModelRoot = "Art/Models/Nature";
         private const float LiftAboveTop = 0.04f;
         private const float MaxPropRadiusFactor = 0.65f;
-        private static readonly string[] TreeModels =
-        {
-            "NormalTree_2", "BirchTree_1", "BirchTree_3", "BirchTree_2", "NormalTree_2"
-        };
-
-        private static readonly string[] RockModels = { "Rock_3", "Rock_3", "Rock_3" };
+        private static readonly string[] ForestTreeSprites =
+            { "tree_canopy_a", "tree_canopy_b", "tree_canopy_c", "tree_canopy_b", "tree_canopy_a" };
         private static readonly string[] BushModels = { "Bush_Flowers", "Bush", "Bush_Small_Flowers", "Bush_Large" };
         public static void Apply(GameObject hexRoot, HexTileData data, float hexScale)
         {
@@ -89,14 +85,12 @@ namespace CatanRoguelike.Game
             {
                 if (placed >= treeTarget)
                     break;
-                // Poisson points are (x, z) in a Vector2; the implicit Vector2->Vector3 cast would
-                // put z into Y (trees floating on a line), so map explicitly onto the XZ plane.
                 var localXZ = new Vector3(ringPoint.x, 0f, ringPoint.y);
-                string modelName = TreeModels[PositiveMod(seed + attempt, TreeModels.Length)];
-                float scaleFactor = Mathf.Lerp(0.17f, 0.21f, Hash01(seed + attempt * 19));
-                float yaw = PositiveMod(seed + attempt * 137, 360) + 22f;
-                if (TryPlaceNatureModel(hexRoot, propsRoot.transform, hexScale, modelName, localXZ, scaleFactor, yaw,
-                        ResourceType.Wood, attempt))
+                string sprite = ForestTreeSprites[PositiveMod(seed + attempt, ForestTreeSprites.Length)];
+                float size = Mathf.Lerp(0.24f, 0.36f, Hash01(seed + attempt * 19));
+                float yaw = PositiveMod(seed + attempt * 137, 360);
+                if (PlaceTopDown(hexRoot, propsRoot.transform, hexScale, localXZ, sprite, size, yaw,
+                        $"ForestTree_{sprite}_{attempt}", tokenClear, maxR))
                     placed++;
                 attempt++;
             }
@@ -106,15 +100,12 @@ namespace CatanRoguelike.Game
                 float angle = (i * 37f + PositiveMod(seed, 360)) * Mathf.Deg2Rad;
                 float r = Mathf.Lerp(minR, maxR, 0.45f + Hash01(seed + i * 31) * 0.5f);
                 var localXZ = new Vector3(Mathf.Cos(angle) * r, 0f, Mathf.Sin(angle) * r);
-                string modelName = TreeModels[PositiveMod(seed + i, TreeModels.Length)];
-                float scaleFactor = Mathf.Lerp(0.17f, 0.21f, Hash01(seed + i * 19));
-                float yaw = PositiveMod(seed + i * 137, 360) + 22f;
-                TryPlaceNatureModel(hexRoot, propsRoot.transform, hexScale, modelName, localXZ, scaleFactor, yaw,
-                    ResourceType.Wood, i);
+                string sprite = ForestTreeSprites[PositiveMod(seed + i, ForestTreeSprites.Length)];
+                float size = Mathf.Lerp(0.24f, 0.36f, Hash01(seed + i * 19));
+                float yaw = PositiveMod(seed + i * 137, 360);
+                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, localXZ, sprite, size, yaw,
+                    $"ForestTree_{sprite}_{i}", tokenClear, maxR);
             }
-
-            ScatterModels(hexRoot, propsRoot, hexScale, seed + 1200, 2, BushModels, 0.14f, 0.18f, tokenClear,
-                ResourceType.Wood);
         }
 
         private static void ApplyDesert(GameObject hexRoot, HexTileData data, float hexScale)
@@ -207,8 +198,16 @@ namespace CatanRoguelike.Game
             for (int r = 0; r < fields.Length; r++)
             {
                 var pos = SamplePosition(hexScale, seed + 400 + r * 59, tokenClear, MaxPropRadiusFactor);
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, fields[r], 0.38f,
+                float size = Mathf.Lerp(0.30f, 0.44f, Hash01(seed + r * 29));
+                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, fields[r], size,
                     PositiveMod(seed + r * 40, 360), $"WheatField_{r}", tokenClear, maxR);
+            }
+
+            for (int s = 0; s < 2; s++)
+            {
+                var pos = SamplePosition(hexScale, seed + 460 + s * 63, tokenClear, MaxPropRadiusFactor);
+                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, "wheat_sheaf", Mathf.Lerp(0.14f, 0.20f, Hash01(seed + s * 31)),
+                    PositiveMod(seed + 461 + s * 17, 360), $"WheatSheaf_{s}", tokenClear, maxR);
             }
 
             PlaceTopDown(hexRoot, propsRoot.transform, hexScale,
@@ -216,7 +215,7 @@ namespace CatanRoguelike.Game
                 PositiveMod(seed + 481, 360), "HayBale_0", tokenClear, maxR);
             PlaceTopDown(hexRoot, propsRoot.transform, hexScale,
                 SamplePosition(hexScale, seed + 520, tokenClear, MaxPropRadiusFactor), "windmill", 0.50f,
-                PositiveMod(seed + 521, 360), "Windmill_0", tokenClear, maxR);
+                PositiveMod(seed + 521, 24) - 12f, "Windmill_0", tokenClear, maxR);
         }
 
         private static void ApplySheep(
@@ -228,24 +227,39 @@ namespace CatanRoguelike.Game
         {
             ScatterModels(hexRoot, propsRoot, hexScale, seed, 2, BushModels, 0.18f, 0.26f, tokenClear,
                 ResourceType.Sheep);
+            float maxR = MaxPropCenterRadius(hexScale);
+            var fencePos = SamplePosition(hexScale, seed + 600, tokenClear, MaxPropRadiusFactor);
+            PlaceTopDown(hexRoot, propsRoot.transform, hexScale, fencePos, "fence", 0.44f,
+                PositiveMod(seed, 24) - 12f, "SheepFence_0", tokenClear, maxR);
+
+            float fenceKeepOut = hexScale * 0.34f;
             int sheepCount = 3 + PositiveMod(seed, 2);
             for (int s = 0; s < sheepCount; s++)
             {
-                var pos = SamplePosition(hexScale, seed + 500 + s * 71, tokenClear, MaxPropRadiusFactor);
+                Vector3 pos = Vector3.zero;
+                bool found = false;
+                for (int attempt = 0; attempt < 16; attempt++)
+                {
+                    pos = SamplePosition(hexScale, seed + 500 + s * 71 + attempt * 19, tokenClear, MaxPropRadiusFactor);
+                    if (Vector2.Distance(new Vector2(pos.x, pos.z), new Vector2(fencePos.x, fencePos.z)) >= fenceKeepOut)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                    continue;
+
                 PlacePrimitive(hexRoot, propsRoot.transform,
                     pos + Vector3.up * (HexPrismMesh.TopY + LiftAboveTop), hexScale,
                     parent =>
                         ColonistHexTilePropPrimitives.CreateSheep(
                             parent, Vector3.zero, hexScale * 0.22f, seed + s));
             }
-
-            float maxR = MaxPropCenterRadius(hexScale);
-            PlaceTopDown(hexRoot, propsRoot.transform, hexScale,
-                SamplePosition(hexScale, seed + 600, tokenClear, MaxPropRadiusFactor), "fence", 0.44f,
-                PositiveMod(seed, 24), "SheepFence_0", tokenClear, maxR);
         }
 
-        private static void PlaceTopDown(
+        private static bool PlaceTopDown(
             GameObject hexRoot,
             Transform propsParent,
             float hexScale,
@@ -357,12 +371,6 @@ namespace CatanRoguelike.Game
                 return false;
             }
 
-            if (resource == ResourceType.Wood)
-            {
-                var shadowPos = new Vector3(prop.transform.localPosition.x, 0f, prop.transform.localPosition.z);
-                ColonistHexTilePropPrimitives.CreateTreeShadowDisc(propsParent, shadowPos, hexScale);
-            }
-
             return true;
         }
 
@@ -400,19 +408,8 @@ namespace CatanRoguelike.Game
             return true;
         }
 
-        internal static bool IsForestTreePropName(string propName)
-        {
-            if (string.IsNullOrEmpty(propName))
-                return false;
-
-            foreach (var tree in TreeModels)
-            {
-                if (propName.Contains(tree))
-                    return true;
-            }
-
-            return propName.Contains("Tree");
-        }
+        internal static bool IsForestTreePropName(string propName) =>
+            !string.IsNullOrEmpty(propName) && propName.Contains("ForestTree");
 
         private static void PlacePrimitive(
             GameObject hexRoot,

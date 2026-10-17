@@ -40,11 +40,16 @@ namespace CatanRoguelike.Game
 
             // Open sprites (fence rails) would show the dark disc through their gaps.
             if (spriteName != "fence")
+            {
+                float shadowScale = spriteName.StartsWith("rock_cluster") ? 0.58f : 0.42f;
+                bool darkPatch = spriteName.StartsWith("rock_cluster");
                 ColonistHexTilePropPrimitives.CreateSpriteShadowDisc(
-                holder.transform,
-                Vector3.zero,
-                hexScale,
-                worldSize * 0.42f);
+                    holder.transform,
+                    Vector3.zero,
+                    hexScale,
+                    worldSize * shadowScale,
+                    darkPatch);
+            }
 
             var quad = ColonistFlatBoardQuad.Create(
                 holder.transform,
@@ -59,7 +64,9 @@ namespace CatanRoguelike.Game
             // BoardPitchOnly ignored the yaw and showed every sprite turned 90 deg under the yawed table
             // camera (kiln/cactus lying sideways, fence vertical). Face the camera, then spin in-plane:
             // Kenney art is lit from the top-left, so keep it near-upright except crop fields.
-            float spin = spriteName.StartsWith("wheat_field") ? yawDeg : Mathf.Repeat(yawDeg, 24f) - 12f;
+            float spin = spriteName.StartsWith("wheat_field") || spriteName.StartsWith("wheat_sheaf")
+                ? yawDeg
+                : Mathf.Repeat(yawDeg, 24f) - 12f;
             quad.transform.rotation = Quaternion.AngleAxis(spin, Vector3.up) * quad.transform.rotation;
 
             // Circular footprint: the art is roughly round, but the yawed square quad's AABB is up to

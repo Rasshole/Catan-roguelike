@@ -27,6 +27,9 @@ R = "PNG/Retina/"
 
 # Whole sprites: (zip path, output name)
 COPIES: tuple[tuple[str, str], ...] = (
+    (R + "Environment/medievalEnvironment_01.png", "tree_canopy_a.png"),
+    (R + "Environment/medievalEnvironment_02.png", "tree_canopy_b.png"),
+    (R + "Environment/medievalEnvironment_03.png", "tree_canopy_c.png"),
     (R + "Environment/medievalEnvironment_08.png", "rock_cluster_a.png"),  # grey boulder pair
     (R + "Environment/medievalEnvironment_09.png", "rock_cluster_b.png"),  # flecked (ore)
     (R + "Environment/medievalEnvironment_11.png", "rock_cluster_c.png"),
@@ -94,6 +97,28 @@ def strip_frame(im: Image.Image) -> Image.Image:
     ImageDraw.Draw(out).rounded_rectangle((0, 0, im.width - 1, im.height - 1), radius=im.width // 6,
                                           outline=(128, 82, 34, 255), width=w)
     return out
+
+
+def slate_boulder(im: Image.Image) -> Image.Image:
+    """Darken grey rocks so they read on the light stone hex."""
+    im = im.convert("RGBA")
+    px = im.load()
+    w, h = im.size
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if a < 12:
+                continue
+            t = y / max(h - 1, 1)
+            shade = 0.62 + 0.22 * (1.0 - t)
+            hi = 1.0 + 0.12 * (1.0 - t)
+            px[x, y] = (
+                min(255, int(r * shade * hi)),
+                min(255, int(g * shade * hi)),
+                min(255, int(b * shade * hi + 4 * (1.0 - t))),
+                a,
+            )
+    return im
 
 
 def gold(im: Image.Image, k: float) -> Image.Image:
@@ -169,6 +194,40 @@ def make_cactus(tall: bool) -> Image.Image:
     return im.resize((96, 96), Image.LANCZOS)
 
 
+def make_desert_pond_water(zf: zipfile.ZipFile) -> Image.Image:
+    im = Image.open(BytesIO(zf.read(R + "Tile/medievalTile_28.png"))).convert("RGBA")
+    side = min(im.size)
+    cx, cy = im.width // 2, im.height // 2
+    im = im.crop((cx - side // 2, cy - side // 2, cx + side // 2, cy + side // 2))
+    mask = Image.new("L", im.size, 0)
+    ImageDraw.Draw(mask).ellipse((4, 4, im.width - 5, im.height - 5), fill=255)
+    out = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    out.paste(im, (0, 0), mask)
+    return out
+
+
+def make_pond_reed() -> Image.Image:
+    s = 4
+    W = 48 * s
+    im = Image.new("RGBA", (W, W), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    green = (48, 128, 62, 255)
+    for x, lean in ((W // 2 - 6 * s, -2 * s), (W // 2 + 8 * s, 3 * s)):
+        d.line((x, W - 8 * s, x + lean, 12 * s), fill=green, width=3 * s)
+        d.ellipse((x - 4 * s, 8 * s, x + 4 * s, 18 * s), fill=(72, 160, 82, 255))
+    return im.resize((48, 48), Image.LANCZOS)
+
+
+def make_wheat_sheaf(zf: zipfile.ZipFile) -> Image.Image:
+    im = cut_plot(Image.open(BytesIO(zf.read(R + "Tile/medievalTile_54.png"))))
+    bbox = im.getchannel("A").getbbox()
+    if bbox:
+        im = im.crop(bbox)
+    inset = int(min(im.size) * 0.18)
+    im = im.crop((inset, inset, im.width - inset, im.height - inset))
+    return gold(im, 0.35)
+
+
 def make_fence() -> Image.Image:
     s = 4
     W = 128 * s
@@ -203,7 +262,10 @@ def main() -> None:
         if lic:
             (THIRD / "medieval-rts-CC0.txt").write_bytes(zf.read(lic[0]))
         for src, dest in COPIES:
-            save(dest, Image.open(BytesIO(zf.read(src))))
+            im = Image.open(BytesIO(zf.read(src)))
+            if dest.startswith("rock_cluster"):
+                im = slate_boulder(im)
+            save(dest, im)
         for src, dest, tint in PLOTS:
             plot = cut_plot(Image.open(BytesIO(zf.read(src))))
             if dest.startswith("wheat_field"):
@@ -211,7 +273,10 @@ def main() -> None:
             save(dest, gold(plot, tint) if tint else plot)
         save("windmill.png", make_windmill(zf))
         save("mountain_peak.png", make_peak(zf))
+        save("desert_pond_water.png", make_desert_pond_water(zf))
+        save("wheat_sheaf.png", make_wheat_sheaf(zf))
     save("cactus_tall.png", make_cactus(True))
+    save("pond_reed.png", make_pond_reed())
     save("cactus_short.png", make_cactus(False))
     save("fence.png", make_fence())
 
