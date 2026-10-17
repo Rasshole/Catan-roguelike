@@ -80,7 +80,7 @@ namespace CatanRoguelike.Game
             // starts after the resource hand, which pushed the fan right of the board.
             _fanRoot.anchoredPosition = new Vector2(
                 -(RunHudLayout.ColonistResourceHandWidth + RunHudLayout.Margin) * 0.5f,
-                2f);
+                12f); // Y=2 let the rotated outer corners dip ~3 px into the build bar (v113 review)
             _fanRoot.sizeDelta = new Vector2(640f, ColonistRoguelikeCardHandLayout.CardHeight + 40f);
         }
 

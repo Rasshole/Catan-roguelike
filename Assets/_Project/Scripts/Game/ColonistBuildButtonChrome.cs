@@ -111,7 +111,11 @@ namespace CatanRoguelike.Game
                 FontStyle.Bold);
             pieceCountChip.raycastTarget = false;
 
-            float buttonWidth = shortTitle == ColonistHudCopy.Settlement ? 116f : 94f;
+            // Width follows the cost chip count (Settlement 4, Dev 3, Road/City 2): at 116/94 the
+            // 34 px chips were squeezed and Settlement lost every count (v113 review).
+            float buttonWidth = shortTitle == ColonistHudCopy.Settlement ? 184f
+                : shortTitle == "Dev" ? 140f
+                : 96f;
             RunHudUiFactory.AddLayoutElement(button.gameObject, 88f).preferredWidth = buttonWidth;
 
             labelModel.SetTitle(shortTitle);
@@ -183,11 +187,11 @@ namespace CatanRoguelike.Game
                 row.childAlignment = TextAnchor.MiddleCenter;
                 row.childForceExpandWidth = false;
                 row.childControlWidth = true;
-                RunHudUiFactory.AddLayoutElement(chip, 38f);
+                RunHudUiFactory.AddLayoutElement(chip, 32f);
 
                 var iconGo = new GameObject("Icon");
                 iconGo.transform.SetParent(chip.transform, false);
-                RunHudUiFactory.AddLayoutElement(iconGo, 34f).preferredWidth = 34f;
+                RunHudUiFactory.AddLayoutElement(iconGo, 28f).preferredWidth = 28f;
                 var img = iconGo.AddComponent<Image>();
                 ColonistHudIconGraphic.ApplyCardIcon(img, ColonistHudResourceSprites.Get(resource), fill: 0.94f);
 
@@ -195,12 +199,12 @@ namespace CatanRoguelike.Game
                     chip.transform,
                     "Amt",
                     amount.ToString(),
-                    14,
+                    13,
                     TextAnchor.MiddleLeft,
                     canAfford ? RunHudUiFactory.ColonistTextOnPanel : new Color(0.58f, 0.10f, 0.08f, 1f),
                     FontStyle.Bold);
                 amt.raycastTarget = false;
-                RunHudUiFactory.AddLayoutElement(amt.gameObject, 20f).preferredWidth = 16f;
+                RunHudUiFactory.AddLayoutElement(amt.gameObject, 20f).preferredWidth = 11f;
             }
 
             AddChip(ResourceType.Wood, cost.Wood);

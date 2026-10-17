@@ -13,6 +13,9 @@ namespace CatanRoguelike.Game
         public const float ArcDropPerStep = 2f;
         /// <summary>Resting fan scale; hover multiplies by <see cref="HoverScale"/>.</summary>
         public const float RestScale = 0.74f;
+        /// <summary>Screen band the resting fan needs above the deck band bottom (root Y + scaled card + arc/tilt).</summary>
+        public static float RestingFanHeight =>
+            UnityEngine.Mathf.Max(RunHudLayout.ColonistResourceHandHeight, 12f + CardHeight * RestScale + 10f);
         public const float HoverLift = 32f;
         public const float HoverScale = 1.18f;
 

@@ -21,8 +21,11 @@ namespace CatanRoguelike.Game
             float right = ColonistUiScale.ScaleReferencePixels(
                 RunHudLayout.GetContentRightInset(), screenWidth, screenHeight);
             float bottomInset = ColonistPresentation.IsActive
+                // Reserve only what the resting (RestScale) fan and resource hand occupy: the full
+                // 158 px deck band left a ~100 px dead strip between board and cards (v113 review).
+                // Hovered cards lift over the board on purpose.
                 ? RunHudLayout.GetColonistDeckBandBottom()
-                + RunHudLayout.GetColonistDeckBandHeight()
+                + ColonistRoguelikeCardHandLayout.RestingFanHeight
                 + RunHudLayout.Margin * 0.75f
                 : RunHudLayout.GetBottomHandHeight()
                 + RunHudLayout.GetBottomActionBarHeight()
