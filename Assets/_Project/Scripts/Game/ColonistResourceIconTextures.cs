@@ -45,13 +45,8 @@ namespace CatanRoguelike.Game
                 }
             }
 
-            var kenney = ColonistKenneyResourceIcons.TryGet(resource);
-            if (kenney != null)
-            {
-                PortDecorCache[resource] = kenney;
-                return kenney;
-            }
-
+            // No white Kenney glyph here: on the cream badge it vanished (v106 review). Sheep keeps
+            // the outlined procedural sheep with a dark head, as in v105.
             return GetTexture(PortBadgeCache, resource, forHud: true, inkOverride: GetPortBadgeInk(resource));
         }
 
@@ -78,9 +73,14 @@ namespace CatanRoguelike.Game
 
             // The flat grey ore silhouette on the grey stone hex read as a see-through blob: on the
             // board use the Kenney ore boulder (flecked rock) instead; HUD/port icons keep silhouettes.
-            if (resource == ResourceType.Stone && !forHud && !inkOverride.HasValue)
+            // Same for brick: the terracotta wall silhouette on the terracotta hex read as a faint
+            // clay wall (v106 review), so the board corner icon uses the outlined clay mound (round,
+            // so the BoardPitchOnly quad's fixed in-plane rotation doesn't turn it into a wall).
+            if ((resource == ResourceType.Stone || resource == ResourceType.Brick) && !forHud && !inkOverride.HasValue)
             {
-                var ore = Resources.Load<Texture2D>("Art/Board/TopDownDecor/rock_cluster_c");
+                var ore = Resources.Load<Texture2D>(resource == ResourceType.Stone
+                    ? "Art/Board/TopDownDecor/rock_cluster_c"
+                    : "Art/Board/TopDownDecor/clay_pit");
                 if (ore != null)
                 {
                     cache[resource] = ore;

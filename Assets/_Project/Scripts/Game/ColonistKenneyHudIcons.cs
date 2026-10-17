@@ -37,7 +37,7 @@ namespace CatanRoguelike.Game
             if (Cache.TryGetValue(file, out var sprite) && sprite != null)
                 return sprite;
 
-            var tex = Resources.Load<Texture2D>($"{Root}/{file}");
+            var tex = UnityEngine.Resources.Load<Texture2D>($"{Root}/{file}"); // property "Resources" shadows the class
             if (tex == null)
                 return null;
 

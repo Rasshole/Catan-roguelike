@@ -18,7 +18,8 @@ ICONS = ROOT / "Assets/_Project/Resources/Art/Icons"
 HUD = ROOT / "Assets/_Project/Resources/Art/HudIcons"
 
 RESOURCE_MAP = {
-    "resource_wood.png": "Wood.png",
+    # Wood.png, Sheep.png and Fish.png are hand-drawn glyphs (log pile, sheep, fish): the pack's
+    # resource_wood reads as a ticket and it has no sheep (the barn stand-in was misleading).
     "resource_wheat.png": "Wheat.png",
     "resource_planks.png": "Brick.png",
     "resource_iron.png": "Stone.png",

@@ -5,7 +5,7 @@ namespace CatanRoguelike.Game
 {
     internal static class ColonistHudIconGraphic
     {
-        public static void ApplyCardIcon(Image target, Sprite sprite, float fill = 0.6f)
+        public static void ApplyCardIcon(Image target, Sprite sprite, float fill = 0.6f, float centerY = 0.5f)
         {
             if (target == null)
                 return;
@@ -17,8 +17,9 @@ namespace CatanRoguelike.Game
 
             var rect = target.rectTransform;
             float margin = (1f - fill) * 0.5f;
-            rect.anchorMin = new Vector2(margin, margin);
-            rect.anchorMax = new Vector2(1f - margin, 1f - margin);
+            float shiftY = centerY - 0.5f;
+            rect.anchorMin = new Vector2(margin, margin + shiftY);
+            rect.anchorMax = new Vector2(1f - margin, 1f - margin + shiftY);
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
 

@@ -280,6 +280,16 @@ def make_brick_pallet() -> Image.Image:
     return im.resize((128, 128), Image.LANCZOS)
 
 
+def make_windmill_kenney(zf: zipfile.ZipFile) -> Image.Image:
+    """Kenney mill body (Structure_11) with sails (Structure_14) on the roof."""
+    body = Image.open(BytesIO(zf.read(R + "Structure/medievalStructure_11.png"))).convert("RGBA")
+    sails = Image.open(BytesIO(zf.read(R + "Structure/medievalStructure_14.png"))).convert("RGBA")
+    canvas = Image.new("RGBA", (192, 192), (0, 0, 0, 0))
+    canvas.alpha_composite(body, (32, 44))
+    canvas.alpha_composite(sails.resize((150, 150), Image.LANCZOS), (21, 4))
+    return canvas
+
+
 def make_windmill_oblique() -> Image.Image:
     """Stone tower + cap + crossed sails (upright), dark outlines — reads on yellow wheat hex."""
     s = 4
@@ -444,7 +454,10 @@ def main() -> None:
         save("wheat_sheaf.png", make_wheat_sheaf(zf))
         save("tree_cluster_a.png", make_tree_cluster(zf, R + "Tile/medievalTile_44.png"))  # cypress clump
         save("tree_cluster_b.png", make_tree_cluster(zf, R + "Tile/medievalTile_48.png"))  # pine clump
-    save("windmill.png", make_windmill_oblique())
+    # v106 review: the oblique tower rendered as a small dark funnel on the board; the Kenney
+    # body+sails composite reads as a windmill from the top-down camera.
+    with zipfile.ZipFile(a.zip) as zf2:
+        save("windmill.png", make_windmill_kenney(zf2))
     save("brick_stack.png", make_brick_pallet())
     save("brick_crates.png", make_brick_pallet())
     save("mountain_peak.png", make_peak())

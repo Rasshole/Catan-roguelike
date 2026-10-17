@@ -84,7 +84,15 @@ namespace CatanRoguelike.Game
             var panel = rightRail.Find(panelName);
             var stats = panel?.Find("Content/Stats/Text")?.GetComponent<Text>();
             if (stats != null)
+            {
                 sink.Add(stats);
+                return;
+            }
+
+            // Icon stats view: every value label in the grid must fit its cell.
+            var statsRoot = panel?.Find("Content/Stats");
+            if (statsRoot != null)
+                sink.AddRange(statsRoot.GetComponentsInChildren<Text>(true));
         }
     }
 }

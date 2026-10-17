@@ -34,7 +34,7 @@ namespace CatanRoguelike.Game
             iconRect.offsetMin = Vector2.zero;
             iconRect.offsetMax = Vector2.zero;
             var iconImg = iconGo.AddComponent<Image>();
-            ColonistHudIconGraphic.ApplyCardIcon(iconImg, ColonistHudResourceSprites.Get(ResourceType.Wheat));
+            ColonistHudIconGraphic.ApplyCardIcon(iconImg, ColonistHudResourceSprites.GetFish(), fill: 0.56f, centerY: 0.52f);
 
             var countGo = new GameObject("Count");
             countGo.transform.SetParent(cardGo.transform, false);

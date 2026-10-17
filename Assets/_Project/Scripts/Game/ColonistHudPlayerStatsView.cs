@@ -21,54 +21,78 @@ namespace CatanRoguelike.Game
             return view;
         }
 
+        // Six stacked rows overflowed the player panel and pushed the name out of view, and the
+        // white Kenney glyphs vanished on the parchment. A 2x3 grid of tinted icons keeps every
+        // stat visible inside the panel.
         private void Build()
         {
             var layout = gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.spacing = 3f;
+            layout.spacing = 4f;
             layout.childAlignment = TextAnchor.UpperLeft;
             layout.childForceExpandWidth = true;
             layout.childControlWidth = true;
             layout.childForceExpandHeight = false;
             layout.childControlHeight = true;
 
-            AddRow(ColonistKenneyHudIcons.Victory);
-            AddRow(ColonistKenneyHudIcons.Resources);
-            AddRow(ColonistKenneyHudIcons.DevCard);
-            AddRow(ColonistKenneyHudIcons.Road);
-            AddRow(ColonistKenneyHudIcons.Knight);
-            AddRow(ColonistKenneyHudIcons.Army);
+            var row0 = AddRow();
+            AddCell(row0, ColonistKenneyHudIcons.Victory);
+            AddCell(row0, ColonistKenneyHudIcons.Resources);
+            AddCell(row0, ColonistKenneyHudIcons.DevCard);
+            var row1 = AddRow();
+            AddCell(row1, ColonistKenneyHudIcons.Road);
+            AddCell(row1, ColonistKenneyHudIcons.Knight);
+            AddCell(row1, ColonistKenneyHudIcons.Army);
         }
 
-        private void AddRow(Sprite icon)
+        private Transform AddRow()
         {
             var row = new GameObject("StatRow");
             row.transform.SetParent(transform, false);
             var h = row.AddComponent<HorizontalLayoutGroup>();
-            h.spacing = 6f;
+            h.spacing = 10f;
             h.childAlignment = TextAnchor.MiddleLeft;
             h.childForceExpandWidth = false;
             h.childControlWidth = true;
             h.childForceExpandHeight = false;
             h.childControlHeight = true;
             RunHudUiFactory.AddLayoutElement(row, 20f);
+            return row.transform;
+        }
+
+        private void AddCell(Transform row, Sprite icon)
+        {
+            var cell = new GameObject("StatCell");
+            cell.transform.SetParent(row, false);
+            var h = cell.AddComponent<HorizontalLayoutGroup>();
+            h.spacing = 4f;
+            h.childAlignment = TextAnchor.MiddleLeft;
+            h.childForceExpandWidth = false;
+            h.childControlWidth = true;
+            h.childForceExpandHeight = false;
+            h.childControlHeight = true;
+            var cellLayout = RunHudUiFactory.AddLayoutElement(cell, 20f);
+            cellLayout.minWidth = 58f; // aligned columns; grows with the value ("2 · Fish 0")
 
             var iconGo = new GameObject("Icon");
-            iconGo.transform.SetParent(row.transform, false);
-            RunHudUiFactory.AddLayoutElement(iconGo, 18f).preferredWidth = 18f;
+            iconGo.transform.SetParent(cell.transform, false);
+            var iconLayout = RunHudUiFactory.AddLayoutElement(iconGo, 16f);
+            iconLayout.preferredWidth = 16f;
+            iconLayout.minWidth = 16f;
             var img = iconGo.AddComponent<Image>();
             img.preserveAspect = true;
             img.sprite = icon;
-            img.color = Color.white;
+            img.color = RunHudUiFactory.ColonistTextOnPanel;
 
             var text = RunHudUiFactory.CreateText(
-                row.transform,
+                cell.transform,
                 "Value",
-                "—",
+                "\u2014",
                 13,
                 TextAnchor.MiddleLeft,
                 RunHudUiFactory.ColonistTextOnPanel);
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
             var textLayout = text.gameObject.AddComponent<LayoutElement>();
-            textLayout.flexibleWidth = 1f;
+            textLayout.minWidth = 26f;
             _rows.Add((img, text));
         }
 

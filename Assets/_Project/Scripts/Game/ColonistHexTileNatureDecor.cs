@@ -137,7 +137,9 @@ namespace CatanRoguelike.Game
                 var pos = SamplePosition(hexScale, seed + 700 + i * 53, tokenClear, MaxPropRadiusFactor);
                 string sprite = sprites[PositiveMod(seed + i * 41, sprites.Length)];
                 float size = sprite == "clay_pit" ? 0.40f : sprite == "brick_kiln" ? 0.38f : 0.34f;
-                float yaw = sprite == "brick_kiln"
+                // Only the round clay mound spins freely: a brick pallet turned ~90° reads as a faint
+                // brick wall (v106 review), so stacks and kiln stay upright within ±12°.
+                float yaw = sprite != "clay_pit"
                     ? PositiveMod(seed + i * 91, 24) - 12f
                     : PositiveMod(seed + i * 91, 360);
                 PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, sprite, size,
@@ -206,7 +208,7 @@ namespace CatanRoguelike.Game
             }
 
             PlaceTopDown(hexRoot, propsRoot.transform, hexScale,
-                SamplePosition(hexScale, seed + 520, tokenClear, MaxPropRadiusFactor), "windmill", 0.32f,
+                SamplePosition(hexScale, seed + 520, tokenClear, MaxPropRadiusFactor), "windmill", 0.42f,
                 PositiveMod(seed + 521, 24) - 12f, "Windmill_0", tokenClear, maxR);
         }
 
