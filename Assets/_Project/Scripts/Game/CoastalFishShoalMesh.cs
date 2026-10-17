@@ -47,12 +47,14 @@ namespace CatanRoguelike.Game
             var mesh = new Mesh { name = "CoastalFishChevron" };
             mesh.vertices = vertices;
             // Convex hex fan from inland tip C (index 1).
+            // Both windings: Unlit/Color has no _Cull property, so a single winding is culled
+            // whenever the placement's left/right order faces away from the top-down camera.
             mesh.triangles = new[]
             {
-                1, 0, 5,
-                1, 5, 4,
-                1, 4, 3,
-                1, 3, 2
+                1, 0, 5, 1, 5, 0,
+                1, 5, 4, 1, 4, 5,
+                1, 4, 3, 1, 3, 4,
+                1, 3, 2, 1, 2, 3
             };
             mesh.uv = new[]
             {

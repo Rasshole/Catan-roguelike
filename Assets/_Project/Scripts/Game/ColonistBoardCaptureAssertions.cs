@@ -796,25 +796,32 @@ namespace CatanRoguelike.Game
 
                 float y = tile.ChipTopWorldY;
                 float bandT = SeaFrameSlotLayout.FishChevronBandThicknessFactor * hexScale;
-                var probeLeft = (placement.CoastArmLeft + placement.InlandTip) / 2f
-                    + placement.Outward * (bandT * 0.42f);
-                var probeRight = (placement.CoastArmRight + placement.InlandTip) / 2f
-                    + placement.Outward * (bandT * 0.42f);
-                var probeXz = (probeLeft + probeRight) / 2f;
-                var probeWorld = new Vector3(probeXz.X, y, probeXz.Z);
-                var pixel = ColonistCaptureProjection.WorldToTexturePixel(
-                    probeWorld, camera, tableCamera, textureWidth, textureHeight);
-
-                for (int dx = -4; dx <= 4; dx++)
+                // Probe the band arms (toward the outer corners), not the axis: the token covers the notch.
+                var probes = new[]
                 {
-                    for (int dy = -4; dy <= 4; dy++)
+                    placement.InlandTip + (placement.CoastArmLeft - placement.InlandTip) * 0.75f
+                        + placement.Outward * (bandT * 0.5f),
+                    placement.InlandTip + (placement.CoastArmRight - placement.InlandTip) * 0.75f
+                        + placement.Outward * (bandT * 0.5f)
+                };
+
+                foreach (var probeXz in probes)
+                {
+                    var probeWorld = new Vector3(probeXz.X, y, probeXz.Z);
+                    var pixel = ColonistCaptureProjection.WorldToTexturePixel(
+                        probeWorld, camera, tableCamera, textureWidth, textureHeight);
+
+                    for (int dx = -3; dx <= 3; dx++)
                     {
-                        int x = Mathf.Clamp(pixel.x + dx, 0, boardCapture.width - 1);
-                        int yPx = Mathf.Clamp(pixel.y + dy, 0, boardCapture.height - 1);
-                        Color c = boardCapture.GetPixel(x, yPx);
-                        waterSamples++;
-                        if (IsFishChevronLightBlue(c))
-                            waterHits++;
+                        for (int dy = -3; dy <= 3; dy++)
+                        {
+                            int x = Mathf.Clamp(pixel.x + dx, 0, boardCapture.width - 1);
+                            int yPx = Mathf.Clamp(pixel.y + dy, 0, boardCapture.height - 1);
+                            Color c = boardCapture.GetPixel(x, yPx);
+                            waterSamples++;
+                            if (IsFishChevronLightBlue(c))
+                                waterHits++;
+                        }
                     }
                 }
             }
