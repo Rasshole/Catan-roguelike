@@ -8,12 +8,21 @@ namespace CatanRoguelike.Game
     {
         public static GameObject CreateSheep(Transform parent, Vector3 localPos, float scale, int seed)
         {
-            var body = CreatePart(parent, "SheepBody", localPos, PrimitiveType.Sphere,
-                new Vector3(scale * 1.2f, scale * 0.85f, scale * 1.4f),
-                new Color(0.94f, 0.94f, 0.96f));
-            CreatePart(parent, "SheepHead", localPos + new Vector3(0f, scale * 0.2f, scale * 0.65f),
-                PrimitiveType.Sphere, Vector3.one * scale * 0.55f, new Color(0.92f, 0.92f, 0.94f));
-            body.transform.localRotation = Quaternion.Euler(0f, seed * 37f, 0f);
+            // Pivot so body + head turn together; a dark face and ears make it read as a sheep from
+            // above (the all-white head hid inside the body and the sheep looked like cotton blobs).
+            var pivot = new GameObject("Sheep");
+            pivot.transform.SetParent(parent, false);
+            pivot.transform.localPosition = localPos;
+            pivot.transform.localRotation = Quaternion.Euler(0f, seed * 37f, 0f);
+            var body = CreatePart(pivot.transform, "SheepBody", Vector3.zero, PrimitiveType.Sphere,
+                new Vector3(scale * 1.1f, scale * 0.85f, scale * 1.35f),
+                new Color(0.95f, 0.95f, 0.93f));
+            var face = new Color(0.20f, 0.18f, 0.18f);
+            CreatePart(pivot.transform, "SheepHead", new Vector3(0f, scale * 0.25f, scale * 0.72f),
+                PrimitiveType.Sphere, new Vector3(scale * 0.46f, scale * 0.46f, scale * 0.56f), face);
+            for (int side = -1; side <= 1; side += 2)
+                CreatePart(pivot.transform, "SheepEar", new Vector3(side * scale * 0.28f, scale * 0.32f, scale * 0.66f),
+                    PrimitiveType.Sphere, new Vector3(scale * 0.26f, scale * 0.10f, scale * 0.14f), face);
             return body;
         }
 

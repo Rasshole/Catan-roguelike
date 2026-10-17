@@ -33,6 +33,8 @@ namespace CatanRoguelike.Game
                 ResourceType.Wheat when name.Contains("flower") || name.Contains("petal") => Flower(),
                 ResourceType.Wheat => WheatGold(),
                 ResourceType.Sheep when name.Contains("fence") || name.Contains("plank") => TreeBark(),
+                // Pasture bushes kept their FBX 0.8-grey materials and rendered as white blobs.
+                ResourceType.Sheep => TreeLeaves(),
                 _ => null
             };
 
@@ -46,6 +48,12 @@ namespace CatanRoguelike.Game
             for (int i = 0; i < mats.Length; i++)
             {
                 string src = mats[i] != null ? mats[i].name.ToLowerInvariant() : string.Empty;
+                if (resource == ResourceType.Sheep && mat != TreeBark())
+                {
+                    mats[i] = src.Contains("flower") || src.Contains("petal") ? Flower() : mat;
+                    continue;
+                }
+
                 mats[i] = resource == ResourceType.Wood
                     ? (src.Contains("leaf") || src.Contains("leaves")
                         ? PickTreeLeafMaterial(renderer)
