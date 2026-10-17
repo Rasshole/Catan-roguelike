@@ -155,7 +155,7 @@ namespace CatanRoguelike.Tests.PlayMode
                         bMaxY = Mathf.Max(bMaxY, p.y);
                     }
                 }
-              }
+            }
 
             fanMinX -= padding;
             fanMaxX += padding;
