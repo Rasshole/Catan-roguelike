@@ -265,36 +265,43 @@ namespace CatanRoguelike.Game
             float y,
             float bisectorOffset)
         {
-            Vector3 bisector = ComputeCoastCornerSeaBisector(board, portVertex, coastCorner, hexScale);
-            return new Vector3(coastCorner.X, y, coastCorner.Z) + bisector * bisectorOffset;
+            // Start the plank off the coast corner along the outward normal n (away from the land
+            // hexes that meet at THIS corner). The land wedge edges make 60° with n for both 1- and
+            // 2-hex corners, so a start corner offset ±halfWidth clears them when
+            // d * sin(60°) >= halfWidth + margin.
+            const float margin = 0.02f;
+            float halfWidth = SeaSlotPlankWidth * 0.5f;
+            float d = Mathf.Max(bisectorOffset, (halfWidth + margin) / Mathf.Sin(60f * Mathf.Deg2Rad));
+            Vector3 n = ComputeCoastCornerSeaBisector(board, coastCorner, hexScale);
+            return new Vector3(coastCorner.X, y, coastCorner.Z) + n * d;
         }
 
+        /// <summary>
+        /// Outward normal at a coast corner: away from the centroid of the land hexes touching that
+        /// corner. (Previously used the port vertex's hexes for both corners, which pointed the
+        /// non-port corner's offset along the wrong bisector, into land.)
+        /// </summary>
         private static Vector3 ComputeCoastCornerSeaBisector(
             BoardState board,
-            Vertex portVertex,
             MapPlaneXz coastCorner,
             float hexScale)
         {
             Vector3 sum = Vector3.zero;
-            foreach (var hex in VertexGraph.GetHexesForVertex(portVertex))
+            int count = 0;
+            float touch = hexScale * HexMath.OuterRadius * 1.01f;
+            foreach (var hex in board.Tiles.Keys)
             {
-                if (!board.Tiles.ContainsKey(hex))
-                    continue;
                 var (cx, cz) = HexMath.ToWorldPosition(hex, hexScale);
-                sum += new Vector3(coastCorner.X - cx, 0f, coastCorner.Z - cz);
+                var away = new Vector3(coastCorner.X - cx, 0f, coastCorner.Z - cz);
+                if (away.magnitude > touch)
+                    continue;
+                sum += away.normalized;
+                count++;
             }
 
-            if (sum.sqrMagnitude < 1e-8f)
+            if (count == 0 || sum.sqrMagnitude < 1e-8f)
                 return Vector3.forward;
             return sum.normalized;
-        }
-
-        private static Vector3 PierPlankStartInSea(Vector3 coast, Vector3 badge, float inset)
-        {
-            Vector3 towardSea = badge - coast;
-            if (towardSea.sqrMagnitude < 1e-8f)
-                return coast;
-            return coast + towardSea.normalized * inset;
         }
 
         private static Vector3 RimPointToward(Vector3 badgeCenter, Vector3 toward, float radius)
