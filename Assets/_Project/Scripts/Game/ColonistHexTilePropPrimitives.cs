@@ -104,17 +104,6 @@ namespace CatanRoguelike.Game
             }
         }
 
-        public static void CreateKiln(Transform parent, Vector3 localPos, float hexScale)
-        {
-            float s = hexScale * 0.30f;
-            CreatePart(parent, "Kiln", localPos + Vector3.up * s * 0.45f, PrimitiveType.Cylinder,
-                new Vector3(s, s * 0.9f, s),
-                new Color(0.48f, 0.26f, 0.18f));
-            CreatePart(parent, "Chimney", localPos + Vector3.up * (s * 1.35f), PrimitiveType.Cylinder,
-                new Vector3(s * 0.28f, s * 0.85f, s * 0.28f),
-                new Color(0.18f, 0.18f, 0.20f));
-        }
-
         public static void CreateRockPile(Transform parent, Vector3 localPos, float hexScale)
         {
             var pile = new GameObject("RockPile");

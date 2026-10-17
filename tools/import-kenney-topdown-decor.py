@@ -484,12 +484,11 @@ def main() -> None:
         save("wheat_sheaf.png", make_wheat_sheaf(zf))
         save("tree_cluster_a.png", make_tree_cluster(zf, R + "Tile/medievalTile_44.png"))  # cypress clump
         save("tree_cluster_b.png", make_tree_cluster(zf, R + "Tile/medievalTile_48.png"))  # pine clump
-    save("windmill.png", make_windmill_board())
+        save("windmill.png", make_windmill_kenney(zf))
     save("brick_stack.png", make_brick_pallet())
     save("brick_crates.png", make_brick_pallet())
     save("mountain_peak.png", make_peak())
     save("wheat_rows.png", make_wheat_rows())
-    save("brick_kiln.png", make_brick_kiln())
     save("cactus_tall.png", make_cactus(True))
     save("pond_reed.png", make_pond_reed())
     save("cactus_short.png", make_cactus(False))

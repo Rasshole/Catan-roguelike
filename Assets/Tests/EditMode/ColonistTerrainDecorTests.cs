@@ -1,5 +1,6 @@
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Game;
 using NUnit.Framework;
@@ -42,12 +43,16 @@ namespace CatanRoguelike.Tests
                     Assert.IsNotNull(props, $"Desert hex {tile.Coord} should spawn TileNatureProps.");
                     Assert.GreaterOrEqual(
                         ColonistHexTileNatureDecor.CountDescendantsNamed(props, "Cactus"),
-                        8,
+                        5,
                         $"Desert hex {tile.Coord} needs cacti around pond/token (found cactus parts).");
                     Assert.GreaterOrEqual(
                         ColonistHexTileNatureDecor.CountDescendantsNamed(props, "DesertRock"),
-                        4,
+                        3,
                         $"Desert hex {tile.Coord} needs desert rocks.");
+                    Assert.GreaterOrEqual(
+                        ColonistHexTileNatureDecor.CountDecorProps(props),
+                        10,
+                        $"Desert hex {tile.Coord} should use the full decor template.");
                     Object.DestroyImmediate(hexGo);
                     continue;
                 }
@@ -57,15 +62,18 @@ namespace CatanRoguelike.Tests
                 {
                     case ResourceType.Brick:
                         sawBrick = true;
-                        Assert.GreaterOrEqual(count, 10, $"Brick hex {tile.Coord} needs clay/brick props (found {count}).");
                         Assert.AreEqual(
-                            0,
-                            ColonistHexTileNatureDecor.CountDescendantsNamed(props, "kiln"),
-                            $"Brick hex {tile.Coord} should not use kiln/oven props.");
+                            ColonistHexTileDecorTemplates.Brick.Count,
+                            count,
+                            $"Brick hex {tile.Coord} should use the brick decor template (found {count}).");
+                        AssertBrickHasNoKilnLikeProps(props, tile.Coord);
                         break;
                     case ResourceType.Stone:
                         sawStone = true;
-                        Assert.GreaterOrEqual(count, 10, $"Stone hex {tile.Coord} needs boulder props (found {count}).");
+                        Assert.AreEqual(
+                            ColonistHexTileDecorTemplates.Stone.Count,
+                            count,
+                            $"Stone hex {tile.Coord} should use the stone decor template (found {count}).");
                         Assert.AreEqual(
                             0,
                             ColonistHexTileNatureDecor.CountDescendantsNamed(props, "Peak"),
@@ -73,11 +81,21 @@ namespace CatanRoguelike.Tests
                         break;
                     case ResourceType.Wheat:
                         sawWheat = true;
-                        Assert.GreaterOrEqual(count, 12, $"Wheat hex {tile.Coord} needs field props (found {count}).");
+                        Assert.AreEqual(
+                            ColonistHexTileDecorTemplates.Wheat.Count,
+                            count,
+                            $"Wheat hex {tile.Coord} should use the wheat decor template (found {count}).");
+                        Assert.GreaterOrEqual(
+                            ColonistHexTileNatureDecor.CountDescendantsNamed(props, "windmill"),
+                            1,
+                            $"Wheat hex {tile.Coord} should include the Kenney windmill.");
                         break;
                     case ResourceType.Sheep:
                         sawSheep = true;
-                        Assert.GreaterOrEqual(count, 14, $"Sheep hex {tile.Coord} needs flock props (found {count}).");
+                        Assert.AreEqual(
+                            ColonistHexTileDecorTemplates.Sheep.Count,
+                            count,
+                            $"Sheep hex {tile.Coord} should use the sheep decor template (found {count}).");
                         break;
                 }
 
@@ -100,6 +118,18 @@ namespace CatanRoguelike.Tests
             Assert.IsTrue(
                 sawBrick && sawStone && sawWheat && sawSheep && sawDesert,
                 "Large map should include all productive terrains and desert.");
+        }
+        private static void AssertBrickHasNoKilnLikeProps(Transform props, HexCoord coord)
+        {
+            foreach (var t in props.GetComponentsInChildren<Transform>(true))
+            {
+                string lower = t.name.ToLowerInvariant();
+                if (lower.Contains("kiln") || lower.Contains("oven") || lower.Contains("smelter")
+                    || lower.Contains("furnace"))
+                {
+                    Assert.Fail($"Brick hex {coord} should not contain kiln-like prop '{t.name}'.");
+                }
+            }
         }
     }
 }

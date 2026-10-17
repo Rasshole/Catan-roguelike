@@ -104,25 +104,10 @@ namespace CatanRoguelike.Game
             if (data.IsFishTile)
                 tokenClear = Mathf.Max(tokenClear, hexScale * HexMath.OuterRadius * 2f * 0.35f * 0.59f + hexScale * 0.04f);
 
-            int cactusTarget = 8 + PositiveMod(seed, 3);
-            float maxR = MaxPropCenterRadius(hexScale);
-            for (int c = 0; c < cactusTarget; c++)
-            {
-                var pos = SamplePosition(hexScale, seed + 300 + c * 61, tokenClear, MaxPropRadiusFactor);
-                string sprite = PositiveMod(seed + c, 2) == 0 ? "cactus_tall" : "cactus_short";
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, sprite, 0.30f,
-                    PositiveMod(seed + c * 91, 24) - 12f, $"Cactus_{sprite}_{c}", tokenClear, maxR);
-            }
-
-            for (int r = 0; r < 4 + PositiveMod(seed, 2); r++)
-            {
-                var pos = SamplePosition(hexScale, seed + 360 + r * 71, tokenClear, MaxPropRadiusFactor);
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, "desert_rock", 0.26f,
-                    PositiveMod(seed + r * 113, 360), $"DesertRock_{r}", tokenClear, maxR);
-            }
-
-            ScatterModels(hexRoot, propsRoot, hexScale, seed + 900, 5 + PositiveMod(seed, 2),
-                new[] { "Bush", "Bush_Small_Flowers", "Bush" }, 0.14f, 0.20f, tokenClear, ResourceType.Sheep);
+            var template = data.IsFishTile
+                ? ColonistHexTileDecorTemplates.DesertFishPond
+                : ColonistHexTileDecorTemplates.Desert;
+            ApplyDecorTemplate(hexRoot, propsRoot, hexScale, seed, tokenClear, template, ResourceType.Sheep);
         }
 
         private static void ApplyBrick(
@@ -130,143 +115,90 @@ namespace CatanRoguelike.Game
             GameObject propsRoot,
             float hexScale,
             int seed,
-            float tokenClear)
-        {
-            int target = 10 + PositiveMod(seed, 3);
-            float maxR = MaxPropCenterRadius(hexScale);
-            string[] sprites = { "clay_pit", "clay_pit", "clay_pit", "brick_stack", "brick_stack", "brick_stack" };
-            for (int i = 0; i < target; i++)
-            {
-                var pos = SamplePosition(hexScale, seed + 700 + i * 53, tokenClear, MaxPropRadiusFactor);
-                string sprite = sprites[PositiveMod(seed + i * 41, sprites.Length)];
-                float size = sprite == "clay_pit" ? Mathf.Lerp(0.36f, 0.44f, Hash01(seed + i * 29)) : 0.32f;
-                // Only the round clay mound spins freely: a brick pallet turned ~90° reads as a faint
-                // brick wall (v106 review), so stacks stay upright within ±12°.
-                float yaw = sprite != "clay_pit"
-                    ? PositiveMod(seed + i * 91, 24) - 12f
-                    : PositiveMod(seed + i * 91, 360);
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, sprite, size,
-                    yaw, $"BrickProp_{sprite}_{i}", tokenClear, maxR);
-            }
-        }
+            float tokenClear) =>
+            ApplyDecorTemplate(
+                hexRoot, propsRoot, hexScale, seed, tokenClear,
+                ColonistHexTileDecorTemplates.Brick, ResourceType.Brick);
 
         private static void ApplyStone(
             GameObject hexRoot,
             GameObject propsRoot,
             float hexScale,
             int seed,
-            float tokenClear)
-        {
-            int boulderTarget = 10 + PositiveMod(seed, 4);
-            float maxR = MaxPropCenterRadius(hexScale);
-            string[] rocks = { "rock_cluster_a", "rock_cluster_b", "rock_cluster_c" };
-            for (int i = 0; i < boulderTarget; i++)
-            {
-                var pos = SamplePosition(hexScale, seed + 800 + i * 67, tokenClear, MaxPropRadiusFactor);
-                string sprite = rocks[PositiveMod(seed + i * 37, rocks.Length)];
-                float size = Mathf.Lerp(0.26f, 0.40f, Hash01(seed + i * 41));
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, sprite, size,
-                    PositiveMod(seed + i * 113, 360), $"StoneBoulder_{i}", tokenClear, maxR);
-            }
-        }
+            float tokenClear) =>
+            ApplyDecorTemplate(
+                hexRoot, propsRoot, hexScale, seed, tokenClear,
+                ColonistHexTileDecorTemplates.Stone, ResourceType.Stone);
 
         private static void ApplyWheat(
             GameObject hexRoot,
             GameObject propsRoot,
             float hexScale,
             int seed,
-            float tokenClear)
-        {
-            float maxR = MaxPropCenterRadius(hexScale);
-            string[] fields = { "wheat_field_a", "wheat_field_b", "wheat_field_c" };
-            int fieldPatches = 7 + PositiveMod(seed, 3);
-            for (int r = 0; r < fieldPatches; r++)
-            {
-                var pos = SamplePosition(hexScale, seed + 400 + r * 59, tokenClear, MaxPropRadiusFactor);
-                string fieldSprite = fields[PositiveMod(seed + r, fields.Length)];
-                float size = Mathf.Lerp(0.30f, 0.42f, Hash01(seed + r * 29));
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, fieldSprite, size,
-                    PositiveMod(seed + r * 40, 360), $"WheatField_{r}", tokenClear, maxR);
-            }
-
-            for (int row = 0; row < 4; row++)
-            {
-                var pos = SamplePosition(hexScale, seed + 430 + row * 61, tokenClear, MaxPropRadiusFactor);
-                float size = Mathf.Lerp(0.34f, 0.46f, Hash01(seed + row * 23));
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, "wheat_rows", size,
-                    PositiveMod(seed + row * 47, 360), $"WheatRows_{row}", tokenClear, maxR);
-            }
-
-            for (int s = 0; s < 5; s++)
-            {
-                var pos = SamplePosition(hexScale, seed + 460 + s * 63, tokenClear, MaxPropRadiusFactor);
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, "wheat_sheaf",
-                    Mathf.Lerp(0.32f, 0.44f, Hash01(seed + s * 31)),
-                    PositiveMod(seed + 461 + s * 17, 360), $"WheatSheaf_{s}", tokenClear, maxR);
-            }
-
-            PlaceTopDown(hexRoot, propsRoot.transform, hexScale,
-                SamplePosition(hexScale, seed + 520, tokenClear, MaxPropRadiusFactor), "windmill", 0.50f,
-                PositiveMod(seed + 521, 24) - 12f, "Windmill_0", tokenClear, maxR);
-        }
+            float tokenClear) =>
+            ApplyDecorTemplate(
+                hexRoot, propsRoot, hexScale, seed, tokenClear,
+                ColonistHexTileDecorTemplates.Wheat, ResourceType.Wheat);
 
         private static void ApplySheep(
             GameObject hexRoot,
             GameObject propsRoot,
             float hexScale,
             int seed,
-            float tokenClear)
+            float tokenClear) =>
+            ApplyDecorTemplate(
+                hexRoot, propsRoot, hexScale, seed, tokenClear,
+                ColonistHexTileDecorTemplates.Sheep, ResourceType.Sheep);
+
+        private static void ApplyDecorTemplate(
+            GameObject hexRoot,
+            GameObject propsRoot,
+            float hexScale,
+            int seed,
+            float tokenClear,
+            IReadOnlyList<ColonistHexTileDecorTemplates.Slot> template,
+            ResourceType natureStyle)
         {
-            ScatterModels(hexRoot, propsRoot, hexScale, seed, 8 + PositiveMod(seed, 3), BushModels, 0.16f, 0.28f,
-                tokenClear, ResourceType.Sheep);
             float maxR = MaxPropCenterRadius(hexScale);
-            var fencePositions = new List<Vector3>(3);
-            for (int f = 0; f < 3; f++)
+            float templateRot = PositiveMod(seed, 6) * 60f;
+            for (int i = 0; i < template.Count; i++)
             {
-                var fencePos = SamplePosition(hexScale, seed + 600 + f * 40, tokenClear, MaxPropRadiusFactor);
-                fencePositions.Add(fencePos);
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, fencePos, "fence",
-                    Mathf.Lerp(0.36f, 0.46f, Hash01(seed + f * 11)), PositiveMod(seed + f * 17, 24) - 12f,
-                    $"SheepFence_{f}", tokenClear, maxR);
-            }
+                var slot = template[i];
+                Vector2 flat = ColonistHexTileDecorTemplates.LocalPositionHex(slot, templateRot, seed + i * 17);
+                var localXZ = new Vector3(flat.x * hexScale, 0f, flat.y * hexScale);
+                if (new Vector2(localXZ.x, localXZ.z).magnitude > maxR + hexScale * 0.02f)
+                    continue;
 
-            float fenceKeepOut = hexScale * 0.28f;
-            int sheepCount = 8 + PositiveMod(seed, 3);
-            for (int s = 0; s < sheepCount; s++)
-            {
-                Vector3 pos = Vector3.zero;
-                bool found = false;
-                for (int attempt = 0; attempt < 16; attempt++)
+                switch (slot.Kind)
                 {
-                    pos = SamplePosition(hexScale, seed + 500 + s * 71 + attempt * 19, tokenClear, MaxPropRadiusFactor);
-                    var flat = new Vector2(pos.x, pos.z);
-                    bool clearOfFences = true;
-                    foreach (var fence in fencePositions)
+                    case ColonistHexTileDecorTemplates.SlotKind.TopDownSprite:
                     {
-                        if (Vector2.Distance(flat, new Vector2(fence.x, fence.z)) < fenceKeepOut)
-                        {
-                            clearOfFences = false;
-                            break;
-                        }
+                        float yaw = slot.YawDeg;
+                        if (slot.Asset == "clay_pit" || slot.Asset == "windmill")
+                            yaw += templateRot;
+                        else if (slot.Asset == "fence" || slot.Asset == "brick_stack")
+                            yaw += PositiveMod(seed + i * 91, 24) - 12f;
+                        else
+                            yaw += templateRot * 0.25f;
+                        string objectName = $"{slot.Asset}_{i}";
+                        PlaceTopDown(hexRoot, propsRoot.transform, hexScale, localXZ, slot.Asset, slot.DiameterHex,
+                            yaw, objectName, tokenClear, maxR);
+                        break;
                     }
-
-                    if (clearOfFences)
+                    case ColonistHexTileDecorTemplates.SlotKind.NatureModel:
+                        TryPlaceNatureModel(hexRoot, propsRoot.transform, hexScale, slot.Asset, localXZ,
+                            slot.ModelScale, templateRot + slot.YawDeg, natureStyle, i);
+                        break;
+                    case ColonistHexTileDecorTemplates.SlotKind.SheepFlock:
                     {
-                        found = true;
+                        float lift = HexPrismMesh.TopY + LiftAboveTop;
+                        float sheepScale = hexScale * slot.ModelScale;
+                        PlacePrimitive(hexRoot, propsRoot.transform, localXZ + Vector3.up * lift, hexScale,
+                            parent => ColonistHexTilePropPrimitives.CreateSheep(
+                                parent, Vector3.zero, sheepScale, seed + i));
                         break;
                     }
                 }
-
-                if (!found)
-                    continue;
-
-                float lift = HexPrismMesh.TopY + LiftAboveTop + s * 0.008f;
-                float sheepScale = hexScale * Mathf.Lerp(0.20f, 0.24f, Hash01(seed + s * 41));
-                PlacePrimitive(hexRoot, propsRoot.transform,
-                    pos + Vector3.up * lift, hexScale,
-                    parent =>
-                        ColonistHexTilePropPrimitives.CreateSheep(
-                            parent, Vector3.zero, sheepScale, seed + s));
             }
         }
 
