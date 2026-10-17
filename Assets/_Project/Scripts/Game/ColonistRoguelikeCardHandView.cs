@@ -78,7 +78,7 @@ namespace CatanRoguelike.Game
             _fanRoot.pivot = new Vector2(0.5f, 0f);
             // Centre the fan under the board (play-area centre), not the band centre: the band
             // starts after the resource hand, which pushed the fan right of the board.
-            _fanRoot.anchoredPosition = new Vector2(-(RunHudLayout.ColonistResourceHandWidth + RunHudLayout.Margin) * 0.5f, 20f);
+            _fanRoot.anchoredPosition = new Vector2(-(RunHudLayout.ColonistResourceHandWidth + RunHudLayout.Margin) * 0.5f, 6f);
             _fanRoot.sizeDelta = new Vector2(640f, ColonistRoguelikeCardHandLayout.CardHeight + 40f);
         }
 
@@ -337,7 +337,10 @@ namespace CatanRoguelike.Game
                 _cost.text = $"{CategoryLabelEnglish(def.Category)} · Night";
                 var rgb = CardVisualStyle.GetCategoryColor(def.Category);
                 _accent.color = new Color(rgb.R, rgb.G, rgb.B, 1f);
-                _icon.color = new Color(rgb.R, rgb.G, rgb.B, 0.35f);
+                var sprite = ColonistRoguelikeCardArt.GetIcon(def.Id);
+                _icon.sprite = sprite;
+                _icon.color = sprite != null ? Color.white : new Color(rgb.R, rgb.G, rgb.B, 0.35f);
+                _icon.preserveAspect = true;
                 _drag.Configure(index, hover, play);
             }
         }

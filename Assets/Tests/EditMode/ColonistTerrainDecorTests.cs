@@ -17,7 +17,7 @@ namespace CatanRoguelike.Tests
         {
             var board = MapPresets.CreateBoard(MapSize.Large, seed: 77);
             float keepOut = HexTileView.TokenWorldFaceDiameter * 0.5f + TestHexScale * 0.08f;
-            float maxCenter = TestHexScale * 0.70f;
+            float keepOutHex = keepOut / TestHexScale;
             bool sawBrick = false;
             bool sawStone = false;
             bool sawWheat = false;
@@ -96,19 +96,25 @@ namespace CatanRoguelike.Tests
                             ColonistHexTileDecorTemplates.Sheep.Count,
                             count,
                             $"Sheep hex {tile.Coord} should use the sheep decor template (found {count}).");
+                        Assert.GreaterOrEqual(
+                            ColonistHexTileNatureDecor.CountDescendantsNamed(props, "Sheep"),
+                            6,
+                            $"Sheep hex {tile.Coord} should flock at least six sheep.");
                         break;
                 }
 
                 foreach (Transform child in props)
                 {
-                    var flat = new Vector2(child.localPosition.x, child.localPosition.z);
-                    if (flat.sqrMagnitude < 0.0001f)
+                    var flatHex = new Vector2(child.localPosition.x / TestHexScale, child.localPosition.z / TestHexScale);
+                    if (flatHex.sqrMagnitude < 0.0001f)
                         continue;
-                    Assert.LessOrEqual(flat.magnitude, maxCenter + 0.03f,
-                        $"Prop {child.name} on {tile.Coord} should stay within 0.70 hex cap.");
+                    Assert.GreaterOrEqual(
+                        ColonistHexTileDecorTemplates.DistanceToHexBoundary(flatHex),
+                        -0.02f,
+                        $"Prop {child.name} on {tile.Coord} center should stay inside the hex outline.");
                     if (!ColonistHexTileNatureDecor.IsForestTreePropName(child.name))
                         continue;
-                    Assert.GreaterOrEqual(flat.magnitude, keepOut - 0.03f,
+                    Assert.GreaterOrEqual(flatHex.magnitude, keepOutHex - 0.03f,
                         $"Tree {child.name} on {tile.Coord} should clear token keep-out.");
                 }
 

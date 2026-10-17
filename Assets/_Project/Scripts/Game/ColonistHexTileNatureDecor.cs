@@ -12,6 +12,7 @@ namespace CatanRoguelike.Game
         private const string NatureModelRoot = "Art/Models/Nature";
         private const float LiftAboveTop = 0.04f;
         private const float MaxPropRadiusFactor = 0.65f;
+        private const float TemplateMaxCenterRadiusHex = 0.92f;
         private static readonly string[] ForestTreeSprites =
             { "tree_canopy_b", "tree_canopy_c", "tree_canopy_b", "tree_canopy_c", "tree_canopy_b" };
         private static readonly string[] BushModels = { "Bush_Flowers", "Bush", "Bush_Small_Flowers", "Bush_Large" };
@@ -159,15 +160,19 @@ namespace CatanRoguelike.Game
             IReadOnlyList<ColonistHexTileDecorTemplates.Slot> template,
             ResourceType natureStyle)
         {
-            float maxR = MaxPropCenterRadius(hexScale);
+            // Template slots are validated on the flat-top hex outline (ring B ~0.76); the old 0.70 circular cap clipped corners.
+            float maxR = hexScale * TemplateMaxCenterRadiusHex;
+            float tokenKeepOutHex = tokenClear / hexScale;
             float templateRot = PositiveMod(seed, 6) * 60f;
             for (int i = 0; i < template.Count; i++)
             {
                 var slot = template[i];
                 Vector2 flat = ColonistHexTileDecorTemplates.LocalPositionHex(slot, templateRot, seed + i * 17);
-                var localXZ = new Vector3(flat.x * hexScale, 0f, flat.y * hexScale);
-                if (new Vector2(localXZ.x, localXZ.z).magnitude > maxR + hexScale * 0.02f)
+                float footprintHex = ColonistHexTileDecorTemplates.VisibleFootprintRadiusHex(slot);
+                if (!ColonistHexTileDecorTemplates.CanPlaceSlot(flat, footprintHex, tokenKeepOutHex))
                     continue;
+
+                var localXZ = new Vector3(flat.x * hexScale, 0f, flat.y * hexScale);
 
                 switch (slot.Kind)
                 {

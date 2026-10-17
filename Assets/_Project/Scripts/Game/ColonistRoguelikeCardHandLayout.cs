@@ -6,11 +6,11 @@ namespace CatanRoguelike.Game
     /// <summary>Fan geometry for the colonist roguelike card hand (screen-space).</summary>
     public static class ColonistRoguelikeCardHandLayout
     {
-        public const float CardWidth = 108f;
-        public const float CardHeight = 144f;
-        public const float HorizontalStep = 68f; // 44 left only ~40 px of each card visible (titles cut to "Kni")
+        public const float CardWidth = 92f;
+        public const float CardHeight = 122f;
+        public const float HorizontalStep = 58f;
         public const float RotationPerCard = 5f;
-        public const float ArcDropPerStep = 3.5f;
+        public const float ArcDropPerStep = 2.5f;
         public const float HoverLift = 28f;
         public const float HoverScale = 1.12f;
 

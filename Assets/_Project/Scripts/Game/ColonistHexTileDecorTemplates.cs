@@ -5,12 +5,15 @@ using UnityEngine;
 
 namespace CatanRoguelike.Game
 {
-    /// <summary>Hand-authored decor slot layouts (one prop per slot, no overlap).</summary>
+    /// <summary>Hand-authored decor slot layouts on two hex rings (edge-mid / corner).</summary>
     public static class ColonistHexTileDecorTemplates
     {
-        public const float MaxCenterRadiusFactor = 0.70f;
+        public const float RingARadiusHex = 0.58f;
+        public const float RingBRadiusHex = 0.76f;
+        public const float FootprintScale = 0.42f;
         public const float FootprintGapHex = 0.05f;
         public const float MaxJitterHex = 0.02f;
+        private const float HexHalfWidth = 0.8660254f;
 
         public enum SlotKind
         {
@@ -34,7 +37,7 @@ namespace CatanRoguelike.Game
                 float radiusHex,
                 SlotKind kind,
                 string asset,
-                float diameterHex = 0.30f,
+                float diameterHex = 0.26f,
                 float yawDeg = 0f,
                 float modelScale = 0.20f)
             {
@@ -46,10 +49,6 @@ namespace CatanRoguelike.Game
                 YawDeg = yawDeg;
                 ModelScale = modelScale;
             }
-
-            public float FootprintRadiusHex => Kind == SlotKind.NatureModel || Kind == SlotKind.SheepFlock
-                ? ModelScale * 0.80f
-                : DiameterHex * 0.5f;
         }
 
         public static IReadOnlyList<Slot> Wheat => WheatSlots;
@@ -61,90 +60,110 @@ namespace CatanRoguelike.Game
 
         private static readonly Slot[] WheatSlots =
         {
-            new(0f, 0.54f, SlotKind.TopDownSprite, "wheat_field_a", 0.30f),
-            new(90f, 0.54f, SlotKind.TopDownSprite, "wheat_field_b", 0.30f),
-            new(180f, 0.54f, SlotKind.TopDownSprite, "wheat_field_c", 0.30f),
-            new(270f, 0.54f, SlotKind.TopDownSprite, "wheat_field_a", 0.30f),
-            new(50f, 0.44f, SlotKind.TopDownSprite, "wheat_sheaf", 0.28f),
-            new(230f, 0.44f, SlotKind.TopDownSprite, "wheat_sheaf", 0.28f),
-            new(305f, 0.48f, SlotKind.TopDownSprite, "windmill", 0.42f, -8f),
-            new(155f, 0.50f, SlotKind.TopDownSprite, "wheat_rows", 0.28f),
-            new(335f, 0.50f, SlotKind.TopDownSprite, "wheat_rows", 0.28f)
+            RingASlot(0, SlotKind.TopDownSprite, "wheat_field_a", 0.27f),
+            RingASlot(1, SlotKind.TopDownSprite, "wheat_field_b", 0.27f),
+            RingASlot(2, SlotKind.TopDownSprite, "wheat_field_c", 0.27f),
+            RingASlot(3, SlotKind.TopDownSprite, "wheat_rows", 0.27f),
+            RingASlot(4, SlotKind.TopDownSprite, "wheat_field_a", 0.27f),
+            RingASlot(5, SlotKind.TopDownSprite, "wheat_sheaf", 0.24f),
+            RingBSlot(0, SlotKind.TopDownSprite, "wheat_rows", 0.22f),
+            RingBSlot(1, SlotKind.TopDownSprite, "wheat_field_b", 0.22f),
+            RingBSlot(2, SlotKind.TopDownSprite, "wheat_sheaf", 0.22f),
+            RingBSlot(3, SlotKind.TopDownSprite, "wheat_field_c", 0.22f),
+            RingBSlot(4, SlotKind.TopDownSprite, "wheat_field_a", 0.22f),
+            RingBSlot(5, SlotKind.TopDownSprite, "windmill", 0.34f, -8f)
         };
 
         private static readonly Slot[] BrickSlots =
         {
-            new(0f, 0.52f, SlotKind.TopDownSprite, "clay_pit", 0.36f),
-            new(60f, 0.52f, SlotKind.TopDownSprite, "brick_stack", 0.28f, -6f),
-            new(120f, 0.52f, SlotKind.TopDownSprite, "clay_pit", 0.34f),
-            new(180f, 0.52f, SlotKind.TopDownSprite, "brick_stack", 0.28f, 6f),
-            new(240f, 0.52f, SlotKind.TopDownSprite, "clay_pit", 0.36f),
-            new(300f, 0.52f, SlotKind.TopDownSprite, "brick_stack", 0.28f, -4f),
-            new(30f, 0.42f, SlotKind.TopDownSprite, "brick_stack", 0.26f, 8f),
-            new(90f, 0.42f, SlotKind.TopDownSprite, "clay_pit", 0.32f),
-            new(210f, 0.42f, SlotKind.TopDownSprite, "clay_pit", 0.32f),
-            new(270f, 0.42f, SlotKind.TopDownSprite, "brick_stack", 0.26f, -8f)
+            RingASlot(0, SlotKind.TopDownSprite, "clay_pit", 0.27f),
+            RingASlot(1, SlotKind.TopDownSprite, "brick_stack", 0.26f, -6f),
+            RingASlot(2, SlotKind.TopDownSprite, "clay_pit", 0.27f),
+            RingASlot(3, SlotKind.TopDownSprite, "brick_stack", 0.26f, 6f),
+            RingASlot(4, SlotKind.TopDownSprite, "clay_pit", 0.27f),
+            RingASlot(5, SlotKind.TopDownSprite, "brick_stack", 0.26f, -4f),
+            RingBSlot(0, SlotKind.TopDownSprite, "brick_stack", 0.22f, 8f),
+            RingBSlot(1, SlotKind.TopDownSprite, "clay_pit", 0.24f),
+            RingBSlot(2, SlotKind.TopDownSprite, "brick_stack", 0.22f, -8f),
+            RingBSlot(3, SlotKind.TopDownSprite, "clay_pit", 0.24f),
+            RingBSlot(4, SlotKind.TopDownSprite, "brick_stack", 0.22f, 4f),
+            RingBSlot(5, SlotKind.TopDownSprite, "clay_pit", 0.24f)
         };
 
         private static readonly Slot[] StoneSlots =
         {
-            new(0f, 0.52f, SlotKind.TopDownSprite, "rock_cluster_a", 0.30f),
-            new(60f, 0.52f, SlotKind.TopDownSprite, "rock_cluster_b", 0.28f),
-            new(120f, 0.52f, SlotKind.TopDownSprite, "rock_cluster_c", 0.30f),
-            new(180f, 0.52f, SlotKind.TopDownSprite, "rock_cluster_a", 0.28f),
-            new(240f, 0.52f, SlotKind.TopDownSprite, "rock_cluster_b", 0.30f),
-            new(300f, 0.52f, SlotKind.TopDownSprite, "rock_cluster_c", 0.28f),
-            new(30f, 0.42f, SlotKind.TopDownSprite, "rock_cluster_b", 0.26f),
-            new(90f, 0.42f, SlotKind.TopDownSprite, "rock_cluster_c", 0.28f),
-            new(210f, 0.42f, SlotKind.TopDownSprite, "rock_cluster_a", 0.28f),
-            new(270f, 0.42f, SlotKind.TopDownSprite, "rock_cluster_c", 0.26f)
+            RingASlot(0, SlotKind.TopDownSprite, "rock_cluster_a", 0.27f),
+            RingASlot(1, SlotKind.TopDownSprite, "rock_cluster_b", 0.26f),
+            RingASlot(2, SlotKind.TopDownSprite, "rock_cluster_c", 0.27f),
+            RingASlot(3, SlotKind.TopDownSprite, "rock_cluster_a", 0.26f),
+            RingASlot(4, SlotKind.TopDownSprite, "rock_cluster_b", 0.27f),
+            RingASlot(5, SlotKind.TopDownSprite, "rock_cluster_c", 0.26f),
+            RingBSlot(0, SlotKind.TopDownSprite, "rock_cluster_b", 0.22f),
+            RingBSlot(1, SlotKind.TopDownSprite, "rock_cluster_c", 0.22f),
+            RingBSlot(2, SlotKind.TopDownSprite, "rock_cluster_a", 0.22f),
+            RingBSlot(3, SlotKind.TopDownSprite, "rock_cluster_c", 0.22f),
+            RingBSlot(4, SlotKind.TopDownSprite, "rock_cluster_a", 0.22f),
+            RingBSlot(5, SlotKind.TopDownSprite, "rock_cluster_b", 0.22f)
         };
 
         private static readonly Slot[] SheepSlots =
         {
-            new(0f, 0.52f, SlotKind.NatureModel, "Bush_Flowers", modelScale: 0.20f),
-            new(60f, 0.52f, SlotKind.NatureModel, "Bush", modelScale: 0.18f),
-            new(120f, 0.52f, SlotKind.NatureModel, "Bush_Small_Flowers", modelScale: 0.17f),
-            new(180f, 0.52f, SlotKind.NatureModel, "Bush_Large", modelScale: 0.21f),
-            new(240f, 0.52f, SlotKind.NatureModel, "Bush", modelScale: 0.18f),
-            new(300f, 0.52f, SlotKind.NatureModel, "Bush_Flowers", modelScale: 0.20f),
-            new(40f, 0.44f, SlotKind.TopDownSprite, "fence", 0.38f, -10f),
-            new(220f, 0.44f, SlotKind.TopDownSprite, "fence", 0.36f, 10f),
-            new(100f, 0.40f, SlotKind.SheepFlock, "sheep", modelScale: 0.20f),
-            new(160f, 0.40f, SlotKind.SheepFlock, "sheep", modelScale: 0.19f),
-            new(280f, 0.40f, SlotKind.SheepFlock, "sheep", modelScale: 0.20f),
-            new(340f, 0.40f, SlotKind.SheepFlock, "sheep", modelScale: 0.19f)
+            RingASlot(0, SlotKind.SheepFlock, "sheep", modelScale: 0.22f),
+            RingASlot(1, SlotKind.SheepFlock, "sheep", modelScale: 0.21f),
+            RingASlot(2, SlotKind.SheepFlock, "sheep", modelScale: 0.22f),
+            RingASlot(3, SlotKind.SheepFlock, "sheep", modelScale: 0.21f),
+            RingASlot(4, SlotKind.SheepFlock, "sheep", modelScale: 0.22f),
+            RingASlot(5, SlotKind.SheepFlock, "sheep", modelScale: 0.21f),
+            RingBSlot(0, SlotKind.NatureModel, "Bush_Flowers", modelScale: 0.20f),
+            RingBSlot(1, SlotKind.NatureModel, "Bush", modelScale: 0.19f),
+            RingBSlot(2, SlotKind.NatureModel, "Bush_Small_Flowers", modelScale: 0.18f),
+            RingBSlot(3, SlotKind.NatureModel, "Bush_Large", modelScale: 0.21f),
+            RingBSlot(4, SlotKind.TopDownSprite, "fence", 0.34f, -10f),
+            RingBSlot(5, SlotKind.TopDownSprite, "fence", 0.32f, 10f)
         };
 
         private static readonly Slot[] DesertSlots =
         {
-            new(0f, 0.54f, SlotKind.TopDownSprite, "cactus_tall", 0.28f, -8f),
-            new(60f, 0.54f, SlotKind.TopDownSprite, "cactus_short", 0.26f, 6f),
-            new(120f, 0.54f, SlotKind.TopDownSprite, "desert_rock", 0.24f),
-            new(180f, 0.54f, SlotKind.TopDownSprite, "cactus_tall", 0.28f, 8f),
-            new(240f, 0.54f, SlotKind.TopDownSprite, "cactus_short", 0.26f, -6f),
-            new(300f, 0.54f, SlotKind.TopDownSprite, "desert_rock", 0.24f),
-            new(30f, 0.44f, SlotKind.NatureModel, "Bush", modelScale: 0.15f),
-            new(90f, 0.44f, SlotKind.TopDownSprite, "desert_rock", 0.22f),
-            new(210f, 0.44f, SlotKind.NatureModel, "Bush_Small_Flowers", modelScale: 0.14f),
-            new(270f, 0.44f, SlotKind.TopDownSprite, "cactus_short", 0.24f, 4f),
-            new(150f, 0.44f, SlotKind.TopDownSprite, "cactus_tall", 0.26f, -4f),
-            new(330f, 0.44f, SlotKind.NatureModel, "Bush", modelScale: 0.15f)
+            RingASlot(0, SlotKind.TopDownSprite, "cactus_tall", 0.26f, -8f),
+            RingASlot(1, SlotKind.TopDownSprite, "cactus_short", 0.24f, 6f),
+            RingASlot(2, SlotKind.TopDownSprite, "desert_rock", 0.24f),
+            RingASlot(3, SlotKind.TopDownSprite, "cactus_tall", 0.26f, 8f),
+            RingASlot(4, SlotKind.TopDownSprite, "cactus_short", 0.24f, -6f),
+            RingASlot(5, SlotKind.TopDownSprite, "desert_rock", 0.24f),
+            RingBSlot(0, SlotKind.NatureModel, "Bush", modelScale: 0.16f),
+            RingBSlot(1, SlotKind.TopDownSprite, "desert_rock", 0.22f),
+            RingBSlot(2, SlotKind.NatureModel, "Bush_Small_Flowers", modelScale: 0.15f),
+            RingBSlot(3, SlotKind.TopDownSprite, "cactus_short", 0.22f, 4f),
+            RingBSlot(4, SlotKind.TopDownSprite, "cactus_tall", 0.24f, -4f),
+            RingBSlot(5, SlotKind.NatureModel, "Bush", modelScale: 0.16f)
         };
 
         private static readonly Slot[] DesertFishSlots =
         {
-            new(0f, 0.54f, SlotKind.TopDownSprite, "cactus_tall", 0.28f, -8f),
-            new(72f, 0.54f, SlotKind.TopDownSprite, "cactus_short", 0.26f, 6f),
-            new(144f, 0.54f, SlotKind.TopDownSprite, "desert_rock", 0.24f),
-            new(216f, 0.54f, SlotKind.TopDownSprite, "cactus_tall", 0.28f, 8f),
-            new(288f, 0.54f, SlotKind.TopDownSprite, "cactus_short", 0.26f, -6f),
-            new(36f, 0.46f, SlotKind.TopDownSprite, "desert_rock", 0.24f),
-            new(108f, 0.46f, SlotKind.NatureModel, "Bush", modelScale: 0.15f),
-            new(180f, 0.46f, SlotKind.TopDownSprite, "desert_rock", 0.22f),
-            new(252f, 0.46f, SlotKind.NatureModel, "Bush_Small_Flowers", modelScale: 0.14f),
-            new(324f, 0.46f, SlotKind.TopDownSprite, "cactus_short", 0.24f, 4f)
+            RingBSlot(0, SlotKind.TopDownSprite, "cactus_tall", 0.24f, -8f),
+            RingBSlot(1, SlotKind.TopDownSprite, "cactus_short", 0.22f, 6f),
+            RingBSlot(2, SlotKind.TopDownSprite, "desert_rock", 0.22f),
+            RingBSlot(3, SlotKind.TopDownSprite, "cactus_tall", 0.24f, 8f),
+            RingBSlot(4, SlotKind.TopDownSprite, "cactus_short", 0.22f, -6f),
+            RingBSlot(5, SlotKind.TopDownSprite, "desert_rock", 0.22f),
+            RingASlot(0, SlotKind.NatureModel, "Bush", modelScale: 0.15f),
+            RingASlot(2, SlotKind.NatureModel, "Bush_Small_Flowers", modelScale: 0.14f),
+            RingASlot(4, SlotKind.TopDownSprite, "desert_rock", 0.22f),
+            RingASlot(5, SlotKind.TopDownSprite, "cactus_short", 0.22f, 4f)
         };
+
+        private static Slot RingASlot(int index, SlotKind kind, string asset, float diameterHex = 0.26f, float yawDeg = 0f,
+            float modelScale = 0.20f) =>
+            new(30f + 60f * index, RingARadiusHex, kind, asset, diameterHex, yawDeg, modelScale);
+
+        private static Slot RingBSlot(int index, SlotKind kind, string asset, float diameterHex = 0.22f, float yawDeg = 0f,
+            float modelScale = 0.20f) =>
+            new(60f * index, RingBRadiusHex, kind, asset, diameterHex, yawDeg, modelScale);
+
+        public static float VisibleFootprintRadiusHex(Slot slot) =>
+            slot.Kind == SlotKind.TopDownSprite
+                ? slot.DiameterHex * FootprintScale
+                : slot.ModelScale * FootprintScale;
 
         public static Vector2 LocalPositionHex(Slot slot, float templateRotationDeg, int jitterSeed)
         {
@@ -155,38 +174,87 @@ namespace CatanRoguelike.Game
             return basePos + new Vector2(jx, jz);
         }
 
+        public static bool CanPlaceSlot(Vector2 centerHex, float footprintRadiusHex, float tokenKeepOutHex)
+        {
+            if (centerHex.magnitude < tokenKeepOutHex + footprintRadiusHex - 0.001f)
+                return false;
+            return DistanceToHexBoundary(centerHex) >= footprintRadiusHex - 0.001f;
+        }
+
         public static void ValidateTemplate(
             IReadOnlyList<Slot> template,
-            float minRadiusHex,
+            float tokenKeepOutHex,
             string label)
         {
+            float jitterPad = MaxJitterHex * 1.5f;
             for (int i = 0; i < template.Count; i++)
             {
                 var pos = LocalPositionHex(template[i], 0f, i);
-                float inner = pos.magnitude - template[i].FootprintRadiusHex;
-                float outer = pos.magnitude + template[i].FootprintRadiusHex;
-                if (inner < minRadiusHex - 0.001f)
+                float foot = VisibleFootprintRadiusHex(template[i]) + jitterPad;
+                if (pos.magnitude < tokenKeepOutHex + foot - 0.001f)
                     throw new InvalidOperationException(
-                        $"{label} slot {i} overlaps token keep-out (inner={inner:F3}).");
-                if (outer > MaxCenterRadiusFactor + 0.001f)
+                        $"{label} slot {i} overlaps token keep-out (inner={pos.magnitude - foot:F3}).");
+                if (DistanceToHexBoundary(pos) < foot - 0.001f)
                     throw new InvalidOperationException(
-                        $"{label} slot {i} exceeds decor cap (outer={outer:F3}).");
+                        $"{label} slot {i} exceeds hex outline (margin={DistanceToHexBoundary(pos):F3} need>={foot:F3}).");
             }
 
             for (int i = 0; i < template.Count; i++)
             {
                 var pi = LocalPositionHex(template[i], 0f, i);
-                float ri = template[i].FootprintRadiusHex;
+                float ri = VisibleFootprintRadiusHex(template[i]) + jitterPad;
                 for (int j = i + 1; j < template.Count; j++)
                 {
                     var pj = LocalPositionHex(template[j], 0f, j);
-                    float rj = template[j].FootprintRadiusHex;
+                    float rj = VisibleFootprintRadiusHex(template[j]) + jitterPad;
                     float need = ri + rj + FootprintGapHex;
                     if ((pi - pj).magnitude < need - 0.001f)
                         throw new InvalidOperationException(
                             $"{label} slots {i} and {j} overlap (dist={(pi - pj).magnitude:F3} need>={need:F3}).");
                 }
             }
+        }
+
+        /// <summary>Distance from a point inside the unit flat-top hex to the nearest edge.</summary>
+        public static float DistanceToHexBoundary(Vector2 p)
+        {
+            if (!PointInsideUnitHex(p))
+                return -1f;
+
+            float min = float.MaxValue;
+            for (int i = 0; i < 6; i++)
+            {
+                Vector2 a = HexVertex(i);
+                Vector2 b = HexVertex((i + 1) % 6);
+                min = Mathf.Min(min, DistancePointToSegment(p, a, b));
+            }
+
+            return min;
+        }
+
+        private static Vector2 HexVertex(int i)
+        {
+            float angle = (90f - 60f * i) * Mathf.Deg2Rad;
+            return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+        }
+
+        private static bool PointInsideUnitHex(Vector2 p)
+        {
+            if (Mathf.Abs(p.y) > 1f + 1e-4f)
+                return false;
+            if (Mathf.Abs(p.x) > HexHalfWidth + 1e-4f)
+                return false;
+            return HexHalfWidth * 2f - Mathf.Abs(p.x) - Mathf.Abs(p.y) * HexHalfWidth >= -1e-4f;
+        }
+
+        private static float DistancePointToSegment(Vector2 p, Vector2 a, Vector2 b)
+        {
+            Vector2 ab = b - a;
+            float lenSq = ab.sqrMagnitude;
+            if (lenSq < 1e-8f)
+                return (p - a).magnitude;
+            float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / lenSq);
+            return (p - (a + ab * t)).magnitude;
         }
 
         internal static int ExpectedTopLevelPropCount(IReadOnlyList<Slot> template) => template.Count;

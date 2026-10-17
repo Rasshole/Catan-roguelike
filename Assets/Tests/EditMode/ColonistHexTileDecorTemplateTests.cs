@@ -23,11 +23,12 @@ namespace CatanRoguelike.Tests
         [Test]
         public void Templates_MeetTerrainSlotCounts()
         {
-            Assert.AreEqual(9, ColonistHexTileDecorTemplates.Wheat.Count);
-            Assert.AreEqual(10, ColonistHexTileDecorTemplates.Brick.Count);
-            Assert.AreEqual(10, ColonistHexTileDecorTemplates.Stone.Count);
+            Assert.AreEqual(12, ColonistHexTileDecorTemplates.Wheat.Count);
+            Assert.AreEqual(12, ColonistHexTileDecorTemplates.Brick.Count);
+            Assert.AreEqual(12, ColonistHexTileDecorTemplates.Stone.Count);
             Assert.AreEqual(12, ColonistHexTileDecorTemplates.Sheep.Count);
             Assert.AreEqual(12, ColonistHexTileDecorTemplates.Desert.Count);
+            Assert.AreEqual(10, ColonistHexTileDecorTemplates.DesertFishPond.Count);
         }
 
         private static void Validate(
