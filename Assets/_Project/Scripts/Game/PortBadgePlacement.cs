@@ -52,10 +52,9 @@ namespace CatanRoguelike.Game
             var (vx, vz) = HexMath.VertexToWorldPosition(portVertex, hexScale);
             Vector2 vertexPos = new Vector2(vx, vz);
 
-            float layoutRadius = discRadius + SeaFrameSlotLayout.BadgeRenderedLandInset;
             if (useColonistShortPier
                 && SeaFrameSlotLayout.TryGetBadgeCenter(
-                    board, portVertex, hexScale, layoutRadius, out MapPlaneXz shortCenter))
+                    board, portVertex, hexScale, discRadius, out MapPlaneXz shortCenter))
             {
                 badgeCenter = new Vector2(shortCenter.X, shortCenter.Z);
                 seaOutward = ComputeSeawardDirection(board, portVertex, hexScale, vertexPos);

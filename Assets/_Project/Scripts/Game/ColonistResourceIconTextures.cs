@@ -26,6 +26,16 @@ namespace CatanRoguelike.Game
             if (PortDecorCache.TryGetValue(resource, out var cached) && cached != null)
                 return cached;
 
+            if (resource == ResourceType.Wheat)
+            {
+                var kenneyWheat = Resources.Load<Texture2D>("Art/Icons/Wheat");
+                if (kenneyWheat != null)
+                {
+                    PortDecorCache[resource] = kenneyWheat;
+                    return kenneyWheat;
+                }
+            }
+
             string sprite = resource switch
             {
                 ResourceType.Wood => "tree_canopy_b",

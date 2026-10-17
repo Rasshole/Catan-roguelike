@@ -154,23 +154,16 @@ namespace CatanRoguelike.Game
             int seed,
             float tokenClear)
         {
-            int boulderTarget = 5 + PositiveMod(seed, 2);
-            int peakTarget = 1 + PositiveMod(seed + 11, 2);
+            int boulderTarget = 6 + PositiveMod(seed, 3);
             float maxR = MaxPropCenterRadius(hexScale);
             string[] rocks = { "rock_cluster_a", "rock_cluster_b", "rock_cluster_c" };
             for (int i = 0; i < boulderTarget; i++)
             {
                 var pos = SamplePosition(hexScale, seed + 800 + i * 67, tokenClear, MaxPropRadiusFactor);
                 string sprite = rocks[PositiveMod(seed + i * 37, rocks.Length)];
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, sprite, 0.32f,
+                float size = Mathf.Lerp(0.26f, 0.40f, Hash01(seed + i * 41));
+                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, sprite, size,
                     PositiveMod(seed + i * 113, 360), $"StoneBoulder_{i}", tokenClear, maxR);
-            }
-
-            for (int p = 0; p < peakTarget; p++)
-            {
-                var pos = SamplePosition(hexScale, seed + 880 + p * 73, tokenClear, MaxPropRadiusFactor);
-                PlaceTopDown(hexRoot, propsRoot.transform, hexScale, pos, "mountain_peak", 0.48f,
-                    PositiveMod(seed + p * 127, 24) - 12f, $"StonePeak_{p}", tokenClear, maxR);
             }
         }
 

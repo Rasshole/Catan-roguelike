@@ -176,9 +176,8 @@ namespace CatanRoguelike.Game
             Color resourceColor)
         {
             float y = hexTopY + BaseGapAboveHex;
-            float layoutRadius = BadgeDiscWorldRadius + SeaFrameSlotLayout.BadgeRenderedLandInset;
             if (!SeaFrameSlotLayout.TryGetBadgeCenter(
-                    board, vertex, hexScale, layoutRadius, out MapPlaneXz badgeXZ))
+                    board, vertex, hexScale, BadgeDiscWorldRadius, out MapPlaneXz badgeXZ))
             {
                 var (seaX, seaZ) = HexMath.ToWorldPosition(seaCoord, hexScale);
                 badgeXZ = new MapPlaneXz(seaX, seaZ);

@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace CatanRoguelike.Game
 {
-    internal static class ColonistHudResourceSprites
+    public static class ColonistHudResourceSprites
     {
         private static readonly Dictionary<ResourceType, Sprite> Cache = new();
         private static Sprite _fish;
@@ -27,8 +27,7 @@ namespace CatanRoguelike.Game
             if (Cache.TryGetValue(resource, out var sprite) && sprite != null)
                 return sprite;
 
-            var texture = ColonistKenneyResourceIcons.TryGet(resource)
-                ?? ColonistResourceIconTextures.GetForHud(resource);
+            var texture = ColonistResourceIconTextures.GetForPortBadge(resource);
             sprite = Sprite.Create(
                 texture,
                 new Rect(0f, 0f, texture.width, texture.height),

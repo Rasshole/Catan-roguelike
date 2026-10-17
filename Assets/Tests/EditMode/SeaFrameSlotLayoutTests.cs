@@ -70,9 +70,10 @@ namespace CatanRoguelike.Tests.EditMode
         {
             var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
             var ports = PortAccess.DiscoverPorts(board);
-            float radius = SeaFrameSlotLayout.DefaultBadgeDiscRadius
-                + SeaFrameSlotLayout.BadgeRenderedLandInset;
-            float requiredGap = radius + SeaFrameSlotLayout.BadgeLandPolygonClearance;
+            float radius = SeaFrameSlotLayout.DefaultBadgeDiscRadius;
+            float requiredGap = radius
+                + SeaFrameSlotLayout.BadgeRenderedLandInset
+                + SeaFrameSlotLayout.BadgeLandPolygonClearance;
 
             foreach (var port in ports)
             {
@@ -95,8 +96,10 @@ namespace CatanRoguelike.Tests.EditMode
         {
             var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
             var ports = PortAccess.DiscoverPorts(board);
-            float radius = SeaFrameSlotLayout.DefaultBadgeDiscRadius
-                + SeaFrameSlotLayout.BadgeRenderedLandInset;
+            float radius = SeaFrameSlotLayout.DefaultBadgeDiscRadius;
+            float probeRadius = radius
+                + SeaFrameSlotLayout.BadgeRenderedLandInset
+                + SeaFrameSlotLayout.BadgeLandPolygonClearance;
 
             foreach (var port in ports)
             {
@@ -110,7 +113,7 @@ namespace CatanRoguelike.Tests.EditMode
                     Assert.IsFalse(
                         SeaFrameSlotLayout.DiscIntersectsHexPolygon(
                             center,
-                            radius + SeaFrameSlotLayout.BadgeLandPolygonClearance,
+                            probeRadius,
                             landCoord,
                             HexScale),
                         $"Port badge at {center} overlaps land hex {landCoord}.");

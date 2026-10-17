@@ -19,9 +19,9 @@ namespace CatanRoguelike.Core.Map
         /// <summary>Extra radius so clearance matches drawn hex outline + badge rim (world units).</summary>
         public const float BadgeRenderedLandInset = 0.055f;
         public const float FishShoalLandClearance = 0.05f;
-        public const float FishChevronBandThicknessFactor = 0.76f; // thick enough for the token to sit between the arms
-        public const float FishChevronBandCenterPushFactor = 1.28f; // outer notch apex clears the token rim
-        private const float FishChevronTokenBiasFactor = 0.16f; // token ~0.15 hex further seaward, clear of the land corner
+        public const float FishChevronBandThicknessFactor = 0.53f; // ~70% of v107 band; token + fish still nest in the coast corner
+        public const float FishChevronBandCenterPushFactor = 0.90f;
+        private const float FishChevronTokenBiasFactor = 0.11f;
         private const float BadgeClearanceEpsilon = 0.004f;
         private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
 
@@ -206,9 +206,9 @@ namespace CatanRoguelike.Core.Map
                 outward = (seaCenter - boardCenter).Normalized;
             }
 
-            const float pushStep = 0.008f;
-            float minPush = badgeRadius + BadgeLandPolygonClearance;
-            float maxPush = badgeRadius + 1.1f;
+            const float pushStep = 0.006f;
+            float minPush = BadgeLandPolygonClearance;
+            float maxPush = badgeRadius + BadgeRenderedLandInset + 0.55f;
             for (float push = minPush; push <= maxPush; push += pushStep)
             {
                 center = coastMid + outward * push;

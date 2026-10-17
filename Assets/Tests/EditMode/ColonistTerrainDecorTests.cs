@@ -61,11 +61,11 @@ namespace CatanRoguelike.Tests
                         break;
                     case ResourceType.Stone:
                         sawStone = true;
-                        Assert.GreaterOrEqual(count, 6, $"Stone hex {tile.Coord} needs boulders/peaks (found {count}).");
-                        Assert.GreaterOrEqual(
+                        Assert.GreaterOrEqual(count, 6, $"Stone hex {tile.Coord} needs boulder props (found {count}).");
+                        Assert.AreEqual(
+                            0,
                             ColonistHexTileNatureDecor.CountDescendantsNamed(props, "Peak"),
-                            1,
-                            $"Stone hex {tile.Coord} needs at least one snow peak.");
+                            $"Stone hex {tile.Coord} should not use mountain peaks.");
                         break;
                     case ResourceType.Wheat:
                         sawWheat = true;
