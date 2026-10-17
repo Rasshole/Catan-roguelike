@@ -71,6 +71,55 @@ namespace CatanRoguelike.Game
             image.color = new Color(0.55f, 0.72f, 0.82f, 1f);
         }
 
+        public static void ApplyColonistWarmButton(Image image, bool primaryGreen = false)
+        {
+            if (image == null)
+                return;
+
+            var sprite = NeutralButtonSprite();
+            if (sprite != null)
+            {
+                image.sprite = sprite;
+                image.type = Image.Type.Sliced;
+            }
+
+            image.color = primaryGreen
+                ? new Color(0.48f, 0.68f, 0.36f, 1f)
+                : new Color(0.78f, 0.66f, 0.48f, 1f);
+        }
+
+        public static void ApplyColonistEndTurnButton(Image image) => ApplyColonistWarmButton(image, primaryGreen: true);
+
+        public static void ApplyTurnBannerImage(Image image)
+        {
+            if (image == null)
+                return;
+
+            var sprite = NeutralPanelSprite();
+            if (sprite != null)
+            {
+                image.sprite = sprite;
+                image.type = Image.Type.Sliced;
+            }
+
+            image.color = new Color(0.94f, 0.78f, 0.28f, 0.96f);
+        }
+
+        public static void ApplyColonistCountBadge(Image image)
+        {
+            if (image == null)
+                return;
+
+            var sprite = NeutralPanelSprite();
+            if (sprite != null)
+            {
+                image.sprite = sprite;
+                image.type = Image.Type.Sliced;
+            }
+
+            image.color = new Color(0.90f, 0.82f, 0.66f, 0.96f);
+        }
+
         public static Sprite CardFrameSprite() => _cardFrameSprite ??= LoadSprite("Art/Boardgame/Cards/CardBack_blue");
 
         private static Sprite _neutralPanelSprite;
@@ -114,6 +163,45 @@ namespace CatanRoguelike.Game
         }
 
         private static Sprite PanelSprite() => _panelSprite ??= LoadSprite("Art/UI/HudPanel");
+
+        private static Sprite _neutralButtonSprite;
+
+        private static Sprite NeutralButtonSprite()
+        {
+            if (_neutralButtonSprite != null)
+                return _neutralButtonSprite;
+
+            var src = Resources.Load<Texture2D>("Art/UI/HudButton");
+            if (src == null || !src.isReadable)
+                return ButtonSprite();
+
+            var pixels = src.GetPixels();
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                var c = pixels[i];
+                bool blueFill = c.b - c.r > 0.12f;
+                float v = blueFill ? 1f : Mathf.Lerp(0.40f, 0.58f, c.grayscale);
+                pixels[i] = new Color(v, v, v, c.a);
+            }
+
+            var tex = new Texture2D(src.width, src.height, TextureFormat.RGBA32, false)
+            {
+                name = "HudButtonNeutral",
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            tex.SetPixels(pixels);
+            tex.Apply(false, true);
+            _neutralButtonSprite = Sprite.Create(
+                tex,
+                new Rect(0, 0, tex.width, tex.height),
+                new Vector2(0.5f, 0.5f),
+                100f,
+                0,
+                SpriteMeshType.FullRect,
+                new Vector4(8f, 8f, 8f, 8f));
+            return _neutralButtonSprite;
+        }
 
         private static Sprite ButtonSprite() => _buttonSprite ??= LoadSprite("Art/UI/HudButton");
 

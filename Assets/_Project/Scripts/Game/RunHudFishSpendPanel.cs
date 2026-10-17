@@ -25,7 +25,7 @@ namespace CatanRoguelike.Game
             _fishSpendRoot.sizeDelta = new Vector2(168f, 220f);
 
             var bg = go.AddComponent<Image>();
-            bg.color = new Color(0.12f, 0.14f, 0.18f, 0.88f);
+            ColonistKenneyHudArt.ApplyPanelImage(bg);
 
             _fishBalanceText = CreateFishLabel(go.transform, "Fish: 0", 0, 28f);
 
@@ -65,7 +65,7 @@ namespace CatanRoguelike.Game
             y -= 34f;
 
             var image = buttonGo.AddComponent<Image>();
-            image.color = new Color(0.22f, 0.45f, 0.62f, 1f);
+            ColonistKenneyHudArt.ApplyColonistWarmButton(image);
             var button = buttonGo.AddComponent<Button>();
             button.targetGraphic = image;
             button.onClick.AddListener(() =>
@@ -80,7 +80,7 @@ namespace CatanRoguelike.Game
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.text = label;
             text.fontSize = 13;
-            text.color = Color.white;
+            text.color = RunHudUiFactory.ColonistTextOnPanel;
             text.alignment = TextAnchor.MiddleCenter;
             var textRect = text.GetComponent<RectTransform>();
             textRect.anchorMin = Vector2.zero;
@@ -104,7 +104,7 @@ namespace CatanRoguelike.Game
             label.text = text;
             label.fontSize = 16;
             label.fontStyle = FontStyle.Bold;
-            label.color = new Color(0.95f, 0.92f, 0.75f);
+            label.color = RunHudUiFactory.ColonistTextOnPanel;
             label.alignment = TextAnchor.MiddleLeft;
             return label;
         }

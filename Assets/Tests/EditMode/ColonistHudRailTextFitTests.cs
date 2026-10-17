@@ -47,7 +47,7 @@ namespace CatanRoguelike.Tests
 
                 var texts = new System.Collections.Generic.List<Text>();
                 ColonistHudTextFit.CollectColonistRailHeaderTexts(canvas.transform, texts);
-                Assert.GreaterOrEqual(texts.Count, 4, "Expected log/chat titles and both player body texts.");
+                Assert.GreaterOrEqual(texts.Count, 6, "Expected log/chat titles and both player name/stats lines.");
             }
             finally
             {

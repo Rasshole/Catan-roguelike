@@ -14,7 +14,9 @@ namespace CatanRoguelike.Game
     {
         private bool _colonistLayoutBuilt;
         private RectTransform _colonistRightRail;
+        private Text _colonistHumanNameText;
         private Text _colonistHumanPanelText;
+        private Text _colonistAiNameText;
         private Text _colonistAiPanelText;
         private Text _colonistTurnTimerText;
         private Text _colonistChatText;
@@ -176,14 +178,14 @@ namespace CatanRoguelike.Game
                 new Vector2(150f, -top));
             banner.pivot = new Vector2(0.5f, 1f);
             banner.anchoredPosition = new Vector2((left - right) * 0.5f, -top);
-            banner.GetComponent<Image>().color = new Color(0.12f, 0.42f, 0.28f, 0.94f);
+            ColonistKenneyHudArt.ApplyTurnBannerImage(banner.GetComponent<Image>());
             RunHudUiFactory.CreateText(
                 banner,
                 "Label",
                 ColonistHudCopy.YourTurn,
                 20,
                 TextAnchor.MiddleCenter,
-                RunHudUiFactory.TextPrimary,
+                RunHudUiFactory.ColonistTextOnPanel,
                 FontStyle.Bold);
             _colonistTurnBanner = banner.gameObject;
             _colonistTurnBanner.SetActive(false);
@@ -217,18 +219,22 @@ namespace CatanRoguelike.Game
             layout.childControlWidth = true;
             layout.childForceExpandHeight = false;
 
-            var humanPanel = BuildColonistPlayerPanel(
+            BuildColonistPlayerPanel(
                 _colonistRightRail,
                 "PlayerYou",
+                ColonistHudCopy.You,
                 new Color(0.22f, 0.55f, 0.95f, 1f),
+                out _colonistHumanNameText,
                 out _colonistHumanPanelText,
                 out _colonistTurnTimerText);
 
             Text unusedTurnTimer;
-            var aiPanel = BuildColonistPlayerPanel(
+            BuildColonistPlayerPanel(
                 _colonistRightRail,
                 "PlayerAi",
+                ColonistHudCopy.Opponent,
                 new Color(0.92f, 0.32f, 0.28f, 1f),
+                out _colonistAiNameText,
                 out _colonistAiPanelText,
                 out unusedTurnTimer);
 
@@ -312,27 +318,24 @@ namespace CatanRoguelike.Game
             if (_colonistHumanPanelText != null)
             {
                 int roads = state.Board.CountRoads(PlayerId.Human);
-                _colonistHumanPanelText.fontSize = 10;
+                _colonistHumanPanelText.fontSize = 14;
                 _colonistHumanPanelText.horizontalOverflow = HorizontalWrapMode.Wrap;
-                string fishLine = state.FishermenOfCatanEnabled
-                    ? $"\nRd {roads} · Fish {state.PlayerFish}"
-                    : $"\nRd {roads}";
+                string fishPart = state.FishermenOfCatanEnabled
+                    ? $" · Fish {state.PlayerFish}"
+                    : string.Empty;
                 _colonistHumanPanelText.text =
-                    $"{ColonistHudCopy.You}\n" +
-                    $"VP {state.PlayerVictoryPoints} · Res {state.PlayerInventory.Total} · Dv {state.PlayerHand.Count}" +
-                    fishLine + "\n" +
+                    $"VP {state.PlayerVictoryPoints} · Res {state.PlayerInventory.Total} · Dv {state.PlayerHand.Count}\n" +
+                    $"Rd {roads}{fishPart}\n" +
                     $"LR {(longestRoad == PlayerId.Human ? "✓" : "—")} · LA {(state.LargestArmyOwner == PlayerId.Human ? "✓" : "—")}";
             }
 
             if (_colonistAiPanelText != null)
             {
                 int aiRoads = state.Board.CountRoads(PlayerId.Ai);
-                _colonistAiPanelText.fontSize = 10;
+                _colonistAiPanelText.fontSize = 14;
                 _colonistAiPanelText.horizontalOverflow = HorizontalWrapMode.Wrap;
                 _colonistAiPanelText.text =
-                    $"{ColonistHudCopy.Opponent}\n" +
-                    $"VP {state.AiVictoryPoints} · Dv {state.AiHand.Count}\n" +
-                    $"Rd {aiRoads}\n" +
+                    $"VP {state.AiVictoryPoints} · Dv {state.AiHand.Count} · Rd {aiRoads}\n" +
                     $"LR {(longestRoad == PlayerId.Ai ? "✓" : "—")} · LA {(state.LargestArmyOwner == PlayerId.Ai ? "✓" : "—")}";
             }
 
@@ -345,74 +348,100 @@ namespace CatanRoguelike.Game
 
         private static RectTransform BuildColonistPlayerPanel(
             RectTransform parent,
-            string name,
+            string panelName,
+            string displayName,
             Color avatarColor,
-            out Text bodyText,
+            out Text nameText,
+            out Text statsText,
             out Text turnTimerText)
         {
             var panel = RunHudUiFactory.CreatePanel(
                 parent,
-                name,
+                panelName,
                 Vector2.zero,
                 Vector2.one,
                 Vector2.zero,
                 Vector2.zero);
-            RunHudUiFactory.AddLayoutElement(panel.gameObject, 108f);
+            RunHudUiFactory.AddLayoutElement(panel.gameObject, 88f);
 
-            var row = new GameObject("Row");
-            row.transform.SetParent(panel, false);
-            var rowRect = row.AddComponent<RectTransform>();
-            rowRect.anchorMin = Vector2.zero;
-            rowRect.anchorMax = Vector2.one;
-            rowRect.offsetMin = new Vector2(8f, 8f);
-            rowRect.offsetMax = new Vector2(-8f, -8f);
-            var rowLayout = row.AddComponent<HorizontalLayoutGroup>();
-            rowLayout.spacing = 10f;
-            rowLayout.childAlignment = TextAnchor.UpperLeft;
-            rowLayout.childForceExpandHeight = true;
-            rowLayout.childControlHeight = true;
-            // Without these the row force-expands the avatar swatch and squeezes the stats text.
-            rowLayout.childControlWidth = true;
-            rowLayout.childForceExpandWidth = false;
+            var content = new GameObject("Content");
+            content.transform.SetParent(panel, false);
+            var contentRect = content.AddComponent<RectTransform>();
+            contentRect.anchorMin = Vector2.zero;
+            contentRect.anchorMax = Vector2.one;
+            contentRect.offsetMin = new Vector2(8f, 6f);
+            contentRect.offsetMax = new Vector2(-8f, -6f);
+            var contentLayout = content.AddComponent<VerticalLayoutGroup>();
+            contentLayout.spacing = 4f;
+            contentLayout.childAlignment = TextAnchor.UpperLeft;
+            contentLayout.childForceExpandWidth = true;
+            contentLayout.childControlWidth = true;
+            contentLayout.childForceExpandHeight = false;
+            contentLayout.childControlHeight = true;
 
-            var avatarGo = new GameObject("Avatar");
-            avatarGo.transform.SetParent(row.transform, false);
-            RunHudUiFactory.AddLayoutElement(avatarGo, 32f).preferredWidth = 32f;
-            var avatarImg = avatarGo.AddComponent<Image>();
-            avatarImg.color = avatarColor;
+            var nameRow = new GameObject("NameRow");
+            nameRow.transform.SetParent(content.transform, false);
+            var nameRowLayout = nameRow.AddComponent<HorizontalLayoutGroup>();
+            nameRowLayout.spacing = 8f;
+            nameRowLayout.childAlignment = TextAnchor.MiddleLeft;
+            nameRowLayout.childForceExpandHeight = false;
+            nameRowLayout.childControlHeight = true;
+            nameRowLayout.childForceExpandWidth = false;
+            nameRowLayout.childControlWidth = true;
+            RunHudUiFactory.AddLayoutElement(nameRow, 22f);
 
-            var bodyGo = new GameObject("Body");
-            bodyGo.transform.SetParent(row.transform, false);
-            var bodyLayout = bodyGo.AddComponent<LayoutElement>();
-            bodyLayout.flexibleWidth = 1f;
-            bodyText = RunHudUiFactory.CreateText(
-                bodyGo.transform,
-                "Text",
-                string.Empty,
-                10,
-                TextAnchor.UpperLeft,
-                RunHudUiFactory.ColonistTextOnPanel);
-            bodyText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            bodyText.verticalOverflow = VerticalWrapMode.Truncate;
+            var swatchGo = new GameObject("Swatch");
+            swatchGo.transform.SetParent(nameRow.transform, false);
+            RunHudUiFactory.AddLayoutElement(swatchGo, 18f).preferredWidth = 18f;
+            swatchGo.AddComponent<Image>().color = avatarColor;
+
+            var nameGo = new GameObject("Name");
+            nameGo.transform.SetParent(nameRow.transform, false);
+            var nameLayout = nameGo.AddComponent<LayoutElement>();
+            nameLayout.flexibleWidth = 1f;
+            nameText = RunHudUiFactory.CreateText(
+                nameGo.transform,
+                "Label",
+                displayName,
+                14,
+                TextAnchor.MiddleLeft,
+                RunHudUiFactory.ColonistTextOnPanel,
+                FontStyle.Bold);
+            nameText.horizontalOverflow = HorizontalWrapMode.Wrap;
 
             turnTimerText = null;
             var timerGo = new GameObject("TurnTimer");
-            timerGo.transform.SetParent(row.transform, false);
-            RunHudUiFactory.AddLayoutElement(timerGo, 32f).preferredWidth = 52f;
+            timerGo.transform.SetParent(nameRow.transform, false);
+            RunHudUiFactory.AddLayoutElement(timerGo, 22f).preferredWidth = 52f;
             turnTimerText = RunHudUiFactory.CreateText(
                 timerGo.transform,
                 "Timer",
                 string.Empty,
                 13,
-                TextAnchor.UpperRight,
+                TextAnchor.MiddleRight,
                 RunHudUiFactory.ColonistTextOnPanel,
                 FontStyle.Bold);
-            turnTimerText.alignment = TextAnchor.UpperRight;
-            if (name != "PlayerYou")
+            turnTimerText.alignment = TextAnchor.MiddleRight;
+            if (panelName != "PlayerYou")
             {
                 timerGo.SetActive(false);
                 turnTimerText = null;
             }
+
+            var statsGo = new GameObject("Stats");
+            statsGo.transform.SetParent(content.transform, false);
+            var statsLayout = statsGo.AddComponent<LayoutElement>();
+            statsLayout.flexibleHeight = 1f;
+            statsLayout.minHeight = 52f;
+            statsText = RunHudUiFactory.CreateText(
+                statsGo.transform,
+                "Text",
+                string.Empty,
+                14,
+                TextAnchor.UpperLeft,
+                RunHudUiFactory.ColonistTextOnPanel);
+            statsText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            statsText.verticalOverflow = VerticalWrapMode.Truncate;
 
             return panel;
         }

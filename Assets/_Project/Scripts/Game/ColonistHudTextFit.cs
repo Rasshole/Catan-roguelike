@@ -37,8 +37,10 @@ namespace CatanRoguelike.Game
 
             TryAddTitle(rightRail, "GameLogPanel", sink);
             TryAddTitle(rightRail, "ChatPanel", sink);
-            TryAddBody(rightRail, "PlayerYou", sink);
-            TryAddBody(rightRail, "PlayerAi", sink);
+            TryAddName(rightRail, "PlayerYou", sink);
+            TryAddStats(rightRail, "PlayerYou", sink);
+            TryAddName(rightRail, "PlayerAi", sink);
+            TryAddStats(rightRail, "PlayerAi", sink);
         }
 
         public static void AssertAllColonistRailTextsFit(Transform canvasRoot)
@@ -69,12 +71,20 @@ namespace CatanRoguelike.Game
                 sink.Add(title);
         }
 
-        private static void TryAddBody(Transform rightRail, string panelName, List<Text> sink)
+        private static void TryAddName(Transform rightRail, string panelName, List<Text> sink)
         {
             var panel = rightRail.Find(panelName);
-            var body = panel?.Find("Row/Body/Text")?.GetComponent<Text>();
-            if (body != null)
-                sink.Add(body);
+            var name = panel?.Find("Content/NameRow/Name/Label")?.GetComponent<Text>();
+            if (name != null)
+                sink.Add(name);
+        }
+
+        private static void TryAddStats(Transform rightRail, string panelName, List<Text> sink)
+        {
+            var panel = rightRail.Find(panelName);
+            var stats = panel?.Find("Content/Stats/Text")?.GetComponent<Text>();
+            if (stats != null)
+                sink.Add(stats);
         }
     }
 }

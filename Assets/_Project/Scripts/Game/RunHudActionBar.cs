@@ -124,7 +124,9 @@ namespace CatanRoguelike.Game
 
         private void BuildEndTurnButton(RectTransform parent)
         {
-            _endTurnPinned = RunHudUiFactory.CreateButton(parent, ColonistHudCopy.EndTurn, new Color(0.18f, 0.55f, 0.32f, 1f));
+            _endTurnPinned = ColonistPresentation.IsActive
+                ? RunHudUiFactory.CreateColonistEndTurnButton(parent, ColonistHudCopy.EndTurn)
+                : RunHudUiFactory.CreateButton(parent, ColonistHudCopy.EndTurn, new Color(0.18f, 0.55f, 0.32f, 1f));
             float endHeight = ColonistPresentation.IsActive ? 60f : 52f;
             float endWidth = ColonistPresentation.IsActive ? 196f : 140f;
             RunHudUiFactory.AddLayoutElement(_endTurnPinned.gameObject, endHeight).preferredWidth = endWidth;

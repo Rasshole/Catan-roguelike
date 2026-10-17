@@ -83,15 +83,16 @@ namespace CatanRoguelike.Game
             badgeRect.pivot = new Vector2(1f, 1f);
             badgeRect.anchoredPosition = new Vector2(-1f, -1f);
             badgeRect.sizeDelta = new Vector2(20f, 16f);
-            badgeGo.AddComponent<Image>().color = new Color(0.08f, 0.10f, 0.14f, 0.92f);
+            var badgeImg = badgeGo.AddComponent<Image>();
+            ColonistKenneyHudArt.ApplyColonistCountBadge(badgeImg);
 
             countLabel = RunHudUiFactory.CreateText(
                 badgeGo.transform,
                 "Label",
                 "0",
-                10,
+                11,
                 TextAnchor.MiddleCenter,
-                RunHudUiFactory.TextPrimary,
+                RunHudUiFactory.ColonistTextOnPanel,
                 FontStyle.Bold);
             countLabel.raycastTarget = false;
             return cardGo;

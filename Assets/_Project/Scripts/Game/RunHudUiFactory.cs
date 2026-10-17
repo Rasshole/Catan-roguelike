@@ -93,19 +93,37 @@ namespace CatanRoguelike.Game
             go.transform.SetParent(parent, false);
             var image = go.AddComponent<Image>();
             image.color = fill;
-            if (fill == ButtonFill)
+            if (ColonistPresentation.IsActive)
+            {
+                bool green = fill == ButtonFill || fill.g > fill.r + 0.08f;
+                ColonistKenneyHudArt.ApplyColonistWarmButton(image, green);
+            }
+            else if (fill == ButtonFill)
                 ColonistKenneyHudArt.ApplyPrimaryButtonImage(image);
             else
                 ColonistKenneyHudArt.ApplySecondaryButtonImage(image);
 
             var button = go.AddComponent<Button>();
             var colors = button.colors;
-            colors.highlightedColor = Color.Lerp(fill, Color.white, 0.15f);
-            colors.pressedColor = Color.Lerp(fill, Color.black, 0.12f);
+            colors.highlightedColor = Color.Lerp(image.color, Color.white, 0.15f);
+            colors.pressedColor = Color.Lerp(image.color, Color.black, 0.12f);
             button.colors = colors;
 
-            var text = CreateText(go.transform, "Label", label, 16, TextAnchor.MiddleCenter, TextPrimary, FontStyle.Bold);
+            var labelColor = ColonistPresentation.IsActive ? ColonistTextOnPanel : TextPrimary;
+            var text = CreateText(go.transform, "Label", label, 16, TextAnchor.MiddleCenter, labelColor, FontStyle.Bold);
             text.raycastTarget = false;
+            return button;
+        }
+
+        public static Button CreateColonistEndTurnButton(Transform parent, string label)
+        {
+            var button = CreateButton(parent, label, ButtonFill);
+            var image = button.GetComponent<Image>();
+            ColonistKenneyHudArt.ApplyColonistEndTurnButton(image);
+            var colors = button.colors;
+            colors.highlightedColor = Color.Lerp(image.color, Color.white, 0.15f);
+            colors.pressedColor = Color.Lerp(image.color, Color.black, 0.12f);
+            button.colors = colors;
             return button;
         }
 
