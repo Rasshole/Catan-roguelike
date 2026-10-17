@@ -273,18 +273,41 @@ namespace CatanRoguelike.Game
 
         private static void DrawSheepBlob(Color32[] px, Color32 c)
         {
+            // v114: scaled up ~1.3x about the body centre with a dark rim so the sheep fills the
+            // badge/card like the other resource sprites (it read noticeably smaller on 2:1 ports).
             var wool = new Color32(245, 245, 250, 255);
             var dark = new Color32(38, 34, 40, 255);
-            FillCircle(px, 32, 38, 17, wool);
-            FillCircle(px, 22, 36, 9, wool);
-            FillCircle(px, 44, 36, 9, wool);
-            FillCircle(px, 18, 32, 7, wool);
-            FillCircle(px, 48, 32, 7, wool);
-            FillCircle(px, 40, 44, 7, dark);
-            FillRect(px, 36, 48, 4, 8, dark);
-            FillRect(px, 42, 48, 4, 8, dark);
-            FillCircle(px, 44, 42, 4, dark);
+            int[,] woolCircles = { { 32, 38, 17 }, { 22, 36, 9 }, { 44, 36, 9 }, { 18, 32, 7 }, { 48, 32, 7 } };
+            for (int i = 0; i < woolCircles.GetLength(0); i++)
+                SheepCircle(px, woolCircles[i, 0], woolCircles[i, 1], woolCircles[i, 2], 2, dark);
+            for (int i = 0; i < woolCircles.GetLength(0); i++)
+                SheepCircle(px, woolCircles[i, 0], woolCircles[i, 1], woolCircles[i, 2], 0, wool);
+            SheepCircle(px, 40, 44, 7, 0, dark);
+            SheepRect(px, 36, 48, 4, 8, dark);
+            SheepRect(px, 42, 48, 4, 8, dark);
+            SheepCircle(px, 44, 42, 4, 0, dark);
         }
+
+        private const float SheepScale = 1.3f;
+        private const float SheepCx = 33f;
+        private const float SheepCy = 38.5f;
+
+        private static void SheepCircle(Color32[] px, int cx, int cy, int r, int extra, Color32 c) =>
+            FillCircle(
+                px,
+                Mathf.RoundToInt(SheepCx + (cx - SheepCx) * SheepScale),
+                Mathf.RoundToInt(SheepCy + (cy - SheepCy) * SheepScale),
+                Mathf.RoundToInt(r * SheepScale) + extra,
+                c);
+
+        private static void SheepRect(Color32[] px, int x, int y, int w, int h, Color32 c) =>
+            FillRect(
+                px,
+                Mathf.RoundToInt(SheepCx + (x - SheepCx) * SheepScale),
+                Mathf.RoundToInt(SheepCy + (y - SheepCy) * SheepScale),
+                Mathf.RoundToInt(w * SheepScale),
+                Mathf.Min(Size - Mathf.RoundToInt(SheepCy + (y - SheepCy) * SheepScale), Mathf.RoundToInt(h * SheepScale)),
+                c);
 
         private static void DrawOreRock(Color32[] px, Color32 c)
         {

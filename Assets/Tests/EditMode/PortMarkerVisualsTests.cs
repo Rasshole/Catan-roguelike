@@ -150,6 +150,15 @@ namespace CatanRoguelike.Tests
                 expectedIcon * 1.08f,
                 $"Rate icon should stay near {PortMarkerVisuals.BadgeRateIconDiameterFraction:P0} of disc diameter.");
 
+            var rateTex = ColonistPortRateLabelTextures.Get(false);
+            float labelHeightFraction = PortMarkerVisuals.BadgeLabelWidthFractionSpecific
+                * rateTex.height / (float)rateTex.width;
+            float stackFraction = PortMarkerVisuals.BadgeRateIconDiameterFraction + 0.03f + labelHeightFraction;
+            Assert.Less(
+                stackFraction,
+                0.88f,
+                $"2:1 icon + label stack ({stackFraction:P0} of disc) must fit inside the badge disc with margin.");
+
             AssertMinWorldYAboveHexTop(specificMarker);
             AssertSharedMaterialsAssigned(specificMarker);
         }

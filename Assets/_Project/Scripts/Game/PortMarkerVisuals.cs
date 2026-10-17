@@ -31,10 +31,11 @@ namespace CatanRoguelike.Game
         public static float BadgeDiscWorldRadius => ColonistPortBadgeSizing.ActiveDiscWorldRadius;
         private const float BadgeDiscHeight = 0.012f * BadgeDiscSizeScale;
         public const float BadgeLabelWidthFractionGeneric = 0.78f;
-        public const float BadgeLabelWidthFractionSpecific = 0.58f;
+        public const float BadgeLabelWidthFractionSpecific = 0.56f;
         /// <summary>World quad edge length; reads ~40% of disc diameter on screen under the colonist camera.</summary>
-        public const float BadgeRateIconDiameterFraction = 0.675f;
-        private const float BadgeStackGapFraction = 0.05f;
+        // v114: icon + gap + label must fit inside the disc (0.675 + 0.05 + ~0.28 overflowed the rim).
+        public const float BadgeRateIconDiameterFraction = 0.50f;
+        private const float BadgeStackGapFraction = 0.03f;
         private static bool _loggedPortMarkerChildren;
 
         public static void LogChildRenderersOnce(GameObject portRoot)
