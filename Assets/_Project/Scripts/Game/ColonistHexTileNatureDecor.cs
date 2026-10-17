@@ -11,6 +11,7 @@ namespace CatanRoguelike.Game
     {
         private const string NatureModelRoot = "Art/Models/Nature";
         private const string KenneyModelRoot = "Art/Models/Kenney";
+        private const float KenneyImportScaleCompensation = 9f;
         private const float LiftAboveTop = 0.04f;
         private const float MaxPropRadiusFactor = 0.65f;
         private static readonly string[] TreeModels =
@@ -22,11 +23,13 @@ namespace CatanRoguelike.Game
         private static readonly string[] BushModels = { "Bush_Flowers", "Bush", "Bush_Small_Flowers", "Bush_Large" };
         private static readonly string[] WheatCropModels = { "crops_wheatStageB", "crops_wheatStageA", "crops_wheatStageB" };
         private static readonly string[] StoneRockModels =
-            { "stone-rocks", "rock_largeA", "rock_largeB", "rock_smallA", "stone-hill" };
+            { "rock_largeA", "rock_largeB", "rock_smallA", "rock_largeA", "rock_largeB" };
         private static readonly string[] BrickPropModels =
-            { "campfire_bricks", "building-smelter", "stone-rocks", "rock_smallFlatA" };
+            { "campfire_bricks", "rock_smallFlatA", "campfire_bricks" };
         private static readonly string[] CactusModels = { "cactus_tall", "cactus_short", "cactus_tall", "cactus_short" };
-        private static readonly string[] DesertRockModels = { "sand-rocks", "rock_smallFlatA", "rock_smallA" };
+        // Hexagon Kit "building-*", "stone-*", "sand-*", "dirt-*" models include a hex ground plate,
+        // which rendered as mini hex tiles on top of ours; only free-standing Nature Kit models are used.
+        private static readonly string[] DesertRockModels = { "rock_smallFlatA", "rock_smallA", "rock_smallFlatA" };
 
         public static void Apply(GameObject hexRoot, HexTileData data, float hexScale)
         {
@@ -75,10 +78,10 @@ namespace CatanRoguelike.Game
             int seed,
             float tokenClear)
         {
-            int treeTarget = 7 + PositiveMod(seed, 4);
+            int treeTarget = 12 + PositiveMod(seed, 5); // dense wood: 12-16 smaller trees
             float minR = tokenClear;
             float maxR = MaxPropCenterRadius(hexScale);
-            float minSep = hexScale * 0.10f;
+            float minSep = hexScale * 0.075f;
             var ring = SamplePoissonAnnulus(seed, treeTarget, minR, maxR, minSep, treeTarget * 90);
             if (ring.Count < treeTarget)
             {
@@ -102,7 +105,7 @@ namespace CatanRoguelike.Game
                 // put z into Y (trees floating on a line), so map explicitly onto the XZ plane.
                 var localXZ = new Vector3(ringPoint.x, 0f, ringPoint.y);
                 string modelName = TreeModels[PositiveMod(seed + attempt, TreeModels.Length)];
-                float scaleFactor = Mathf.Lerp(0.22f, 0.26f, Hash01(seed + attempt * 19));
+                float scaleFactor = Mathf.Lerp(0.17f, 0.21f, Hash01(seed + attempt * 19));
                 float yaw = PositiveMod(seed + attempt * 137, 360) + 22f;
                 if (TryPlaceNatureModel(hexRoot, propsRoot.transform, hexScale, modelName, localXZ, scaleFactor, yaw,
                         ResourceType.Wood, attempt))
@@ -116,7 +119,7 @@ namespace CatanRoguelike.Game
                 float r = Mathf.Lerp(minR, maxR, 0.45f + Hash01(seed + i * 31) * 0.5f);
                 var localXZ = new Vector3(Mathf.Cos(angle) * r, 0f, Mathf.Sin(angle) * r);
                 string modelName = TreeModels[PositiveMod(seed + i, TreeModels.Length)];
-                float scaleFactor = Mathf.Lerp(0.22f, 0.26f, Hash01(seed + i * 19));
+                float scaleFactor = Mathf.Lerp(0.17f, 0.21f, Hash01(seed + i * 19));
                 float yaw = PositiveMod(seed + i * 137, 360) + 22f;
                 TryPlaceNatureModel(hexRoot, propsRoot.transform, hexScale, modelName, localXZ, scaleFactor, yaw,
                     ResourceType.Wood, i);
@@ -171,14 +174,18 @@ namespace CatanRoguelike.Game
                 int kind = PositiveMod(seed + i * 41, 5);
                 if (kind == 0)
                 {
-                    TryPlaceKenneyModel(hexRoot, propsRoot.transform, hexScale, "building-mine", pos,
-                        Mathf.Lerp(0.09f, 0.11f, Hash01(seed + i)), PositiveMod(seed + i * 71, 360),
-                        "BrickQuarry", styleDesert: false, stylePeak: false, index: i, ResourceType.Brick);
+                    PlacePrimitive(hexRoot, propsRoot.transform, pos + Vector3.up * HexPrismMesh.TopY, hexScale,
+                        parent => ColonistHexTilePropPrimitives.CreateKiln(parent, Vector3.zero, hexScale));
+                }
+                else if (kind == 1 || kind == 2)
+                {
+                    PlacePrimitive(hexRoot, propsRoot.transform, pos + Vector3.up * HexPrismMesh.TopY, hexScale,
+                        parent => ColonistHexTilePropPrimitives.CreateBrickStack(parent, Vector3.zero, hexScale));
                 }
                 else
                 {
                     string model = BrickPropModels[PositiveMod(seed + i * 19, BrickPropModels.Length)];
-                    float scale = model.Contains("smelter") ? 0.10f : 0.12f;
+                    float scale = 0.12f;
                     TryPlaceKenneyModel(hexRoot, propsRoot.transform, hexScale, model, pos, scale,
                         PositiveMod(seed + i * 91, 360), "BrickProp", styleDesert: false, stylePeak: false, index: i,
                         ResourceType.Brick);
@@ -208,9 +215,8 @@ namespace CatanRoguelike.Game
             for (int p = 0; p < peakTarget; p++)
             {
                 var pos = SamplePosition(hexScale, seed + 880 + p * 73, tokenClear, MaxPropRadiusFactor);
-                TryPlaceKenneyModel(hexRoot, propsRoot.transform, hexScale, "stone-mountain", pos,
-                    Mathf.Lerp(0.11f, 0.14f, Hash01(seed + p * 53)), PositiveMod(seed + p * 127, 360),
-                    "StonePeak", styleDesert: false, stylePeak: true, index: p, ResourceType.Stone);
+                PlacePrimitive(hexRoot, propsRoot.transform, pos + Vector3.up * HexPrismMesh.TopY, hexScale,
+                    parent => ColonistHexTilePropPrimitives.CreateMountainPeak(parent, Vector3.zero, hexScale));
             }
         }
 
@@ -221,25 +227,27 @@ namespace CatanRoguelike.Game
             int seed,
             float tokenClear)
         {
-            int wheatClumps = 4 + PositiveMod(seed, 3);
-            ScatterKenneyModels(hexRoot, propsRoot, hexScale, seed, wheatClumps, WheatCropModels, 0.10f, 0.14f,
-                tokenClear, "WheatCrop", ResourceType.Wheat);
-            for (int r = 0; r < 2; r++)
+            for (int r = 0; r < 5; r++)
             {
                 var pos = SamplePosition(hexScale, seed + 400 + r * 59, tokenClear, MaxPropRadiusFactor);
-                TryPlaceKenneyModel(hexRoot, propsRoot.transform, hexScale, "building-farm", pos, 0.085f,
-                    PositiveMod(seed + r * 40, 360), "WheatFarm", styleDesert: false, stylePeak: false, index: r,
-                    ResourceType.Wheat);
+                float yaw = seed + r * 40f;
+                PlacePrimitive(hexRoot, propsRoot.transform, pos + Vector3.up * HexPrismMesh.TopY, hexScale,
+                    parent => ColonistHexTilePropPrimitives.CreateWheatRow(parent, Vector3.zero, hexScale, yaw));
             }
 
-            TryPlaceKenneyModel(hexRoot, propsRoot.transform, hexScale, "dirt-lumber",
-                SamplePosition(hexScale, seed + 480, tokenClear, MaxPropRadiusFactor), 0.12f,
-                PositiveMod(seed + 481, 360), "HayBale", styleDesert: false, stylePeak: false, index: 0,
-                ResourceType.Wheat);
-            TryPlaceKenneyModel(hexRoot, propsRoot.transform, hexScale, "building-mill",
-                SamplePosition(hexScale, seed + 520, tokenClear, MaxPropRadiusFactor), 0.095f,
-                PositiveMod(seed + 521, 360), "Windmill", styleDesert: false, stylePeak: false, index: 0,
-                ResourceType.Wheat);
+            for (int sh = 0; sh < 3; sh++)
+            {
+                var pos = SamplePosition(hexScale, seed + 450 + sh * 61, tokenClear, MaxPropRadiusFactor);
+                PlacePrimitive(hexRoot, propsRoot.transform, pos + Vector3.up * HexPrismMesh.TopY, hexScale,
+                    parent => ColonistHexTilePropPrimitives.CreateWheatSheaf(parent, Vector3.zero, hexScale));
+            }
+
+            PlacePrimitive(hexRoot, propsRoot.transform,
+                SamplePosition(hexScale, seed + 480, tokenClear, MaxPropRadiusFactor) + Vector3.up * HexPrismMesh.TopY,
+                hexScale, parent => ColonistHexTilePropPrimitives.CreateHayBale(parent, Vector3.zero, hexScale));
+            PlacePrimitive(hexRoot, propsRoot.transform,
+                SamplePosition(hexScale, seed + 520, tokenClear, MaxPropRadiusFactor) + Vector3.up * HexPrismMesh.TopY,
+                hexScale, parent => ColonistHexTilePropPrimitives.CreateWindmill(parent, Vector3.zero, hexScale));
         }
 
         private static void ApplySheep(
@@ -362,7 +370,9 @@ namespace CatanRoguelike.Game
             if (prefab == null)
                 return false;
 
-            float scale = scaleFactor * hexScale;
+            // Kenney FBX import at globalScale 0.28 of ~1-unit models; at the Quaternius-style
+            // factors (~0.1) props came out ~0.04 world wide (invisible). Compensate here.
+            float scale = scaleFactor * hexScale * KenneyImportScaleCompensation;
             var prop = Object.Instantiate(prefab, propsParent, false);
             prop.name = $"{namePrefix}_{modelName}_{index}";
             prop.transform.localPosition = localXZ + Vector3.up * (HexPrismMesh.TopY + LiftAboveTop);

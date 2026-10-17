@@ -80,7 +80,7 @@ namespace CatanRoguelike.Game
             _rock ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.55f, 0.57f, 0.60f));
 
         private static Material RockDark() =>
-            _rockDark ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.38f, 0.40f, 0.44f));
+            _rockDark ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.24f, 0.26f, 0.30f)); // dark slate: contrast on light stone tile
 
         private static Material Terracotta() =>
             _terracotta ??= BuiltInMaterials.CreateMatteOpaque(new Color(0.72f, 0.36f, 0.24f));

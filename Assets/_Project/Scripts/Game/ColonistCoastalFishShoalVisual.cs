@@ -12,6 +12,7 @@ namespace CatanRoguelike.Game
         public static readonly Color ChevronWaterBlue = new(0.58f, 0.78f, 0.91f, 1f);
         public static readonly Color ChevronOutlineBlue = new(0.22f, 0.38f, 0.58f, 1f);
 
+        private const string FishIconResourcePath = "Art/Board/FishIcon";
         private static Material _chevronMaterial;
         private static Material _outlineMaterial;
 
@@ -95,7 +96,11 @@ namespace CatanRoguelike.Game
             float hexHeightScale,
             float hexScale)
         {
-            var texture = ColonistFishIconTextures.SilverBlueFish();
+            // The procedural silver sprite read as a pale bullet/blob from the camera; prefer the
+            // drawn fish icon (side-view, horizontal) and fall back to the procedural one.
+            var drawnIcon = Resources.Load<Texture2D>(FishIconResourcePath);
+            var texture = drawnIcon != null ? drawnIcon : ColonistFishIconTextures.SilverBlueFish();
+            float iconYawOffset = drawnIcon != null ? 90f : 0f;
             if (boardRoot == null)
                 return;
 
@@ -152,7 +157,7 @@ namespace CatanRoguelike.Game
                 float armYaw = Mathf.Atan2(armDir.X, armDir.Z) * Mathf.Rad2Deg;
                 var rot = Quaternion.Euler(
                     ColonistFlatBoardQuad.BoardPitchDegrees,
-                    armYaw,
+                    armYaw + iconYawOffset,
                     0f);
                 icon.transform.rotation = rot;
                 haloQuad.transform.rotation = rot;

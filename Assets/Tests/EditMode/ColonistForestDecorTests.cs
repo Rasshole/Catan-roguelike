@@ -47,7 +47,7 @@ namespace CatanRoguelike.Tests
                         $"Tree on {tile.Coord} should stay within 0.70 hex cap (r={flat.magnitude:F3} max={maxCenter:F3}).");
                 }
 
-                Assert.GreaterOrEqual(trees, 7,
+                Assert.GreaterOrEqual(trees, 12,
                     $"Forest hex {tile.Coord} should show a dense tree ring (found {trees}).");
 
                 Object.DestroyImmediate(hexGo);

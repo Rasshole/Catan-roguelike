@@ -48,12 +48,14 @@ namespace CatanRoguelike.Game
                 "00001",
                 "10001",
                 "01110"),
+            // Two single-cell dots three rows apart: with StrokeExpand the old 2-row dots with a
+            // 1-row gap fused into a bar and the label read "3 I 1".
             [':'] = Rows(
                 "00000",
                 "00100",
-                "00100",
                 "00000",
-                "00100",
+                "00000",
+                "00000",
                 "00100",
                 "00000"),
         };
