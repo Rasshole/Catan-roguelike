@@ -11,3 +11,6 @@
 - Increased displacement, saturation, sun energy, and forest/wheat density.
 - Closer on layout and color family but still stylized 3D vs printed board illustration.
   Keeping `ColonistBlenderHexTerrainArt.Enabled = false` until another art pass.
+## Pass 6 (v120)
+- Re-aligned reference_board.jpg crops via HSV match; lowered exposure/sun/fill and saturation.
+- Toned forest/sheep greens; still not photo-close — `Enabled = false`.

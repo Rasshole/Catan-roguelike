@@ -15,7 +15,8 @@ namespace CatanRoguelike.Game
         private const float BaseGapAboveHex = 0.02f;
 
         public static bool ModelsAvailable =>
-            Resources.Load<GameObject>($"{ModelRoot}/settlement") != null;
+            !ColonistPresentation.IsActive
+            && Resources.Load<GameObject>($"{ModelRoot}/settlement") != null;
 
         /// <summary>Colonist pieces use Body/Roof part names at the piece root (not Kenney wrappers).</summary>
         public static bool UsesKenneyModels => false;
@@ -112,7 +113,6 @@ namespace CatanRoguelike.Game
         {
             StripColliders(root);
             DisableRealtimeShadows(root);
-            ColonistPlayerPieceContactShadow.Attach(root.transform, hexTopY);
         }
 
         private static void DisableRealtimeShadows(GameObject root)

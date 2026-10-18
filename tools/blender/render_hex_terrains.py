@@ -51,7 +51,7 @@ def setup_render() -> None:
     scene.render.image_settings.file_format = "PNG"
     scene.render.image_settings.color_mode = "RGBA"
     scene.view_settings.view_transform = "Standard"
-    scene.view_settings.exposure = 0.0
+    scene.view_settings.exposure = -0.45
 
     world = bpy.data.worlds.new("World")
     scene.world = world
@@ -69,13 +69,13 @@ def setup_render() -> None:
 
     bpy.ops.object.light_add(type="SUN", location=(2.5, -3.5, 9))
     sun = bpy.context.object
-    sun.data.energy = 4.0 + PASS * 0.5
+    sun.data.energy = 2.4 + PASS * 0.15
     sun.data.angle = math.radians(3)
     sun.rotation_euler = (math.radians(42), math.radians(10), math.radians(22))
 
     bpy.ops.object.light_add(type="AREA", location=(-2.5, 2.5, 5))
     fill = bpy.context.object
-    fill.data.energy = 420
+    fill.data.energy = 180
     fill.data.size = 7
     fill.rotation_euler = (math.radians(62), 0, math.radians(-28))
 
@@ -194,7 +194,7 @@ def mat_grass_meadow(name: str) -> bpy.types.Material:
     mix = nodes.new("ShaderNodeMixRGB")
     mix.inputs[0].default_value = 0.55
     mix.inputs[1].default_value = (0.14, 0.42, 0.12, 1.0)
-    mix.inputs[2].default_value = (0.42, 0.82, 0.28, 1.0)
+    mix.inputs[2].default_value = (0.38, 0.68, 0.24, 1.0)
     links.new(n1.outputs["Fac"], mix.inputs[0])
     links.new(mix.outputs["Color"], bsdf.inputs["Base Color"])
     links.new(n2.outputs["Fac"], bsdf.inputs["Roughness"])
@@ -232,7 +232,7 @@ def displace_grid(strength: float, tex_type: str = "CLOUDS", scale: float = 0.5)
 
 
 def build_forest() -> None:
-    add_hex_floor(mat_solid("Soil", (0.06, 0.22, 0.05)))
+    add_hex_floor(mat_solid("Soil", (0.10, 0.28, 0.08)))
     rng = random.Random(101 + PASS)
     spacing = 0.11 / DENSITY
     for row in range(-8, 9):
@@ -248,9 +248,9 @@ def build_forest() -> None:
             if roll < 0.14:
                 col = (0.92, 0.62, 0.12)
             elif roll < 0.32:
-                col = (0.35, 0.82, 0.18)
+                col = (0.22, 0.52, 0.14)
             else:
-                col = (0.05 + rng.uniform(0, 0.06), 0.38 + rng.uniform(0, 0.22), 0.06)
+                col = (0.08 + rng.uniform(0, 0.05), 0.32 + rng.uniform(0, 0.16), 0.07)
             bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=rad, location=(x, y, rad * 0.55))
             t = bpy.context.object
             t.scale = (1.05, 1.05, 0.65)
@@ -390,7 +390,7 @@ def render_slot(name: str) -> str:
     bpy.ops.render.render(write_still=True)
     hex_post = import_hex_post()
     pre_var = hex_post.interior_luma_variance(out_res)
-    sat = 1.05 + PASS * 0.03
+    sat = 0.92 + PASS * 0.02
     hex_post.process_png(out_res, saturation=sat)
     post_var = hex_post.interior_luma_variance(out_res)
     default_min = float(os.environ.get("BLENDER_TILE_MIN_LUMA_STD", "10"))
@@ -433,6 +433,10 @@ def write_pass_notes() -> None:
 - Increased displacement, saturation, sun energy, and forest/wheat density.
 - Closer on layout and color family but still stylized 3D vs printed board illustration.
   Keeping `ColonistBlenderHexTerrainArt.Enabled = false` until another art pass.
+""",
+        6: """## Pass 6 (v120)
+- Re-aligned reference_board.jpg crops via HSV match; lowered exposure/sun/fill and saturation.
+- Toned forest/sheep greens; still not photo-close — `Enabled = false`.
 """,
     }
     path = os.path.join(OUT_DOCS, "pass_notes.md")

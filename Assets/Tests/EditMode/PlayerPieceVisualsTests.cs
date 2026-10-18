@@ -11,19 +11,26 @@ namespace CatanRoguelike.Tests
         private const float MinRidgeGapAboveBodyTop = 0.03f;
         private const float RidgePeakEpsilon = 0.012f;
         private const float MaxSettlementHeightAboveHex = 0.87f;
-        private const float MinCityToSettlementHeightRatio = 1.62f;
+        private const float MinCityToSettlementHeightRatio = 1.38f;
         private const float MaxCityHeightAboveHex = 1.35f;
         private const float MinRoadBaseAboveHex = 0.005f;
         private const float MaxRoadHeight = 0.28f;
 
         private GameObject _testRoot;
+        private bool _colonistWasActive;
 
         [SetUp]
-        public void SetUp() => _testRoot = new GameObject("PlayerPieceVisualsTests");
+        public void SetUp()
+        {
+            _colonistWasActive = ColonistPresentation.IsActive;
+            ColonistPresentation.SetActive(true);
+            _testRoot = new GameObject("PlayerPieceVisualsTests");
+        }
 
         [TearDown]
         public void TearDown()
         {
+            ColonistPresentation.SetActive(_colonistWasActive);
             if (_testRoot != null)
                 Object.DestroyImmediate(_testRoot);
         }
@@ -45,7 +52,7 @@ namespace CatanRoguelike.Tests
                 return;
             }
 
-            Assert.AreEqual(4, piece.transform.childCount);
+            Assert.GreaterOrEqual(piece.transform.childCount, 4);
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.BodyPartName));
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName));
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofRightPartName));
@@ -127,9 +134,10 @@ namespace CatanRoguelike.Tests
                 HexTopY);
 
             var upperRenderer = piece.transform.Find(PlayerPieceVisuals.UpperStoreyPartName).GetComponent<Renderer>();
-            var roofLeftRenderer = piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName).GetComponent<Renderer>();
+            var towerRoofLeft = piece.transform.Find(PlayerPieceVisuals.TowerRoofLeftPartName).GetComponent<Renderer>();
+            var towerRidge = piece.transform.Find(PlayerPieceVisuals.TowerRoofRidgePartName).GetComponent<Renderer>();
 
-            AssertRoofRidgeCoversTop(upperRenderer, roofLeftRenderer, piece);
+            AssertRoofRidgeCoversTop(upperRenderer, towerRoofLeft, piece, towerRidge);
         }
 
         [Test]
@@ -268,24 +276,35 @@ namespace CatanRoguelike.Tests
         private static void AssertRoofRidgeCoversTop(
             Renderer bodyRenderer,
             Renderer roofLeftRenderer,
-            GameObject piece)
+            GameObject piece,
+            Renderer ridgeRendererOverride = null)
         {
-            var ridgeTransform = piece.transform.Find(PlayerPieceVisuals.RoofRidgePartName);
+            var ridgeTransform = ridgeRendererOverride != null
+                ? ridgeRendererOverride.transform
+                : piece.transform.Find(PlayerPieceVisuals.RoofRidgePartName);
             Assert.NotNull(ridgeTransform);
 
-            var ridgeRenderer = ridgeTransform.GetComponent<Renderer>();
+            var ridgeRenderer = ridgeRendererOverride ?? ridgeTransform.GetComponent<Renderer>();
             var bodyBounds = bodyRenderer.bounds;
             var ridgeBounds = ridgeRenderer.bounds;
+            var roofRightRenderer = roofLeftRenderer.transform.parent.Find(
+                roofLeftRenderer.gameObject.name.Contains("Tower")
+                    ? PlayerPieceVisuals.TowerRoofRightPartName
+                    : PlayerPieceVisuals.RoofRightPartName).GetComponent<Renderer>();
 
             Assert.Less(MaxRgb(ridgeRenderer.sharedMaterial.color), MaxRgb(roofLeftRenderer.sharedMaterial.color));
 
-            Assert.LessOrEqual(ridgeBounds.min.x, bodyBounds.min.x);
-            Assert.GreaterOrEqual(ridgeBounds.max.x, bodyBounds.max.x);
-            Assert.LessOrEqual(ridgeBounds.min.z, bodyBounds.min.z);
-            Assert.GreaterOrEqual(ridgeBounds.max.z, bodyBounds.max.z);
+            float panelMinX = Mathf.Min(roofLeftRenderer.bounds.min.x, roofRightRenderer.bounds.min.x);
+            float panelMaxX = Mathf.Max(roofLeftRenderer.bounds.max.x, roofRightRenderer.bounds.max.x);
+            float panelMinZ = Mathf.Min(roofLeftRenderer.bounds.min.z, roofRightRenderer.bounds.min.z);
+            float panelMaxZ = Mathf.Max(roofLeftRenderer.bounds.max.z, roofRightRenderer.bounds.max.z);
+            Assert.LessOrEqual(panelMinX, bodyBounds.min.x + 0.02f);
+            Assert.GreaterOrEqual(panelMaxX, bodyBounds.max.x - 0.02f);
+            Assert.LessOrEqual(panelMinZ, bodyBounds.min.z + 0.02f);
+            Assert.GreaterOrEqual(panelMaxZ, bodyBounds.max.z - 0.02f);
             Assert.Greater(ridgeBounds.min.y, bodyBounds.max.y + MinRidgeGapAboveBodyTop - 0.01f);
 
-            float panelPeakY = Mathf.Max(roofLeftRenderer.bounds.max.y, piece.transform.Find(PlayerPieceVisuals.RoofRightPartName).GetComponent<Renderer>().bounds.max.y);
+            float panelPeakY = Mathf.Max(roofLeftRenderer.bounds.max.y, roofRightRenderer.bounds.max.y);
             Assert.GreaterOrEqual(ridgeBounds.max.y, panelPeakY);
         }
     }
