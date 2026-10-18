@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace CatanRoguelike.Game
 {
@@ -8,8 +9,8 @@ namespace CatanRoguelike.Game
         private const string ModelRoot = "Art/Models/ColonistPieces";
         public const string ModelChildName = PlayerPieceVisuals.KenneyModelChildName;
 
-        private const float SettlementFootprint = 0.60f;
-        private const float CityFootprint = 0.68f;
+        private const float SettlementFootprint = 0.62f;
+        private const float CityFootprint = 0.72f;
         private const float RoadWidth = 0.16f;
         private const float BaseGapAboveHex = 0.02f;
 
@@ -77,7 +78,7 @@ namespace CatanRoguelike.Game
             FitModelToRoad(root.transform, targetLen, RoadWidth, hexTopY);
             root.transform.rotation = Quaternion.Euler(0f, angleY, 0f);
             TintRenderers(root, playerColor, roofDarken: 0.72f);
-            StripColliders(root);
+            FinishPiece(root, hexTopY);
             return root;
         }
 
@@ -103,8 +104,38 @@ namespace CatanRoguelike.Game
             FitModelToFootprint(root.transform, targetFootprint, hexTopY);
             root.transform.rotation = Quaternion.Euler(0f, yawOffsetDeg, 0f);
             TintRenderers(root, playerColor, roofDarken: 0.62f);
-            StripColliders(root);
+            FinishPiece(root, hexTopY);
             return root;
+        }
+
+        private static void FinishPiece(GameObject root, float hexTopY)
+        {
+            StripColliders(root);
+            DisableRealtimeShadows(root);
+            ColonistPlayerPieceContactShadow.Attach(root.transform, hexTopY);
+        }
+
+        private static void DisableRealtimeShadows(GameObject root)
+        {
+            foreach (var renderer in root.GetComponentsInChildren<Renderer>())
+            {
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+        }
+
+        private static Transform FindPart(Transform root, string partName)
+        {
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+            {
+                if (t == root)
+                    continue;
+                if (t.name.StartsWith(partName, System.StringComparison.Ordinal)
+                    || t.name.Contains(partName, System.StringComparison.Ordinal))
+                    return t;
+            }
+
+            return null;
         }
 
         private static void FitModelToFootprint(Transform model, float targetFootprint, float hexTopY)
@@ -174,15 +205,18 @@ namespace CatanRoguelike.Game
             foreach (var renderer in model.GetComponentsInChildren<Renderer>())
             {
                 string name = renderer.gameObject.name;
-                if (name.Contains("Ridge"))
+                if (name.Contains("Ridge", System.StringComparison.Ordinal))
                     renderer.sharedMaterial = roofRidge;
-                else if (name == PlayerPieceVisuals.RoofLeftPartName || name.Contains("RoofLeft"))
+                else if (name.Contains("RoofLeft", System.StringComparison.Ordinal)
+                         || name.Contains("TowerRoofLeft", System.StringComparison.Ordinal))
                     renderer.sharedMaterial = roofLit;
-                else if (name == PlayerPieceVisuals.RoofRightPartName || name.Contains("RoofRight"))
+                else if (name.Contains("RoofRight", System.StringComparison.Ordinal)
+                         || name.Contains("TowerRoofRight", System.StringComparison.Ordinal))
                     renderer.sharedMaterial = roofShade;
-                else if (name == PlayerPieceVisuals.UpperStoreyPartName)
+                else if (name.Contains(PlayerPieceVisuals.UpperStoreyPartName, System.StringComparison.Ordinal))
                     renderer.sharedMaterial = upper;
-                else if (name.Contains("Roof") || name.Contains("Tower"))
+                else if (name.Contains("Roof", System.StringComparison.Ordinal)
+                         || name.Contains("Tower", System.StringComparison.Ordinal))
                     renderer.sharedMaterial = roofShade;
                 else
                     renderer.sharedMaterial = body;

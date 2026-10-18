@@ -183,13 +183,16 @@ namespace CatanRoguelike.Game
             bool darkStonePatch = false)
         {
             float y = -0.02f;
-            var tint = darkStonePatch ? new Color(0.22f, 0.24f, 0.28f) : new Color(0.08f, 0.10f, 0.08f);
+            var tint = darkStonePatch
+                ? new Color(0.22f, 0.24f, 0.28f, 0.20f)
+                : new Color(0.10f, 0.14f, 0.10f, 0.16f);
+            float softRadius = radius * 0.82f;
             var shadow = CreatePart(parent, "SpriteShadow", localPos + new Vector3(0f, y, 0f), PrimitiveType.Cylinder,
-                new Vector3(radius, darkStonePatch ? 0.01f : 0.008f, radius), tint);
+                new Vector3(softRadius, darkStonePatch ? 0.006f : 0.005f, softRadius), tint);
             var renderer = shadow.GetComponent<Renderer>();
             if (renderer != null)
             {
-                renderer.sharedMaterial = BuiltInMaterials.CreateMatteOpaque(tint);
+                renderer.sharedMaterial = BuiltInMaterials.CreateUnlit(tint, zWrite: false);
                 renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             }
         }

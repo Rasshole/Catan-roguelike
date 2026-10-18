@@ -11,6 +11,16 @@ except ImportError:
 SAND = (237, 209, 148)
 
 # (center_x_frac, center_y_frac, half_size_frac) on reference_board.jpg
+# Expected mean HSV (H 0-1, S 0-1, V 0-1) inside hex interior per terrain slot
+REF_MEAN_HSV = {
+    "Wood": (0.28, 0.55, 0.35),
+    "Wheat": (0.12, 0.62, 0.72),
+    "Sheep": (0.30, 0.48, 0.55),
+    "Ore": (0.55, 0.18, 0.55),
+    "Brick": (0.06, 0.58, 0.48),
+    "Desert": (0.10, 0.35, 0.82),
+}
+
 REF_HEX_CROPS = {
     "Wood": (0.36, 0.38, 0.09),
     "Wheat": (0.52, 0.34, 0.09),
@@ -27,6 +37,48 @@ def hex_sdf(x: float, y: float, cx: float, cy: float, radius: float) -> float:
     qx = abs(px)
     qy = abs(py)
     return max(qy - 1.0, qx * 0.866025 + qy * 0.5 - 0.866025)
+
+
+def interior_mean_hsv(path: str, inner_radius_frac: float = 0.47) -> tuple[float, float, float]:
+    if Image is None:
+        return (0.0, 0.0, 0.0)
+    im = Image.open(path).convert("RGBA")
+    w, h = im.size
+    cx, cy = w * 0.5, h * 0.5
+    radius = min(w, h) * inner_radius_frac
+    bevel_w = 0.020
+    px = im.load()
+    rs = gs = bs = 0.0
+    n = 0
+    for y in range(h):
+        for x in range(w):
+            d = hex_sdf(x, y, cx, cy, radius)
+            if d > -bevel_w:
+                continue
+            r, g, b, a = px[x, y]
+            if a < 16:
+                continue
+            rn, gn, bn = r / 255.0, g / 255.0, b / 255.0
+            mx = max(rn, gn, bn)
+            mn = min(rn, gn, bn)
+            v = mx
+            s = 0.0 if mx < 1e-6 else (mx - mn) / mx
+            if mx == mn:
+                hue = 0.0
+            elif mx == rn:
+                hue = ((gn - bn) / (mx - mn)) % 6.0
+            elif mx == gn:
+                hue = (bn - rn) / (mx - mn) + 2.0
+            else:
+                hue = (rn - gn) / (mx - mn) + 4.0
+            hue /= 6.0
+            rs += hue
+            gs += s
+            bs += v
+            n += 1
+    if n == 0:
+        return (0.0, 0.0, 0.0)
+    return (rs / n, gs / n, bs / n)
 
 
 def interior_luma_variance(path: str, inner_radius_frac: float = 0.47) -> float:
@@ -123,3 +175,15 @@ def make_side_by_side(
         draw.text((8, y + 8), f"{name} reference", fill=(255, 255, 200))
         draw.text((tile + 8, y + 8), f"{name} render", fill=(255, 255, 200))
     sheet.save(out_path)
+
+
+def assert_terrain_color(slot: str, path: str, hue_tol: float = 0.14, sat_tol: float = 0.30) -> None:
+    if slot not in REF_MEAN_HSV:
+        return
+    h, s, v = interior_mean_hsv(path)
+    eh, es, _ = REF_MEAN_HSV[slot]
+    dh = min(abs(h - eh), 1.0 - abs(h - eh))
+    if dh > hue_tol:
+        raise ValueError(f"{slot}: hue {h:.2f} not near reference {eh:.2f} (delta {dh:.2f})")
+    if s < es - sat_tol:
+        raise ValueError(f"{slot}: saturation {s:.2f} too low vs reference {es:.2f}")

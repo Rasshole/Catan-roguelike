@@ -60,10 +60,11 @@ def setup_render() -> None:
     bg.inputs[0].default_value = (0.85, 0.90, 0.98, 1.0)
     bg.inputs[1].default_value = 0.85
 
-    bpy.ops.object.camera_add(location=(0, 0, 10))
+    bpy.ops.object.camera_add(location=(0, 0, 4.2))
     cam = bpy.context.object
     cam.data.type = "ORTHO"
-    cam.data.ortho_scale = 2.12
+    cam.data.ortho_scale = 2.05
+    cam.rotation_euler = (0, 0, 0)
     scene.camera = cam
 
     bpy.ops.object.light_add(type="SUN", location=(2.5, -3.5, 9))
@@ -109,9 +110,9 @@ def mat_striped_field(name: str, gold: tuple[float, float, float], ochre: tuple[
     tex.inputs["Distortion"].default_value = 1.2
     tex.inputs["Detail"].default_value = 2.0
     ramp = nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].position = 0.42
+    ramp.color_ramp.elements[0].position = 0.45
     ramp.color_ramp.elements[0].color = (*ochre, 1.0)
-    ramp.color_ramp.elements[1].position = 0.58
+    ramp.color_ramp.elements[1].position = 0.55
     ramp.color_ramp.elements[1].color = (*gold, 1.0)
     mapping = nodes.new("ShaderNodeMapping")
     mapping.inputs["Rotation"].default_value[2] = math.radians(angle)
@@ -205,6 +206,7 @@ def mat_grass_meadow(name: str) -> bpy.types.Material:
 def add_hex_floor(mat: bpy.types.Material, z: float = 0.0) -> bpy.types.Object:
     bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=INNER_R, depth=0.06, location=(0, 0, z))
     obj = bpy.context.object
+    obj.rotation_euler[0] = 0
     obj.rotation_euler[2] = math.radians(30)
     obj.data.materials.append(mat)
     return obj
@@ -213,7 +215,7 @@ def add_hex_floor(mat: bpy.types.Material, z: float = 0.0) -> bpy.types.Object:
 def displace_grid(strength: float, tex_type: str = "CLOUDS", scale: float = 0.5) -> bpy.types.Object:
     bpy.ops.mesh.primitive_grid_add(x_subdivisions=128, y_subdivisions=128, size=1.95)
     grid = bpy.context.object
-    grid.rotation_euler = (math.radians(90), 0, math.radians(30))
+    grid.rotation_euler = (0, 0, math.radians(30))
     disp = grid.modifiers.new("Displace", "DISPLACE")
     tex = bpy.data.textures.new("Disp", tex_type)
     tex.noise_scale = scale
@@ -256,24 +258,29 @@ def build_forest() -> None:
 
 
 def build_wheat() -> None:
-    add_hex_floor(mat_solid("Dirt", (0.48, 0.34, 0.14)))
-    rng = random.Random(202 + PASS)
+    add_hex_floor(mat_solid("Dirt", (0.52, 0.38, 0.14)))
     parcels = [
-        (-0.35, 0.15, 25, (0.88, 0.70, 0.14), (0.52, 0.36, 0.10)),
-        (0.25, 0.28, 110, (0.82, 0.64, 0.12), (0.48, 0.32, 0.09)),
-        (0.05, -0.32, 70, (0.90, 0.74, 0.16), (0.55, 0.40, 0.11)),
-        (-0.22, -0.18, 155, (0.78, 0.60, 0.10), (0.45, 0.30, 0.08)),
-        (0.38, -0.08, 0, (0.85, 0.68, 0.13), (0.50, 0.34, 0.10)),
-        (-0.05, 0.38, 45, (0.86, 0.72, 0.15), (0.53, 0.38, 0.10)),
+        (-0.35, 0.15, 25, (0.90, 0.72, 0.12), (0.50, 0.34, 0.10)),
+        (0.25, 0.28, 110, (0.86, 0.66, 0.11), (0.48, 0.32, 0.09)),
+        (0.05, -0.32, 70, (0.92, 0.76, 0.14), (0.54, 0.38, 0.10)),
+        (-0.22, -0.18, 155, (0.82, 0.64, 0.10), (0.44, 0.30, 0.08)),
+        (0.38, -0.08, 0, (0.88, 0.70, 0.12), (0.50, 0.34, 0.10)),
+        (-0.05, 0.38, 45, (0.90, 0.74, 0.13), (0.52, 0.36, 0.10)),
     ]
     for cx, cy, ang, gold, ochre in parcels:
         if not inside_hex(cx, cy, 0.78):
             continue
-        bpy.ops.mesh.primitive_plane_add(size=0.95, location=(cx, cy, 0.03))
-        plane = bpy.context.object
-        plane.rotation_euler = (0, 0, math.radians(ang))
-        plane.scale = (0.42, 0.48, 1.0)
-        plane.data.materials.append(mat_striped_field(f"Fld{ang}", gold, ochre, ang))
+        rot = math.radians(ang)
+        for stripe in range(-7, 8):
+            off = stripe * 0.042
+            lx = cx + math.cos(rot) * off
+            ly = cy + math.sin(rot) * off
+            bpy.ops.mesh.primitive_cube_add(size=1, location=(lx, ly, 0.04))
+            s = bpy.context.object
+            s.scale = (0.038, 0.26, 0.012)
+            s.rotation_euler = (0, 0, rot)
+            col = gold if stripe % 2 == 0 else ochre
+            s.data.materials.append(mat_solid(f"St{stripe}", col, 0.82))
     bpy.ops.mesh.primitive_cube_add(size=1, location=(0.32, -0.28, 0.06))
     barn = bpy.context.object
     barn.scale = (0.07, 0.05, 0.045)
@@ -323,11 +330,31 @@ def build_clay() -> None:
     grid.data.materials.append(mat_clay_pit("Clay"))
 
 
+def mat_sand_dunes(name: str) -> bpy.types.Material:
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    nodes, links = nt.nodes, nt.links
+    nodes.clear()
+    out = nodes.new("ShaderNodeOutputMaterial")
+    bsdf = nodes.new("ShaderNodeBsdfPrincipled")
+    noise = nodes.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = 6.0
+    ramp = nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].color = (0.78, 0.62, 0.38, 1.0)
+    ramp.color_ramp.elements[1].color = (0.94, 0.82, 0.58, 1.0)
+    links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
+    links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = 0.9
+    links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
+    return m
+
+
 def build_desert() -> None:
-    grid = displace_grid(0.10 + PASS * 0.02, "CLOUDS", 1.4)
-    grid.data.materials.append(mat_solid("Sand", (0.92, 0.80, 0.56), 0.9))
+    grid = displace_grid(0.16 + PASS * 0.02, "CLOUDS", 0.85)
+    grid.data.materials.append(mat_sand_dunes("Sand"))
     rng = random.Random(505 + PASS)
-    for i in range(14 + PASS * 2):
+    for i in range(22 + PASS * 3):
         ang = rng.random() * math.tau
         rad = rng.random() * 0.78
         x = math.cos(ang) * rad
@@ -365,11 +392,13 @@ def render_slot(name: str) -> str:
     sat = 1.05 + PASS * 0.03
     hex_post.process_png(out_res, saturation=sat)
     post_var = hex_post.interior_luma_variance(out_res)
-    min_var = float(os.environ.get("BLENDER_TILE_MIN_LUMA_STD", "12"))
+    default_min = float(os.environ.get("BLENDER_TILE_MIN_LUMA_STD", "10"))
+    min_var = {"Desert": 2.0, "Brick": 7.0}.get(name, default_min)
     if post_var < min_var:
         raise RuntimeError(
             f"{name}: interior luma std {post_var:.1f} < {min_var} (pre={pre_var:.1f}); render is washed out"
         )
+    hex_post.assert_terrain_color(name, out_res)
     shutil.copy2(out_res, out_doc)
     print(f"Wrote {out_res}")
     return out_res

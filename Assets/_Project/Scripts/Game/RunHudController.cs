@@ -370,12 +370,22 @@ namespace CatanRoguelike.Game
 
         private void RefreshResources(ResourceBundle bundle)
         {
+            if (_resourceAmountTexts == null || bundle == null)
+                return;
+
             int i = 0;
             foreach (ResourceType resource in ResourceTypes.Productive)
             {
                 if (i >= _resourceAmountTexts.Count)
                     break;
-                _resourceAmountTexts[i].text = HudResourceFormatting.FormatInventoryLine(bundle, resource);
+                var label = _resourceAmountTexts[i];
+                if (label == null)
+                {
+                    i++;
+                    continue;
+                }
+
+                label.text = HudResourceFormatting.FormatInventoryLine(bundle, resource);
                 i++;
             }
         }

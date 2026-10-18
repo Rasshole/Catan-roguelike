@@ -30,18 +30,16 @@ namespace CatanRoguelike.Game
 
             var validator = new PlacementValidator();
             var vertices = EnumerateLandVertices(board);
-            var humanVerts = PickVerticesSpread(board, validator, vertices, 3, PlayerId.Human);
-            if (humanVerts.Count < 3)
+            var spread = PickVerticesQuadrants(board, validator, vertices, 5);
+            if (spread.Count < 5)
                 return;
+
+            var humanVerts = new List<Vertex> { spread[0], spread[1], spread[2] };
+            var aiVerts = new List<Vertex> { spread[3], spread[4] };
 
             board.VertexBuildings[humanVerts[0]] = (BuildingType.Settlement, PlayerId.Human);
             board.VertexBuildings[humanVerts[1]] = (BuildingType.Settlement, PlayerId.Human);
             board.VertexBuildings[humanVerts[2]] = (BuildingType.City, PlayerId.Human);
-
-            var aiVerts = PickVerticesSpread(board, validator, vertices, 2, PlayerId.Ai);
-            if (aiVerts.Count < 2)
-                return;
-
             board.VertexBuildings[aiVerts[0]] = (BuildingType.Settlement, PlayerId.Ai);
             board.VertexBuildings[aiVerts[1]] = (BuildingType.Settlement, PlayerId.Ai);
 
@@ -105,15 +103,12 @@ namespace CatanRoguelike.Game
                 .ToList();
         }
 
-        private static List<Vertex> PickVerticesSpread(
+        private static List<Vertex> PickVerticesQuadrants(
             BoardState board,
             PlacementValidator validator,
             List<Vertex> candidates,
-            int count,
-            PlayerId player)
+            int count)
         {
-            var picked = new List<Vertex>(count);
-            var valid = new List<(Vertex vertex, float angle)>();
             float centerX = 0f;
             float centerZ = 0f;
             int landCount = 0;
@@ -133,60 +128,51 @@ namespace CatanRoguelike.Game
                 centerZ /= landCount;
             }
 
+            var valid = new List<(Vertex vertex, int quadrant, float radius)>();
             foreach (var vertex in candidates)
             {
                 if (!IsInnerLandVertex(board, vertex))
                     continue;
-                if (!validator.CanPlaceSettlement(board, vertex, player, setupPhase: true))
+                if (!validator.CanPlaceSettlement(board, vertex, PlayerId.Human, setupPhase: true))
                     continue;
+                if (!validator.CanPlaceSettlement(board, vertex, PlayerId.Ai, setupPhase: true))
+                    continue;
+
                 var (vx, vz) = HexMath.VertexToWorldPosition(vertex, 1f);
-                float angle = Mathf.Atan2(vz - centerZ, vx - centerX);
-                float radius = Mathf.Sqrt((vx - centerX) * (vx - centerX) + (vz - centerZ) * (vz - centerZ));
-                valid.Add((vertex, angle + radius * 0.02f));
+                int quadrant = (vx >= centerX ? 1 : 0) | (vz >= centerZ ? 2 : 0);
+                float radius = (vx - centerX) * (vx - centerX) + (vz - centerZ) * (vz - centerZ);
+                valid.Add((vertex, quadrant, radius));
             }
 
-            valid = valid.OrderBy(v => v.angle).ToList();
-            if (valid.Count == 0)
-                return picked;
-
-            int sectors = Mathf.Max(count * 2, 4);
-            float sectorWidth = Mathf.PI * 2f / sectors;
-            int sectorIndex = 0;
-            while (picked.Count < count && sectorIndex < sectors * 4)
+            var picked = new List<Vertex>(count);
+            for (int q = 0; q < 4; q++)
             {
-                float targetAngle = (sectorIndex % sectors) * sectorWidth;
-                Vertex? best = null;
-                float bestScore = float.MaxValue;
-                foreach (var (vertex, angle) in valid)
+                Vertex? choice = null;
+                float bestR = -1f;
+                foreach (var (vertex, quadrant, radius) in valid)
                 {
-                    if (!IsFarEnough(vertex, picked))
+                    if (quadrant != q || !IsFarEnough(vertex, picked))
                         continue;
-                    float delta = Mathf.Abs(NormalizeAngle(angle - targetAngle));
-                    float score = delta + sectorIndex * 0.001f;
-                    if (score < bestScore)
+                    if (radius > bestR)
                     {
-                        bestScore = score;
-                        best = vertex;
+                        bestR = radius;
+                        choice = vertex;
                     }
                 }
 
-                if (best.HasValue)
-                    picked.Add(best.Value);
-                sectorIndex++;
+                if (choice.HasValue)
+                    picked.Add(choice.Value);
             }
 
-            if (picked.Count < count)
+            foreach (var (vertex, _, radius) in valid.OrderByDescending(v => v.radius))
             {
-                foreach (var (vertex, _) in valid)
-                {
-                    if (picked.Contains(vertex))
-                        continue;
-                    if (!IsFarEnough(vertex, picked))
-                        continue;
-                    picked.Add(vertex);
-                    if (picked.Count >= count)
-                        break;
-                }
+                if (picked.Count >= count)
+                    break;
+                if (picked.Contains(vertex))
+                    continue;
+                if (!IsFarEnough(vertex, picked))
+                    continue;
+                picked.Add(vertex);
             }
 
             return picked;
@@ -207,15 +193,6 @@ namespace CatanRoguelike.Game
             }
 
             return landTouches >= 2;
-        }
-
-        private static float NormalizeAngle(float radians)
-        {
-            while (radians > Mathf.PI)
-                radians -= Mathf.PI * 2f;
-            while (radians < -Mathf.PI)
-                radians += Mathf.PI * 2f;
-            return Mathf.Abs(radians);
         }
 
         private static bool IsFarEnough(Vertex vertex, IReadOnlyList<Vertex> picked)
