@@ -370,7 +370,7 @@ namespace CatanRoguelike.Game
 
         private void RefreshResources(ResourceBundle bundle)
         {
-            if (_resourceAmountTexts == null || bundle == null)
+            if (_resourceAmountTexts == null)
                 return;
 
             int i = 0;
