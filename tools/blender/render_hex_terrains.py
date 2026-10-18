@@ -351,7 +351,8 @@ def mat_sand_dunes(name: str) -> bpy.types.Material:
 
 
 def build_desert() -> None:
-    grid = displace_grid(0.16 + PASS * 0.02, "CLOUDS", 0.85)
+    add_hex_floor(mat_solid("SandBase", (0.88, 0.72, 0.46)))
+    grid = displace_grid(0.12 + PASS * 0.02, "CLOUDS", 1.1)
     grid.data.materials.append(mat_sand_dunes("Sand"))
     rng = random.Random(505 + PASS)
     for i in range(22 + PASS * 3):

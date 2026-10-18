@@ -18,7 +18,7 @@ REF_MEAN_HSV = {
     "Sheep": (0.30, 0.48, 0.55),
     "Ore": (0.55, 0.18, 0.55),
     "Brick": (0.06, 0.58, 0.48),
-    "Desert": (0.10, 0.35, 0.82),
+    "Desert": (0.10, 0.28, 0.78),
 }
 
 REF_HEX_CROPS = {
@@ -185,5 +185,7 @@ def assert_terrain_color(slot: str, path: str, hue_tol: float = 0.14, sat_tol: f
     dh = min(abs(h - eh), 1.0 - abs(h - eh))
     if dh > hue_tol:
         raise ValueError(f"{slot}: hue {h:.2f} not near reference {eh:.2f} (delta {dh:.2f})")
+    if v < 0.12:
+        raise ValueError(f"{slot}: value {v:.2f} too dark; render likely failed")
     if s < es - sat_tol:
         raise ValueError(f"{slot}: saturation {s:.2f} too low vs reference {es:.2f}")

@@ -11,7 +11,3 @@
 - Increased displacement, saturation, sun energy, and forest/wheat density.
 - Closer on layout and color family but still stylized 3D vs printed board illustration.
   Keeping `ColonistBlenderHexTerrainArt.Enabled = false` until another art pass.
-
-## Pass 4 (v118)
-- Fixed bevel SDF units (was mixing pixel radius with normalized distance, flooding tiles yellow).
-- Added interior luma variance gate; boosted pasture/forest saturation. Still not photo-close; Enabled stays false.
