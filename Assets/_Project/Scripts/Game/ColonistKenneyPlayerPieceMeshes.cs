@@ -10,7 +10,7 @@ namespace CatanRoguelike.Game
 
         private const float SettlementFootprint = 0.40f;
         private const float CityFootprint = 0.55f;
-        private const float RoadWidth = 0.12f;
+        private const float RoadWidth = 0.18f; // 0.12 read as a 6 px hairline at 1080p (v117 review)
         private const float BaseGapAboveHex = 0.02f;
 
         public static bool ModelsAvailable =>
@@ -68,10 +68,14 @@ namespace CatanRoguelike.Game
             var root = Object.Instantiate(prefab, parent, false);
             root.name = PlayerPieceVisuals.RoadName;
             root.transform.position = midpoint;
-            root.transform.rotation = Quaternion.Euler(0f, angleY, 0f);
+            // Fit while axis-aligned: ComputeLocalBounds maps only the world AABB min/max corners back
+            // to local space, so fitting after a 60°/120° yaw mis-measured width/length and some roads
+            // rendered as 1 px hairlines (v117 capture). Rotate once the scale is set.
+            root.transform.rotation = Quaternion.identity;
 
             float targetLen = Mathf.Max(length * 0.92f, 0.35f);
             FitModelToRoad(root.transform, targetLen, RoadWidth, hexTopY);
+            root.transform.rotation = Quaternion.Euler(0f, angleY, 0f);
             TintRenderers(root, playerColor, roofDarken: 0.72f);
             StripColliders(root);
             return root;
@@ -94,9 +98,10 @@ namespace CatanRoguelike.Game
             var root = Object.Instantiate(prefab, parent, false);
             root.name = instanceName;
             root.transform.position = worldPosition;
-            root.transform.rotation = Quaternion.Euler(0f, yawOffsetDeg, 0f);
+            root.transform.rotation = Quaternion.identity;
 
             FitModelToFootprint(root.transform, targetFootprint, hexTopY);
+            root.transform.rotation = Quaternion.Euler(0f, yawOffsetDeg, 0f);
             TintRenderers(root, playerColor, roofDarken: 0.62f);
             StripColliders(root);
             return root;
