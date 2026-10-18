@@ -115,7 +115,7 @@ namespace CatanRoguelike.Tests.PlayMode
 
                 var mainCamera = Camera.main;
                 var tableCamera = UnityEngine.Object.FindFirstObjectByType<TableCamera>();
-                var boardView = UnityEngine.Object.FindFirstObjectByType<BoardView>();
+                boardView = UnityEngine.Object.FindFirstObjectByType<BoardView>();
                 Assert.IsNotNull(mainCamera, "Main camera should exist for board capture assertions.");
                 Assert.IsNotNull(tableCamera, "TableCamera should exist for colonist capture assertions.");
                 Assert.IsNotNull(boardView, "BoardView should exist for colonist capture assertions.");

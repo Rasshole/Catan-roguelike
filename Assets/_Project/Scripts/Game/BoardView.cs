@@ -309,6 +309,8 @@ namespace CatanRoguelike.Game
                     DestroySceneObject(boardRoot.GetChild(i).gameObject);
             }
 
+            buildingsRoot = null;
+
             _tiles.Clear();
             _fishShoalViews.Clear();
             _boardTileCoords.Clear();

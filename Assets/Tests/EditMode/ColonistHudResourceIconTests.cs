@@ -31,11 +31,26 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void Sheep_PortBadge_UsesPastureBoardArt()
+        public void Sheep_PortBadge_IsWhiteSheepIcon_NotPastureTerrain()
         {
             var sheep = ColonistResourceIconTextures.GetForPortBadge(ResourceType.Sheep);
+            var pastureTerrain = Resources.Load<Texture2D>("Art/Board/Sheep");
             Assert.IsNotNull(sheep);
-            Assert.AreEqual("Sheep", sheep.name, "Sheep HUD/port icons should use the pasture tile Kenney art.");
+            Assert.AreNotEqual(pastureTerrain, sheep, "Sheep icon must not reuse the pasture hex terrain texture.");
+            Assert.Greater(CountTransparentPixels(sheep), 32, "Sheep icon should have transparent background pixels.");
+        }
+
+        private static int CountTransparentPixels(Texture2D tex)
+        {
+            int count = 0;
+            var pixels = tex.GetPixels32();
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                if (pixels[i].a < 16)
+                    count++;
+            }
+
+            return count;
         }
 
         [Test]

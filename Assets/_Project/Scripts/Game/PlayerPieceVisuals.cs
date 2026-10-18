@@ -44,7 +44,7 @@ namespace CatanRoguelike.Game
             return mat;
         }
 
-        public static bool UsesKenneyModels => ColonistKenneyPlayerPieceMeshes.ModelsAvailable;
+        public static bool UsesKenneyModels => ColonistKenneyPlayerPieceMeshes.UsesKenneyModels;
 
         public static GameObject CreateSettlement(Transform parent, Vector3 worldPosition, Color color, float hexTopY)
         {

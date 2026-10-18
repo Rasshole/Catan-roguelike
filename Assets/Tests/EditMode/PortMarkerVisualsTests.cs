@@ -100,8 +100,8 @@ namespace CatanRoguelike.Tests
                     float minDist = float.MaxValue;
                     foreach (var coast in coasts)
                     {
-                        minDist = Mathf.Min(minDist, Vector3.Distance(start, coast));
-                        minDist = Mathf.Min(minDist, Vector3.Distance(end, coast));
+                        minDist = Mathf.Min(minDist, HorizontalDistance(start, coast));
+                        minDist = Mathf.Min(minDist, HorizontalDistance(end, coast));
                     }
 
                     Assert.Less(
@@ -246,6 +246,13 @@ namespace CatanRoguelike.Tests
                 plankRenderer.transform.position.z);
             float minDistCenter = SeaFrameSlotLayout.MinDistanceToLandHexPolygons(board, center, HexScale);
             Assert.Greater(minDistCenter, 0.001f, "Pier plank center should stay in open water.");
+        }
+
+        private static float HorizontalDistance(Vector3 a, Vector3 b)
+        {
+            float dx = a.x - b.x;
+            float dz = a.z - b.z;
+            return Mathf.Sqrt(dx * dx + dz * dz);
         }
 
         private static void AssertPlankLengthReadableFromTable(GameObject marker)

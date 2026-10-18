@@ -2,19 +2,22 @@ using UnityEngine;
 
 namespace CatanRoguelike.Game
 {
-    /// <summary>Kenney Mini Strategy / Medieval building meshes for board pieces (top-down readable).</summary>
+    /// <summary>Blender-authored Catan-style player pieces (settlements, cities, roads).</summary>
     internal static class ColonistKenneyPlayerPieceMeshes
     {
-        private const string ModelRoot = "Art/Models/Kenney";
+        private const string ModelRoot = "Art/Models/ColonistPieces";
         public const string ModelChildName = PlayerPieceVisuals.KenneyModelChildName;
 
-        private const float SettlementFootprint = 0.34f;
-        private const float CityFootprint = 0.42f;
-        private const float RoadWidth = 0.16f;
+        private const float SettlementFootprint = 0.40f;
+        private const float CityFootprint = 0.55f;
+        private const float RoadWidth = 0.12f;
         private const float BaseGapAboveHex = 0.02f;
 
         public static bool ModelsAvailable =>
-            Resources.Load<GameObject>($"{ModelRoot}/building-farm") != null;
+            Resources.Load<GameObject>($"{ModelRoot}/settlement") != null;
+
+        /// <summary>Colonist pieces use Body/Roof part names at the piece root (not Kenney wrappers).</summary>
+        public static bool UsesKenneyModels => false;
 
         public static GameObject TryCreateSettlement(
             Transform parent,
@@ -25,7 +28,8 @@ namespace CatanRoguelike.Game
             return TryPlaceModel(
                 parent,
                 worldPosition,
-                "building-farm",
+                "settlement",
+                PlayerPieceVisuals.SettlementName,
                 SettlementFootprint,
                 playerColor,
                 hexTopY,
@@ -41,11 +45,12 @@ namespace CatanRoguelike.Game
             return TryPlaceModel(
                 parent,
                 worldPosition,
-                "building-smelter",
+                "city",
+                PlayerPieceVisuals.CityName,
                 CityFootprint,
                 playerColor,
                 hexTopY,
-                yawOffsetDeg: 18f);
+                yawOffsetDeg: 14f);
         }
 
         public static GameObject TryCreateRoad(
@@ -56,54 +61,44 @@ namespace CatanRoguelike.Game
             Color playerColor,
             float hexTopY)
         {
-            var prefab = Resources.Load<GameObject>($"{ModelRoot}/fence_planksDouble");
+            var prefab = Resources.Load<GameObject>($"{ModelRoot}/road");
             if (prefab == null)
                 return null;
 
-            var root = new GameObject(PlayerPieceVisuals.RoadName);
-            root.transform.SetParent(parent, false);
+            var root = Object.Instantiate(prefab, parent, false);
+            root.name = PlayerPieceVisuals.RoadName;
             root.transform.position = midpoint;
             root.transform.rotation = Quaternion.Euler(0f, angleY, 0f);
 
-            var model = Object.Instantiate(prefab, root.transform, false);
-            model.name = ModelChildName;
-            model.transform.localPosition = Vector3.zero;
-            model.transform.localRotation = Quaternion.identity;
-
-            float targetLen = Mathf.Max(length * 0.92f, hexTopY * 0.5f);
-            FitModelToRoad(model.transform, targetLen, RoadWidth, hexTopY);
-            TintRenderers(model, playerColor, roofDarken: 0.72f);
-            StripColliders(model);
+            float targetLen = Mathf.Max(length * 0.92f, 0.35f);
+            FitModelToRoad(root.transform, targetLen, RoadWidth, hexTopY);
+            TintRenderers(root, playerColor, roofDarken: 0.72f);
+            StripColliders(root);
             return root;
         }
 
         private static GameObject TryPlaceModel(
             Transform parent,
             Vector3 worldPosition,
-            string modelName,
+            string resourceName,
+            string instanceName,
             float targetFootprint,
             Color playerColor,
             float hexTopY,
             float yawOffsetDeg)
         {
-            var prefab = Resources.Load<GameObject>($"{ModelRoot}/{modelName}");
+            var prefab = Resources.Load<GameObject>($"{ModelRoot}/{resourceName}");
             if (prefab == null)
                 return null;
 
-            var root = new GameObject(
-                modelName.Contains("smelter") ? PlayerPieceVisuals.CityName : PlayerPieceVisuals.SettlementName);
-            root.transform.SetParent(parent, false);
+            var root = Object.Instantiate(prefab, parent, false);
+            root.name = instanceName;
             root.transform.position = worldPosition;
             root.transform.rotation = Quaternion.Euler(0f, yawOffsetDeg, 0f);
 
-            var model = Object.Instantiate(prefab, root.transform, false);
-            model.name = ModelChildName;
-            model.transform.localPosition = Vector3.zero;
-            model.transform.localRotation = Quaternion.identity;
-
-            FitModelToFootprint(model.transform, targetFootprint, hexTopY);
-            TintRenderers(model, playerColor, roofDarken: 0.62f);
-            StripColliders(model);
+            FitModelToFootprint(root.transform, targetFootprint, hexTopY);
+            TintRenderers(root, playerColor, roofDarken: 0.62f);
+            StripColliders(root);
             return root;
         }
 
@@ -130,8 +125,8 @@ namespace CatanRoguelike.Game
 
             float scaleZ = bounds.size.z > 1e-4f ? targetLength / bounds.size.z : 1f;
             float scaleX = bounds.size.x > 1e-4f ? targetWidth / bounds.size.x : scaleZ;
-            float uniform = Mathf.Min(scaleX, scaleZ);
-            model.localScale = new Vector3(uniform * 1.05f, uniform * 0.55f, uniform);
+            float heightScale = Mathf.Min(scaleX, scaleZ) * 0.5f;
+            model.localScale = new Vector3(scaleX, heightScale, scaleZ);
 
             bounds = ComputeLocalBounds(model);
             float lift = hexTopY + 0.01f - bounds.min.y;
@@ -158,13 +153,15 @@ namespace CatanRoguelike.Game
         private static void TintRenderers(GameObject model, Color playerColor, float roofDarken)
         {
             var body = BuiltInMaterials.Create(playerColor);
+            body.SetFloat("_Glossiness", 0.04f);
             var roof = BuiltInMaterials.Create(
                 new Color(playerColor.r * roofDarken, playerColor.g * roofDarken, playerColor.b * roofDarken, 1f));
+            roof.SetFloat("_Glossiness", 0.02f);
 
             foreach (var renderer in model.GetComponentsInChildren<Renderer>())
             {
                 string lower = renderer.gameObject.name.ToLowerInvariant();
-                bool roofLike = lower.Contains("roof") || lower.Contains("chimney") || lower.Contains("tower");
+                bool roofLike = lower.Contains("roof") || lower.Contains("upper");
                 renderer.sharedMaterial = roofLike ? roof : body;
             }
         }

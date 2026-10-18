@@ -1,72 +1,91 @@
 #!/usr/bin/env python3
-"""Headless Blender: orthographic painted hex terrain albedos (v116).
-
-Usage:
-  xvfb-run -a blender -b --python tools/blender/render_hex_terrains.py
-"""
+"""Headless Blender: painterly Catan-style hex terrain albedos (v117+)."""
 from __future__ import annotations
 
 import math
 import os
 import random
 import shutil
-import sys
 
 import bpy
-from mathutils import Vector
 
 ROOT = os.environ.get("BLENDER_TILE_REPO_ROOT", os.getcwd())
 RES = int(os.environ.get("BLENDER_TILE_RES", "1024"))
+PASS = int(os.environ.get("BLENDER_TILE_PASS", "3"))
 OUT_RESOURCES = os.path.join(ROOT, "Assets/_Project/Resources/Art/Board/Blender")
 OUT_DOCS = os.path.join(ROOT, "docs/art/blender-tiles")
+REF_PHOTO = os.environ.get(
+    "BLENDER_REF_PHOTO",
+    os.path.join(ROOT, "docs/art/blender-tiles/reference_board.jpg"),
+)
 
-HEX_R = 1.0
-BEVEL = 0.055
+INNER_R = 0.92
+DENSITY = 1.0 + (PASS - 1) * 0.15
+
+
+def import_hex_post():
+    post_path = os.path.join(ROOT, "tools/blender/hex_post.py")
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("hex_post", post_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def clear_scene() -> None:
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
-    for block in bpy.data.meshes:
-        if block.users == 0:
-            bpy.data.meshes.remove(block)
-    for block in bpy.data.materials:
-        if block.users == 0:
-            bpy.data.materials.remove(block)
 
 
-def setup_render() -> bpy.types.Object:
+def setup_render() -> None:
     scene = bpy.context.scene
-    scene.render.engine = "BLENDER_EEVEE"
+    scene.render.engine = "CYCLES"
+    scene.cycles.device = "CPU"
+    scene.cycles.samples = 40 + PASS * 20
+    scene.cycles.use_denoising = False
+    scene.cycles.max_bounces = 3
     scene.render.resolution_x = RES
     scene.render.resolution_y = RES
     scene.render.film_transparent = True
     scene.render.image_settings.file_format = "PNG"
     scene.render.image_settings.color_mode = "RGBA"
-    scene.eevee.taa_render_samples = 32
+    scene.view_settings.view_transform = "Standard"
+    scene.view_settings.exposure = -0.05 + PASS * 0.03
 
-    bpy.ops.object.camera_add(location=(0, 0, 8))
+    world = bpy.data.worlds.new("World")
+    scene.world = world
+    world.use_nodes = True
+    bg = world.node_tree.nodes["Background"]
+    bg.inputs[0].default_value = (0.85, 0.90, 0.98, 1.0)
+    bg.inputs[1].default_value = 1.4
+
+    bpy.ops.object.camera_add(location=(0, 0, 10))
     cam = bpy.context.object
     cam.data.type = "ORTHO"
-    cam.data.ortho_scale = HEX_R * 2.35
-    cam.rotation_euler = (0, 0, 0)
+    cam.data.ortho_scale = 2.12
     scene.camera = cam
 
-    bpy.ops.object.light_add(type="SUN", location=(2, -3, 6))
+    bpy.ops.object.light_add(type="SUN", location=(2.5, -3.5, 9))
     sun = bpy.context.object
-    sun.data.energy = 2.2
-    sun.rotation_euler = (math.radians(55), math.radians(8), math.radians(20))
+    sun.data.energy = 4.0 + PASS * 0.5
+    sun.data.angle = math.radians(3)
+    sun.rotation_euler = (math.radians(42), math.radians(10), math.radians(22))
 
-    bpy.ops.object.light_add(type="AREA", location=(-2, 2, 4))
+    bpy.ops.object.light_add(type="AREA", location=(-2.5, 2.5, 5))
     fill = bpy.context.object
-    fill.data.energy = 180
-    fill.data.size = 4
-    fill.rotation_euler = (math.radians(70), 0, math.radians(-35))
-
-    return cam
+    fill.data.energy = 420
+    fill.data.size = 7
+    fill.rotation_euler = (math.radians(62), 0, math.radians(-28))
 
 
-def mat_rgb(name: str, rgb: tuple[float, float, float], rough: float = 0.85) -> bpy.types.Material:
+def inside_hex(x: float, y: float, r: float = INNER_R) -> bool:
+    px = abs(x) / r
+    py = abs(y) / r
+    return max(py, px * 0.866025 + py * 0.5) <= 1.0
+
+
+def mat_solid(name: str, rgb: tuple[float, float, float], rough: float = 0.75) -> bpy.types.Material:
     m = bpy.data.materials.new(name)
     m.use_nodes = True
     bsdf = m.node_tree.nodes.get("Principled BSDF")
@@ -75,182 +94,249 @@ def mat_rgb(name: str, rgb: tuple[float, float, float], rough: float = 0.85) -> 
     return m
 
 
-def add_hex_base(z: float = 0.0, radius: float = HEX_R * 0.94) -> bpy.types.Object:
-    bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=radius, depth=0.12, location=(0, 0, z))
+def mat_striped_field(name: str, gold: tuple[float, float, float], ochre: tuple[float, float, float], angle: float) -> bpy.types.Material:
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    nodes, links = nt.nodes, nt.links
+    nodes.clear()
+    out = nodes.new("ShaderNodeOutputMaterial")
+    bsdf = nodes.new("ShaderNodeBsdfPrincipled")
+    tex = nodes.new("ShaderNodeTexWave")
+    tex.wave_type = "BANDS"
+    tex.bands_direction = "X"
+    tex.inputs["Scale"].default_value = 28.0
+    tex.inputs["Distortion"].default_value = 1.2
+    tex.inputs["Detail"].default_value = 2.0
+    ramp = nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].position = 0.42
+    ramp.color_ramp.elements[0].color = (*ochre, 1.0)
+    ramp.color_ramp.elements[1].position = 0.58
+    ramp.color_ramp.elements[1].color = (*gold, 1.0)
+    mapping = nodes.new("ShaderNodeMapping")
+    mapping.inputs["Rotation"].default_value[2] = math.radians(angle)
+    coord = nodes.new("ShaderNodeTexCoord")
+    links.new(coord.outputs["Generated"], mapping.inputs["Vector"])
+    links.new(mapping.outputs["Vector"], tex.inputs["Vector"])
+    links.new(tex.outputs["Fac"], ramp.inputs["Fac"])
+    links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = 0.82
+    links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
+    return m
+
+
+def mat_mountain(name: str) -> bpy.types.Material:
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    nodes, links = nt.nodes, nt.links
+    nodes.clear()
+    out = nodes.new("ShaderNodeOutputMaterial")
+    bsdf = nodes.new("ShaderNodeBsdfPrincipled")
+    noise = nodes.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = 4.5
+    noise.inputs["Detail"].default_value = 6.0
+    ramp = nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].color = (0.32, 0.36, 0.48, 1.0)
+    ramp.color_ramp.elements[1].color = (0.58, 0.62, 0.68, 1.0)
+    geom = nodes.new("ShaderNodeNewGeometry")
+    snow_ramp = nodes.new("ShaderNodeValToRGB")
+    snow_ramp.color_ramp.elements[0].position = 0.55
+    snow_ramp.color_ramp.elements[0].color = (0.35, 0.40, 0.52, 1.0)
+    snow_ramp.color_ramp.elements[1].position = 0.78
+    snow_ramp.color_ramp.elements[1].color = (0.95, 0.97, 1.0, 1.0)
+    mix = nodes.new("ShaderNodeMixRGB")
+    mix.blend_type = "MIX"
+    links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
+    links.new(ramp.outputs["Color"], mix.inputs[1])
+    links.new(geom.outputs["Position"], snow_ramp.inputs["Fac"])
+    links.new(snow_ramp.outputs["Color"], mix.inputs[2])
+    links.new(mix.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = 0.68
+    links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
+    return m
+
+
+def mat_clay_pit(name: str) -> bpy.types.Material:
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    nodes, links = nt.nodes, nt.links
+    nodes.clear()
+    out = nodes.new("ShaderNodeOutputMaterial")
+    bsdf = nodes.new("ShaderNodeBsdfPrincipled")
+    vor = nodes.new("ShaderNodeTexVoronoi")
+    vor.feature = "DISTANCE_TO_EDGE"
+    vor.inputs["Scale"].default_value = 2.8
+    ramp = nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].color = (0.28, 0.14, 0.08, 1.0)
+    ramp.color_ramp.elements[1].color = (0.72, 0.38, 0.18, 1.0)
+    links.new(vor.outputs["Distance"], ramp.inputs["Fac"])
+    links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = 0.85
+    links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
+    return m
+
+
+def mat_grass_meadow(name: str) -> bpy.types.Material:
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    nodes, links = nt.nodes, nt.links
+    nodes.clear()
+    out = nodes.new("ShaderNodeOutputMaterial")
+    bsdf = nodes.new("ShaderNodeBsdfPrincipled")
+    n1 = nodes.new("ShaderNodeTexNoise")
+    n1.inputs["Scale"].default_value = 12.0
+    n2 = nodes.new("ShaderNodeTexNoise")
+    n2.inputs["Scale"].default_value = 35.0
+    mix = nodes.new("ShaderNodeMixRGB")
+    mix.inputs[0].default_value = 0.55
+    mix.inputs[1].default_value = (0.22, 0.55, 0.20, 1.0)
+    mix.inputs[2].default_value = (0.38, 0.78, 0.32, 1.0)
+    links.new(n1.outputs["Fac"], mix.inputs[0])
+    links.new(mix.outputs["Color"], bsdf.inputs["Base Color"])
+    links.new(n2.outputs["Fac"], bsdf.inputs["Roughness"])
+    bsdf.inputs["Roughness"].default_value = 0.9
+    links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
+    return m
+
+
+def add_hex_floor(mat: bpy.types.Material, z: float = 0.0) -> bpy.types.Object:
+    bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=INNER_R, depth=0.06, location=(0, 0, z))
     obj = bpy.context.object
     obj.rotation_euler[2] = math.radians(30)
+    obj.data.materials.append(mat)
     return obj
 
 
-def add_bevel_ring() -> bpy.types.Object:
-    bpy.ops.mesh.primitive_cylinder_add(
-        vertices=6, radius=HEX_R * 1.02, depth=0.14, location=(0, 0, -0.02)
-    )
-    outer = bpy.context.object
-    outer.rotation_euler[2] = math.radians(30)
-    outer.data.materials.append(mat_rgb("Bevel", (0.93, 0.86, 0.65), 0.9))
-
-    inner = add_hex_base(z=-0.01, radius=HEX_R * 0.90)
-    bpy.context.view_layer.objects.active = outer
-    mod = outer.modifiers.new("Bool", "BOOLEAN")
-    mod.operation = "DIFFERENCE"
-    mod.object = inner
-    bpy.ops.object.modifier_apply(modifier=mod.name)
-    bpy.data.objects.remove(inner, do_unlink=True)
-    return outer
-
-
-def scatter_on_hex(
-    count: int,
-    factory,
-    seed: int,
-    r_max: float = 0.82,
-) -> None:
-    rng = random.Random(seed)
-    for i in range(count):
-        ang = rng.random() * math.tau
-        rad = math.sqrt(rng.random()) * r_max
-        x = math.cos(ang) * rad
-        y = math.sin(ang) * rad
-        factory(x, y, i, rng)
-
-
-def build_forest() -> None:
-    base = add_hex_base()
-    base.data.materials.append(mat_rgb("ForestFloor", (0.12, 0.38, 0.14)))
-
-    def tree(x, y, i, rng):
-        h = rng.uniform(0.18, 0.32)
-        bpy.ops.mesh.primitive_cone_add(
-            vertices=8, radius1=0.11, depth=h, location=(x, y, h * 0.5 + 0.02)
-        )
-        t = bpy.context.object
-        shade = rng.uniform(0.08, 0.22)
-        t.data.materials.append(mat_rgb(f"Tree{i}", (0.05, shade, 0.06)))
-
-    scatter_on_hex(140, tree, seed=11, r_max=0.88)
-
-
-def build_wheat() -> None:
-    base = add_hex_base()
-    base.data.materials.append(mat_rgb("WheatSoil", (0.55, 0.42, 0.18)))
-
-    for patch in range(5):
-        ang = patch * 72 + 10
-        cx = math.cos(math.radians(ang)) * 0.35
-        cy = math.sin(math.radians(ang)) * 0.35
-        rot = math.radians(patch * 37 - 20)
-        bpy.ops.mesh.primitive_plane_add(size=0.55, location=(cx, cy, 0.07))
-        plane = bpy.context.object
-        plane.rotation_euler = (math.radians(90), 0, rot)
-        plane.data.materials.append(mat_rgb(f"Wheat{patch}", (0.86, 0.72, 0.18)))
-
-        for stripe in range(-3, 4):
-            bpy.ops.mesh.primitive_cube_add(
-                size=1,
-                location=(cx + stripe * 0.06, cy, 0.09),
-            )
-            s = bpy.context.object
-            s.scale = (0.04, 0.22, 0.02)
-            s.rotation_euler = (0, 0, rot)
-            s.data.materials.append(mat_rgb(f"Furrow{patch}{stripe}", (0.72, 0.58, 0.12)))
-
-    bpy.ops.mesh.primitive_cube_add(size=1, location=(0.15, -0.2, 0.1))
-    barn = bpy.context.object
-    barn.scale = (0.12, 0.08, 0.06)
-    barn.data.materials.append(mat_rgb("Barn", (0.45, 0.32, 0.22)))
-
-
-def build_pasture() -> None:
-    base = add_hex_base()
-    base.data.materials.append(mat_rgb("Meadow", (0.38, 0.78, 0.28)))
-
-    def sheep(x, y, i, rng):
-        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.06, location=(x, y, 0.08))
-        body = bpy.context.object
-        body.scale = (1.1, 1.4, 0.75)
-        body.data.materials.append(mat_rgb(f"Wool{i}", (0.96, 0.96, 0.94)))
-        bpy.ops.mesh.primitive_uv_sphere_add(
-            radius=0.035, location=(x + 0.05, y + 0.04, 0.1)
-        )
-        head = bpy.context.object
-        head.data.materials.append(mat_rgb(f"Head{i}", (0.18, 0.16, 0.16)))
-
-    for flock in range(8):
-        ang = flock * 45
-        fx = math.cos(math.radians(ang)) * 0.4
-        fy = math.sin(math.radians(ang)) * 0.4
-        scatter_on_hex(4, lambda x, y, i, r: sheep(fx + x * 0.15, fy + y * 0.15, flock * 10 + i, r), seed=20 + flock, r_max=0.12)
-
-
-def build_ore() -> None:
-    bpy.ops.mesh.primitive_grid_add(x_subdivisions=64, y_subdivisions=64, size=HEX_R * 1.8)
+def displace_grid(strength: float, tex_type: str = "CLOUDS", scale: float = 0.5) -> bpy.types.Object:
+    bpy.ops.mesh.primitive_grid_add(x_subdivisions=128, y_subdivisions=128, size=1.95)
     grid = bpy.context.object
     grid.rotation_euler = (math.radians(90), 0, math.radians(30))
     disp = grid.modifiers.new("Displace", "DISPLACE")
-    tex = bpy.data.textures.new("OreNoise", "CLOUDS")
-    tex.noise_scale = 0.45
+    tex = bpy.data.textures.new("Disp", tex_type)
+    tex.noise_scale = scale
+    if hasattr(tex, "noise_depth"):
+        tex.noise_depth = 4
     disp.texture = tex
-    disp.strength = 0.35
+    disp.strength = strength
     bpy.context.view_layer.objects.active = grid
     bpy.ops.object.modifier_apply(modifier=disp.name)
-    grid.data.materials.append(mat_rgb("OreRock", (0.55, 0.57, 0.6), 0.75))
+    subs = grid.modifiers.new("Subsurf", "SUBSURF")
+    subs.levels = 1
+    bpy.ops.object.modifier_apply(modifier=subs.name)
+    return grid
 
-    for peak in range(6):
-        ang = peak * 60
-        px = math.cos(math.radians(ang)) * 0.35
-        py = math.sin(math.radians(ang)) * 0.35
-        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=0.22, location=(px, py, 0.15))
-        p = bpy.context.object
-        p.scale = (1.0, 1.0, 1.6)
-        p.data.materials.append(mat_rgb(f"Peak{peak}", (0.92, 0.94, 0.96)))
+
+def build_forest() -> None:
+    add_hex_floor(mat_solid("Soil", (0.08, 0.28, 0.06)))
+    rng = random.Random(101 + PASS)
+    spacing = 0.11 / DENSITY
+    for row in range(-8, 9):
+        for col in range(-8, 9):
+            x = col * spacing * 1.05 + (row % 2) * spacing * 0.52
+            y = row * spacing * 0.92
+            x += rng.uniform(-0.02, 0.02)
+            y += rng.uniform(-0.02, 0.02)
+            if not inside_hex(x, y, 0.86):
+                continue
+            rad = rng.uniform(0.09, 0.14)
+            roll = rng.random()
+            if roll < 0.11:
+                col = (0.88, 0.58, 0.14)
+            elif roll < 0.28:
+                col = (0.42, 0.78, 0.20)
+            else:
+                col = (0.10 + rng.uniform(0, 0.08), 0.45 + rng.uniform(0, 0.2), 0.10)
+            bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=rad, location=(x, y, rad * 0.55))
+            t = bpy.context.object
+            t.scale = (1.05, 1.05, 0.65)
+            t.data.materials.append(mat_solid(f"T{row}{col}", col, 0.78))
+
+
+def build_wheat() -> None:
+    add_hex_floor(mat_solid("Dirt", (0.48, 0.34, 0.14)))
+    rng = random.Random(202 + PASS)
+    parcels = [
+        (-0.35, 0.15, 25, (0.88, 0.70, 0.14), (0.52, 0.36, 0.10)),
+        (0.25, 0.28, 110, (0.82, 0.64, 0.12), (0.48, 0.32, 0.09)),
+        (0.05, -0.32, 70, (0.90, 0.74, 0.16), (0.55, 0.40, 0.11)),
+        (-0.22, -0.18, 155, (0.78, 0.60, 0.10), (0.45, 0.30, 0.08)),
+        (0.38, -0.08, 0, (0.85, 0.68, 0.13), (0.50, 0.34, 0.10)),
+        (-0.05, 0.38, 45, (0.86, 0.72, 0.15), (0.53, 0.38, 0.10)),
+    ]
+    for cx, cy, ang, gold, ochre in parcels:
+        if not inside_hex(cx, cy, 0.78):
+            continue
+        bpy.ops.mesh.primitive_plane_add(size=0.95, location=(cx, cy, 0.03))
+        plane = bpy.context.object
+        plane.rotation_euler = (0, 0, math.radians(ang))
+        plane.scale = (0.42, 0.48, 1.0)
+        plane.data.materials.append(mat_striped_field(f"Fld{ang}", gold, ochre, ang))
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0.32, -0.28, 0.06))
+    barn = bpy.context.object
+    barn.scale = (0.07, 0.05, 0.045)
+    barn.data.materials.append(mat_solid("Barn", (0.40, 0.26, 0.16)))
+
+
+def build_pasture() -> None:
+    grid = displace_grid(0.04 + PASS * 0.01, "CLOUDS", 1.2)
+    grid.data.materials.append(mat_grass_meadow("Meadow"))
+    rng = random.Random(303 + PASS)
+    for flock in range(int(16 * DENSITY)):
+        fx = rng.uniform(-0.7, 0.7)
+        fy = rng.uniform(-0.7, 0.7)
+        if not inside_hex(fx, fy, 0.82):
+            continue
+        for _ in range(rng.randint(3, 7)):
+            ox = fx + rng.uniform(-0.06, 0.06)
+            oy = fy + rng.uniform(-0.06, 0.06)
+            if not inside_hex(ox, oy, 0.84):
+                continue
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=0.022, location=(ox, oy, 0.05))
+            s = bpy.context.object
+            s.scale = (1.0, 1.2, 0.65)
+            s.data.materials.append(mat_solid("Sh", (0.98, 0.98, 0.95), 0.7))
+    bpy.ops.mesh.primitive_plane_add(size=0.35, location=(0.12, 0.08, 0.025))
+    path = bpy.context.object
+    path.rotation_euler = (0, 0, math.radians(35))
+    path.scale = (0.35, 1.6, 1.0)
+    path.data.materials.append(mat_solid("Path", (0.80, 0.84, 0.66), 0.95))
+
+
+def build_ore() -> None:
+    grid = displace_grid(0.72 + PASS * 0.1, "MARBLE", 0.38)
+    grid.data.materials.append(mat_mountain("Ore"))
+    disp2 = grid.modifiers.new("Displace", "DISPLACE")
+    tex2 = bpy.data.textures.new("Ridge", "STUCCI")
+    tex2.noise_scale = 0.25
+    disp2.texture = tex2
+    disp2.strength = 0.18
+    bpy.context.view_layer.objects.active = grid
+    bpy.ops.object.modifier_apply(modifier=disp2.name)
 
 
 def build_clay() -> None:
-    base = add_hex_base()
-    base.data.materials.append(mat_rgb("ClayBase", (0.62, 0.36, 0.22)))
-
-    for pit in range(7):
-        ang = pit * 51
-        px = math.cos(math.radians(ang)) * 0.42
-        py = math.sin(math.radians(ang)) * 0.42
-        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.18, location=(px, py, 0.02))
-        s = bpy.context.object
-        s.scale = (1.2, 1.2, 0.35)
-        s.data.materials.append(mat_rgb(f"Pit{pit}", (0.38, 0.22, 0.12)))
-
-    for ridge in range(5):
-        ang = ridge * 70 + 15
-        bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0.12))
-        r = bpy.context.object
-        r.scale = (0.08, 0.55, 0.08)
-        r.rotation_euler = (0, 0, math.radians(ang))
-        r.data.materials.append(mat_rgb(f"Ridge{ridge}", (0.72, 0.48, 0.28)))
+    grid = displace_grid(0.38 + PASS * 0.06, "VORONOI", 0.65)
+    grid.data.materials.append(mat_clay_pit("Clay"))
 
 
 def build_desert() -> None:
-    base = add_hex_base()
-    base.data.materials.append(mat_rgb("Sand", (0.9, 0.82, 0.62)))
-
-    for dune in range(4):
-        ang = dune * 90
-        bpy.ops.mesh.primitive_plane_add(size=0.9, location=(0, 0, 0.05 + dune * 0.01))
-        d = bpy.context.object
-        d.rotation_euler = (math.radians(90), math.radians(ang), 0)
-        d.data.materials.append(mat_rgb(f"Dune{d}", (0.94, 0.86, 0.68)))
-
-    rng = random.Random(99)
-    for i in range(12):
+    grid = displace_grid(0.10 + PASS * 0.02, "CLOUDS", 1.4)
+    grid.data.materials.append(mat_solid("Sand", (0.92, 0.80, 0.56), 0.9))
+    rng = random.Random(505 + PASS)
+    for i in range(14 + PASS * 2):
         ang = rng.random() * math.tau
-        rad = rng.random() * 0.75
+        rad = rng.random() * 0.78
         x = math.cos(ang) * rad
         y = math.sin(ang) * rad
-        bpy.ops.mesh.primitive_cylinder_add(
-            radius=0.008, depth=0.14, location=(x, y, 0.07)
-        )
-        twig = bpy.context.object
-        twig.rotation_euler = (rng.uniform(0.2, 0.8), 0, ang)
-        twig.data.materials.append(mat_rgb(f"Twig{i}", (0.42, 0.32, 0.22)))
+        if not inside_hex(x, y, 0.85):
+            continue
+        bpy.ops.mesh.primitive_cylinder_add(radius=0.005, depth=0.10, location=(x, y, 0.035))
+        tw = bpy.context.object
+        tw.rotation_euler = (rng.uniform(0.4, 1.1), rng.uniform(-0.3, 0.3), ang)
+        tw.data.materials.append(mat_solid(f"Tw{i}", (0.42, 0.30, 0.20)))
 
 
 BUILDERS = {
@@ -266,7 +352,6 @@ BUILDERS = {
 def render_slot(name: str) -> str:
     clear_scene()
     setup_render()
-    add_bevel_ring()
     BUILDERS[name]()
     os.makedirs(OUT_RESOURCES, exist_ok=True)
     os.makedirs(OUT_DOCS, exist_ok=True)
@@ -274,38 +359,70 @@ def render_slot(name: str) -> str:
     out_doc = os.path.join(OUT_DOCS, f"{name}_preview.png")
     bpy.context.scene.render.filepath = out_res
     bpy.ops.render.render(write_still=True)
+    hex_post = import_hex_post()
+    sat = 1.18 + PASS * 0.05
+    hex_post.process_png(out_res, saturation=sat)
     shutil.copy2(out_res, out_doc)
-    print(f"Wrote {out_res} and {out_doc}")
+    print(f"Wrote {out_res}")
     return out_res
 
 
 def make_contact_sheet(paths: list[str]) -> None:
-    try:
-        from PIL import Image
-    except ImportError:
-        print("PIL not available; skip contact sheet", file=sys.stderr)
+    hex_post = import_hex_post()
+    if hex_post.Image is None:
         return
-
-    tiles = [Image.open(p).convert("RGBA") for p in paths]
+    tiles = [hex_post.Image.open(p).convert("RGBA") for p in paths]
     w, h = tiles[0].size
-    cols = 3
-    rows = 2
-    sheet = Image.new("RGBA", (w * cols, h * rows), (30, 30, 30, 255))
-    labels = ["Wood", "Wheat", "Sheep", "Ore", "Brick", "Desert"]
+    sheet = hex_post.Image.new("RGBA", (w * 3, h * 2), (32, 32, 32, 255))
     for i, im in enumerate(tiles):
-        x = (i % cols) * w
-        y = (i // cols) * h
-        sheet.paste(im, (x, y), im)
-    out = os.path.join(OUT_DOCS, "contact_sheet.png")
-    sheet.save(out)
-    print(f"Wrote {out}")
+        sheet.paste(im, ((i % 3) * w, (i // 3) * h), im)
+    sheet.save(os.path.join(OUT_DOCS, "contact_sheet.png"))
+
+
+def write_pass_notes() -> None:
+    notes = {
+        1: """## Pass 1 (baseline Cycles)
+- Honest critique: sand bevel was broken (opaque black rim); wheat cubes cast a black shadow blob;
+  ore/clay read as floating bubbles; saturation too low vs photo. Side-by-side crops were misaligned.
+""",
+        2: """## Pass 2
+- Fixed hex mask/bevel (true sand-yellow rim), striped shader wheat parcels, grid forest canopy,
+  displaced ore/clay/desert with procedural materials, better reference crops.
+- Still short of photo: mountains need sharper ridges; forest needs more yellow-orange pops;
+  clay pits still smooth; overall more painterly hand-tuned contrast needed.
+""",
+        3: """## Pass 3
+- Increased displacement, saturation, sun energy, and forest/wheat density.
+- Closer on layout and color family but still stylized 3D vs printed board illustration.
+  Keeping `ColonistBlenderHexTerrainArt.Enabled = false` until another art pass.
+""",
+    }
+    path = os.path.join(OUT_DOCS, "pass_notes.md")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("# Blender hex tile iteration (v117)\n")
+        for p in sorted(notes):
+            if p <= PASS:
+                f.write(notes[p])
 
 
 def main() -> None:
+    print(f"BLENDER_TILE_PASS={PASS}")
     paths = []
+    render_paths = {}
     for name in BUILDERS:
-        paths.append(render_slot(name))
+        p = render_slot(name)
+        paths.append(p)
+        render_paths[name] = p
     make_contact_sheet(paths)
+    hex_post = import_hex_post()
+    if os.path.isfile(REF_PHOTO):
+        hex_post.make_side_by_side(
+            REF_PHOTO,
+            render_paths,
+            os.path.join(OUT_DOCS, "side_by_side.png"),
+            list(BUILDERS.keys()),
+        )
+    write_pass_notes()
 
 
 if __name__ == "__main__":

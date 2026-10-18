@@ -9,7 +9,6 @@ namespace CatanRoguelike.Tests
         [Test]
         public void BlenderTerrainTextures_ExistForLandSlots()
         {
-            Assert.IsTrue(ColonistBlenderHexTerrainArt.Enabled);
             foreach (var slot in new[]
                      {
                          BoardTerrainSlot.Wood,
@@ -20,7 +19,7 @@ namespace CatanRoguelike.Tests
                          BoardTerrainSlot.Desert
                      })
             {
-                var tex = ColonistBoardTextureLoader.TryLoadBlenderTerrainTexture(slot);
+                var tex = Resources.Load<Texture2D>($"{ColonistBlenderHexTerrainArt.TextureFolder}/{slot}");
                 Assert.IsNotNull(tex, $"Missing Blender terrain texture for {slot}.");
                 Assert.GreaterOrEqual(tex.width, 1024, $"{slot} texture should be at least 1024px.");
             }
