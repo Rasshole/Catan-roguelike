@@ -6,7 +6,7 @@ namespace CatanRoguelike.Game
     internal static class ColonistKenneyPlayerPieceMeshes
     {
         private const string ModelRoot = "Art/Models/Kenney";
-        public const string ModelChildName = "KenneyModel";
+        public const string ModelChildName = PlayerPieceVisuals.KenneyModelChildName;
 
         private const float SettlementFootprint = 0.34f;
         private const float CityFootprint = 0.42f;
