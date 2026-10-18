@@ -514,18 +514,27 @@ namespace CatanRoguelike.Game
             HexCartoonTileDecor.ApplyOutline(go, data.Coord, hexScale, _boardTileCoords);
             if (ColonistPresentation.IsActive)
             {
-                if (!data.IsDesert && !IsSeaFishTile(data))
+                bool blenderTop = ColonistBlenderHexTerrainArt.Enabled
+                    && !IsSeaFishTile(data)
+                    && ColonistBoardTextureLoader.UsesBlenderTerrainTextures(
+                        data.IsDesert
+                            ? BoardTerrainSlot.Desert
+                            : BoardTerrainMaterialSlots.ResourceToSlot(data.Resource));
+
+                if (!blenderTop && !data.IsDesert && !IsSeaFishTile(data))
                     ColonistHexTileNatureDecor.Apply(go, data, hexScale);
-                if (data.IsDesert && !data.IsFishTile)
+                if (!blenderTop && data.IsDesert && !data.IsFishTile)
                 {
                     ColonistDesertDuneDecor.Apply(go, hexScale);
                     ColonistHexTileNatureDecor.Apply(go, data, hexScale);
                 }
-                if (data.IsDesert && data.IsFishTile)
+                if (!blenderTop && data.IsDesert && data.IsFishTile)
                 {
                     ColonistDesertLakeVisual.Apply(go, hexScale);
                     ColonistHexTileNatureDecor.Apply(go, data, hexScale); // cacti/rocks around the pond
                 }
+                if (blenderTop && data.IsDesert && data.IsFishTile)
+                    ColonistDesertLakeVisual.Apply(go, hexScale);
                 if (data.IsFishTile)
                     ColonistFishTileVisual.Apply(go, data, hexScale);
             }

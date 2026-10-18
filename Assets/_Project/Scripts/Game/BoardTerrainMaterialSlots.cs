@@ -22,7 +22,7 @@ namespace CatanRoguelike.Game
         public static Material GetTileMaterialInstance(HexTileData data) =>
             new Material(GetTileMaterial(data));
 
-        private static BoardTerrainSlot ResourceToSlot(ResourceType resource) => resource switch
+        public static BoardTerrainSlot ResourceToSlot(ResourceType resource) => resource switch
         {
             ResourceType.Wood => BoardTerrainSlot.Wood,
             ResourceType.Brick => BoardTerrainSlot.Brick,

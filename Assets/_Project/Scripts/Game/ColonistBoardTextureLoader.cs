@@ -20,7 +20,9 @@ namespace CatanRoguelike.Game
                 return cached;
 
             var fallback = GetFallbackColor(slot);
-            Texture2D texture = Resources.Load<Texture2D>($"{ArtRoot}/{slot}");
+            Texture2D texture = TryLoadBlenderTerrainTexture(slot);
+            if (texture == null)
+                texture = Resources.Load<Texture2D>($"{ArtRoot}/{slot}");
             if (texture == null)
             {
                 try
@@ -55,7 +57,20 @@ namespace CatanRoguelike.Game
         public static void ClearCache() => _cache.Clear();
 
         public static Texture2D LoadBoardTexture(BoardTerrainSlot slot) =>
-            Resources.Load<Texture2D>($"{ArtRoot}/{slot}");
+            TryLoadBlenderTerrainTexture(slot) ?? Resources.Load<Texture2D>($"{ArtRoot}/{slot}");
+
+        public static Texture2D TryLoadBlenderTerrainTexture(BoardTerrainSlot slot)
+        {
+            if (!ColonistBlenderHexTerrainArt.Enabled)
+                return null;
+            if (slot == BoardTerrainSlot.SeaLake || slot == BoardTerrainSlot.CoastSand
+                || slot == BoardTerrainSlot.FishShoal)
+                return null;
+            return Resources.Load<Texture2D>($"{ColonistBlenderHexTerrainArt.TextureFolder}/{slot}");
+        }
+
+        public static bool UsesBlenderTerrainTextures(BoardTerrainSlot slot) =>
+            TryLoadBlenderTerrainTexture(slot) != null;
 
         private static void ApplyTerrainSurface(Material mat)
         {
