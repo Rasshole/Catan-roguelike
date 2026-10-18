@@ -9,9 +9,9 @@ namespace CatanRoguelike.Tests
         private const float HexTopY = 0.15f;
         private const float MinBaseAboveHex = 0.01f;
         private const float MinRidgeGapAboveBodyTop = 0.05f;
-        private const float MaxSettlementHeight = 0.50f;
-        private const float MinCityHeight = 0.25f;
-        private const float MaxCityHeight = 0.72f;
+        private const float MaxSettlementHeightAboveHex = 0.87f;
+        private const float MinCityToSettlementHeightRatio = 1.62f;
+        private const float MaxCityHeightAboveHex = 1.35f;
         private const float MinRoadBaseAboveHex = 0.005f;
         private const float MaxRoadHeight = 0.28f;
 
@@ -68,7 +68,7 @@ namespace CatanRoguelike.Tests
                 return;
             }
 
-            Assert.AreEqual(5, piece.transform.childCount);
+            Assert.GreaterOrEqual(piece.transform.childCount, 5);
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.BodyPartName));
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.UpperStoreyPartName));
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName));
@@ -164,7 +164,7 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void CreateSettlement_RoofIsDarkerThanBody()
+        public void CreateSettlement_RoofHasLitAndShadedFaces()
         {
             var piece = PlayerPieceVisuals.CreateSettlement(
                 _testRoot.transform,
@@ -172,13 +172,16 @@ namespace CatanRoguelike.Tests
                 PlayerPieceVisuals.HumanColor,
                 HexTopY);
 
-            var bodyRenderer = piece.transform.Find(PlayerPieceVisuals.BodyPartName).GetComponent<Renderer>();
-            var roofRenderer = piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName).GetComponent<Renderer>();
+            var roofLeftRenderer = piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName).GetComponent<Renderer>();
+            var roofRightRenderer = piece.transform.Find(PlayerPieceVisuals.RoofRightPartName).GetComponent<Renderer>();
+            var ridgeRenderer = piece.transform.Find(PlayerPieceVisuals.RoofRidgePartName).GetComponent<Renderer>();
 
-            float bodyMaxRgb = MaxRgb(bodyRenderer.sharedMaterial.color);
-            float roofMaxRgb = MaxRgb(roofRenderer.sharedMaterial.color);
+            float litRgb = MaxRgb(roofLeftRenderer.sharedMaterial.color);
+            float shadeRgb = MaxRgb(roofRightRenderer.sharedMaterial.color);
+            float ridgeRgb = MaxRgb(ridgeRenderer.sharedMaterial.color);
 
-            Assert.Less(roofMaxRgb, bodyMaxRgb);
+            Assert.Greater(litRgb, shadeRgb);
+            Assert.Less(ridgeRgb, shadeRgb);
         }
 
         [Test]
@@ -194,7 +197,7 @@ namespace CatanRoguelike.Tests
             float maxY = GetWorldMaxY(piece);
 
             Assert.Greater(minY, HexTopY + MinBaseAboveHex);
-            Assert.Less(maxY, HexTopY + MaxSettlementHeight);
+            Assert.Less(maxY - HexTopY, MaxSettlementHeightAboveHex);
         }
 
         [Test]
@@ -215,10 +218,11 @@ namespace CatanRoguelike.Tests
             float cityMinY = GetWorldMinY(city);
             float cityMaxY = GetWorldMaxY(city);
 
-            Assert.Greater(cityMaxY, settlementMaxY);
+            float settlementHeight = settlementMaxY - HexTopY;
+            float cityHeight = cityMaxY - HexTopY;
+            Assert.Greater(cityHeight, settlementHeight * MinCityToSettlementHeightRatio);
             Assert.Greater(cityMinY, HexTopY + MinBaseAboveHex);
-            Assert.Greater(cityMaxY, HexTopY + MinCityHeight);
-            Assert.Less(cityMaxY, HexTopY + MaxCityHeight);
+            Assert.Less(cityHeight, MaxCityHeightAboveHex);
         }
 
         [Test]
@@ -272,8 +276,7 @@ namespace CatanRoguelike.Tests
             var bodyBounds = bodyRenderer.bounds;
             var ridgeBounds = ridgeRenderer.bounds;
 
-            Assert.AreSame(roofLeftRenderer.sharedMaterial, ridgeRenderer.sharedMaterial);
-            Assert.Less(MaxRgb(ridgeRenderer.sharedMaterial.color), MaxRgb(bodyRenderer.sharedMaterial.color));
+            Assert.Less(MaxRgb(ridgeRenderer.sharedMaterial.color), MaxRgb(roofLeftRenderer.sharedMaterial.color));
 
             Assert.LessOrEqual(ridgeBounds.min.x, bodyBounds.min.x);
             Assert.GreaterOrEqual(ridgeBounds.max.x, bodyBounds.max.x);

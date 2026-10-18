@@ -29,11 +29,38 @@ def hex_sdf(x: float, y: float, cx: float, cy: float, radius: float) -> float:
     return max(qy - 1.0, qx * 0.866025 + qy * 0.5 - 0.866025)
 
 
+def interior_luma_variance(path: str, inner_radius_frac: float = 0.47) -> float:
+    """Std-dev of luma inside the hex (excluding sand bevel band). SDF distance is normalized."""
+    if Image is None:
+        return 999.0
+    im = Image.open(path).convert("RGBA")
+    w, h = im.size
+    cx, cy = w * 0.5, h * 0.5
+    radius = min(w, h) * inner_radius_frac
+    bevel_w = 0.020
+    lumas: list[float] = []
+    px = im.load()
+    for y in range(h):
+        for x in range(w):
+            d = hex_sdf(x, y, cx, cy, radius)
+            if d > -bevel_w:
+                continue
+            r, g, b, a = px[x, y]
+            if a < 16:
+                continue
+            lumas.append(0.299 * r + 0.587 * g + 0.114 * b)
+    if len(lumas) < 100:
+        return 0.0
+    mean = sum(lumas) / len(lumas)
+    var = sum((lv - mean) ** 2 for lv in lumas) / len(lumas)
+    return math.sqrt(var)
+
+
 def process_png(
     path: str,
     inner_radius_frac: float = 0.47,
     bevel_frac: float = 0.018,
-    saturation: float = 1.22,
+    saturation: float = 1.08,
 ) -> None:
     if Image is None:
         return
@@ -41,7 +68,7 @@ def process_png(
     w, h = im.size
     cx, cy = w * 0.5, h * 0.5
     radius = min(w, h) * inner_radius_frac
-    bevel_w = radius * bevel_frac
+    bevel_w = bevel_frac
     px = im.load()
     for y in range(h):
         for x in range(w):
@@ -49,17 +76,17 @@ def process_png(
             r, g, b, a = px[x, y]
             if d > 0:
                 px[x, y] = (0, 0, 0, 0)
-            elif d > -bevel_w:
+            elif d > -bevel_w and a > 12:
                 t = (d + bevel_w) / bevel_w
                 br, bg, bb = SAND
                 px[x, y] = (
                     int(r * (1 - t) + br * t),
                     int(g * (1 - t) + bg * t),
                     int(b * (1 - t) + bb * t),
-                    255 if a > 8 else 255,
+                    255,
                 )
     im = ImageEnhance.Color(im).enhance(saturation)
-    im = ImageEnhance.Contrast(im).enhance(1.08)
+    im = ImageEnhance.Contrast(im).enhance(1.12)
     im.save(path)
 
 

@@ -135,11 +135,14 @@ namespace CatanRoguelike.Game
 
             foreach (var vertex in candidates)
             {
+                if (!IsInnerLandVertex(board, vertex))
+                    continue;
                 if (!validator.CanPlaceSettlement(board, vertex, player, setupPhase: true))
                     continue;
                 var (vx, vz) = HexMath.VertexToWorldPosition(vertex, 1f);
                 float angle = Mathf.Atan2(vz - centerZ, vx - centerX);
-                valid.Add((vertex, angle));
+                float radius = Mathf.Sqrt((vx - centerX) * (vx - centerX) + (vz - centerZ) * (vz - centerZ));
+                valid.Add((vertex, angle + radius * 0.02f));
             }
 
             valid = valid.OrderBy(v => v.angle).ToList();
@@ -187,6 +190,23 @@ namespace CatanRoguelike.Game
             }
 
             return picked;
+        }
+
+        private static bool IsInnerLandVertex(BoardState board, Vertex vertex)
+        {
+            vertex = VertexGraph.Canonicalize(vertex);
+            if (board.PortVertexToSeaSlot.ContainsKey(vertex))
+                return false;
+
+            int landTouches = 0;
+            foreach (var hex in VertexGraph.GetHexesForVertex(vertex))
+            {
+                if (!board.TryGetTile(hex, out var tile) || BoardState.IsSeaFishGround(tile))
+                    continue;
+                landTouches++;
+            }
+
+            return landTouches >= 2;
         }
 
         private static float NormalizeAngle(float radians)

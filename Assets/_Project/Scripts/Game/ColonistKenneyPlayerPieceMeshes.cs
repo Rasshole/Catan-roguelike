@@ -8,9 +8,9 @@ namespace CatanRoguelike.Game
         private const string ModelRoot = "Art/Models/ColonistPieces";
         public const string ModelChildName = PlayerPieceVisuals.KenneyModelChildName;
 
-        private const float SettlementFootprint = 0.40f;
-        private const float CityFootprint = 0.55f;
-        private const float RoadWidth = 0.18f; // 0.12 read as a 6 px hairline at 1080p (v117 review)
+        private const float SettlementFootprint = 0.60f;
+        private const float CityFootprint = 0.68f;
+        private const float RoadWidth = 0.16f;
         private const float BaseGapAboveHex = 0.02f;
 
         public static bool ModelsAvailable =>
@@ -159,15 +159,33 @@ namespace CatanRoguelike.Game
         {
             var body = BuiltInMaterials.Create(playerColor);
             body.SetFloat("_Glossiness", 0.04f);
-            var roof = BuiltInMaterials.Create(
-                new Color(playerColor.r * roofDarken, playerColor.g * roofDarken, playerColor.b * roofDarken, 1f));
-            roof.SetFloat("_Glossiness", 0.02f);
+            var roofLit = BuiltInMaterials.Create(playerColor);
+            roofLit.SetFloat("_Glossiness", 0.03f);
+            var roofShade = BuiltInMaterials.Create(
+                new Color(playerColor.r * 0.65f, playerColor.g * 0.65f, playerColor.b * 0.65f, 1f));
+            roofShade.SetFloat("_Glossiness", 0.02f);
+            var roofRidge = BuiltInMaterials.Create(
+                new Color(playerColor.r * roofDarken * 0.72f, playerColor.g * roofDarken * 0.72f, playerColor.b * roofDarken * 0.72f, 1f));
+            roofRidge.SetFloat("_Glossiness", 0.01f);
+            var upper = BuiltInMaterials.Create(
+                new Color(playerColor.r * 0.92f, playerColor.g * 0.92f, playerColor.b * 0.92f, 1f));
+            upper.SetFloat("_Glossiness", 0.04f);
 
             foreach (var renderer in model.GetComponentsInChildren<Renderer>())
             {
-                string lower = renderer.gameObject.name.ToLowerInvariant();
-                bool roofLike = lower.Contains("roof") || lower.Contains("upper");
-                renderer.sharedMaterial = roofLike ? roof : body;
+                string name = renderer.gameObject.name;
+                if (name.Contains("Ridge"))
+                    renderer.sharedMaterial = roofRidge;
+                else if (name == PlayerPieceVisuals.RoofLeftPartName || name.Contains("RoofLeft"))
+                    renderer.sharedMaterial = roofLit;
+                else if (name == PlayerPieceVisuals.RoofRightPartName || name.Contains("RoofRight"))
+                    renderer.sharedMaterial = roofShade;
+                else if (name == PlayerPieceVisuals.UpperStoreyPartName)
+                    renderer.sharedMaterial = upper;
+                else if (name.Contains("Roof") || name.Contains("Tower"))
+                    renderer.sharedMaterial = roofShade;
+                else
+                    renderer.sharedMaterial = body;
             }
         }
 

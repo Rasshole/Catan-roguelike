@@ -84,10 +84,11 @@ namespace CatanRoguelike.Tests
 
             var plank = ghost.transform.Find(PlayerPieceVisuals.PlankPartName);
             Assert.NotNull(plank);
-            Assert.Greater(plank.localScale.z, plank.localScale.x);
+            var plankRenderer = plank.GetComponent<Renderer>();
+            var plankSize = plankRenderer.bounds.size;
+            Assert.Greater(plankSize.z, plankRenderer.bounds.size.x * 1.2f);
             Assert.AreEqual(0, ghost.GetComponentsInChildren<Collider>().Length);
 
-            var plankRenderer = plank.GetComponent<Renderer>();
             AssertGhostMaterialColor(plankRenderer.sharedMaterial.color, RoadGhostColor);
         }
 

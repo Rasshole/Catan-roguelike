@@ -51,14 +51,14 @@ def setup_render() -> None:
     scene.render.image_settings.file_format = "PNG"
     scene.render.image_settings.color_mode = "RGBA"
     scene.view_settings.view_transform = "Standard"
-    scene.view_settings.exposure = -0.05 + PASS * 0.03
+    scene.view_settings.exposure = 0.0
 
     world = bpy.data.worlds.new("World")
     scene.world = world
     world.use_nodes = True
     bg = world.node_tree.nodes["Background"]
     bg.inputs[0].default_value = (0.85, 0.90, 0.98, 1.0)
-    bg.inputs[1].default_value = 1.4
+    bg.inputs[1].default_value = 0.85
 
     bpy.ops.object.camera_add(location=(0, 0, 10))
     cam = bpy.context.object
@@ -192,8 +192,8 @@ def mat_grass_meadow(name: str) -> bpy.types.Material:
     n2.inputs["Scale"].default_value = 35.0
     mix = nodes.new("ShaderNodeMixRGB")
     mix.inputs[0].default_value = 0.55
-    mix.inputs[1].default_value = (0.22, 0.55, 0.20, 1.0)
-    mix.inputs[2].default_value = (0.38, 0.78, 0.32, 1.0)
+    mix.inputs[1].default_value = (0.14, 0.42, 0.12, 1.0)
+    mix.inputs[2].default_value = (0.42, 0.82, 0.28, 1.0)
     links.new(n1.outputs["Fac"], mix.inputs[0])
     links.new(mix.outputs["Color"], bsdf.inputs["Base Color"])
     links.new(n2.outputs["Fac"], bsdf.inputs["Roughness"])
@@ -230,7 +230,7 @@ def displace_grid(strength: float, tex_type: str = "CLOUDS", scale: float = 0.5)
 
 
 def build_forest() -> None:
-    add_hex_floor(mat_solid("Soil", (0.08, 0.28, 0.06)))
+    add_hex_floor(mat_solid("Soil", (0.06, 0.22, 0.05)))
     rng = random.Random(101 + PASS)
     spacing = 0.11 / DENSITY
     for row in range(-8, 9):
@@ -243,12 +243,12 @@ def build_forest() -> None:
                 continue
             rad = rng.uniform(0.09, 0.14)
             roll = rng.random()
-            if roll < 0.11:
-                col = (0.88, 0.58, 0.14)
-            elif roll < 0.28:
-                col = (0.42, 0.78, 0.20)
+            if roll < 0.14:
+                col = (0.92, 0.62, 0.12)
+            elif roll < 0.32:
+                col = (0.35, 0.82, 0.18)
             else:
-                col = (0.10 + rng.uniform(0, 0.08), 0.45 + rng.uniform(0, 0.2), 0.10)
+                col = (0.05 + rng.uniform(0, 0.06), 0.38 + rng.uniform(0, 0.22), 0.06)
             bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=rad, location=(x, y, rad * 0.55))
             t = bpy.context.object
             t.scale = (1.05, 1.05, 0.65)
@@ -281,8 +281,9 @@ def build_wheat() -> None:
 
 
 def build_pasture() -> None:
-    grid = displace_grid(0.04 + PASS * 0.01, "CLOUDS", 1.2)
+    grid = displace_grid(0.07 + PASS * 0.015, "CLOUDS", 0.9)
     grid.data.materials.append(mat_grass_meadow("Meadow"))
+    add_hex_floor(mat_solid("MeadowBase", (0.22, 0.52, 0.18)))
     rng = random.Random(303 + PASS)
     for flock in range(int(16 * DENSITY)):
         fx = rng.uniform(-0.7, 0.7)
@@ -360,8 +361,15 @@ def render_slot(name: str) -> str:
     bpy.context.scene.render.filepath = out_res
     bpy.ops.render.render(write_still=True)
     hex_post = import_hex_post()
-    sat = 1.18 + PASS * 0.05
+    pre_var = hex_post.interior_luma_variance(out_res)
+    sat = 1.05 + PASS * 0.03
     hex_post.process_png(out_res, saturation=sat)
+    post_var = hex_post.interior_luma_variance(out_res)
+    min_var = float(os.environ.get("BLENDER_TILE_MIN_LUMA_STD", "12"))
+    if post_var < min_var:
+        raise RuntimeError(
+            f"{name}: interior luma std {post_var:.1f} < {min_var} (pre={pre_var:.1f}); render is washed out"
+        )
     shutil.copy2(out_res, out_doc)
     print(f"Wrote {out_res}")
     return out_res
