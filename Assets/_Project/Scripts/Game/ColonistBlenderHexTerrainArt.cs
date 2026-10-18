@@ -7,7 +7,7 @@ namespace CatanRoguelike.Game
     public static class ColonistBlenderHexTerrainArt
     {
         /// <summary>Set false to restore v114 legacy board textures + template decor.</summary>
-        public static bool Enabled { get; internal set; } = true;
+        public static bool Enabled { get; internal set; } = false;
 
         public const string TextureFolder = "Art/Board/Blender";
     }
