@@ -59,6 +59,9 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.AreEqual(GamePhase.DayPlayerActions, gameManager.Controller.State.Phase);
 
             ColonistCaptureCardSeeding.ForceDemoHandForCapture(gameManager.Controller.State);
+            ColonistCapturePieceSeeding.ForceDemoBoardPiecesForCapture(gameManager.Controller.State);
+            var boardView = Object.FindFirstObjectByType<BoardView>();
+            boardView?.Refresh(gameManager.Controller.State);
 
             gameManager.EnsureRunHudReady();
 
@@ -138,6 +141,13 @@ namespace CatanRoguelike.Tests.PlayMode
 
                 ColonistBoardCaptureAssertions.AssertColonistLandHexViewCount(19);
                 ColonistBoardCaptureAssertions.AssertRenderedPortBadgeDiscCount(9);
+
+                Assert.IsTrue(
+                    ColonistCapturePieceSeeding.MatchesExpectedDemoCounts(gameManager.Controller.State.Board),
+                    "Capture demo should show human/AI settlements, a city, and roads.");
+                var buildingsRoot = GameObject.Find("Buildings");
+                Assert.IsNotNull(buildingsRoot, "Buildings root should exist after demo piece seeding.");
+                Assert.GreaterOrEqual(buildingsRoot.transform.childCount, 7, "Demo pieces should be visible on the board.");
 
                 ColonistBoardCaptureAssertions.AssertColonistBoardCaptureShowsHexTiles(
                     boardOnly,

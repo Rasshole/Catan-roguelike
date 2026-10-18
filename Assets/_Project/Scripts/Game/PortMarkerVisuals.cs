@@ -192,23 +192,19 @@ namespace CatanRoguelike.Game
             if (SeaFrameSlotLayout.TryGetHarborCoastEdge(
                     board, vertex, seaCoord, hexScale, out _, out MapPlaneXz coastA, out MapPlaneXz coastB))
             {
-                float rim = BadgeDiscWorldRadius;
                 var coastAWorld = new Vector3(coastA.X, y, coastA.Z);
                 var coastBWorld = new Vector3(coastB.X, y, coastB.Z);
-                const float plankCoastBisectorOffset = 0.07f;
-                var plankStartA = CoastPlankStart(board, vertex, coastA, hexScale, y, plankCoastBisectorOffset);
-                var plankStartB = CoastPlankStart(board, vertex, coastB, hexScale, y, plankCoastBisectorOffset);
                 CreateWorldPlank(
                     root.transform,
-                    plankStartA,
-                    RimPointToward(badgeWorld, plankStartA, rim),
+                    coastAWorld,
+                    badgeWorld,
                     PierWoodColor,
                     SeaSlotPlankWidth,
                     SeaSlotPlankHeight);
                 CreateWorldPlank(
                     root.transform,
-                    plankStartB,
-                    RimPointToward(badgeWorld, plankStartB, rim),
+                    coastBWorld,
+                    badgeWorld,
                     PierWoodColor,
                     SeaSlotPlankWidth,
                     SeaSlotPlankHeight);
@@ -230,7 +226,15 @@ namespace CatanRoguelike.Game
             return root;
         }
 
-        public const float SeaSlotPlankCoastBisectorOffset = 0.07f;
+        public const float SeaSlotPlankCoastTouchEpsilon = 0.04f;
+
+        /// <summary>World-space segment endpoints for a pier plank cube (coast → badge).</summary>
+        public static void GetPlankSegmentEnds(Transform plank, out Vector3 start, out Vector3 end)
+        {
+            float halfLen = plank.localScale.z * 0.5f;
+            start = plank.position - plank.forward * halfLen;
+            end = plank.position + plank.forward * halfLen;
+        }
 
         /// <summary>Oriented pier plank footprint corners in XZ (for land-clearance tests).</summary>
         public static MapPlaneXz[] GetPlankFootprintCorners(Transform plankTransform)

@@ -36,6 +36,16 @@ namespace CatanRoguelike.Game
                 }
             }
 
+            if (resource == ResourceType.Sheep)
+            {
+                var pastureSheep = Resources.Load<Texture2D>("Art/Board/Sheep");
+                if (pastureSheep != null)
+                {
+                    PortDecorCache[resource] = pastureSheep;
+                    return pastureSheep;
+                }
+            }
+
             string sprite = resource switch
             {
                 ResourceType.Wood => "tree_canopy_b",

@@ -156,6 +156,9 @@ namespace CatanRoguelike.Editor
                 GameScenePlayHarness.CompleteRunSelectAndSetup(controller, meta);
 
             ColonistCaptureCardSeeding.ForceDemoHandForCapture(controller.State);
+            ColonistCapturePieceSeeding.ForceDemoBoardPiecesForCapture(controller.State);
+            var boardView = UnityEngine.Object.FindFirstObjectByType<BoardView>();
+            boardView?.Refresh(controller.State);
             gameManager.EditorRefreshRunHud();
             var hud = gameManager.EditorRunHud
                 ?? UnityEngine.Object.FindFirstObjectByType<RunHudController>();

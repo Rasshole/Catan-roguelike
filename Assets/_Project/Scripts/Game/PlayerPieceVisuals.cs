@@ -17,6 +17,7 @@ namespace CatanRoguelike.Game
         public const string RoofRightPartName = "RoofRight";
         public const string RoofRidgePartName = "RoofRidge";
         public const string PlankPartName = "Plank";
+        public const string KenneyModelChildName = "KenneyModel";
 
         public static readonly Color HumanColor = new(0.2f, 0.4f, 0.9f);
         public static readonly Color AiColor = new(0.9f, 0.25f, 0.2f);
@@ -43,8 +44,14 @@ namespace CatanRoguelike.Game
             return mat;
         }
 
+        public static bool UsesKenneyModels => ColonistKenneyPlayerPieceMeshes.ModelsAvailable;
+
         public static GameObject CreateSettlement(Transform parent, Vector3 worldPosition, Color color, float hexTopY)
         {
+            var kenney = ColonistKenneyPlayerPieceMeshes.TryCreateSettlement(parent, worldPosition, color, hexTopY);
+            if (kenney != null)
+                return kenney;
+
             var root = CreateRoot(parent, SettlementName, worldPosition);
             var bodyMaterial = BuiltInMaterials.Create(color);
             var roofMaterial = CreateRoofMaterial(color);
@@ -68,6 +75,10 @@ namespace CatanRoguelike.Game
 
         public static GameObject CreateCity(Transform parent, Vector3 worldPosition, Color color, float hexTopY)
         {
+            var kenney = ColonistKenneyPlayerPieceMeshes.TryCreateCity(parent, worldPosition, color, hexTopY);
+            if (kenney != null)
+                return kenney;
+
             var root = CreateRoot(parent, CityName, worldPosition);
             var bodyMaterial = BuiltInMaterials.Create(color);
             var roofMaterial = CreateRoofMaterial(color);
@@ -114,6 +125,11 @@ namespace CatanRoguelike.Game
             Color color,
             float hexTopY)
         {
+            var kenney = ColonistKenneyPlayerPieceMeshes.TryCreateRoad(
+                parent, midpoint, angleY, length, color, hexTopY);
+            if (kenney != null)
+                return kenney;
+
             var root = CreateRoot(parent, RoadName, midpoint);
             root.transform.rotation = Quaternion.Euler(0f, angleY, 0f);
 

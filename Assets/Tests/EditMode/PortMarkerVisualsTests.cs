@@ -58,6 +58,67 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
+        public void SeaSlotPort_PierPlanks_TouchCoastCorners()
+        {
+            bool wasActive = ColonistPresentation.IsActive;
+            ColonistPresentation.SetActive(true);
+            try
+            {
+                var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
+                var port = PortAccess.DiscoverPorts(board).Find(p => !p.IsGeneric);
+                Assert.IsNotNull(port);
+                Assert.IsTrue(board.TryGetSeaSlotForPort(port.Vertex, out var seaCoord));
+
+                var marker = PortMarkerVisuals.Create(
+                    _root.transform,
+                    port.Vertex,
+                    HexScale,
+                    TileHeight,
+                    board,
+                    false,
+                    port.SpecificResource,
+                    WoodColor);
+
+                Assert.IsTrue(
+                    SeaFrameSlotLayout.TryGetHarborCoastEdge(
+                        board, port.Vertex, seaCoord, HexScale, out _, out MapPlaneXz coastA, out MapPlaneXz coastB));
+
+                var coasts = new[]
+                {
+                    new Vector3(coastA.X, TileHeight, coastA.Z),
+                    new Vector3(coastB.X, TileHeight, coastB.Z)
+                };
+
+                int planks = 0;
+                foreach (var renderer in marker.GetComponentsInChildren<Renderer>())
+                {
+                    if (!renderer.gameObject.name.StartsWith("PierPlank"))
+                        continue;
+
+                    planks++;
+                    PortMarkerVisuals.GetPlankSegmentEnds(renderer.transform, out var start, out var end);
+                    float minDist = float.MaxValue;
+                    foreach (var coast in coasts)
+                    {
+                        minDist = Mathf.Min(minDist, Vector3.Distance(start, coast));
+                        minDist = Mathf.Min(minDist, Vector3.Distance(end, coast));
+                    }
+
+                    Assert.Less(
+                        minDist,
+                        PortMarkerVisuals.SeaSlotPlankCoastTouchEpsilon,
+                        "Pier plank should reach the coast corner (no water gap).");
+                }
+
+                Assert.Greater(planks, 0, "Sea-slot port should include pier planks.");
+            }
+            finally
+            {
+                ColonistPresentation.SetActive(wasActive);
+            }
+        }
+
+        [Test]
         public void SeaSlotPort_PierPlankBounds_DoNotIntersectLandPolygons()
         {
             bool wasActive = ColonistPresentation.IsActive;
@@ -180,23 +241,11 @@ namespace CatanRoguelike.Tests
 
         private static void AssertPlankBoundsClearOfLand(BoardState board, Renderer plankRenderer)
         {
-            var corners = PortMarkerVisuals.GetPlankFootprintCorners(plankRenderer.transform);
-            Assert.Greater(corners.Length, 0, "Plank footprint should have corners.");
-
-            foreach (var sample in corners)
-            {
-                float minDist = SeaFrameSlotLayout.MinDistanceToLandHexPolygons(board, sample, HexScale);
-                Assert.Greater(
-                    minDist,
-                    0.001f,
-                    $"Pier plank footprint should stay off land polygons (corner={sample} minDist={minDist:F4}).");
-            }
-
             var center = new MapPlaneXz(
                 plankRenderer.transform.position.x,
                 plankRenderer.transform.position.z);
             float minDistCenter = SeaFrameSlotLayout.MinDistanceToLandHexPolygons(board, center, HexScale);
-            Assert.Greater(minDistCenter, 0.001f, "Pier plank center should stay off land.");
+            Assert.Greater(minDistCenter, 0.001f, "Pier plank center should stay in open water.");
         }
 
         private static void AssertPlankLengthReadableFromTable(GameObject marker)

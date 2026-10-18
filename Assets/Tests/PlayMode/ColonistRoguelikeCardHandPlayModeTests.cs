@@ -33,6 +33,8 @@ namespace CatanRoguelike.Tests.PlayMode
             GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
             GameScenePlayHarness.AdvanceToDayPlayerActions(gameManager.Controller);
             ColonistCaptureCardSeeding.ForceDemoHandForCapture(gameManager.Controller.State);
+            ColonistCapturePieceSeeding.ForceDemoBoardPiecesForCapture(gameManager.Controller.State);
+            Object.FindFirstObjectByType<BoardView>()?.Refresh(gameManager.Controller.State);
             gameManager.EnsureRunHudReady();
             for (int i = 0; i < 4; i++)
                 yield return null;

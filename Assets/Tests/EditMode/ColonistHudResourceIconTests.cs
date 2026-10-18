@@ -31,6 +31,14 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
+        public void Sheep_PortBadge_UsesPastureBoardArt()
+        {
+            var sheep = ColonistResourceIconTextures.GetForPortBadge(ResourceType.Sheep);
+            Assert.IsNotNull(sheep);
+            Assert.AreEqual("Sheep", sheep.name, "Sheep HUD/port icons should use the pasture tile Kenney art.");
+        }
+
+        [Test]
         public void Wheat_PortBadge_UsesKenneyOrSheafArt()
         {
             var wheat = ColonistResourceIconTextures.GetForPortBadge(ResourceType.Wheat);

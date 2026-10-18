@@ -37,6 +37,13 @@ namespace CatanRoguelike.Tests
                 HexTopY);
 
             Assert.AreEqual(PlayerPieceVisuals.SettlementName, piece.name);
+            if (PlayerPieceVisuals.UsesKenneyModels)
+            {
+                Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.KenneyModelChildName));
+                Assert.Greater(piece.GetComponentsInChildren<Renderer>().Length, 0);
+                return;
+            }
+
             Assert.AreEqual(4, piece.transform.childCount);
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.BodyPartName));
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName));
@@ -54,6 +61,13 @@ namespace CatanRoguelike.Tests
                 HexTopY);
 
             Assert.AreEqual(PlayerPieceVisuals.CityName, piece.name);
+            if (PlayerPieceVisuals.UsesKenneyModels)
+            {
+                Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.KenneyModelChildName));
+                Assert.Greater(piece.GetComponentsInChildren<Renderer>().Length, 0);
+                return;
+            }
+
             Assert.AreEqual(5, piece.transform.childCount);
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.BodyPartName));
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.UpperStoreyPartName));
@@ -74,6 +88,12 @@ namespace CatanRoguelike.Tests
                 HexTopY);
 
             Assert.AreEqual(PlayerPieceVisuals.RoadName, piece.name);
+            if (PlayerPieceVisuals.UsesKenneyModels)
+            {
+                Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.KenneyModelChildName));
+                return;
+            }
+
             Assert.AreEqual(1, piece.transform.childCount);
             Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.PlankPartName));
         }
@@ -81,6 +101,9 @@ namespace CatanRoguelike.Tests
         [Test]
         public void CreateSettlement_RoofRidgeCoversBodyTop()
         {
+            if (PlayerPieceVisuals.UsesKenneyModels)
+                return;
+
             var piece = PlayerPieceVisuals.CreateSettlement(
                 _testRoot.transform,
                 Vector3.zero,
