@@ -1,6 +1,7 @@
 using CatanRoguelike.Game;
 using NUnit.Framework;
 using UnityEngine;
+using static CatanRoguelike.Tests.PlayerPieceTestUtil;
 
 namespace CatanRoguelike.Tests
 {
@@ -24,90 +25,59 @@ namespace CatanRoguelike.Tests
                 Object.DestroyImmediate(_testRoot);
         }
 
-        [Test]
-        public void CreateSettlementGhost_HasHouseParts_NoColliders_NotSphere()
+        private static void AssertGhostSlots(Renderer renderer, Color ghostColor)
         {
-            var ghost = PlacementMarkerVisuals.CreateSettlementGhost(
-                _testRoot.transform,
-                Vector3.zero,
-                SettlementGhostColor,
-                HexTopY);
-
-            Assert.AreEqual(PlacementMarkerVisuals.SettlementGhostName, ghost.name);
-            Assert.NotNull(ghost.transform.Find(PlayerPieceVisuals.BodyPartName));
-            Assert.NotNull(ghost.transform.Find(PlayerPieceVisuals.RoofLeftPartName));
-            Assert.NotNull(ghost.transform.Find(PlayerPieceVisuals.RoofRidgePartName));
-            Assert.AreEqual(0, ghost.GetComponentsInChildren<Collider>().Length);
-            AssertSettlementSilhouetteNotSphere(ghost);
-        }
-
-        [Test]
-        public void CreateSettlementGhost_UsesGhostMaterialColor()
-        {
-            var ghost = PlacementMarkerVisuals.CreateSettlementGhost(
-                _testRoot.transform,
-                Vector3.zero,
-                SettlementGhostColor,
-                HexTopY);
-
-            var bodyRenderer = ghost.transform.Find(PlayerPieceVisuals.BodyPartName).GetComponent<Renderer>();
-            AssertGhostMaterialColor(bodyRenderer.sharedMaterial.color, SettlementGhostColor);
-        }
-
-        [Test]
-        public void CreateCityGhost_HasUpperStoreyAndRoofParts()
-        {
-            var ghost = PlacementMarkerVisuals.CreateCityGhost(
-                _testRoot.transform,
-                Vector3.zero,
-                CityGhostColor,
-                HexTopY);
-
-            Assert.AreEqual(PlacementMarkerVisuals.CityGhostName, ghost.name);
-            Assert.NotNull(ghost.transform.Find(PlayerPieceVisuals.UpperStoreyPartName));
-            Assert.NotNull(ghost.transform.Find(PlayerPieceVisuals.RoofLeftPartName));
-            Assert.AreEqual(0, ghost.GetComponentsInChildren<Collider>().Length);
-        }
-
-        [Test]
-        public void CreateRoadGhost_HasPlankElongatedAlongEdge()
-        {
-            var ghost = PlacementMarkerVisuals.CreateRoadGhost(
-                _testRoot.transform,
-                Vector3.zero,
-                0f,
-                RoadLength,
-                RoadGhostColor,
-                HexTopY);
-
-            Assert.AreEqual(PlacementMarkerVisuals.RoadGhostName, ghost.name);
-
-            var plank = ghost.transform.Find(PlayerPieceVisuals.PlankPartName);
-            Assert.NotNull(plank);
-            var plankRenderer = plank.GetComponent<Renderer>();
-            var plankSize = plankRenderer.bounds.size;
-            Assert.Greater(plankSize.z, plankRenderer.bounds.size.x * 1.2f);
-            Assert.AreEqual(0, ghost.GetComponentsInChildren<Collider>().Length);
-
-            AssertGhostMaterialColor(plankRenderer.sharedMaterial.color, RoadGhostColor);
-        }
-
-        private static void AssertSettlementSilhouetteNotSphere(GameObject ghost)
-        {
-            Assert.Greater(ghost.transform.childCount, 1);
-            foreach (var filter in ghost.GetComponentsInChildren<MeshFilter>())
+            var wall = Slot(renderer, PlayerPieceVisuals.WallMaterialName);
+            Assert.AreEqual(ghostColor, wall.color);
+            foreach (var m in renderer.sharedMaterials)
             {
-                string meshName = filter.sharedMesh != null ? filter.sharedMesh.name : string.Empty;
-                Assert.That(meshName, Does.Not.Contain("Sphere"));
+                Assert.GreaterOrEqual(m.renderQueue, 3000, $"{m.name} should be transparent");
+                Assert.AreEqual(ghostColor.a, m.color.a, 0.001f, $"{m.name} alpha");
             }
         }
 
-        private static void AssertGhostMaterialColor(Color actual, Color expected)
+        [Test]
+        public void CreateSettlementGhost_IsTheHouseMesh_GhostTinted_NoColliders()
         {
-            Assert.AreEqual(expected.r, actual.r, 0.02f);
-            Assert.AreEqual(expected.g, actual.g, 0.02f);
-            Assert.AreEqual(expected.b, actual.b, 0.02f);
-            Assert.AreEqual(expected.a, actual.a, 0.02f);
+            var ghost = PlacementMarkerVisuals.CreateSettlementGhost(
+                _testRoot.transform, Vector3.zero, SettlementGhostColor, HexTopY);
+
+            Assert.AreEqual(PlacementMarkerVisuals.SettlementGhostName, ghost.name);
+            var filter = SingleMesh(ghost, PlayerPieceVisuals.BodyPartName);
+            AssertClosed(filter.sharedMesh);
+            Assert.AreNotEqual("Sphere", filter.sharedMesh.name);
+            Assert.AreEqual(0, ghost.GetComponentsInChildren<Collider>().Length);
+            AssertGhostSlots(filter.GetComponent<Renderer>(), SettlementGhostColor);
+        }
+
+        [Test]
+        public void CreateCityGhost_IsTheCityMesh_LargerThanSettlementGhost()
+        {
+            var settlement = PlacementMarkerVisuals.CreateSettlementGhost(
+                _testRoot.transform, Vector3.zero, SettlementGhostColor, HexTopY);
+            var city = PlacementMarkerVisuals.CreateCityGhost(
+                _testRoot.transform, Vector3.zero, CityGhostColor, HexTopY);
+
+            Assert.AreEqual(PlacementMarkerVisuals.CityGhostName, city.name);
+            var cityFilter = SingleMesh(city, PlayerPieceVisuals.BodyPartName);
+            var settlementFilter = SingleMesh(settlement, PlayerPieceVisuals.BodyPartName);
+            Assert.Greater(ScaledModelSize(cityFilter).x, ScaledModelSize(settlementFilter).x * 1.4f);
+            Assert.AreEqual(0, city.GetComponentsInChildren<Collider>().Length);
+            AssertGhostSlots(cityFilter.GetComponent<Renderer>(), CityGhostColor);
+        }
+
+        [Test]
+        public void CreateRoadGhost_IsElongatedPlank_GhostTinted_NoColliders()
+        {
+            var ghost = PlacementMarkerVisuals.CreateRoadGhost(
+                _testRoot.transform, new Vector3(0f, HexTopY, 0f), 0f, RoadLength, RoadGhostColor, HexTopY);
+
+            Assert.AreEqual(PlacementMarkerVisuals.RoadGhostName, ghost.name);
+            var filter = SingleMesh(ghost, PlayerPieceVisuals.PlankPartName);
+            var bounds = filter.GetComponent<Renderer>().bounds;
+            Assert.Greater(bounds.size.z, bounds.size.x * 1.2f);
+            Assert.AreEqual(0, ghost.GetComponentsInChildren<Collider>().Length);
+            AssertGhostSlots(filter.GetComponent<Renderer>(), RoadGhostColor);
         }
     }
 }

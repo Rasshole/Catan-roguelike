@@ -6,37 +6,54 @@ using UnityEngine.Rendering;
 namespace CatanRoguelike.Game
 {
     /// <summary>
-    /// Board pieces: colonist mode uses top-down-readable primitive houses (ridge + two roof tones).
+    /// Classic Catan wooden board pieces built from the Blender meshes in
+    /// <c>Resources/Art/Models/ColonistPieces</c> (tools/blender/pieces.py): a pentagon-prism house,
+    /// a city (long house joined with a tower house, ~1.5x the settlement footprint) and a bevelled
+    /// plank road. Each piece is one closed mesh with three material slots: Wall (player colour),
+    /// Roof (darker) and Edge (bevel faces, darkest).
+    /// <para>
+    /// The colonist table camera looks straight down, which would show only a roof rectangle, so in
+    /// colonist mode settlements and cities lean back toward the top of the screen by
+    /// <see cref="ColonistLeanDegrees"/>: the camera then sees them in 3/4 view (gable, side wall
+    /// and both roof slopes), like the printed pieces on colonist.io.
+    /// </para>
     /// </summary>
     public static class PlayerPieceVisuals
     {
         public const string SettlementName = "Settlement";
         public const string CityName = "City";
         public const string RoadName = "Road";
+        /// <summary>Child holding the single house/city mesh.</summary>
         public const string BodyPartName = "Body";
-        public const string UpperStoreyPartName = "UpperStorey";
-        public const string RoofLeftPartName = "RoofLeft";
-        public const string RoofRightPartName = "RoofRight";
-        public const string RoofRidgePartName = "RoofRidge";
+        /// <summary>Child holding the single road plank mesh.</summary>
         public const string PlankPartName = "Plank";
-        public const string TowerRoofLeftPartName = "TowerRoofLeft";
-        public const string TowerRoofRightPartName = "TowerRoofRight";
-        public const string TowerRoofRidgePartName = "TowerRoofRidge";
-        public const string KenneyModelChildName = "KenneyModel";
+
+        public const string WallMaterialName = "PieceWall";
+        public const string RoofMaterialName = "PieceRoof";
+        public const string EdgeMaterialName = "PieceEdge";
 
         public static readonly Color HumanColor = new(0.2f, 0.4f, 0.9f);
         public static readonly Color AiColor = new(0.9f, 0.25f, 0.2f);
 
-        private const float RoofPitchDegrees = 38f;
-        private const float BaseGapAboveHex = 0.028f;
-        private const float BodyTopBelowRoofEave = 0.06f;
-        private const float RidgeLift = 0.02f;
-        private const float RidgeThickness = 0.10f;
         public const float RoofColorMultiply = 0.55f;
-        public const float RoofGlossiness = 0.02f;
-        /// <summary>Settlement/city footprint as a fraction of flat-to-flat hex width.</summary>
-        public const float SettlementFootprintOfHex = 0.20f;
-        public const float CityFootprintOfHex = 0.30f;
+        public const float EdgeColorMultiply = 0.32f;
+
+        /// <summary>Settlement wall width as a fraction of the flat-to-flat hex width (city is 1.5x).</summary>
+        public const float SettlementFootprintOfHex = 0.27f;
+        /// <summary>Road plank width as a fraction of the flat-to-flat hex width.</summary>
+        public const float RoadWidthOfHex = 0.09f;
+        public const float RoadLengthOfEdge = 0.80f;
+        /// <summary>Lean toward screen-top so the top-down colonist camera sees a 3/4 view.</summary>
+        public const float ColonistLeanDegrees = 50f;
+        /// <summary>Yaw of the gable end away from facing the viewer straight on.</summary>
+        public const float ColonistYawDegrees = 32f;
+
+        /// <summary>City turn relative to the settlement so its long wall and tower face the viewer.</summary>
+        public const float CityExtraYawDegrees = 90f;
+
+        private const string ModelRoot = "Art/Models/ColonistPieces";
+        private const float BaseGapAboveHex = 0.02f;
+        private const float RoadGapAboveHex = 0.012f;
 
         public static float FlatHexWidth(float hexScale) =>
             hexScale * Mathf.Sqrt(3f) * HexMath.OuterRadius;
@@ -44,179 +61,28 @@ namespace CatanRoguelike.Game
         public static Color ColorForPlayer(PlayerId owner) =>
             owner == PlayerId.Human ? HumanColor : AiColor;
 
-        public static Color DarkenForRoof(Color color) =>
-            new(color.r * RoofColorMultiply, color.g * RoofColorMultiply, color.b * RoofColorMultiply, color.a);
+        public static Color DarkenForRoof(Color color) => Shade(color, RoofColorMultiply);
 
-        public static Material CreateRoofMaterial(Color playerColor)
-        {
-            var mat = BuiltInMaterials.Create(DarkenForRoof(playerColor));
-            mat.SetFloat("_Glossiness", RoofGlossiness);
-            mat.SetFloat("_Metallic", 0f);
-            return mat;
-        }
+        public static Color DarkenForEdge(Color color) => Shade(color, EdgeColorMultiply);
 
-        public static bool UsesKenneyModels => ColonistKenneyPlayerPieceMeshes.UsesKenneyModels;
-
-        internal static void SetColonistBoardSpritesForTests(bool use) =>
-            ColonistPlayerPieceBoardSprites.SetUseBoardSprites(use);
+        private static Color Shade(Color c, float k) => new(c.r * k, c.g * k, c.b * k, c.a);
 
         public static GameObject CreateSettlement(
             Transform parent,
             Vector3 worldPosition,
             Color color,
             float hexTopY,
-            float hexScale = ColonistBoardVisualScale.ReferenceHexScale)
-        {
-            if (!ColonistPresentation.IsActive)
-            {
-                var imported = ColonistKenneyPlayerPieceMeshes.TryCreateSettlement(
-                    parent, worldPosition, color, hexTopY);
-                if (imported != null)
-                    return imported;
-            }
-
-            if (ColonistPresentation.IsActive && ColonistPlayerPieceBoardSprites.UseBoardSprites)
-            {
-                var sprite = ColonistPlayerPieceBoardSprites.TryCreateSettlement(
-                    parent, worldPosition, color, hexTopY, hexScale);
-                if (sprite != null)
-                    return sprite;
-            }
-
-            var root = CreateRoot(parent, SettlementName, worldPosition);
-            var bodyMaterial = BuiltInMaterials.Create(color);
-
-            float flat = FlatHexWidth(hexScale);
-            float bodyWidth = flat * SettlementFootprintOfHex;
-            float bodyDepth = bodyWidth * 0.94f;
-            float bodyNominalHeight = bodyWidth * 0.54f;
-            float bodyHeight = bodyNominalHeight - BodyTopBelowRoofEave;
-            float roofY = hexTopY + BaseGapAboveHex + bodyNominalHeight;
-
-            AddBody(root.transform, bodyWidth, bodyHeight, bodyDepth, hexTopY, bodyMaterial);
-            float roofBaseY = hexTopY + BaseGapAboveHex + bodyHeight;
-            AddColonistTopDownRoof(root.transform, bodyWidth, bodyDepth, roofY, color);
-            AddFacadePitchedRoof(root.transform, bodyWidth, bodyDepth, roofBaseY, color, 0f, 0f);
-            AddPentagonEaveOutline(root.transform, bodyWidth, bodyDepth, roofY, color);
-            FinishColonistPiece(root, hexTopY, bodyWidth);
-
-            return root;
-        }
+            float hexScale = ColonistBoardVisualScale.ReferenceHexScale) =>
+            CreateBuilding(parent, SettlementName, "settlement", worldPosition, color, hexTopY, hexScale, 0f);
 
         public static GameObject CreateCity(
             Transform parent,
             Vector3 worldPosition,
             Color color,
             float hexTopY,
-            float hexScale = ColonistBoardVisualScale.ReferenceHexScale)
-        {
-            if (!ColonistPresentation.IsActive)
-            {
-                var imported = ColonistKenneyPlayerPieceMeshes.TryCreateCity(
-                    parent, worldPosition, color, hexTopY);
-                if (imported != null)
-                    return imported;
-            }
-
-            if (ColonistPresentation.IsActive && ColonistPlayerPieceBoardSprites.UseBoardSprites)
-            {
-                var sprite = ColonistPlayerPieceBoardSprites.TryCreateCity(
-                    parent, worldPosition, color, hexTopY, hexScale);
-                if (sprite != null)
-                    return sprite;
-            }
-
-            var root = CreateRoot(parent, CityName, worldPosition);
-            var bodyMaterial = BuiltInMaterials.Create(color);
-
-            float flat = FlatHexWidth(hexScale);
-            float citySpan = flat * CityFootprintOfHex;
-            float wingWidth = citySpan * 0.66f;
-            float wingDepth = citySpan * 0.46f;
-            float wingNominalHeight = citySpan * 0.32f;
-            float towerWidth = citySpan * 0.28f;
-            float towerDepth = citySpan * 0.26f;
-            float towerNominalHeight = citySpan * 0.82f;
-
-            float wingHeight = wingNominalHeight - BodyTopBelowRoofEave;
-            float towerHeight = towerNominalHeight - BodyTopBelowRoofEave;
-            float baseY = hexTopY + BaseGapAboveHex;
-            float wingOffsetX = -citySpan * 0.20f;
-            float wingOffsetZ = -citySpan * 0.06f;
-            float towerOffsetX = citySpan * 0.24f;
-            float towerOffsetZ = citySpan * 0.14f;
-
-            CreatePrimitivePart(
-                root.transform,
-                PrimitiveType.Cube,
-                BodyPartName,
-                new Vector3(wingOffsetX, baseY + wingHeight * 0.5f, wingOffsetZ),
-                new Vector3(wingWidth, wingHeight, wingDepth),
-                Quaternion.identity,
-                bodyMaterial);
-
-            CreatePrimitivePart(
-                root.transform,
-                PrimitiveType.Cube,
-                UpperStoreyPartName,
-                new Vector3(towerOffsetX, baseY + towerHeight * 0.5f, towerOffsetZ),
-                new Vector3(towerWidth, towerHeight, towerDepth),
-                Quaternion.identity,
-                bodyMaterial);
-
-            float wingRoofY = baseY + wingNominalHeight;
-            AddColonistTopDownRoof(root.transform, wingWidth, wingDepth, wingRoofY, color, wingOffsetX, wingOffsetZ);
-            AddFacadePitchedRoof(
-                root.transform,
-                wingWidth,
-                wingDepth,
-                baseY + wingHeight,
-                color,
-                wingOffsetX,
-                wingOffsetZ);
-
-            float towerRoofY = baseY + towerNominalHeight;
-            AddColonistTopDownRoof(
-                root.transform,
-                towerWidth,
-                towerDepth,
-                towerRoofY,
-                color,
-                towerOffsetX,
-                towerOffsetZ,
-                ridgeName: "TowerRoofRidge",
-                leftName: "TowerRoofLeft",
-                rightName: "TowerRoofRight");
-            AddFacadePitchedRoof(
-                root.transform,
-                towerWidth,
-                towerDepth,
-                baseY + towerHeight,
-                color,
-                towerOffsetX,
-                towerOffsetZ,
-                leftName: "TowerFacadeLeft",
-                rightName: "TowerFacadeRight");
-
-            AddCitySilhouetteOutline(
-                root.transform,
-                citySpan,
-                wingWidth,
-                wingDepth,
-                wingOffsetX,
-                wingOffsetZ,
-                towerWidth,
-                towerDepth,
-                towerOffsetX,
-                towerOffsetZ,
-                wingRoofY,
-                towerRoofY,
-                color);
-
-            FinishColonistPiece(root, hexTopY, citySpan);
-
-            return root;
-        }
+            float hexScale = ColonistBoardVisualScale.ReferenceHexScale) =>
+            // Turned side-on: the long house faces the viewer with the tower rising at one end.
+            CreateBuilding(parent, CityName, "city", worldPosition, color, hexTopY, hexScale, CityExtraYawDegrees);
 
         public static GameObject CreateRoad(
             Transform parent,
@@ -227,39 +93,144 @@ namespace CatanRoguelike.Game
             float hexTopY,
             float hexScale = ColonistBoardVisualScale.ReferenceHexScale)
         {
-            if (!ColonistPresentation.IsActive)
-            {
-                var imported = ColonistKenneyPlayerPieceMeshes.TryCreateRoad(
-                    parent, midpoint, angleY, length, color, hexTopY);
-                if (imported != null)
-                    return imported;
-            }
-
-            var root = CreateRoot(parent, RoadName, midpoint);
+            var root = new GameObject(RoadName);
+            root.transform.SetParent(parent, false);
+            root.transform.position = midpoint;
             root.transform.rotation = Quaternion.Euler(0f, angleY, 0f);
 
-            float flat = FlatHexWidth(hexScale);
-            float roadWidth = flat * 0.068f;
-            float roadThickness = flat * 0.024f;
-            float centerY = hexTopY + roadThickness * 0.5f + flat * 0.014f;
+            var mesh = LoadMesh("road", out var slotNames);
+            var plank = CreateMeshChild(root.transform, PlankPartName, mesh, slotNames, color);
+            var b = mesh.bounds;
+            // Blender plank runs along model X; the road root's local Z runs along the edge.
+            plank.localRotation = Quaternion.Euler(0f, 90f, 0f);
+            float targetLength = Mathf.Max(length * RoadLengthOfEdge, 0.05f);
+            float targetWidth = FlatHexWidth(hexScale) * RoadWidthOfHex;
+            float sx = targetLength / Mathf.Max(b.size.x, 1e-4f);
+            float sz = targetWidth / Mathf.Max(b.size.z, 1e-4f);
+            float sy = sz; // keep the bevel profile square-ish
+            plank.localScale = new Vector3(sx, sy, sz);
+            plank.localPosition = new Vector3(0f, hexTopY + RoadGapAboveHex - b.min.y * sy - midpoint.y, 0f);
+            DisableShadows(root);
+            return root;
+        }
 
-            var material = BuiltInMaterials.Create(color);
-            CreatePrimitivePart(
-                root.transform,
-                PrimitiveType.Cube,
-                PlankPartName,
-                new Vector3(0f, centerY, 0f),
-                new Vector3(roadWidth, roadThickness, length * 0.92f),
-                Quaternion.identity,
-                material);
+        private static GameObject CreateBuilding(
+            Transform parent,
+            string rootName,
+            string modelName,
+            Vector3 worldPosition,
+            Color color,
+            float hexTopY,
+            float hexScale,
+            float extraYaw)
+        {
+            var root = new GameObject(rootName);
+            root.transform.SetParent(parent, false);
+            root.transform.position = worldPosition;
+
+            var mesh = LoadMesh(modelName, out var slotNames);
+            var body = CreateMeshChild(root.transform, BodyPartName, mesh, slotNames, color);
+
+            // One scale for every building (from the settlement width) keeps the city at 1.5x.
+            var settlementMesh = modelName == "settlement" ? mesh : LoadMesh("settlement", out _);
+            float scale = FlatHexWidth(hexScale) * SettlementFootprintOfHex
+                / Mathf.Max(settlementMesh.bounds.size.x, 1e-4f);
+            body.localScale = Vector3.one * scale;
+            body.localRotation = ComputeBuildingRotation(extraYaw);
+
+            // Pivot on the footprint centre, then drop the lowest (leaned) point onto the hex top.
+            var c = mesh.bounds.center;
+            var footprintCentre = new Vector3(c.x, mesh.bounds.min.y, c.z);
+            body.localPosition = -(body.localRotation * (footprintCentre * scale));
+            float minY = LowestWorldY(body, mesh);
+            body.position += Vector3.up * (hexTopY + BaseGapAboveHex - minY);
 
             DisableShadows(root);
             return root;
         }
 
-        private static void FinishColonistPiece(GameObject root, float hexTopY, float footprintDiameter)
+        /// <summary>Gable toward the viewer (yawed), leaned back toward screen-top in colonist mode.</summary>
+        internal static Quaternion ComputeBuildingRotation(float extraYaw)
         {
-            DisableShadows(root);
+            if (!ColonistPresentation.IsActive)
+                return Quaternion.Euler(0f, extraYaw + ColonistYawDegrees, 0f);
+
+            Vector3 up = ColonistFlatBoardQuad.GetColonistCameraUpOnBoard();
+            // Model +X is the settlement gable end: face it toward the viewer (screen-bottom).
+            var face = Quaternion.FromToRotation(Vector3.right, -up);
+            if (Vector3.Dot(face * Vector3.up, Vector3.up) < 0.5f)
+                face = Quaternion.LookRotation(Vector3.Cross(-up, Vector3.up), Vector3.up);
+            var yaw = Quaternion.AngleAxis(ColonistYawDegrees + extraYaw, Vector3.up);
+            var leanTarget = Vector3.up * Mathf.Cos(ColonistLeanDegrees * Mathf.Deg2Rad)
+                + up * Mathf.Sin(ColonistLeanDegrees * Mathf.Deg2Rad);
+            var lean = Quaternion.FromToRotation(Vector3.up, leanTarget);
+            return lean * yaw * face;
+        }
+
+        private static float LowestWorldY(Transform body, Mesh mesh)
+        {
+            float min = float.MaxValue;
+            foreach (var v in mesh.vertices)
+                min = Mathf.Min(min, body.TransformPoint(v).y);
+            return min;
+        }
+
+        private static Transform CreateMeshChild(
+            Transform parent,
+            string name,
+            Mesh mesh,
+            string[] slotNames,
+            Color color)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var renderer = go.AddComponent<MeshRenderer>();
+            renderer.sharedMaterials = CreateSlotMaterials(slotNames, color);
+            return go.transform;
+        }
+
+        /// <summary>Wall = player colour, Roof darker, Edge (bevels) darkest, in the mesh's slot order.</summary>
+        internal static Material[] CreateSlotMaterials(string[] slotNames, Color color)
+        {
+            var mats = new Material[slotNames.Length];
+            for (int i = 0; i < slotNames.Length; i++)
+            {
+                var kind = SlotKind(slotNames[i]);
+                var tint = kind == RoofMaterialName ? DarkenForRoof(color)
+                    : kind == EdgeMaterialName ? DarkenForEdge(color)
+                    : color;
+                var mat = BuiltInMaterials.CreateMatteOpaque(tint);
+                mat.name = kind;
+                mats[i] = mat;
+            }
+
+            return mats;
+        }
+
+        internal static string SlotKind(string importedName)
+        {
+            if (importedName != null && importedName.Contains("Roof"))
+                return RoofMaterialName;
+            if (importedName != null && importedName.Contains("Edge"))
+                return EdgeMaterialName;
+            return WallMaterialName;
+        }
+
+        private static Mesh LoadMesh(string modelName, out string[] slotNames)
+        {
+            var prefab = Resources.Load<GameObject>($"{ModelRoot}/{modelName}");
+            var filter = prefab != null ? prefab.GetComponentInChildren<MeshFilter>() : null;
+            var renderer = prefab != null ? prefab.GetComponentInChildren<MeshRenderer>() : null;
+            if (filter == null || filter.sharedMesh == null || renderer == null)
+                throw new System.InvalidOperationException(
+                    $"Player piece model '{ModelRoot}/{modelName}' is missing (run tools/blender/run-pieces.sh).");
+
+            var shared = renderer.sharedMaterials;
+            slotNames = new string[shared.Length];
+            for (int i = 0; i < shared.Length; i++)
+                slotNames[i] = shared[i] != null ? shared[i].name : WallMaterialName;
+            return filter.sharedMesh;
         }
 
         private static void DisableShadows(GameObject root)
@@ -269,396 +240,6 @@ namespace CatanRoguelike.Game
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
             }
-        }
-
-        private static GameObject CreateRoot(Transform parent, string name, Vector3 worldPosition)
-        {
-            var root = new GameObject(name);
-            root.transform.SetParent(parent, false);
-            root.transform.position = worldPosition;
-            return root;
-        }
-
-        private static void AddBody(
-            Transform parent,
-            float width,
-            float height,
-            float depth,
-            float hexTopY,
-            Material material)
-        {
-            float centerY = hexTopY + BaseGapAboveHex + height * 0.5f;
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                BodyPartName,
-                new Vector3(0f, centerY, 0f),
-                new Vector3(width, height, depth),
-                Quaternion.identity,
-                material);
-        }
-
-        private static void AddColonistTopDownRoof(
-            Transform parent,
-            float bodyWidth,
-            float bodyDepth,
-            float roofY,
-            Color playerColor,
-            float offsetX = 0f,
-            float offsetZ = 0f,
-            string leftName = RoofLeftPartName,
-            string rightName = RoofRightPartName,
-            string ridgeName = RoofRidgePartName)
-        {
-            var roofLit = BuiltInMaterials.Create(playerColor);
-            roofLit.SetFloat("_Glossiness", 0.03f);
-            var roofShade = BuiltInMaterials.Create(
-                new Color(playerColor.r * RoofColorMultiply, playerColor.g * RoofColorMultiply, playerColor.b * RoofColorMultiply, 1f));
-            roofShade.SetFloat("_Glossiness", 0.02f);
-            var roofRidge = BuiltInMaterials.Create(
-                new Color(playerColor.r * 0.38f, playerColor.g * 0.38f, playerColor.b * 0.38f, 1f));
-            roofRidge.SetFloat("_Glossiness", 0.01f);
-            var outline = BuiltInMaterials.Create(
-                new Color(playerColor.r * 0.22f, playerColor.g * 0.22f, playerColor.b * 0.22f, 1f));
-
-            float slab = Mathf.Max(bodyWidth * 0.11f, 0.04f);
-            float halfSpan = bodyWidth * 0.52f;
-            float depth = bodyDepth * 1.18f;
-            float shadeLift = slab * 0.38f;
-
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                leftName,
-                new Vector3(offsetX - halfSpan * 0.5f, roofY, offsetZ),
-                new Vector3(halfSpan, slab, depth),
-                Quaternion.identity,
-                roofLit);
-
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                rightName,
-                new Vector3(offsetX + halfSpan * 0.5f, roofY + shadeLift, offsetZ),
-                new Vector3(halfSpan, slab, depth),
-                Quaternion.identity,
-                roofShade);
-
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                ridgeName,
-                new Vector3(offsetX, roofY + slab * 0.72f, offsetZ),
-                new Vector3(bodyWidth * 0.10f, slab * 1.55f, depth * 1.02f),
-                Quaternion.identity,
-                roofRidge);
-
-            AddGableEndCaps(parent, bodyWidth, depth, roofY, slab, offsetX, offsetZ, roofLit, roofShade, outline);
-
-            float edge = Mathf.Max(bodyWidth * 0.035f, 0.014f);
-            float edgeY = roofY - slab * 0.25f;
-            float outlineW = bodyWidth * 1.14f;
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                "RoofOutline",
-                new Vector3(offsetX, edgeY, offsetZ + depth * 0.5f),
-                new Vector3(outlineW, edge, edge),
-                Quaternion.identity,
-                outline);
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                "RoofOutline",
-                new Vector3(offsetX, edgeY, offsetZ - depth * 0.5f),
-                new Vector3(outlineW, edge, edge),
-                Quaternion.identity,
-                outline);
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                "RoofOutline",
-                new Vector3(offsetX - outlineW * 0.5f, edgeY, offsetZ),
-                new Vector3(edge, edge, depth * 0.92f),
-                Quaternion.identity,
-                outline);
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                "RoofOutline",
-                new Vector3(offsetX + outlineW * 0.5f, edgeY, offsetZ),
-                new Vector3(edge, edge, depth * 0.92f),
-                Quaternion.identity,
-                outline);
-        }
-
-        private static void AddFacadePitchedRoof(
-            Transform parent,
-            float bodyWidth,
-            float bodyDepth,
-            float roofBaseY,
-            Color playerColor,
-            float offsetX,
-            float offsetZ,
-            string leftName = "FacadeRoofLeft",
-            string rightName = "FacadeRoofRight")
-        {
-            var roofLit = BuiltInMaterials.Create(playerColor);
-            roofLit.SetFloat("_Glossiness", 0.03f);
-            var roofShade = BuiltInMaterials.Create(DarkenForRoof(playerColor));
-            roofShade.SetFloat("_Glossiness", 0.02f);
-
-            const float panelThickness = 0.05f;
-            float panelWidth = bodyWidth * 1.08f;
-            float panelDepth = bodyDepth * 0.58f;
-            float lift = panelDepth * Mathf.Sin(RoofPitchDegrees * Mathf.Deg2Rad) * 0.45f;
-
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                leftName,
-                new Vector3(offsetX, roofBaseY + lift, offsetZ - bodyDepth * 0.22f),
-                new Vector3(panelWidth, panelThickness, panelDepth),
-                Quaternion.Euler(-RoofPitchDegrees, 0f, 0f),
-                roofLit);
-
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                rightName,
-                new Vector3(offsetX, roofBaseY + lift, offsetZ + bodyDepth * 0.22f),
-                new Vector3(panelWidth, panelThickness, panelDepth),
-                Quaternion.Euler(RoofPitchDegrees, 0f, 0f),
-                roofShade);
-        }
-
-        private static void AddPentagonEaveOutline(
-            Transform parent,
-            float bodyWidth,
-            float bodyDepth,
-            float roofY,
-            Color playerColor)
-        {
-            var outline = BuiltInMaterials.Create(
-                new Color(playerColor.r * 0.16f, playerColor.g * 0.16f, playerColor.b * 0.16f, 1f));
-            float edge = Mathf.Max(bodyWidth * 0.04f, 0.016f);
-            float halfW = bodyWidth * 0.56f;
-            float halfD = bodyDepth * 0.58f;
-            float y = roofY - edge * 0.5f;
-
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                "EaveOutline",
-                new Vector3(0f, y, halfD),
-                new Vector3(bodyWidth * 1.12f, edge, edge),
-                Quaternion.identity,
-                outline);
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                "EaveOutline",
-                new Vector3(0f, y, -halfD),
-                new Vector3(bodyWidth * 1.12f, edge, edge),
-                Quaternion.identity,
-                outline);
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                "EaveOutline",
-                new Vector3(-halfW, y, 0f),
-                new Vector3(edge, edge, bodyDepth * 1.05f),
-                Quaternion.identity,
-                outline);
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                "EaveOutline",
-                new Vector3(halfW, y, 0f),
-                new Vector3(edge, edge, bodyDepth * 1.05f),
-                Quaternion.identity,
-                outline);
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                "EaveOutline",
-                new Vector3(0f, y + edge * 1.2f, 0f),
-                new Vector3(bodyWidth * 0.22f, edge * 1.4f, bodyDepth * 1.12f),
-                Quaternion.identity,
-                outline);
-        }
-
-        private static void AddCitySilhouetteOutline(
-            Transform parent,
-            float citySpan,
-            float wingWidth,
-            float wingDepth,
-            float wingOffsetX,
-            float wingOffsetZ,
-            float towerWidth,
-            float towerDepth,
-            float towerOffsetX,
-            float towerOffsetZ,
-            float wingRoofY,
-            float towerRoofY,
-            Color playerColor)
-        {
-            var outline = BuiltInMaterials.Create(
-                new Color(playerColor.r * 0.14f, playerColor.g * 0.14f, playerColor.b * 0.14f, 1f));
-            float edge = Mathf.Max(citySpan * 0.028f, 0.014f);
-            float y = wingRoofY - edge;
-
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                "CityOutline",
-                new Vector3(wingOffsetX, y, wingOffsetZ + wingDepth * 0.5f),
-                new Vector3(wingWidth * 1.06f, edge, edge),
-                Quaternion.identity,
-                outline);
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                "CityOutline",
-                new Vector3(wingOffsetX, y, wingOffsetZ - wingDepth * 0.5f),
-                new Vector3(wingWidth * 1.06f, edge, edge),
-                Quaternion.identity,
-                outline);
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                "CityOutline",
-                new Vector3(towerOffsetX, towerRoofY - edge, towerOffsetZ + towerDepth * 0.5f),
-                new Vector3(towerWidth * 1.08f, edge, edge),
-                Quaternion.identity,
-                outline);
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                "CityOutline",
-                new Vector3(towerOffsetX, towerRoofY - edge, towerOffsetZ - towerDepth * 0.5f),
-                new Vector3(towerWidth * 1.08f, edge, edge),
-                Quaternion.identity,
-                outline);
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                "CityOutline",
-                new Vector3((wingOffsetX + towerOffsetX) * 0.5f, y, (wingOffsetZ + towerOffsetZ) * 0.5f),
-                new Vector3(citySpan * 0.92f, edge, edge),
-                Quaternion.identity,
-                outline);
-        }
-
-        private static void AddGableEndCaps(
-            Transform parent,
-            float bodyWidth,
-            float depth,
-            float roofY,
-            float slab,
-            float offsetX,
-            float offsetZ,
-            Material roofLit,
-            Material roofShade,
-            Material outline)
-        {
-            float cap = bodyWidth * 0.22f;
-            float zNorth = offsetZ + depth * 0.48f;
-            float zSouth = offsetZ - depth * 0.48f;
-            foreach (var (z, litOnLeft) in new[] { (zNorth, true), (zSouth, false) })
-            {
-                float xLit = offsetX + (litOnLeft ? -cap * 0.35f : cap * 0.35f);
-                float xShade = offsetX + (litOnLeft ? cap * 0.35f : -cap * 0.35f);
-                CreatePrimitivePart(
-                    parent,
-                    PrimitiveType.Cube,
-                    "RoofGable",
-                    new Vector3(xLit, roofY + slab * 0.12f, z),
-                    new Vector3(cap, slab * 1.1f, cap * 0.55f),
-                    Quaternion.Euler(0f, 45f, 0f),
-                    litOnLeft ? roofLit : roofShade);
-                CreatePrimitivePart(
-                    parent,
-                    PrimitiveType.Cube,
-                    "RoofGable",
-                    new Vector3(xShade, roofY + slab * 0.42f, z),
-                    new Vector3(cap, slab * 1.1f, cap * 0.55f),
-                    Quaternion.Euler(0f, 45f, 0f),
-                    litOnLeft ? roofShade : roofLit);
-                CreatePrimitivePart(
-                    parent,
-                    PrimitiveType.Cube,
-                    "RoofGableOutline",
-                    new Vector3(offsetX, roofY - slab * 0.15f, z),
-                    new Vector3(bodyWidth * 0.72f, slab * 0.35f, cap * 0.35f),
-                    Quaternion.identity,
-                    outline);
-            }
-        }
-
-        private static void AddPitchedRoof(
-            Transform parent,
-            float bodyWidth,
-            float bodyDepth,
-            float roofBaseY,
-            Material material)
-        {
-            const float panelThickness = 0.046f;
-            float panelWidth = bodyWidth * 1.18f;
-            float panelDepth = bodyDepth * 0.62f;
-            float panelLift = panelDepth * Mathf.Sin(RoofPitchDegrees * Mathf.Deg2Rad) * 0.5f;
-
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                RoofLeftPartName,
-                new Vector3(0f, roofBaseY + panelLift, -bodyDepth * 0.24f),
-                new Vector3(panelWidth, panelThickness, panelDepth),
-                Quaternion.Euler(-RoofPitchDegrees, 0f, 0f),
-                material);
-
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                RoofRightPartName,
-                new Vector3(0f, roofBaseY + panelLift, bodyDepth * 0.24f),
-                new Vector3(panelWidth, panelThickness, panelDepth),
-                Quaternion.Euler(RoofPitchDegrees, 0f, 0f),
-                material);
-
-            float ridgeDepth = bodyDepth * 1.10f;
-            float ridgeCenterY = roofBaseY + RidgeLift + RidgeThickness * 0.5f;
-
-            CreatePrimitivePart(
-                parent,
-                PrimitiveType.Cube,
-                RoofRidgePartName,
-                new Vector3(0f, ridgeCenterY, 0f),
-                new Vector3(panelWidth, RidgeThickness, ridgeDepth),
-                Quaternion.identity,
-                material);
-        }
-
-        private static void CreatePrimitivePart(
-            Transform parent,
-            PrimitiveType primitive,
-            string name,
-            Vector3 localPosition,
-            Vector3 localScale,
-            Quaternion localRotation,
-            Material material)
-        {
-            var go = GameObject.CreatePrimitive(primitive);
-            go.name = name;
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = localPosition;
-            go.transform.localScale = localScale;
-            go.transform.localRotation = localRotation;
-
-            var renderer = go.GetComponent<Renderer>();
-            renderer.sharedMaterial = material;
-
-            Object.DestroyImmediate(go.GetComponent<Collider>());
         }
     }
 }
