@@ -20,10 +20,14 @@ namespace CatanRoguelike.Game
             var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             go.name = "ContactShadow";
             go.transform.SetParent(pieceRoot, false);
-            float localY = hexTopY - pieceRoot.position.y + 0.002f;
-            go.transform.localPosition = new Vector3(0f, localY, 0f);
-            float d = Mathf.Clamp(footprintDiameter * 0.72f, 0.14f, 0.55f);
-            go.transform.localScale = new Vector3(d, 0.008f, d);
+            const float minBaseAboveHex = 0.012f;
+            const float shadowThickness = 0.003f;
+            float rootY = pieceRoot.position.y;
+            float shadowBottom = hexTopY + minBaseAboveHex;
+            float localCenterY = shadowBottom - rootY + shadowThickness;
+            go.transform.localPosition = new Vector3(0f, localCenterY, 0f);
+            float d = Mathf.Clamp(footprintDiameter * 0.68f, 0.12f, 0.50f);
+            go.transform.localScale = new Vector3(d, shadowThickness, d);
 
             var renderer = go.GetComponent<Renderer>();
             renderer.sharedMaterial = BuiltInMaterials.CreateUnlit(ShadowTint, zWrite: false);

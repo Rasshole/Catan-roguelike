@@ -17,3 +17,6 @@
 ## Pass 7 (v121)
 - Geometric 3-4-5-4-3 crop centers on reference_board.jpg; ambientCG photo textures + scatter + posterize compositor.
 - Still short of printed board; `ColonistBlenderHexTerrainArt.Enabled = false`.
+## Pass 8 (v122)
+- Hand-measured reference crops; painted forest/wheat/pasture/ore/clay/desert targets (stripes, terraces, rock cubes).
+- `ColonistBlenderHexTerrainArt.Enabled = false`.

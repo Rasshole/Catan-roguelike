@@ -115,6 +115,65 @@ def scatter_cones(
         cone.name = f"Tree_{i}"
 
 
+def scatter_rock_cubes(
+    rng: random.Random,
+    count: int,
+    size_range: tuple[float, float],
+    mat: bpy.types.Material,
+    highlight: bpy.types.Material | None = None,
+    inner_r: float = 0.84,
+) -> None:
+    for i in range(count):
+        ang = rng.random() * math.tau
+        rad = rng.uniform(0.06, inner_r)
+        x = math.cos(ang) * rad
+        y = math.sin(ang) * rad
+        if max(abs(y), abs(x) * 0.866025 + abs(y) * 0.5) > inner_r:
+            continue
+        sx = rng.uniform(*size_range)
+        sy = sx * rng.uniform(0.7, 1.1)
+        sz = sx * rng.uniform(0.45, 0.85)
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(x, y, sz * 0.5 + 0.04))
+        rock = bpy.context.object
+        rock.scale = (sx, sy, sz)
+        rock.rotation_euler = (
+            rng.uniform(0.1, 0.5),
+            rng.uniform(-0.4, 0.4),
+            ang + rng.uniform(-0.5, 0.5),
+        )
+        rock.data.materials.append(mat)
+        if highlight is not None and rng.random() < 0.35:
+            bpy.ops.mesh.primitive_cube_add(
+                size=1,
+                location=(x + sx * 0.2, y + sy * 0.15, sz + 0.06),
+            )
+            cap = bpy.context.object
+            cap.scale = (sx * 0.35, sy * 0.25, sz * 0.18)
+            cap.data.materials.append(highlight)
+
+
+def scatter_clay_terraces(
+    rng: random.Random,
+    mat: bpy.types.Material,
+    inner_r: float = 0.82,
+) -> None:
+    for ring in range(3):
+        rad = 0.18 + ring * 0.22
+        steps = 5 + ring * 2
+        for s in range(steps):
+            ang = (s / steps) * math.tau + ring * 0.2
+            x = math.cos(ang) * rad
+            y = math.sin(ang) * rad
+            if max(abs(y), abs(x) * 0.866025 + abs(y) * 0.5) > inner_r:
+                continue
+            h = 0.04 + ring * 0.035
+            bpy.ops.mesh.primitive_cube_add(size=1, location=(x, y, h * 0.5))
+            step = bpy.context.object
+            step.scale = (0.14 - ring * 0.02, 0.10, h)
+            step.rotation_euler = (0, 0, ang)
+            step.data.materials.append(mat)
+
+
 def scatter_icos(
     rng: random.Random,
     count: int,

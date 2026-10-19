@@ -28,7 +28,7 @@ namespace CatanRoguelike.Game
         public static readonly Color AiColor = new(0.9f, 0.25f, 0.2f);
 
         private const float RoofPitchDegrees = 38f;
-        private const float BaseGapAboveHex = 0.02f;
+        private const float BaseGapAboveHex = 0.028f;
         private const float BodyTopBelowRoofEave = 0.06f;
         private const float RidgeLift = 0.02f;
         private const float RidgeThickness = 0.10f;
@@ -83,7 +83,10 @@ namespace CatanRoguelike.Game
             float roofY = hexTopY + BaseGapAboveHex + bodyNominalHeight;
 
             AddBody(root.transform, bodyWidth, bodyHeight, bodyDepth, hexTopY, bodyMaterial);
+            float roofBaseY = hexTopY + BaseGapAboveHex + bodyHeight;
             AddColonistTopDownRoof(root.transform, bodyWidth, bodyDepth, roofY, color);
+            AddFacadePitchedRoof(root.transform, bodyWidth, bodyDepth, roofBaseY, color, 0f, 0f);
+            AddPentagonEaveOutline(root.transform, bodyWidth, bodyDepth, roofY, color);
             FinishColonistPiece(root, hexTopY, bodyWidth);
 
             return root;
@@ -109,20 +112,20 @@ namespace CatanRoguelike.Game
 
             float flat = FlatHexWidth(hexScale);
             float citySpan = flat * CityFootprintOfHex;
-            float wingWidth = citySpan * 0.58f;
-            float wingDepth = citySpan * 0.52f;
-            float wingNominalHeight = citySpan * 0.38f;
-            float towerWidth = citySpan * 0.40f;
-            float towerDepth = citySpan * 0.44f;
-            float towerNominalHeight = wingNominalHeight * 1.72f;
+            float wingWidth = citySpan * 0.66f;
+            float wingDepth = citySpan * 0.46f;
+            float wingNominalHeight = citySpan * 0.32f;
+            float towerWidth = citySpan * 0.28f;
+            float towerDepth = citySpan * 0.26f;
+            float towerNominalHeight = citySpan * 0.82f;
 
             float wingHeight = wingNominalHeight - BodyTopBelowRoofEave;
             float towerHeight = towerNominalHeight - BodyTopBelowRoofEave;
             float baseY = hexTopY + BaseGapAboveHex;
-            float wingOffsetX = -citySpan * 0.14f;
-            float wingOffsetZ = -citySpan * 0.10f;
-            float towerOffsetX = citySpan * 0.20f;
-            float towerOffsetZ = citySpan * 0.16f;
+            float wingOffsetX = -citySpan * 0.20f;
+            float wingOffsetZ = -citySpan * 0.06f;
+            float towerOffsetX = citySpan * 0.24f;
+            float towerOffsetZ = citySpan * 0.14f;
 
             CreatePrimitivePart(
                 root.transform,
@@ -137,15 +140,23 @@ namespace CatanRoguelike.Game
                 root.transform,
                 PrimitiveType.Cube,
                 UpperStoreyPartName,
-                new Vector3(towerOffsetX, baseY + wingHeight + towerHeight * 0.5f, towerOffsetZ),
+                new Vector3(towerOffsetX, baseY + towerHeight * 0.5f, towerOffsetZ),
                 new Vector3(towerWidth, towerHeight, towerDepth),
                 Quaternion.identity,
                 bodyMaterial);
 
             float wingRoofY = baseY + wingNominalHeight;
             AddColonistTopDownRoof(root.transform, wingWidth, wingDepth, wingRoofY, color, wingOffsetX, wingOffsetZ);
+            AddFacadePitchedRoof(
+                root.transform,
+                wingWidth,
+                wingDepth,
+                baseY + wingHeight,
+                color,
+                wingOffsetX,
+                wingOffsetZ);
 
-            float towerRoofY = baseY + wingNominalHeight + towerNominalHeight;
+            float towerRoofY = baseY + towerNominalHeight;
             AddColonistTopDownRoof(
                 root.transform,
                 towerWidth,
@@ -157,6 +168,31 @@ namespace CatanRoguelike.Game
                 ridgeName: "TowerRoofRidge",
                 leftName: "TowerRoofLeft",
                 rightName: "TowerRoofRight");
+            AddFacadePitchedRoof(
+                root.transform,
+                towerWidth,
+                towerDepth,
+                baseY + towerHeight,
+                color,
+                towerOffsetX,
+                towerOffsetZ,
+                leftName: "TowerFacadeLeft",
+                rightName: "TowerFacadeRight");
+
+            AddCitySilhouetteOutline(
+                root.transform,
+                citySpan,
+                wingWidth,
+                wingDepth,
+                wingOffsetX,
+                wingOffsetZ,
+                towerWidth,
+                towerDepth,
+                towerOffsetX,
+                towerOffsetZ,
+                wingRoofY,
+                towerRoofY,
+                color);
 
             FinishColonistPiece(root, hexTopY, citySpan);
 
@@ -334,6 +370,164 @@ namespace CatanRoguelike.Game
                 "RoofOutline",
                 new Vector3(offsetX + outlineW * 0.5f, edgeY, offsetZ),
                 new Vector3(edge, edge, depth * 0.92f),
+                Quaternion.identity,
+                outline);
+        }
+
+        private static void AddFacadePitchedRoof(
+            Transform parent,
+            float bodyWidth,
+            float bodyDepth,
+            float roofBaseY,
+            Color playerColor,
+            float offsetX,
+            float offsetZ,
+            string leftName = "FacadeRoofLeft",
+            string rightName = "FacadeRoofRight")
+        {
+            var roofLit = BuiltInMaterials.Create(playerColor);
+            roofLit.SetFloat("_Glossiness", 0.03f);
+            var roofShade = BuiltInMaterials.Create(DarkenForRoof(playerColor));
+            roofShade.SetFloat("_Glossiness", 0.02f);
+
+            const float panelThickness = 0.05f;
+            float panelWidth = bodyWidth * 1.08f;
+            float panelDepth = bodyDepth * 0.58f;
+            float lift = panelDepth * Mathf.Sin(RoofPitchDegrees * Mathf.Deg2Rad) * 0.45f;
+
+            CreatePrimitivePart(
+                parent,
+                PrimitiveType.Cube,
+                leftName,
+                new Vector3(offsetX, roofBaseY + lift, offsetZ - bodyDepth * 0.22f),
+                new Vector3(panelWidth, panelThickness, panelDepth),
+                Quaternion.Euler(-RoofPitchDegrees, 0f, 0f),
+                roofLit);
+
+            CreatePrimitivePart(
+                parent,
+                PrimitiveType.Cube,
+                rightName,
+                new Vector3(offsetX, roofBaseY + lift, offsetZ + bodyDepth * 0.22f),
+                new Vector3(panelWidth, panelThickness, panelDepth),
+                Quaternion.Euler(RoofPitchDegrees, 0f, 0f),
+                roofShade);
+        }
+
+        private static void AddPentagonEaveOutline(
+            Transform parent,
+            float bodyWidth,
+            float bodyDepth,
+            float roofY,
+            Color playerColor)
+        {
+            var outline = BuiltInMaterials.Create(
+                new Color(playerColor.r * 0.16f, playerColor.g * 0.16f, playerColor.b * 0.16f, 1f));
+            float edge = Mathf.Max(bodyWidth * 0.04f, 0.016f);
+            float halfW = bodyWidth * 0.56f;
+            float halfD = bodyDepth * 0.58f;
+            float y = roofY - edge * 0.5f;
+
+            CreatePrimitivePart(
+                parent,
+                PrimitiveType.Cube,
+                "EaveOutline",
+                new Vector3(0f, y, halfD),
+                new Vector3(bodyWidth * 1.12f, edge, edge),
+                Quaternion.identity,
+                outline);
+            CreatePrimitivePart(
+                parent,
+                PrimitiveType.Cube,
+                "EaveOutline",
+                new Vector3(0f, y, -halfD),
+                new Vector3(bodyWidth * 1.12f, edge, edge),
+                Quaternion.identity,
+                outline);
+            CreatePrimitivePart(
+                parent,
+                PrimitiveType.Cube,
+                "EaveOutline",
+                new Vector3(-halfW, y, 0f),
+                new Vector3(edge, edge, bodyDepth * 1.05f),
+                Quaternion.identity,
+                outline);
+            CreatePrimitivePart(
+                parent,
+                PrimitiveType.Cube,
+                "EaveOutline",
+                new Vector3(halfW, y, 0f),
+                new Vector3(edge, edge, bodyDepth * 1.05f),
+                Quaternion.identity,
+                outline);
+            CreatePrimitivePart(
+                parent,
+                PrimitiveType.Cube,
+                "EaveOutline",
+                new Vector3(0f, y + edge * 1.2f, 0f),
+                new Vector3(bodyWidth * 0.22f, edge * 1.4f, bodyDepth * 1.12f),
+                Quaternion.identity,
+                outline);
+        }
+
+        private static void AddCitySilhouetteOutline(
+            Transform parent,
+            float citySpan,
+            float wingWidth,
+            float wingDepth,
+            float wingOffsetX,
+            float wingOffsetZ,
+            float towerWidth,
+            float towerDepth,
+            float towerOffsetX,
+            float towerOffsetZ,
+            float wingRoofY,
+            float towerRoofY,
+            Color playerColor)
+        {
+            var outline = BuiltInMaterials.Create(
+                new Color(playerColor.r * 0.14f, playerColor.g * 0.14f, playerColor.b * 0.14f, 1f));
+            float edge = Mathf.Max(citySpan * 0.028f, 0.014f);
+            float y = wingRoofY - edge;
+
+            CreatePrimitivePart(
+                parent,
+                PrimitiveType.Cube,
+                "CityOutline",
+                new Vector3(wingOffsetX, y, wingOffsetZ + wingDepth * 0.5f),
+                new Vector3(wingWidth * 1.06f, edge, edge),
+                Quaternion.identity,
+                outline);
+            CreatePrimitivePart(
+                parent,
+                PrimitiveType.Cube,
+                "CityOutline",
+                new Vector3(wingOffsetX, y, wingOffsetZ - wingDepth * 0.5f),
+                new Vector3(wingWidth * 1.06f, edge, edge),
+                Quaternion.identity,
+                outline);
+            CreatePrimitivePart(
+                parent,
+                PrimitiveType.Cube,
+                "CityOutline",
+                new Vector3(towerOffsetX, towerRoofY - edge, towerOffsetZ + towerDepth * 0.5f),
+                new Vector3(towerWidth * 1.08f, edge, edge),
+                Quaternion.identity,
+                outline);
+            CreatePrimitivePart(
+                parent,
+                PrimitiveType.Cube,
+                "CityOutline",
+                new Vector3(towerOffsetX, towerRoofY - edge, towerOffsetZ - towerDepth * 0.5f),
+                new Vector3(towerWidth * 1.08f, edge, edge),
+                Quaternion.identity,
+                outline);
+            CreatePrimitivePart(
+                parent,
+                PrimitiveType.Cube,
+                "CityOutline",
+                new Vector3((wingOffsetX + towerOffsetX) * 0.5f, y, (wingOffsetZ + towerOffsetZ) * 0.5f),
+                new Vector3(citySpan * 0.92f, edge, edge),
                 Quaternion.identity,
                 outline);
         }

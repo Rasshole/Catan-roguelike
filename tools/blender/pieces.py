@@ -12,6 +12,7 @@ from mathutils import Vector
 ROOT = os.environ.get("BLENDER_TILE_REPO_ROOT", os.getcwd())
 OUT_DIR = os.path.join(ROOT, "Assets/_Project/Resources/Art/Models/ColonistPieces")
 PREVIEW_PATH = os.path.join(ROOT, "docs/art/pieces_topdown.png")
+PREVIEW_34_PATH = os.path.join(ROOT, "docs/art/pieces_three_quarter.png")
 BOUNDS_JSON = os.path.join(ROOT, "docs/art/piece_bounds.json")
 # ColonistBoardViewConstants.CameraYawDegrees
 CAMERA_YAW_DEG = 90.0
@@ -356,6 +357,57 @@ def render_topdown_preview() -> None:
     print(f"Wrote {PREVIEW_PATH}")
 
 
+def render_three_quarter_preview() -> None:
+    clear_scene()
+    scene = bpy.context.scene
+    scene.render.engine = "BLENDER_EEVEE"
+    scene.render.resolution_x = 1400
+    scene.render.resolution_y = 900
+    scene.render.image_settings.file_format = "PNG"
+    scene.world = bpy.data.worlds.new("W")
+    scene.world.use_nodes = True
+    scene.world.node_tree.nodes["Background"].inputs[0].default_value = (0.45, 0.58, 0.44, 1.0)
+
+    s = link_root("settlement_34")
+    populate_settlement(s)
+    s.location = (-0.55, 0, 0)
+    c = link_root("city_34")
+    populate_city(c)
+    c.location = (0.05, 0, 0)
+    r = link_root("road_34")
+    populate_road(r)
+    r.location = (0.62, 0, 0)
+    r.rotation_euler = (0, 0, math.radians(18))
+
+    bpy.ops.object.camera_add(location=(1.1, -1.35, 0.95))
+    cam = bpy.context.object
+    cam.data.type = "PERSP"
+    cam.data.lens = 42
+    cam.rotation_euler = (math.radians(58), 0, math.radians(38))
+    scene.camera = cam
+
+    bpy.ops.object.light_add(type="SUN", location=(2, -2, 3))
+    sun = bpy.context.object
+    sun.data.energy = 2.4
+    sun.rotation_euler = (math.radians(48), math.radians(18), math.radians(25))
+
+    os.makedirs(os.path.dirname(PREVIEW_34_PATH), exist_ok=True)
+    scene.render.filepath = PREVIEW_34_PATH
+    bpy.ops.render.render(write_still=True)
+    assert_preview_has_content(PREVIEW_34_PATH)
+    print(f"Wrote {PREVIEW_34_PATH}")
+
+
+def populate_road(root: bpy.types.Object, hex_scale: float = HEX_SCALE) -> None:
+    flat = flat_hex_width(hex_scale)
+    w = flat * 0.068
+    h = flat * 0.024
+    center_y = h * 0.5 + 0.028
+    plank = box_mesh("Plank", w, h, 0.92, (0, center_y, 0))
+    assign_mat(plank, mat_rgb("Plank", HUMAN_RGB))
+    plank.parent = root
+
+
 def main() -> None:
     bounds_doc = {}
     for name, builder in (
@@ -371,6 +423,7 @@ def main() -> None:
         json.dump(bounds_doc, f, indent=2)
     print(f"Wrote {BOUNDS_JSON}")
     render_topdown_preview()
+    render_three_quarter_preview()
 
 
 if __name__ == "__main__":

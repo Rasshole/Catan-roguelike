@@ -1,73 +1,24 @@
-"""Geometric 3-4-5-4-3 hex layout on docs/art/blender-tiles/reference_board.jpg."""
+"""Hand-measured hex centres on docs/art/blender-tiles/reference_board.jpg (v122)."""
 from __future__ import annotations
 
-import math
-from typing import Dict, Iterable, Tuple
+from typing import Dict, List, Tuple
 
-# Flat-top axial coords (q, r) for the 19 land hexes.
-def land_hexes() -> Iterable[Tuple[int, int]]:
-    specs = [
-        (-2, (-1, 0, 1)),
-        (-1, (-2, -1, 0, 1)),
-        (0, (-2, -1, 0, 1, 2)),
-        (1, (-1, 0, 1, 2)),
-        (2, (0, 1, 2)),
-    ]
-    for r, qs in specs:
-        for q in qs:
-            yield q, r
+HEX_RADIUS_FRAC = 0.09
 
-
-# Terrain at each hex on the photographed board (for crop labeling only).
-TERRAIN_BY_HEX: Dict[Tuple[int, int], str] = {
-    (-1, -2): "Ore",
-    (0, -2): "Desert",
-    (1, -2): "Wheat",
-    (-2, -1): "Wood",
-    (-1, -1): "Wood",
-    (0, -1): "Wheat",
-    (1, -1): "Sheep",
-    (-2, 0): "Wood",
-    (-1, 0): "Sheep",
-    (0, 0): "Sheep",
-    (1, 0): "Brick",
-    (2, 0): "Wheat",
-    (-1, 1): "Brick",
-    (0, 1): "Wheat",
-    (1, 1): "Brick",
-    (2, 1): "Wheat",
-    (0, 2): "Sheep",
-    (1, 2): "Wheat",
-    (2, 2): "Ore",
-}
-
-# Calibrated on reference_board.jpg (640×768).
-BOARD_CENTER_FRAC = (0.50, 0.48)
-HEX_FLAT_WIDTH_FRAC = 0.144
-
-PREFERRED_HEX: Dict[str, Tuple[int, int]] = {
-    "Wood": (-2, -1),
-    "Wheat": (2, 0),
-    "Sheep": (-1, 0),
-    "Ore": (-1, -2),
-    "Brick": (1, 0),
-    "Desert": (0, -2),
+# Normalised (x, y) image fractions; first entry used for side_by_side crops.
+TERRAIN_CENTERS: Dict[str, List[Tuple[float, float]]] = {
+    "Desert": [(0.53, 0.25)],
+    "Wheat": [(0.70, 0.28), (0.83, 0.38), (0.82, 0.52), (0.80, 0.65)],
+    "Wood": [(0.37, 0.29), (0.20, 0.38), (0.22, 0.51), (0.38, 0.44)],
+    "Ore": [(0.54, 0.39), (0.52, 0.52), (0.52, 0.65)],
+    "Brick": [(0.67, 0.40), (0.36, 0.55), (0.67, 0.55)],
+    "Sheep": [(0.20, 0.66), (0.36, 0.70), (0.52, 0.78), (0.67, 0.69)],
 }
 
 
-def axial_to_frac(q: int, r: int) -> Tuple[float, float]:
-    size = HEX_FLAT_WIDTH_FRAC / math.sqrt(3.0)
-    x = size * (math.sqrt(3) * q + math.sqrt(3) / 2 * r)
-    y = size * (1.5 * r)
-    cx, cy = BOARD_CENTER_FRAC
-    return cx + x, cy + y
-
-
-def crop_for_terrain(terrain: str, half_size_frac: float = 0.09) -> Tuple[float, float, float]:
-    q, r = PREFERRED_HEX[terrain]
-    if TERRAIN_BY_HEX.get((q, r)) != terrain:
-        raise ValueError(f"Preferred hex for {terrain} is mislabeled")
-    fx, fy = axial_to_frac(q, r)
+def crop_for_terrain(terrain: str, half_size_frac: float = HEX_RADIUS_FRAC) -> Tuple[float, float, float]:
+    centers = TERRAIN_CENTERS[terrain]
+    fx, fy = centers[0]
     return fx, fy, half_size_frac
 
 

@@ -29,8 +29,9 @@ namespace CatanRoguelike.Game
             board.DisabledRoads.Clear();
 
             var validator = new PlacementValidator();
+            var fishVertices = CollectFishShoalBorderVertices(board);
             var vertices = EnumerateLandVertices(board);
-            var spread = PickVerticesQuadrants(board, validator, vertices, 5);
+            var spread = PickVerticesQuadrants(board, validator, vertices, fishVertices, 5);
             if (spread.Count < 5)
                 return;
 
@@ -103,10 +104,30 @@ namespace CatanRoguelike.Game
                 .ToList();
         }
 
+        private static HashSet<Vertex> CollectFishShoalBorderVertices(BoardState board)
+        {
+            var set = new HashSet<Vertex>();
+            if (board?.SeaFishGrounds == null)
+                return set;
+
+            foreach (var sea in board.SeaFishGrounds.Keys)
+            {
+                if (!SeaFrameSlotLayout.TryGetFishShoalPlacement(board, sea, 1f, out var placement))
+                    continue;
+
+                set.Add(VertexGraph.Canonicalize(placement.BorderVertexInland));
+                set.Add(VertexGraph.Canonicalize(placement.BorderVertexLeft));
+                set.Add(VertexGraph.Canonicalize(placement.BorderVertexRight));
+            }
+
+            return set;
+        }
+
         private static List<Vertex> PickVerticesQuadrants(
             BoardState board,
             PlacementValidator validator,
             List<Vertex> candidates,
+            HashSet<Vertex> fishBorderVertices,
             int count)
         {
             float centerX = 0f;
@@ -131,7 +152,7 @@ namespace CatanRoguelike.Game
             var valid = new List<(Vertex vertex, int quadrant, float radius)>();
             foreach (var vertex in candidates)
             {
-                if (!IsInnerLandVertex(board, vertex))
+                if (!IsValidCapturePieceVertex(board, vertex, fishBorderVertices))
                     continue;
                 if (!validator.CanPlaceSettlement(board, vertex, PlayerId.Human, setupPhase: true))
                     continue;
@@ -164,7 +185,9 @@ namespace CatanRoguelike.Game
                     picked.Add(choice.Value);
             }
 
-            foreach (var (vertex, _, radius) in valid.OrderByDescending(v => v.radius))
+            foreach (var (vertex, _, radius) in valid
+                         .OrderByDescending(v => CountLandTouches(board, v.vertex))
+                         .ThenByDescending(v => v.radius))
             {
                 if (picked.Count >= count)
                     break;
@@ -178,12 +201,9 @@ namespace CatanRoguelike.Game
             return picked;
         }
 
-        private static bool IsInnerLandVertex(BoardState board, Vertex vertex)
+        /// <summary>3 land hexes, or 2 land with no port / fish chevron / shoal border.</summary>
+        private static int CountLandTouches(BoardState board, Vertex vertex)
         {
-            vertex = VertexGraph.Canonicalize(vertex);
-            if (board.PortVertexToSeaSlot.ContainsKey(vertex))
-                return false;
-
             int landTouches = 0;
             foreach (var hex in VertexGraph.GetHexesForVertex(vertex))
             {
@@ -192,7 +212,25 @@ namespace CatanRoguelike.Game
                 landTouches++;
             }
 
-            return landTouches >= 2;
+            return landTouches;
+        }
+
+        internal static bool IsValidCapturePieceVertex(
+            BoardState board,
+            Vertex vertex,
+            HashSet<Vertex> fishBorderVertices)
+        {
+            vertex = VertexGraph.Canonicalize(vertex);
+            if (board.PortVertexToSeaSlot.ContainsKey(vertex))
+                return false;
+            if (fishBorderVertices != null && fishBorderVertices.Contains(vertex))
+                return false;
+
+            int landTouches = CountLandTouches(board, vertex);
+            if (landTouches >= 3)
+                return true;
+
+            return landTouches == 2;
         }
 
         private static bool IsFarEnough(Vertex vertex, IReadOnlyList<Vertex> picked)
