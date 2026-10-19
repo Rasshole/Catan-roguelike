@@ -520,6 +520,8 @@ namespace CatanRoguelike.Game
                     data.IsDesert
                         ? BoardTerrainSlot.Desert
                         : BoardTerrainMaterialSlots.ResourceToSlot(data.Resource));
+            if (blenderTop && ColonistBlenderHexTerrainArt.IsRotated180(data.Coord))
+                ColonistBlenderHexTerrainArt.ApplyRotation180(renderer.sharedMaterial);
             // Painted tiles carry their own cardboard bevel frame; the slate seam strips would
             // draw a cold line through the middle of the sand borders.
             if (!blenderTop)

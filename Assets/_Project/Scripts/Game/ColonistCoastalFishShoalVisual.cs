@@ -8,8 +8,8 @@ namespace CatanRoguelike.Game
 {
     /// <summary>
     /// Fishermen fish-ground piece: the chevron band that hugs the coast, painted like the board
-    /// tiles. Each piece gets a baked albedo: painted water with fish (Art/Board/FishGroundWater,
-    /// tools/art/make_fish_water.py) inside the exact chevron outline, framed by the same thin sand
+    /// tiles. Each piece gets a baked albedo: painted water with fish (Art/Board/FishGroundWater, the AI
+    /// painting via tools/art/make_fish_water.py) inside the exact chevron outline, framed by the same thin sand
     /// bevel as the hex tiles (dark outer edge, light inner lip, soft inset shadow).
     /// </summary>
     public static class ColonistCoastalFishShoalVisual
@@ -27,9 +27,20 @@ namespace CatanRoguelike.Game
 
         /// <summary>Frame width as a fraction of the hex apothem (tiles use 0.075).</summary>
         public const float FrameOfApothem = 0.06f;
-        /// <summary>World size of one repeat of the painted water.</summary>
-        public const float WaterWorldRepeat = 1.7f;
-        private const int BakeResolution = 384;
+        /// <summary>World width covered by the whole painted-water image (sets fish size).</summary>
+        public const float WaterWorldWidth = 9f;
+
+        /// <summary>
+        /// Fish-school centres in the painted water (Unity uv, v up), measured from
+        /// tools/art/ai-tiles-src/FishWater_v127.jpg. Each arm of a fish ground is centred on one.
+        /// </summary>
+        public static readonly Vector2[] FishSchoolsUv =
+        {
+            new(0.73f, 0.74f),
+            new(0.25f, 0.46f),
+            new(0.71f, 0.24f),
+        };
+        private const int BakeResolution = 512;
 
         private static readonly Dictionary<string, Material> _materials = new();
 
@@ -134,10 +145,22 @@ namespace CatanRoguelike.Game
             float apothem = hexScale * HexMath.OuterRadius * Mathf.Sqrt(3f) * 0.5f;
             float frame = FrameOfApothem * apothem;
             float px = size / n;
-            // Water axes follow the coast so the fish swim along the band on every piece.
+            // Water axes follow the coast; each arm samples the painting around its own fish school
+            // (blended across the token, which covers the seam).
             var outward = new Vector2(placement.Outward.X, placement.Outward.Z).normalized;
             var along = new Vector2(outward.y, -outward.x);
-            var offset = new Vector2((coord.Q * 0.37f) % 1f, (coord.R * 0.53f) % 1f);
+            var origin = new Vector2(placement.TokenCenter.X, placement.TokenCenter.Z);
+            Vector2 L(MapPlaneXz q) => new Vector2(q.X, q.Z) - origin;
+            // Arm centres: centroid of each arm quad (coast arm, inland tip, sea apex, sea flat).
+            var centreL = (L(placement.CoastArmLeft) + L(placement.InlandTip)
+                + L(placement.SeaBandApex) + L(placement.SeaFlatLeft)) * 0.25f;
+            var centreR = (L(placement.CoastArmRight) + L(placement.InlandTip)
+                + L(placement.SeaBandApex) + L(placement.SeaFlatRight)) * 0.25f;
+            int pick = Mathf.Abs(coord.Q * 7 + coord.R * 13) % FishSchoolsUv.Length;
+            var schoolL = FishSchoolsUv[pick];
+            var schoolR = FishSchoolsUv[(pick + 1) % FishSchoolsUv.Length];
+            float sideL = Mathf.Sign(Vector2.Dot(centreL - centreR, along));
+            float aspect = water != null ? water.width / (float)water.height : 16f / 9f;
             bool readable = water != null && water.isReadable;
 
             var pixels = new Color32[n * n];
@@ -164,9 +187,11 @@ namespace CatanRoguelike.Game
                             Color w = ChevronWaterBlue;
                             if (readable)
                             {
-                                float u = Vector2.Dot(p, along) / WaterWorldRepeat + offset.x;
-                                float v = Vector2.Dot(p, outward) / WaterWorldRepeat + offset.y;
-                                w = water.GetPixelBilinear(u, v);
+                                float side = Vector2.Dot(p - (centreL + centreR) * 0.5f, along) * sideL;
+                                float wL = Smooth(-0.12f, 0.12f, side);
+                                var wl = SampleWater(water, p - centreL, along, outward, schoolL, aspect);
+                                var wr = SampleWater(water, p - centreR, along, outward, schoolR, aspect);
+                                w = Color.Lerp(wr, wl, wL);
                             }
 
                             float rim = Smooth(-0.11f * apothem, 0f, dArt);
@@ -186,6 +211,15 @@ namespace CatanRoguelike.Game
             tex.SetPixels32(pixels);
             tex.Apply(true, true);
             return tex;
+        }
+
+        private static Color SampleWater(
+            Texture2D water, Vector2 local, Vector2 along, Vector2 outward, Vector2 school, float aspect)
+        {
+            float u = school.x + Vector2.Dot(local, along) / WaterWorldWidth;
+            float v = school.y + Vector2.Dot(local, outward) * aspect / WaterWorldWidth;
+            // The painting does not tile: clamp instead of wrapping into a seam.
+            return water.GetPixelBilinear(Mathf.Clamp(u, 0.005f, 0.995f), Mathf.Clamp(v, 0.005f, 0.995f));
         }
 
         private static float Smooth(float e0, float e1, float x)

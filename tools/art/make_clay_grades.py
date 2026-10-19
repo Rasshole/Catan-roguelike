@@ -8,7 +8,8 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 VAR = os.path.join(HERE, "ai-tiles-src", "variants")
-BASE = os.path.join(VAR, "base", "Brick_v125.jpg")
+BASE = os.path.join(VAR, "base", "Brick_v125.jpg")  # writes into v126-grades/
+VAR = os.path.join(VAR, "v126-grades")
 
 
 def to_np(im):

@@ -6,7 +6,9 @@ namespace CatanRoguelike.Game
     /// <summary>Fishermen chevron band mesh: P1, C, P2, P2', C', P1'.</summary>
     public static class CoastalFishShoalMesh
     {
-        public const float TopLocalY = 1.06f;
+        // Just under the hex-top plane (1.0) so number-token rims sit fully above the piece (a 1.06
+        // top hid the rim except over open sea, which drew a dark crescent).
+        public const float TopLocalY = 0.985f;
         private const float OutlineExpandFactor = 0.028f;
 
         public static Mesh CreateLocal(FishShoalPlacement placement, MapPlaneXz origin, float hexScale)

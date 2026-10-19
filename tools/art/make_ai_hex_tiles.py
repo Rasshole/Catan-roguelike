@@ -25,7 +25,13 @@ SIZE = 1024
 SS = 2  # supersampling
 SLOTS = ["Wood", "Wheat", "Sheep", "Ore", "Brick", "Desert"]
 # Source painting per slot (Desert is the dune painting with rocks/shrubs from paint_desert.py).
-SOURCE = {"Desert": "Desert_painted.jpg", "Brick": "variants/Brick_B.jpg"}
+SOURCE = {
+    "Desert": "Desert_v127.jpg",
+    "Brick": "variants/Brick_C.jpg",
+    "Ore": os.environ.get("ORE_SOURCE", "Ore_v127.jpg"),
+}
+# The v126 ore is the older painting lifted toward snow in-script; the v127 AI ore is already pale.
+LIFT_ORE_SOURCES = {"Ore.jpg"}
 VARIANT_DIR = os.path.join(SRC, "variants")
 VARIANT_OUT = os.path.join(ROOT, "docs", "art", "tile-variants")
 
@@ -36,7 +42,7 @@ GRADE = {
     "Sheep": (0.80, 0.98, 1.0),
     "Ore": (1.0, 1.0, 1.05),
     "Brick": (0.88, 1.03, 0.98),
-    "Desert": (1.18, 0.9, 1.06),
+    "Desert": (1.12, 0.94, 1.05),
 }
 
 FRAME = 0.075        # frame width as a fraction of the apothem
@@ -86,7 +92,7 @@ def bake(slot, source_path=None, grade_key=None):
 
     # Painted art covering the hex's screen bounding box (2R x sqrt3 R), centre-cropped.
     src = Image.open(source_path or os.path.join(SRC, SOURCE.get(slot, f"{slot}.jpg"))).convert("RGB")
-    if slot == "Ore":
+    if slot == "Ore" and os.path.basename(source_path or SOURCE.get("Ore", "")) in LIFT_ORE_SOURCES:
         src = lift_ore(src)
     sat, bri, con = GRADE[grade_key or slot]
     src = ImageEnhance.Color(src).enhance(sat)
