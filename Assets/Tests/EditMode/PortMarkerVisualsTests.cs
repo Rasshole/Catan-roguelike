@@ -58,64 +58,84 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void SeaSlotPort_PierPlanks_TouchCoastCorners()
+        public void SeaSlotPort_PierPlanks_RunFromBadgeOntoTheCoastEdge()
         {
             bool wasActive = ColonistPresentation.IsActive;
             ColonistPresentation.SetActive(true);
             try
             {
                 var board = MapPresets.CreateBoard(MapSize.Large, 42, new MapGenerationOptions(true));
-                var port = PortAccess.DiscoverPorts(board).Find(p => !p.IsGeneric);
-                Assert.IsNotNull(port);
-                Assert.IsTrue(board.TryGetSeaSlotForPort(port.Vertex, out var seaCoord));
-
-                var marker = PortMarkerVisuals.Create(
-                    _root.transform,
-                    port.Vertex,
-                    HexScale,
-                    TileHeight,
-                    board,
-                    false,
-                    port.SpecificResource,
-                    WoodColor);
-
-                Assert.IsTrue(
-                    SeaFrameSlotLayout.TryGetHarborCoastEdge(
-                        board, port.Vertex, seaCoord, HexScale, out _, out MapPlaneXz coastA, out MapPlaneXz coastB));
-
-                var coasts = new[]
+                foreach (var port in PortAccess.DiscoverPorts(board))
                 {
-                    new Vector3(coastA.X, TileHeight, coastA.Z),
-                    new Vector3(coastB.X, TileHeight, coastB.Z)
-                };
+                    Assert.IsTrue(board.TryGetSeaSlotForPort(port.Vertex, out var seaCoord));
+                    var marker = PortMarkerVisuals.Create(
+                        _root.transform,
+                        port.Vertex,
+                        HexScale,
+                        TileHeight,
+                        board,
+                        port.IsGeneric,
+                        port.IsGeneric ? null : port.SpecificResource,
+                        WoodColor);
 
-                int planks = 0;
-                foreach (var renderer in marker.GetComponentsInChildren<Renderer>())
-                {
-                    if (!renderer.gameObject.name.StartsWith("PierPlank"))
-                        continue;
+                    Assert.IsTrue(
+                        SeaFrameSlotLayout.TryGetHarborCoastEdge(
+                            board, port.Vertex, seaCoord, HexScale, out _, out MapPlaneXz coastA, out MapPlaneXz coastB));
+                    var a = new Vector2(coastA.X, coastA.Z);
+                    var b = new Vector2(coastB.X, coastB.Z);
+                    var badge = new Vector2(marker.transform.position.x, marker.transform.position.z);
 
-                    planks++;
-                    PortMarkerVisuals.GetPlankSegmentEnds(renderer.transform, out var start, out var end);
-                    float minDist = float.MaxValue;
-                    foreach (var coast in coasts)
+                    int planks = 0;
+                    foreach (var renderer in marker.GetComponentsInChildren<Renderer>())
                     {
-                        minDist = Mathf.Min(minDist, HorizontalDistance(start, coast));
-                        minDist = Mathf.Min(minDist, HorizontalDistance(end, coast));
+                        if (!renderer.gameObject.name.StartsWith("PierPlank"))
+                            continue;
+
+                        planks++;
+                        PortMarkerVisuals.GetPlankSegmentEnds(renderer.transform, out var s3, out var e3);
+                        var s2 = new Vector2(s3.x, s3.z);
+                        var e2 = new Vector2(e3.x, e3.z);
+                        // One end at the badge, the other past the coast edge (on the tile).
+                        var landEnd = Vector2.Distance(s2, badge) > Vector2.Distance(e2, badge) ? s2 : e2;
+                        var seaEnd = landEnd == s2 ? e2 : s2;
+                        Assert.Less(Vector2.Distance(seaEnd, badge), 0.05f, "pier starts at the badge");
+                        Assert.IsTrue(
+                            SegmentsCross(seaEnd, landEnd, a, b, out float alongEdge),
+                            "pier must cross the harbour coast edge (no water gap, no floating end)");
+                        Assert.That(alongEdge, Is.InRange(0.08f, 0.92f), "pier lands on the edge, not off its ends");
+                        float past = DistanceToLine(landEnd, a, b);
+                        Assert.That(past, Is.InRange(0.02f, PortMarkerVisuals.PierLandOverlap + 0.02f),
+                            "pier runs a little onto the tile's sand frame");
                     }
 
-                    Assert.Less(
-                        minDist,
-                        PortMarkerVisuals.SeaSlotPlankCoastTouchEpsilon,
-                        "Pier plank should reach the coast corner (no water gap).");
+                    Assert.AreEqual(2, planks, "each harbour has two piers");
+                    Object.DestroyImmediate(marker);
                 }
-
-                Assert.Greater(planks, 0, "Sea-slot port should include pier planks.");
             }
             finally
             {
                 ColonistPresentation.SetActive(wasActive);
             }
+        }
+
+        private static bool SegmentsCross(Vector2 p, Vector2 p2, Vector2 q, Vector2 q2, out float tq)
+        {
+            Vector2 r = p2 - p, sv = q2 - q;
+            float denom = r.x * sv.y - r.y * sv.x;
+            tq = -1f;
+            if (Mathf.Abs(denom) < 1e-8f)
+                return false;
+            Vector2 qp = q - p;
+            float t = (qp.x * sv.y - qp.y * sv.x) / denom;
+            tq = (qp.x * r.y - qp.y * r.x) / denom;
+            return t >= 0f && t <= 1f && tq >= 0f && tq <= 1f;
+        }
+
+        private static float DistanceToLine(Vector2 p, Vector2 a, Vector2 b)
+        {
+            Vector2 ab = (b - a).normalized;
+            Vector2 ap = p - a;
+            return Mathf.Abs(ap.x * ab.y - ap.y * ab.x);
         }
 
         [Test]

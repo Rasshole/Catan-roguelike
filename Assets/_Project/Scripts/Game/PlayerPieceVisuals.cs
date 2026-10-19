@@ -35,16 +35,20 @@ namespace CatanRoguelike.Game
         public static readonly Color HumanColor = new(0.2f, 0.4f, 0.9f);
         public static readonly Color AiColor = new(0.9f, 0.25f, 0.2f);
 
-        public const float RoofColorMultiply = 0.58f;
-        /// <summary>Lift added to roof channels so the darker blue roof still separates from the board.</summary>
-        public const float RoofColorLift = 0.05f;
+        public const float RoofColorMultiply = 0.52f;
+        /// <summary>Walls are lightened toward white so the darker roof separates (blue was murky).</summary>
+        public const float WallLighten = 0.22f;
         public const float EdgeColorMultiply = 0.32f;
 
         /// <summary>Settlement wall width as a fraction of the flat-to-flat hex width (city is 1.5x).</summary>
-        public const float SettlementFootprintOfHex = 0.27f;
+        public const float SettlementFootprintOfHex = 0.18f;
         /// <summary>Road plank width as a fraction of the flat-to-flat hex width.</summary>
-        public const float RoadWidthOfHex = 0.09f;
-        public const float RoadLengthOfEdge = 0.80f;
+        public const float RoadWidthOfHex = 0.085f;
+        /// <summary>
+        /// Each plank runs vertex-centre to vertex-centre and then past it by this fraction of its
+        /// width, so consecutive roads (and the settlement on the vertex) overlap with no gap.
+        /// </summary>
+        public const float RoadJointOverlapOfWidth = 0.5f;
         /// <summary>Lean toward screen-top so the top-down colonist camera sees a 3/4 view.</summary>
         public const float ColonistLeanDegrees = 50f;
         /// <summary>Yaw of the gable end away from facing the viewer straight on.</summary>
@@ -63,10 +67,14 @@ namespace CatanRoguelike.Game
         public static Color ColorForPlayer(PlayerId owner) =>
             owner == PlayerId.Human ? HumanColor : AiColor;
 
-        public static Color DarkenForRoof(Color color)
+        public static Color DarkenForRoof(Color color) => Shade(color, RoofColorMultiply);
+
+        /// <summary>Wall tint: the player colour lifted toward white (keeps alpha).</summary>
+        public static Color WallColor(Color color)
         {
-            var c = Shade(color, RoofColorMultiply);
-            return new Color(c.r + RoofColorLift, c.g + RoofColorLift, c.b + RoofColorLift, c.a);
+            var c = Color.Lerp(color, Color.white, WallLighten);
+            c.a = color.a;
+            return c;
         }
 
         public static Color DarkenForEdge(Color color) => Shade(color, EdgeColorMultiply);
@@ -109,8 +117,8 @@ namespace CatanRoguelike.Game
             var b = mesh.bounds;
             // Blender plank runs along model X; the road root's local Z runs along the edge.
             plank.localRotation = Quaternion.Euler(0f, 90f, 0f);
-            float targetLength = Mathf.Max(length * RoadLengthOfEdge, 0.05f);
             float targetWidth = FlatHexWidth(hexScale) * RoadWidthOfHex;
+            float targetLength = Mathf.Max(length + 2f * RoadJointOverlapOfWidth * targetWidth, 0.05f);
             float sx = targetLength / Mathf.Max(b.size.x, 1e-4f);
             float sz = targetWidth / Mathf.Max(b.size.z, 1e-4f);
             float sy = sz; // keep the bevel profile square-ish
@@ -142,7 +150,7 @@ namespace CatanRoguelike.Game
             float scale = FlatHexWidth(hexScale) * SettlementFootprintOfHex
                 / Mathf.Max(settlementMesh.bounds.size.x, 1e-4f);
             body.localScale = Vector3.one * scale;
-            body.localRotation = ComputeBuildingRotation(extraYaw);
+            body.localRotation = ComputeBuildingRotation(extraYaw + BuildingYawDegrees(worldPosition));
 
             // Pivot on the footprint centre, then drop the lowest (leaned) point onto the hex top.
             var c = mesh.bounds.center;
@@ -153,6 +161,38 @@ namespace CatanRoguelike.Game
 
             DisableShadows(root);
             return root;
+        }
+
+        /// <summary>
+        /// Stable pseudo-random yaw for the vertex at <paramref name="worldPosition"/> (hash of the
+        /// position rounded to 1 cm), so a piece keeps its turn across rebuilds and frames.
+        /// </summary>
+        public static float VertexYawDegrees(Vector3 worldPosition)
+        {
+            unchecked
+            {
+                int x = Mathf.RoundToInt(worldPosition.x * 100f);
+                int z = Mathf.RoundToInt(worldPosition.z * 100f);
+                uint h = (uint)(x * 73856093) ^ (uint)(z * 19349663);
+                h ^= h >> 13;
+                h *= 0x5bd1e995;
+                h ^= h >> 15;
+                return (h % 3600u) * 0.1f;
+            }
+        }
+
+        /// <summary>
+        /// Per-vertex turn that keeps the 3/4 read: a random 18-50 deg to the left or right of
+        /// gable-on, optionally turned 180 deg (the house is symmetric end to end; the city's tower
+        /// just swaps sides). Fully random yaws produced roof-only or tower-hides-wing views.
+        /// </summary>
+        public static float BuildingYawDegrees(Vector3 worldPosition)
+        {
+            float r = VertexYawDegrees(worldPosition) / 360f; // stable 0..1
+            float side = r < 0.5f ? 1f : -1f;
+            float flip = (r * 4f) % 1f < 0.5f ? 0f : 180f;
+            float magnitude = 18f + 32f * ((r * 16f) % 1f);
+            return flip + side * magnitude - ColonistYawDegrees;
         }
 
         /// <summary>Gable toward the viewer (yawed), leaned back toward screen-top in colonist mode.</summary>
@@ -205,7 +245,7 @@ namespace CatanRoguelike.Game
                 var kind = SlotKind(slotNames[i]);
                 var tint = kind == RoofMaterialName ? DarkenForRoof(color)
                     : kind == EdgeMaterialName ? DarkenForEdge(color)
-                    : color;
+                    : WallColor(color);
                 var mat = BuiltInMaterials.CreateMatteOpaque(tint);
                 mat.name = kind;
                 mats[i] = mat;

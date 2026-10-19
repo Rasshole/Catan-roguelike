@@ -14,7 +14,9 @@ import bpy
 ROOT = os.environ.get("BLENDER_TILE_REPO_ROOT", os.getcwd())
 RES = int(os.environ.get("BLENDER_TILE_RES", "1024"))
 PASS = int(os.environ.get("BLENDER_TILE_PASS", "3"))
-OUT_RESOURCES = os.path.join(ROOT, "Assets/_Project/Resources/Art/Board/Blender")
+# Painted board tiles (tools/art/make_ai_hex_tiles.py) own Resources/Art/Board/Blender now;
+# procedural renders go to docs only so this script can no longer overwrite them.
+OUT_RESOURCES = os.path.join(ROOT, "docs/art/blender-tiles/procedural-albedo")
 OUT_DOCS = os.path.join(ROOT, "docs/art/blender-tiles")
 REF_PHOTO = os.environ.get(
     "BLENDER_REF_PHOTO",

@@ -24,15 +24,19 @@ DST = os.path.join(ROOT, "Assets", "_Project", "Resources", "Art", "Board", "Ble
 SIZE = 1024
 SS = 2  # supersampling
 SLOTS = ["Wood", "Wheat", "Sheep", "Ore", "Brick", "Desert"]
+# Source painting per slot (Desert is the dune painting with rocks/shrubs from paint_desert.py).
+SOURCE = {"Desert": "Desert_painted.jpg", "Brick": "variants/Brick_B.jpg"}
+VARIANT_DIR = os.path.join(SRC, "variants")
+VARIANT_OUT = os.path.join(ROOT, "docs", "art", "tile-variants")
 
 # Per-terrain grading: (saturation, brightness, contrast). Gentle, so the HUD still pops.
 GRADE = {
     "Wood": (0.92, 1.04, 1.02),
     "Wheat": (0.88, 1.0, 1.0),
     "Sheep": (0.80, 0.98, 1.0),
-    "Ore": (0.95, 1.02, 1.0),
+    "Ore": (1.0, 1.0, 1.05),
     "Brick": (0.88, 1.03, 0.98),
-    "Desert": (0.95, 0.97, 1.04),
+    "Desert": (1.18, 0.9, 1.06),
 }
 
 FRAME = 0.075        # frame width as a fraction of the apothem
@@ -61,7 +65,19 @@ def smooth(e0, e1, x):
     return t * t * (3 - 2 * t)
 
 
-def bake(slot):
+def lift_ore(src):
+    """Snowy pale crags: desaturate, lift shadows/mids toward white, slightly cool, then restore
+    local contrast so the ridges still read."""
+    a = np.asarray(src, np.float32) / 255.0
+    g = a.mean(-1, keepdims=True)
+    a = g + (a - g) * 0.6
+    a = 1 - (1 - a) ** 1.9
+    a = np.clip(a * np.array([0.97, 0.99, 1.03]), 0, 1)
+    out = Image.fromarray((a * 255).astype(np.uint8))
+    return out.filter(ImageFilter.UnsharpMask(18, 45, 0))
+
+
+def bake(slot, source_path=None, grade_key=None):
     n = SIZE * SS
     radius = n / 2.0
     apothem = radius * np.sqrt(3) / 2.0
@@ -69,8 +85,10 @@ def bake(slot):
     corner = ART_CORNER * apothem
 
     # Painted art covering the hex's screen bounding box (2R x sqrt3 R), centre-cropped.
-    src = Image.open(os.path.join(SRC, f"{slot}.jpg")).convert("RGB")
-    sat, bri, con = GRADE[slot]
+    src = Image.open(source_path or os.path.join(SRC, SOURCE.get(slot, f"{slot}.jpg"))).convert("RGB")
+    if slot == "Ore":
+        src = lift_ore(src)
+    sat, bri, con = GRADE[grade_key or slot]
     src = ImageEnhance.Color(src).enhance(sat)
     src = ImageEnhance.Brightness(src).enhance(bri)
     src = ImageEnhance.Contrast(src).enhance(con)
@@ -114,7 +132,44 @@ def bake(slot):
     return img
 
 
+def bake_variants():
+    """Bake every tools/art/ai-tiles-src/variants/<Slot>_<X>.jpg to docs/art/tile-variants and a
+    labelled contact sheet per slot (for picking a variant; copy the chosen jpg over <Slot>.jpg)."""
+    from PIL import ImageDraw, ImageFont
+
+    os.makedirs(VARIANT_OUT, exist_ok=True)
+    by_slot = {}
+    for name in sorted(os.listdir(VARIANT_DIR)):
+        stem, ext = os.path.splitext(name)
+        if ext.lower() not in (".jpg", ".jpeg", ".png") or "_" not in stem or stem.split("_")[0] not in SLOTS:
+            continue
+        slot, label = stem.split("_", 1)
+        img = bake(slot, os.path.join(VARIANT_DIR, name))
+        upright = img.convert("RGB").transpose(Image.Transpose.ROTATE_90)
+        path = os.path.join(VARIANT_OUT, f"{slot}_{label}.png")
+        upright.save(path, optimize=True)
+        by_slot.setdefault(slot, []).append((label, upright))
+        print("variant", path)
+    for slot, items in by_slot.items():
+        cell = 720
+        sheet = Image.new("RGB", (cell * len(items), cell + 90), (24, 58, 102))
+        draw = ImageDraw.Draw(sheet)
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 54)
+        except OSError:
+            font = ImageFont.load_default()
+        for i, (label, img) in enumerate(items):
+            sheet.paste(img.resize((cell, cell), Image.LANCZOS), (i * cell, 0), )
+            draw.text((i * cell + cell // 2, cell + 45), label, fill=(250, 240, 210), font=font, anchor="mm")
+        path = os.path.join(VARIANT_OUT, f"{slot}_variants.png")
+        sheet.save(path, optimize=True)
+        print("sheet", path)
+
+
 def main(argv):
+    if len(argv) > 1 and argv[1] == "--variants":
+        bake_variants()
+        return
     out_dir = argv[1] if len(argv) > 1 else DST
     os.makedirs(out_dir, exist_ok=True)
     for slot in SLOTS:

@@ -10,7 +10,8 @@ namespace CatanRoguelike.Game
 
         public static void Apply(GameObject hexRoot, float hexScale)
         {
-            if (hexRoot == null || hexRoot.transform.Find("DesertLakeShore") != null)
+            if (hexRoot == null || hexRoot.transform.Find("DesertLakeWater") != null
+                || hexRoot.transform.Find("DesertLakeShore") != null)
                 return;
 
             float hexDiameter = hexScale * HexMath.OuterRadius * 2f;
@@ -18,16 +19,8 @@ namespace CatanRoguelike.Game
             float shoreDiameter = pondDiameter * 1.16f;
             float top = HexPrismMesh.TopY + 0.04f;
 
-            ColonistFlatBoardQuad.Create(
-                hexRoot.transform,
-                "DesertLakeShore",
-                new Vector3(0f, top, 0f),
-                shoreDiameter,
-                shoreDiameter,
-                ColonistProceduralBoardTextures.CreateRoundPondMask(ShoreColor),
-                3188,
-                alignment: ColonistFlatBoardQuad.AlignmentMode.BoardPitchOnly);
-
+            // Painted oasis (tools/art/make_desert_pond.py) carries its own wet-sand shore, so the
+            // flat pale shore disc is gone; the quad covers the old shore footprint.
             var waterTex = Resources.Load<Texture2D>("Art/Board/TopDownDecor/desert_pond_water");
             if (waterTex != null)
             {
@@ -35,10 +28,22 @@ namespace CatanRoguelike.Game
                     hexRoot.transform,
                     "DesertLakeWater",
                     new Vector3(0f, top + 0.01f, 0f),
-                    pondDiameter,
-                    pondDiameter,
+                    shoreDiameter * 1.08f,
+                    shoreDiameter * 1.08f,
                     waterTex,
                     3190,
+                    alignment: ColonistFlatBoardQuad.AlignmentMode.BoardPitchOnly);
+            }
+            else
+            {
+                ColonistFlatBoardQuad.Create(
+                    hexRoot.transform,
+                    "DesertLakeShore",
+                    new Vector3(0f, top, 0f),
+                    shoreDiameter,
+                    shoreDiameter,
+                    ColonistProceduralBoardTextures.CreateRoundPondMask(ShoreColor),
+                    3188,
                     alignment: ColonistFlatBoardQuad.AlignmentMode.BoardPitchOnly);
             }
 

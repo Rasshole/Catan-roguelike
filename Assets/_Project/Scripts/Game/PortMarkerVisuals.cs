@@ -20,8 +20,12 @@ namespace CatanRoguelike.Game
 
         private const float PierLength = 0.36f;
         private const float PierWidth = 0.16f;
-        private const float SeaSlotPlankWidth = 0.09f;
-        private const float SeaSlotPlankHeight = 0.09f;
+        private const float SeaSlotPlankWidth = 0.15f;
+        private const float SeaSlotPlankHeight = 0.05f;
+        /// <summary>Where along the coast edge (from each corner toward the middle) a pier lands.</summary>
+        public const float PierLandingAlongEdge = 0.2f;
+        /// <summary>How far a pier runs past the coast edge onto the tile (onto its sand frame).</summary>
+        public const float PierLandOverlap = 0.07f;
         private const float PierHeight = 0.06f;
         private const float PostHeight = 0.11f;
         private const float PostWidth = 0.07f;
@@ -192,22 +196,27 @@ namespace CatanRoguelike.Game
             if (SeaFrameSlotLayout.TryGetHarborCoastEdge(
                     board, vertex, seaCoord, hexScale, out _, out MapPlaneXz coastA, out MapPlaneXz coastB))
             {
-                var coastAWorld = new Vector3(coastA.X, y, coastA.Z);
-                var coastBWorld = new Vector3(coastB.X, y, coastB.Z);
-                CreateWorldPlank(
-                    root.transform,
-                    coastAWorld,
-                    badgeWorld,
-                    PierWoodColor,
-                    SeaSlotPlankWidth,
-                    SeaSlotPlankHeight);
-                CreateWorldPlank(
-                    root.transform,
-                    coastBWorld,
-                    badgeWorld,
-                    PierWoodColor,
-                    SeaSlotPlankWidth,
-                    SeaSlotPlankHeight);
+                // Each pier runs from the badge onto the coast edge it serves, landing a little in
+                // from the corner and continuing onto the tile's sand frame so it visibly connects.
+                var a = new Vector3(coastA.X, y, coastA.Z);
+                var b = new Vector3(coastB.X, y, coastB.Z);
+                foreach (var landing in new[]
+                         {
+                             Vector3.Lerp(a, b, PierLandingAlongEdge),
+                             Vector3.Lerp(b, a, PierLandingAlongEdge)
+                         })
+                {
+                    var dir = landing - badgeWorld;
+                    dir.y = 0f;
+                    var end = landing + dir.normalized * PierLandOverlap;
+                    CreateWorldPlank(
+                        root.transform,
+                        end,
+                        badgeWorld,
+                        PierWoodColor,
+                        SeaSlotPlankWidth,
+                        SeaSlotPlankHeight);
+                }
             }
 
             CreatePart("PierPost", root.transform,
@@ -226,7 +235,6 @@ namespace CatanRoguelike.Game
             return root;
         }
 
-        public const float SeaSlotPlankCoastTouchEpsilon = 0.04f;
 
         /// <summary>World-space segment endpoints for a pier plank cube (coast → badge).</summary>
         public static void GetPlankSegmentEnds(Transform plank, out Vector3 start, out Vector3 end)
@@ -339,10 +347,58 @@ namespace CatanRoguelike.Game
             part.transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
             part.transform.localScale = new Vector3(width, height, len);
 
-            var mat = BuiltInMaterials.Create(color);
+            var mat = BuiltInMaterials.CreateMatteOpaque(Color.white);
+            mat.mainTexture = PierBoardTexture(color);
+            // Cube top-face V runs along the plank: one board every ~0.4 plank widths.
+            mat.mainTextureScale = new Vector2(1f, Mathf.Max(1f, len / (width * 0.4f)));
             mat.renderQueue = 3075;
-            part.GetComponent<Renderer>().sharedMaterial = mat;
+            var renderer = part.GetComponent<Renderer>();
+            renderer.sharedMaterial = mat;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
             DestroyCollider(part.GetComponent<Collider>());
+        }
+
+        private static Texture2D _pierBoards;
+
+        /// <summary>
+        /// One painted cross-board of a wooden jetty (repeats along the plank): warm boards with
+        /// grain, a dark gap between boards and darker side rails.
+        /// </summary>
+        internal static Texture2D PierBoardTexture(Color wood)
+        {
+            if (_pierBoards != null)
+                return _pierBoards;
+
+            const int w = 64, h = 32;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, true)
+            {
+                name = "PierBoards",
+                wrapMode = TextureWrapMode.Repeat,
+                filterMode = FilterMode.Trilinear
+            };
+            var light = new Color(0.66f, 0.47f, 0.27f);
+            var dark = new Color(0.30f, 0.20f, 0.11f);
+            var px = new Color[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float u = x / (float)(w - 1);
+                    float grain = Mathf.PerlinNoise(u * 18f, y * 0.12f) * 0.5f + Mathf.Sin(u * 61f) * 0.06f;
+                    var c = Color.Lerp(wood, light, 0.35f + grain * 0.5f);
+                    if (y < 4)
+                        c = Color.Lerp(c, dark, 0.85f); // gap between boards
+                    if (x < 5 || x > w - 6)
+                        c = Color.Lerp(c, dark, 0.7f);  // side rails
+                    c.a = 1f;
+                    px[y * w + x] = c;
+                }
+            }
+
+            tex.SetPixels(px);
+            tex.Apply(true, true);
+            _pierBoards = tex;
+            return _pierBoards;
         }
 
         private static void CreatePortRateBadge(

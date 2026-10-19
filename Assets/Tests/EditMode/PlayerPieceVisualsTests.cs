@@ -79,7 +79,7 @@ namespace CatanRoguelike.Tests
             var roof = Slot(renderer, PlayerPieceVisuals.RoofMaterialName);
             var edge = Slot(renderer, PlayerPieceVisuals.EdgeMaterialName);
 
-            Assert.AreEqual(PlayerPieceVisuals.HumanColor, wall.color);
+            Assert.AreEqual(PlayerPieceVisuals.WallColor(PlayerPieceVisuals.HumanColor), wall.color);
             Assert.Less(MaxRgb(roof.color), MaxRgb(wall.color) - 0.1f);
             Assert.Less(MaxRgb(edge.color), MaxRgb(roof.color) - 0.1f);
             Assert.Less(roof.GetFloat("_Glossiness"), 0.2f);
@@ -91,7 +91,9 @@ namespace CatanRoguelike.Tests
             var piece = PlayerPieceVisuals.CreateCity(
                 _testRoot.transform, Vector3.zero, PlayerPieceVisuals.AiColor, HexTopY);
             var renderer = piece.GetComponentInChildren<MeshRenderer>();
-            Assert.AreEqual(PlayerPieceVisuals.AiColor, Slot(renderer, PlayerPieceVisuals.WallMaterialName).color);
+            var wall = Slot(renderer, PlayerPieceVisuals.WallMaterialName).color;
+            Assert.AreEqual(PlayerPieceVisuals.WallColor(PlayerPieceVisuals.AiColor), wall);
+            Assert.Greater(wall.r, wall.b + 0.3f, "AI pieces read red");
         }
 
         [Test]
@@ -119,6 +121,42 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
+        public void Buildings_AreAboutOneSixthToOneFifthOfHexWidth_CityLarger()
+        {
+            float hex = PlayerPieceVisuals.FlatHexWidth(ColonistBoardVisualScale.ReferenceHexScale);
+            float settlement = ScaledModelSize(SingleMesh(Settlement(), PlayerPieceVisuals.BodyPartName)).x / hex;
+            float city = ScaledModelSize(SingleMesh(City(), PlayerPieceVisuals.BodyPartName)).x / hex;
+            Assert.That(settlement, Is.InRange(1f / 6.2f, 1f / 4.9f));
+            Assert.That(city, Is.InRange(settlement * 1.3f, 0.32f));
+        }
+
+        [Test]
+        public void Buildings_YawIsStablePerVertex_AndVariesAcrossVertices()
+        {
+            var a1 = PlayerPieceVisuals.CreateSettlement(
+                _testRoot.transform, new Vector3(1.3f, 0f, 2.1f), PlayerPieceVisuals.HumanColor, HexTopY);
+            var a2 = PlayerPieceVisuals.CreateSettlement(
+                _testRoot.transform, new Vector3(1.3f, 0f, 2.1f), PlayerPieceVisuals.AiColor, HexTopY);
+            Assert.That(Quaternion.Angle(
+                a1.transform.Find(PlayerPieceVisuals.BodyPartName).rotation,
+                a2.transform.Find(PlayerPieceVisuals.BodyPartName).rotation), Is.LessThan(0.01f));
+
+            var yaws = new System.Collections.Generic.HashSet<int>();
+            for (int i = 0; i < 12; i++)
+            {
+                float yaw = PlayerPieceVisuals.BuildingYawDegrees(new Vector3(i * 1.04f, 0f, i * 0.6f))
+                    + PlayerPieceVisuals.ColonistYawDegrees;
+                yaws.Add(Mathf.RoundToInt(Mathf.Repeat(yaw, 360f) / 10f));
+                // Always 18-50 deg off gable-on (mod 180) so the house keeps its 3/4 read.
+                float folded = Mathf.Repeat(yaw, 180f);
+                float offGable = Mathf.Min(folded, 180f - folded);
+                Assert.That(offGable, Is.InRange(17.9f, 50.1f));
+            }
+
+            Assert.Greater(yaws.Count, 5, "pieces on different vertices should face different ways");
+        }
+
+        [Test]
         public void ClassicMode_BuildingsStandUpright()
         {
             ColonistPresentation.SetActive(false);
@@ -141,6 +179,8 @@ namespace CatanRoguelike.Tests
             Assert.Greater(bounds.min.y, HexTopY + MinRoadBaseAboveHex);
             Assert.Less(bounds.max.y, HexTopY + MaxRoadHeight);
             Assert.Greater(bounds.size.z, bounds.size.x * 4f, "plank runs along the edge (local Z)");
+            // Runs past both vertex centres so consecutive roads overlap at the shared vertex.
+            Assert.GreaterOrEqual(bounds.size.z, 1.1f + bounds.size.x * 0.9f);
         }
     }
 }
