@@ -54,16 +54,16 @@ def setup_render() -> None:
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
-    scene.cycles.samples = 40 + PASS * 20
+    scene.cycles.samples = (72 + PASS * 12) if PASS >= 10 else (40 + PASS * 20)
     scene.cycles.use_denoising = False
-    scene.cycles.max_bounces = 3
+    scene.cycles.max_bounces = 4 if PASS >= 10 else 3
     scene.render.resolution_x = RES
     scene.render.resolution_y = RES
     scene.render.film_transparent = True
     scene.render.image_settings.file_format = "PNG"
     scene.render.image_settings.color_mode = "RGBA"
     scene.view_settings.view_transform = "Standard"
-    scene.view_settings.exposure = -0.55
+    scene.view_settings.exposure = -0.48 if PASS >= 10 else -0.55
 
     world = bpy.data.worlds.new("World")
     scene.world = world
@@ -79,21 +79,22 @@ def setup_render() -> None:
     cam.rotation_euler = (0, 0, 0)
     scene.camera = cam
 
-    bpy.ops.object.light_add(type="SUN", location=(2.5, -3.5, 9))
+    # Key light from top-left (photo board lighting).
+    bpy.ops.object.light_add(type="SUN", location=(-3.2, 3.8, 9.5))
     sun = bpy.context.object
-    sun.data.energy = 2.4 + PASS * 0.15
-    sun.data.angle = math.radians(3)
-    sun.rotation_euler = (math.radians(42), math.radians(10), math.radians(22))
+    sun.data.energy = 2.65 + PASS * 0.12
+    sun.data.angle = math.radians(2.5 if PASS >= 10 else 3)
+    sun.rotation_euler = (math.radians(36), math.radians(-16), math.radians(-28))
 
-    bpy.ops.object.light_add(type="AREA", location=(-2.5, 2.5, 5))
+    bpy.ops.object.light_add(type="AREA", location=(2.8, -2.2, 4.5))
     fill = bpy.context.object
-    fill.data.energy = 180
-    fill.data.size = 7
-    fill.rotation_euler = (math.radians(62), 0, math.radians(-28))
+    fill.data.energy = 140 if PASS >= 10 else 180
+    fill.data.size = 8
+    fill.rotation_euler = (math.radians(58), 0, math.radians(35))
 
     try:
         tcc = import_terrain_cc0()
-        tcc.setup_painterly_compositor(scene)
+        tcc.setup_painterly_compositor(scene, posterize_steps=14 if PASS >= 10 else 10)
     except Exception as exc:  # noqa: BLE001
         print(f"Compositor painterly setup skipped: {exc}")
 
@@ -250,6 +251,20 @@ def displace_grid(strength: float, tex_type: str = "CLOUDS", scale: float = 0.5)
 
 
 def build_forest() -> None:
+    if PASS >= 10:
+        tcc = import_terrain_cc0()
+        rng = random.Random(1001 + PASS)
+        soil = tcc.mat_from_cc0("ForestSoil10", "forest", tint=(0.18, 0.32, 0.10), rough=0.92)
+        tcc.add_hex_floor(soil, z=-0.02, inner_r=INNER_R)
+        greens = [
+            mat_solid("CanopyA", (0.10, 0.38, 0.12), 0.88),
+            mat_solid("CanopyB", (0.14, 0.48, 0.16), 0.86),
+            mat_solid("CanopyC", (0.08, 0.30, 0.10), 0.9),
+            mat_solid("CanopyD", (0.22, 0.52, 0.18), 0.84),
+        ]
+        accent = mat_solid("CanopyPop", (0.82, 0.46, 0.12), 0.78)
+        tcc.scatter_round_canopies(rng, greens, accent, count=420, inner_r=0.87)
+        return
     if PASS >= 9:
         tcc = import_terrain_cc0()
         tcc.painted_hex_top("forest", tint=(0.10, 0.34, 0.08), displace_strength=0.14)
@@ -276,6 +291,51 @@ def build_forest() -> None:
 
 
 def build_wheat() -> None:
+    if PASS >= 10:
+        tcc = import_terrain_cc0()
+        base = tcc.mat_from_cc0("WheatSoil10", "wheat_base", tint=(0.52, 0.36, 0.12), rough=0.9)
+        furrow = mat_solid("Furrow", (0.28, 0.18, 0.08), 0.95)
+        tcc.add_hex_floor(base, z=-0.02, inner_r=INNER_R)
+        parcels = [
+            (-0.30, 0.14, 22, (0.92, 0.74, 0.14), (0.50, 0.34, 0.10)),
+            (0.24, 0.20, 108, (0.88, 0.68, 0.12), (0.46, 0.32, 0.09)),
+            (0.04, -0.30, 68, (0.94, 0.78, 0.15), (0.54, 0.38, 0.10)),
+            (-0.16, -0.12, 152, (0.84, 0.64, 0.11), (0.44, 0.30, 0.08)),
+            (0.32, -0.08, 40, (0.90, 0.72, 0.13), (0.48, 0.34, 0.09)),
+            (-0.05, 0.32, 85, (0.86, 0.66, 0.12), (0.46, 0.31, 0.08)),
+        ]
+        gold_m = mat_solid("GoldRow", (0.90, 0.72, 0.14), 0.82)
+        ochre_m = mat_solid("OchreRow", (0.52, 0.36, 0.10), 0.86)
+        for cx, cy, ang, gold, ochre in parcels:
+            if not inside_hex(cx, cy, 0.80):
+                continue
+            rot = math.radians(ang)
+            for stripe in range(-14, 15):
+                off = stripe * 0.026
+                lx = cx + math.cos(rot) * off
+                ly = cy + math.sin(rot) * off
+                bpy.ops.mesh.primitive_cube_add(size=1, location=(lx, ly, 0.038))
+                s = bpy.context.object
+                s.scale = (0.022, 0.30, 0.012)
+                s.rotation_euler = (0, 0, rot)
+                s.data.materials.append(gold_m if stripe % 2 == 0 else ochre_m)
+            for gap in range(-2, 3):
+                gx = cx + math.cos(rot + math.pi / 2) * gap * 0.11
+                gy = cy + math.sin(rot + math.pi / 2) * gap * 0.11
+                bpy.ops.mesh.primitive_cube_add(size=1, location=(gx, gy, 0.028))
+                g = bpy.context.object
+                g.scale = (0.018, 0.22, 0.008)
+                g.rotation_euler = (0, 0, rot)
+                g.data.materials.append(furrow)
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(0.36, -0.22, 0.055))
+        barn = bpy.context.object
+        barn.scale = (0.05, 0.04, 0.035)
+        barn.data.materials.append(mat_solid("Farm", (0.42, 0.28, 0.14), 0.9))
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(0.36, -0.22, 0.095))
+        roof = bpy.context.object
+        roof.scale = (0.062, 0.048, 0.022)
+        roof.data.materials.append(mat_solid("FarmRoof", (0.55, 0.22, 0.12), 0.85))
+        return
     if PASS >= 9:
         tcc = import_terrain_cc0()
         base = tcc.mat_from_cc0("WheatPaint", "wheat_base", tint=(0.62, 0.44, 0.12), rough=0.88)
@@ -319,6 +379,25 @@ def build_wheat() -> None:
 
 
 def build_pasture() -> None:
+    if PASS >= 10:
+        tcc = import_terrain_cc0()
+        rng = random.Random(3010 + PASS)
+        grass = mat_grass_meadow("PastureGrass10")
+        tcc.add_hex_floor(grass, z=-0.02, inner_r=INNER_R)
+        tcc.displace_plane(grass, strength=0.08, inner_r=INNER_R * 0.96)
+        clump = mat_solid("GrassClump", (0.30, 0.58, 0.20), 0.92)
+        for _ in range(42):
+            x = rng.uniform(-0.75, 0.75)
+            y = rng.uniform(-0.75, 0.75)
+            if not inside_hex(x, y, 0.84):
+                continue
+            bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.035, location=(x, y, 0.05))
+            blob = bpy.context.object
+            blob.scale = (rng.uniform(0.8, 1.3), rng.uniform(0.8, 1.3), 0.25)
+            blob.data.materials.append(clump)
+        sheep = mat_solid("Sheep", (0.97, 0.97, 0.94), 0.72)
+        tcc.scatter_sheep_flocks(rng, flock_count=4, sheep_per_flock=(6, 11), mat=sheep, inner_r=0.82)
+        return
     if PASS >= 9:
         tcc = import_terrain_cc0()
         tcc.painted_hex_top("grass", tint=(0.36, 0.66, 0.22), displace_strength=0.10)
@@ -333,6 +412,14 @@ def build_pasture() -> None:
 
 
 def build_ore() -> None:
+    if PASS >= 10:
+        tcc = import_terrain_cc0()
+        rock = mat_mountain("OreMountain10")
+        snow = mat_solid("OreSnow", (0.94, 0.96, 1.0), 0.35)
+        base = tcc.mat_from_cc0("OreBase10", "rock", tint=(0.38, 0.42, 0.48), rough=0.78)
+        tcc.add_hex_floor(base, z=-0.03, inner_r=INNER_R)
+        tcc.add_ridged_mountain_cap(rock, snow, inner_r=INNER_R * 0.94, strength=0.72, subdiv=6)
+        return
     if PASS >= 9:
         tcc = import_terrain_cc0()
         tcc.painted_hex_top("rock", tint=(0.40, 0.44, 0.50), displace_strength=0.42)
@@ -347,6 +434,16 @@ def build_ore() -> None:
 
 
 def build_clay() -> None:
+    if PASS >= 10:
+        tcc = import_terrain_cc0()
+        rng = random.Random(5010 + PASS)
+        clay = mat_clay_pit("ClayTerrace10")
+        rim = mat_solid("ClayRim", (0.68, 0.34, 0.16), 0.88)
+        dark = mat_solid("ClayShadow", (0.18, 0.08, 0.04), 0.96)
+        tcc.add_hex_floor(rim, z=-0.02, inner_r=INNER_R)
+        tcc.displace_plane(clay, strength=0.20, inner_r=INNER_R * 0.94)
+        tcc.build_clay_terrace_pit(rng, clay, dark, inner_r=INNER_R * 0.90, rings=6)
+        return
     if PASS >= 9:
         clay = mat_clay_pit("ClayPaint")
         tcc = import_terrain_cc0()
@@ -382,6 +479,12 @@ def mat_sand_dunes(name: str) -> bpy.types.Material:
 
 
 def build_desert() -> None:
+    if PASS >= 10:
+        tcc = import_terrain_cc0()
+        sand = mat_sand_dunes("DesertDunes10")
+        tcc.add_hex_floor(sand, z=-0.02, inner_r=INNER_R)
+        tcc.add_dune_ripples(sand, inner_r=INNER_R * 0.98, strength=0.20)
+        return
     if PASS >= 9:
         tcc = import_terrain_cc0()
         tcc.painted_hex_top("sand", tint=(0.94, 0.80, 0.54), displace_strength=0.12)
@@ -474,6 +577,11 @@ def write_pass_notes() -> None:
 """,
         9: """## Pass 9 (v123)
 - CC0 photo projection on hex tops only (no scatter primitives); striped wheat cap; clay voronoi shader.
+- `ColonistBlenderHexTerrainArt.Enabled = false`.
+""",
+        10: """## Pass 10 (v124)
+- Dense instanced forest canopies, parcelled wheat with furrows and farm, grass clumps + sheep flocks,
+  ridged ore mountains, terraced clay pit, dune ripples; top-left sun + sand bevel in post.
 - `ColonistBlenderHexTerrainArt.Enabled = false`.
 """,
     }

@@ -23,3 +23,7 @@
 ## Pass 9 (v123)
 - CC0 photo projection on hex tops only (no scatter primitives); striped wheat cap; clay voronoi shader.
 - `ColonistBlenderHexTerrainArt.Enabled = false`.
+## Pass 10 (v124)
+- Dense instanced forest canopies, parcelled wheat with furrows and farm, grass clumps + sheep flocks,
+  ridged ore mountains, terraced clay pit, dune ripples; top-left sun + sand bevel in post.
+- `ColonistBlenderHexTerrainArt.Enabled = false`.
