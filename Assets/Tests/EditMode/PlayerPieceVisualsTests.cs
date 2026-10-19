@@ -24,12 +24,14 @@ namespace CatanRoguelike.Tests
         {
             _colonistWasActive = ColonistPresentation.IsActive;
             ColonistPresentation.SetActive(true);
+            PlayerPieceVisuals.SetColonistBoardSpritesForTests(false);
             _testRoot = new GameObject("PlayerPieceVisualsTests");
         }
 
         [TearDown]
         public void TearDown()
         {
+            PlayerPieceVisuals.SetColonistBoardSpritesForTests(true);
             ColonistPresentation.SetActive(_colonistWasActive);
             if (_testRoot != null)
                 Object.DestroyImmediate(_testRoot);

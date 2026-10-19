@@ -20,3 +20,6 @@
 ## Pass 8 (v122)
 - Hand-measured reference crops; painted forest/wheat/pasture/ore/clay/desert targets (stripes, terraces, rock cubes).
 - `ColonistBlenderHexTerrainArt.Enabled = false`.
+## Pass 9 (v123)
+- CC0 photo projection on hex tops only (no scatter primitives); striped wheat cap; clay voronoi shader.
+- `ColonistBlenderHexTerrainArt.Enabled = false`.

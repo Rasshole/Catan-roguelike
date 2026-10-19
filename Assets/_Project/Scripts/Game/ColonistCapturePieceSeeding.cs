@@ -201,7 +201,6 @@ namespace CatanRoguelike.Game
             return picked;
         }
 
-        /// <summary>3 land hexes, or 2 land with no port / fish chevron / shoal border.</summary>
         private static int CountLandTouches(BoardState board, Vertex vertex)
         {
             int landTouches = 0;
@@ -226,11 +225,7 @@ namespace CatanRoguelike.Game
             if (fishBorderVertices != null && fishBorderVertices.Contains(vertex))
                 return false;
 
-            int landTouches = CountLandTouches(board, vertex);
-            if (landTouches >= 3)
-                return true;
-
-            return landTouches == 2;
+            return CountLandTouches(board, vertex) == 3;
         }
 
         private static bool IsFarEnough(Vertex vertex, IReadOnlyList<Vertex> picked)

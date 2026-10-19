@@ -60,6 +60,21 @@ def mat_from_cc0(name: str, slot: str, tint: tuple[float, float, float] = (1, 1,
     return m
 
 
+def painted_hex_top(
+    slot: str,
+    tint: tuple[float, float, float],
+    rough: float = 0.86,
+    inner_r: float = 0.92,
+    displace_strength: float = 0.16,
+    mat_name: str | None = None,
+) -> bpy.types.Object:
+    """Single CC0-textured hex cap (no primitive scatter)."""
+    label = mat_name or f"Painted_{slot}"
+    mat = mat_from_cc0(label, slot, tint=tint, rough=rough)
+    add_hex_floor(mat, z=-0.02, inner_r=inner_r)
+    return displace_plane(mat, strength=displace_strength, inner_r=inner_r * 0.98)
+
+
 def add_hex_floor(mat: bpy.types.Material, z: float = 0.0, inner_r: float = 0.92) -> bpy.types.Object:
     bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=inner_r, depth=0.05, location=(0, 0, z))
     obj = bpy.context.object

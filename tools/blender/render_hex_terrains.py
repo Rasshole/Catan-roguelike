@@ -250,6 +250,10 @@ def displace_grid(strength: float, tex_type: str = "CLOUDS", scale: float = 0.5)
 
 
 def build_forest() -> None:
+    if PASS >= 9:
+        tcc = import_terrain_cc0()
+        tcc.painted_hex_top("forest", tint=(0.10, 0.34, 0.08), displace_strength=0.14)
+        return
     tcc = import_terrain_cc0()
     rng = random.Random(101 + PASS)
     soil = tcc.mat_from_cc0("ForestSoil", "forest", tint=(0.22, 0.38, 0.12), rough=0.9)
@@ -272,6 +276,23 @@ def build_forest() -> None:
 
 
 def build_wheat() -> None:
+    if PASS >= 9:
+        tcc = import_terrain_cc0()
+        base = tcc.mat_from_cc0("WheatPaint", "wheat_base", tint=(0.62, 0.44, 0.12), rough=0.88)
+        tcc.add_hex_floor(base, z=-0.02)
+        field = mat_striped_field("WheatStripes", (0.92, 0.74, 0.14), (0.52, 0.36, 0.10), 35)
+        bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=INNER_R * 0.98, depth=0.03, location=(0, 0, 0.02))
+        top = bpy.context.object
+        top.rotation_euler[2] = math.radians(30)
+        top.data.materials.append(field)
+        disp = top.modifiers.new("Displace", "DISPLACE")
+        tex = bpy.data.textures.new("WheatDisp", "CLOUDS")
+        tex.noise_scale = 0.55
+        disp.texture = tex
+        disp.strength = 0.04
+        bpy.context.view_layer.objects.active = top
+        bpy.ops.object.modifier_apply(modifier=disp.name)
+        return
     tcc = import_terrain_cc0()
     base = tcc.mat_from_cc0("WheatSoil", "wheat_base", tint=(0.58, 0.40, 0.14), rough=0.9)
     tcc.add_hex_floor(base, z=-0.01)
@@ -298,6 +319,10 @@ def build_wheat() -> None:
 
 
 def build_pasture() -> None:
+    if PASS >= 9:
+        tcc = import_terrain_cc0()
+        tcc.painted_hex_top("grass", tint=(0.36, 0.66, 0.22), displace_strength=0.10)
+        return
     tcc = import_terrain_cc0()
     rng = random.Random(303 + PASS)
     grass = tcc.mat_from_cc0("Pasture", "grass", tint=(0.38, 0.68, 0.26), rough=0.9)
@@ -308,6 +333,10 @@ def build_pasture() -> None:
 
 
 def build_ore() -> None:
+    if PASS >= 9:
+        tcc = import_terrain_cc0()
+        tcc.painted_hex_top("rock", tint=(0.40, 0.44, 0.50), displace_strength=0.42)
+        return
     tcc = import_terrain_cc0()
     rng = random.Random(404 + PASS)
     rock = tcc.mat_from_cc0("OreRock", "rock", tint=(0.42, 0.46, 0.52), rough=0.82)
@@ -318,6 +347,12 @@ def build_ore() -> None:
 
 
 def build_clay() -> None:
+    if PASS >= 9:
+        clay = mat_clay_pit("ClayPaint")
+        tcc = import_terrain_cc0()
+        tcc.add_hex_floor(clay, z=-0.02)
+        tcc.displace_plane(clay, strength=0.18, inner_r=0.9)
+        return
     tcc = import_terrain_cc0()
     rng = random.Random(505 + PASS)
     clay = tcc.mat_from_cc0("Clay", "clay", tint=(0.55, 0.28, 0.14), rough=0.9)
@@ -347,6 +382,10 @@ def mat_sand_dunes(name: str) -> bpy.types.Material:
 
 
 def build_desert() -> None:
+    if PASS >= 9:
+        tcc = import_terrain_cc0()
+        tcc.painted_hex_top("sand", tint=(0.94, 0.80, 0.54), displace_strength=0.12)
+        return
     tcc = import_terrain_cc0()
     rng = random.Random(606 + PASS)
     sand = tcc.mat_from_cc0("DesertSand", "sand", tint=(0.92, 0.78, 0.52), rough=0.92)
@@ -431,6 +470,10 @@ def write_pass_notes() -> None:
 """,
         8: """## Pass 8 (v122)
 - Hand-measured reference crops; painted forest/wheat/pasture/ore/clay/desert targets (stripes, terraces, rock cubes).
+- `ColonistBlenderHexTerrainArt.Enabled = false`.
+""",
+        9: """## Pass 9 (v123)
+- CC0 photo projection on hex tops only (no scatter primitives); striped wheat cap; clay voronoi shader.
 - `ColonistBlenderHexTerrainArt.Enabled = false`.
 """,
     }

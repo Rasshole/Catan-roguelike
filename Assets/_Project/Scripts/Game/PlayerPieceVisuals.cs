@@ -57,6 +57,9 @@ namespace CatanRoguelike.Game
 
         public static bool UsesKenneyModels => ColonistKenneyPlayerPieceMeshes.UsesKenneyModels;
 
+        internal static void SetColonistBoardSpritesForTests(bool use) =>
+            ColonistPlayerPieceBoardSprites.SetUseBoardSprites(use);
+
         public static GameObject CreateSettlement(
             Transform parent,
             Vector3 worldPosition,
@@ -70,6 +73,14 @@ namespace CatanRoguelike.Game
                     parent, worldPosition, color, hexTopY);
                 if (imported != null)
                     return imported;
+            }
+
+            if (ColonistPresentation.IsActive && ColonistPlayerPieceBoardSprites.UseBoardSprites)
+            {
+                var sprite = ColonistPlayerPieceBoardSprites.TryCreateSettlement(
+                    parent, worldPosition, color, hexTopY, hexScale);
+                if (sprite != null)
+                    return sprite;
             }
 
             var root = CreateRoot(parent, SettlementName, worldPosition);
@@ -105,6 +116,14 @@ namespace CatanRoguelike.Game
                     parent, worldPosition, color, hexTopY);
                 if (imported != null)
                     return imported;
+            }
+
+            if (ColonistPresentation.IsActive && ColonistPlayerPieceBoardSprites.UseBoardSprites)
+            {
+                var sprite = ColonistPlayerPieceBoardSprites.TryCreateCity(
+                    parent, worldPosition, color, hexTopY, hexScale);
+                if (sprite != null)
+                    return sprite;
             }
 
             var root = CreateRoot(parent, CityName, worldPosition);
@@ -240,7 +259,6 @@ namespace CatanRoguelike.Game
 
         private static void FinishColonistPiece(GameObject root, float hexTopY, float footprintDiameter)
         {
-            ColonistPlayerPieceContactShadow.Attach(root.transform, hexTopY, footprintDiameter);
             DisableShadows(root);
         }
 
