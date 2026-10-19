@@ -86,6 +86,19 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
+        public void Roofs_AreTwoTone_LitPlaneNearPlayerColour_ShadedPlaneDarker()
+        {
+            foreach (var piece in new[] { Settlement(), City() })
+            {
+                var renderer = SingleMesh(piece, PlayerPieceVisuals.BodyPartName).GetComponent<MeshRenderer>();
+                var lit = Slot(renderer, PlayerPieceVisuals.RoofMaterialName).color;
+                var shade = Slot(renderer, PlayerPieceVisuals.RoofShadeMaterialName).color;
+                Assert.Greater(MaxRgb(lit), 0.8f * MaxRgb(PlayerPieceVisuals.HumanColor), piece.name + " roof reads as the player colour");
+                Assert.Less(MaxRgb(shade), MaxRgb(lit) - 0.15f, piece.name + " ridge splits into two tones");
+            }
+        }
+
+        [Test]
         public void AiPieces_UseRedPlayerColour()
         {
             var piece = PlayerPieceVisuals.CreateCity(
@@ -111,13 +124,18 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void ColonistMode_BuildingsLeanTowardTheTopDownCamera()
+        public void ColonistMode_BuildingsAreNearlyTopDown_WithASmallLeanTowardScreenTop()
         {
+            Assert.That(PlayerPieceVisuals.ColonistLeanDegrees, Is.InRange(5f, 15f),
+                "pieces are seen from above (roofs first) with only a hint of wall");
             var body = Settlement().transform.Find(PlayerPieceVisuals.BodyPartName);
             float tilt = Vector3.Angle(body.up, Vector3.up);
             Assert.AreEqual(PlayerPieceVisuals.ColonistLeanDegrees, tilt, 1f);
             var cameraUp = ColonistFlatBoardQuad.GetColonistCameraUpOnBoard();
-            Assert.Greater(Vector3.Dot(body.up, cameraUp), 0.5f, "should lean toward screen-top");
+            Assert.Greater(
+                Vector3.Dot(body.up, cameraUp),
+                0.8f * Mathf.Sin(PlayerPieceVisuals.ColonistLeanDegrees * Mathf.Deg2Rad),
+                "the small lean goes toward screen-top");
         }
 
         [Test]

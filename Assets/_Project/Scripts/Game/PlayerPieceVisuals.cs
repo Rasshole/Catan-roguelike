@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using UnityEngine;
@@ -12,10 +13,9 @@ namespace CatanRoguelike.Game
     /// plank road. Each piece is one closed mesh with three material slots: Wall (player colour),
     /// Roof (darker) and Edge (bevel faces, darkest).
     /// <para>
-    /// The colonist table camera looks straight down, which would show only a roof rectangle, so in
-    /// colonist mode settlements and cities lean back toward the top of the screen by
-    /// <see cref="ColonistLeanDegrees"/>: the camera then sees them in 3/4 view (gable, side wall
-    /// and both roof slopes), like the printed pieces on colonist.io.
+    /// The colonist table camera looks straight down and so do the pieces (v128): roofs are the main
+    /// read, with only a small lean of <see cref="ColonistLeanDegrees"/> toward screen-top so a
+    /// sliver of gable wall and the two lit roof planes give a hint of 3D.
     /// </para>
     /// </summary>
     public static class PlayerPieceVisuals
@@ -31,11 +31,16 @@ namespace CatanRoguelike.Game
         public const string WallMaterialName = "PieceWall";
         public const string RoofMaterialName = "PieceRoof";
         public const string EdgeMaterialName = "PieceEdge";
+        /// <summary>The roof plane facing away from the (screen top-left) light: a darker second tone.</summary>
+        public const string RoofShadeMaterialName = "PieceRoofShade";
 
         public static readonly Color HumanColor = new(0.2f, 0.4f, 0.9f);
         public static readonly Color AiColor = new(0.9f, 0.25f, 0.2f);
 
-        public const float RoofColorMultiply = 0.52f;
+        /// <summary>Seen from above the roof is the main read, so its lit plane stays close to the player colour.</summary>
+        public const float RoofColorMultiply = 0.84f;
+        /// <summary>The shaded roof plane: the ridge reads as a clear two-tone split from above.</summary>
+        public const float RoofShadeColorMultiply = 0.58f;
         /// <summary>Walls are lightened toward white so the darker roof separates (blue was murky).</summary>
         public const float WallLighten = 0.22f;
         public const float EdgeColorMultiply = 0.32f;
@@ -49,8 +54,8 @@ namespace CatanRoguelike.Game
         /// width, so consecutive roads (and the settlement on the vertex) overlap with no gap.
         /// </summary>
         public const float RoadJointOverlapOfWidth = 0.5f;
-        /// <summary>Lean toward screen-top so the top-down colonist camera sees a 3/4 view.</summary>
-        public const float ColonistLeanDegrees = 50f;
+        /// <summary>Small lean toward screen-top: near top-down, with just a hint of wall (v128; was 50).</summary>
+        public const float ColonistLeanDegrees = 12f;
         /// <summary>Yaw of the gable end away from facing the viewer straight on.</summary>
         public const float ColonistYawDegrees = 32f;
 
@@ -68,6 +73,8 @@ namespace CatanRoguelike.Game
             owner == PlayerId.Human ? HumanColor : AiColor;
 
         public static Color DarkenForRoof(Color color) => Shade(color, RoofColorMultiply);
+
+        public static Color DarkenForRoofShade(Color color) => Shade(color, RoofShadeColorMultiply);
 
         /// <summary>Wall tint: the player colour lifted toward white (keeps alpha).</summary>
         public static Color WallColor(Color color)
@@ -143,14 +150,17 @@ namespace CatanRoguelike.Game
             root.transform.position = worldPosition;
 
             var mesh = LoadMesh(modelName, out var slotNames);
-            var body = CreateMeshChild(root.transform, BodyPartName, mesh, slotNames, color);
+            var rotation = ComputeBuildingRotation(extraYaw + BuildingYawDegrees(worldPosition));
+            var instanceMesh = SplitRoofByLight(mesh, slotNames, rotation, out var instanceSlots);
+            var body = CreateMeshChild(root.transform, BodyPartName, instanceMesh, instanceSlots, color);
+            body.gameObject.AddComponent<OwnedMeshCleanup>().Owned = instanceMesh;
 
             // One scale for every building (from the settlement width) keeps the city at 1.5x.
             var settlementMesh = modelName == "settlement" ? mesh : LoadMesh("settlement", out _);
             float scale = FlatHexWidth(hexScale) * SettlementFootprintOfHex
                 / Mathf.Max(settlementMesh.bounds.size.x, 1e-4f);
             body.localScale = Vector3.one * scale;
-            body.localRotation = ComputeBuildingRotation(extraYaw + BuildingYawDegrees(worldPosition));
+            body.localRotation = rotation;
 
             // Pivot on the footprint centre, then drop the lowest (leaned) point onto the hex top.
             var c = mesh.bounds.center;
@@ -213,6 +223,84 @@ namespace CatanRoguelike.Game
             return lean * yaw * face;
         }
 
+        /// <summary>
+        /// Copies <paramref name="mesh"/> and moves the roof
+        /// triangles whose (rotated) normal faces away from the scene light into an extra RoofShade sub-mesh.
+        /// </summary>
+        internal static Mesh SplitRoofByLight(Mesh mesh, string[] slotNames, Quaternion rotation, out string[] slots)
+        {
+            var light = ScreenTopLeftLightOnBoard();
+            var copy = Object.Instantiate(mesh);
+            copy.name = mesh.name + "_lit";
+            var verts = mesh.vertices;
+            var subs = new List<int[]>();
+            var names = new List<string>();
+            var shade = new List<int>();
+            for (int s = 0; s < mesh.subMeshCount; s++)
+            {
+                var tris = mesh.GetTriangles(s);
+                string slot = s < slotNames.Length ? slotNames[s] : WallMaterialName;
+                if (SlotKind(slot) != RoofMaterialName)
+                {
+                    subs.Add(tris);
+                    names.Add(slot);
+                    continue;
+                }
+
+                var lit = new List<int>();
+                for (int t = 0; t < tris.Length; t += 3)
+                {
+                    var a = verts[tris[t]];
+                    var n = rotation * Vector3.Cross(verts[tris[t + 1]] - a, verts[tris[t + 2]] - a);
+                    var target = Vector3.Dot(new Vector3(n.x, 0f, n.z), light) >= 0f ? lit : shade;
+                    target.Add(tris[t]);
+                    target.Add(tris[t + 1]);
+                    target.Add(tris[t + 2]);
+                }
+
+                subs.Add(lit.ToArray());
+                names.Add(slot);
+            }
+
+            if (shade.Count > 0)
+            {
+                subs.Add(shade.ToArray());
+                names.Add(RoofShadeMaterialName);
+            }
+
+            copy.subMeshCount = subs.Count;
+            for (int s = 0; s < subs.Count; s++)
+                copy.SetTriangles(subs[s], s, false);
+            copy.RecalculateBounds();
+            slots = names.ToArray();
+            return copy;
+        }
+
+        /// <summary>
+        /// Horizontal direction toward the scene's directional light (the sun, else the first
+        /// directional light, else the GameSceneSetup default Euler(50,-30,0)), so the lit roof
+        /// plane really is the one the light hits.
+        /// </summary>
+        internal static Vector3 ScreenTopLeftLightOnBoard()
+        {
+            Light sun = RenderSettings.sun;
+            if (sun == null || sun.type != LightType.Directional)
+            {
+                sun = null;
+                foreach (var l in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+                    if (l.type == LightType.Directional)
+                    {
+                        sun = l;
+                        break;
+                    }
+            }
+
+            var forward = sun != null ? sun.transform.forward : Quaternion.Euler(50f, -30f, 0f) * Vector3.forward;
+            var toward = -forward;
+            toward.y = 0f;
+            return toward.sqrMagnitude > 1e-6f ? toward.normalized : Vector3.forward;
+        }
+
         private static float LowestWorldY(Transform body, Mesh mesh)
         {
             float min = float.MaxValue;
@@ -243,7 +331,8 @@ namespace CatanRoguelike.Game
             for (int i = 0; i < slotNames.Length; i++)
             {
                 var kind = SlotKind(slotNames[i]);
-                var tint = kind == RoofMaterialName ? DarkenForRoof(color)
+                var tint = kind == RoofShadeMaterialName ? DarkenForRoofShade(color)
+                    : kind == RoofMaterialName ? DarkenForRoof(color)
                     : kind == EdgeMaterialName ? DarkenForEdge(color)
                     : WallColor(color);
                 var mat = BuiltInMaterials.CreateMatteOpaque(tint);
@@ -256,6 +345,8 @@ namespace CatanRoguelike.Game
 
         internal static string SlotKind(string importedName)
         {
+            if (importedName == RoofShadeMaterialName)
+                return RoofShadeMaterialName;
             if (importedName != null && importedName.Contains("Roof"))
                 return RoofMaterialName;
             if (importedName != null && importedName.Contains("Edge"))

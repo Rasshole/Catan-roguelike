@@ -520,7 +520,7 @@ namespace CatanRoguelike.Game
                     data.IsDesert
                         ? BoardTerrainSlot.Desert
                         : BoardTerrainMaterialSlots.ResourceToSlot(data.Resource));
-            if (blenderTop && ColonistBlenderHexTerrainArt.IsRotated180(data.Coord))
+            if (blenderTop && !data.IsDesert && ColonistBlenderHexTerrainArt.IsRotated180(data.Coord))
                 ColonistBlenderHexTerrainArt.ApplyRotation180(renderer.sharedMaterial);
             // Painted tiles carry their own cardboard bevel frame; the slate seam strips would
             // draw a cold line through the middle of the sand borders.
@@ -541,8 +541,8 @@ namespace CatanRoguelike.Game
                     ColonistDesertLakeVisual.Apply(go, hexScale);
                     ColonistHexTileNatureDecor.Apply(go, data, hexScale); // cacti/rocks around the pond
                 }
-                if (blenderTop && data.IsDesert && data.IsFishTile)
-                    ColonistDesertLakeVisual.Apply(go, hexScale);
+                // v128: the painted desert has no oasis pond (the desert is still the Fishermen lake
+                // tile in the rules); its painted cacti are baked into Desert.png.
                 if (data.IsFishTile)
                     ColonistFishTileVisual.Apply(go, data, hexScale);
             }

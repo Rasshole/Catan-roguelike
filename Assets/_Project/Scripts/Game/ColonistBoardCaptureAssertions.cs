@@ -849,9 +849,16 @@ namespace CatanRoguelike.Game
                     continue;
 
                 if (tile.Data.IsDesert)
+                {
                     sawDesertLake = true;
-                else
-                    fishGrounds++;
+                    if (ColonistBlenderHexTerrainArt.Enabled)
+                        Assert.IsNull(
+                            tile.transform.Find("DesertLakeWater"),
+                            "v128: the painted desert must not draw an oasis pond (it carries painted cacti instead).");
+                    continue;
+                }
+
+                fishGrounds++;
 
                 bool hasVisual = tile.transform.Find("FishGroundIcon") != null
                     || tile.transform.Find("ShoalMesh") != null
@@ -862,7 +869,7 @@ namespace CatanRoguelike.Game
                     $"Fish tile at {tile.Data.Coord} should spawn coastal shoal or fish icon.");
             }
 
-            Assert.IsTrue(sawDesertLake, "Desert center should become a fishing lake when Fishermen is enabled.");
+            Assert.IsTrue(sawDesertLake, "With Fishermen enabled the desert should still be the (rules-level) lake tile.");
             Assert.IsTrue(
                 fishGrounds >= 3,
                 $"Board should show several sea fishing ground tiles (found {fishGrounds}).");

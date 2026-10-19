@@ -453,7 +453,9 @@ namespace CatanRoguelike.Game
         {
             if (Data == null)
                 return RobberLocalOffset;
-            if (Data.IsDesert && Data.IsFishTile && ColonistPresentation.IsActive)
+            // Legacy art pushes the robber off the pond; the painted desert (no pond) keeps it centred.
+            if (Data.IsDesert && Data.IsFishTile && ColonistPresentation.IsActive
+                && !ColonistBlenderHexTerrainArt.Enabled)
                 return new Vector3(0.58f, 0f, 0.54f);
             if (Data.IsDesert)
                 return Vector3.zero;

@@ -114,7 +114,8 @@ namespace CatanRoguelike.Tests
             var normals = mesh.normals;
             for (int s = 0; s < mesh.subMeshCount && s < slots.Length; s++)
             {
-                if (slots[s].name != PlayerPieceVisuals.RoofMaterialName)
+                if (slots[s].name != PlayerPieceVisuals.RoofMaterialName
+                    && slots[s].name != PlayerPieceVisuals.RoofShadeMaterialName)
                     continue;
                 var tris = mesh.GetTriangles(s);
                 for (int t = 0; t < tris.Length; t += 3)

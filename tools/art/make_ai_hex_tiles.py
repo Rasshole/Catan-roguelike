@@ -27,9 +27,13 @@ SLOTS = ["Wood", "Wheat", "Sheep", "Ore", "Brick", "Desert"]
 # Source painting per slot (Desert is the dune painting with rocks/shrubs from paint_desert.py).
 SOURCE = {
     "Desert": "Desert_v127.jpg",
-    "Brick": "variants/Brick_C.jpg",
+    "Brick": "variants/Brick_A.jpg",
     "Ore": os.environ.get("ORE_SOURCE", "Ore_v127.jpg"),
 }
+# Per-slot crop: (zoom, centre shift x, centre shift y) as fractions of the source size. Clay A's
+# quarry pit is dead centre in the painting, where the number token would hide it; zoom in a
+# little and shift the crop so the pit sits beside the token and still reads as a quarry.
+CROP = {"Brick": tuple(float(v) for v in os.environ.get("BRICK_CROP", "1.25,0.12,0.09").split(","))}
 # The v126 ore is the older painting lifted toward snow in-script; the v127 AI ore is already pale.
 LIFT_ORE_SOURCES = {"Ore.jpg"}
 VARIANT_DIR = os.path.join(SRC, "variants")
@@ -83,6 +87,75 @@ def lift_ore(src):
     return out.filter(ImageFilter.UnsharpMask(18, 45, 0))
 
 
+# Desert: a subtle warm-tan shift (v128) and a few small painted cacti away from the centre, where
+# the robber sits. Screen-space positions (x right, y down) as fractions of the hex width, and
+# height as a fraction of the hex width. The desert is never shown turned 180 deg (cacti stay upright).
+DESERT_TAN = (1.035, 0.985, 0.90)
+DESERT_CACTI = [(-0.27, -0.17, 0.115, True), (0.25, 0.20, 0.10, True), (0.31, -0.13, 0.08, False)]
+
+
+def paint_cactus(img, cx, cy, h, arms, seed):
+    """Small saguaro in the painting's soft gouache style: rounded trunk/arms with a lit left side,
+    shaded right side, faint ribs, and a soft cast shadow toward the lower right."""
+    from PIL import ImageDraw
+    rng = np.random.default_rng(seed)
+    w = h * 0.24
+    pad = int(h * 1.2)
+    big = 4
+    W = int(2 * pad) * big
+    body = Image.new("L", (W, W), 0)
+    d = ImageDraw.Draw(body)
+    ox = oy = W // 2
+
+    def cap(x0, y0, x1, y1, r):
+        d.rounded_rectangle((ox + x0 * big, oy + y0 * big, ox + x1 * big, oy + y1 * big), radius=r * big, fill=255)
+
+    base = h * 0.5
+    cap(-w / 2, -h / 2, w / 2, base, w / 2)
+    if arms:
+        aw = w * 0.74
+        # left arm: out from the trunk low down, then up
+        cap(-w * 1.9, h * 0.02, 0, h * 0.02 + aw, aw / 2)
+        cap(-w * 1.9, -h * 0.26, -w * 1.9 + aw, h * 0.02 + aw, aw / 2)
+        # right arm: higher and shorter
+        cap(0, -h * 0.12, w * 1.75, -h * 0.12 + aw, aw / 2)
+        cap(w * 1.75 - aw, -h * 0.36, w * 1.75, -h * 0.12 + aw, aw / 2)
+    else:
+        aw = w * 0.8
+        cap(0, -h * 0.02, w * 1.6, -h * 0.02 + aw, aw / 2)
+        cap(w * 1.6 - aw, -h * 0.28, w * 1.6, -h * 0.02 + aw, aw / 2)
+    body = body.filter(ImageFilter.GaussianBlur(big * 0.6))
+    m = np.asarray(body, np.float32) / 255.0
+    # Shading: horizontal gradient inside each column via a blurred-edge distance proxy.
+    inner = np.asarray(body.filter(ImageFilter.GaussianBlur(w * big * 0.35)), np.float32) / 255.0
+    gx = np.gradient(inner, axis=1)
+    light = np.clip(0.5 - gx * w * big * 1.6, 0, 1)  # left edges lit, right edges dark
+    yy, xx = np.mgrid[0:W, 0:W]
+    ribs = 0.5 + 0.5 * np.sin(xx / (w * big * 0.17) * np.pi)
+    dark = np.array([56, 76, 42], np.float32)
+    mid = np.array([98, 120, 64], np.float32)
+    lit = np.array([146, 160, 96], np.float32)
+    col = dark + (mid - dark) * np.clip(light * 1.6, 0, 1)[..., None]
+    col = col + (lit - col) * np.clip((light - 0.62) * 2.6, 0, 1)[..., None]
+    col = col * (0.88 + 0.12 * ribs)[..., None]
+    brush = Image.fromarray((rng.random((W // 8, W // 8)) * 255).astype(np.uint8)).resize((W, W), Image.BICUBIC)
+    col = col * (0.92 + 0.16 * np.asarray(brush, np.float32) / 255.0)[..., None]
+    # Cast shadow: body shifted down-right, squashed, blurred.
+    sh = body.transform(body.size, Image.AFFINE, (1, 0, -w * big * 0.45, 0, 1, -w * big * 0.3)).filter(
+        ImageFilter.GaussianBlur(big * w * 0.3))
+    shm = np.asarray(sh, np.float32) / 255.0 * 0.55
+    small = (W // big, W // big)
+    rgba = np.dstack([col, m * 255]).astype(np.uint8)
+    cact = Image.fromarray(rgba, "RGBA").resize(small, Image.LANCZOS)
+    shadow = Image.fromarray((shm * 255).astype(np.uint8), "L").resize(small, Image.LANCZOS)
+    x0, y0 = int(cx - small[0] / 2), int(cy - small[1] / 2)
+    region = img.crop((x0, y0, x0 + small[0], y0 + small[1]))
+    dark_sand = Image.fromarray((np.asarray(region, np.float32) * 0.62).astype(np.uint8))
+    region = Image.composite(dark_sand, region, shadow)
+    region.paste(cact, (0, 0), cact)
+    img.paste(region, (x0, y0))
+
+
 def bake(slot, source_path=None, grade_key=None):
     n = SIZE * SS
     radius = n / 2.0
@@ -99,13 +172,20 @@ def bake(slot, source_path=None, grade_key=None):
     src = ImageEnhance.Brightness(src).enhance(bri)
     src = ImageEnhance.Contrast(src).enhance(con)
     box_w, box_h = n, int(round(2 * apothem))
-    scale = max(box_w / src.width, box_h / src.height)
+    zoom, shift_x, shift_y = CROP.get(slot, (1.0, 0.0, 0.0)) if source_path is None else (1.0, 0.0, 0.0)
+    scale = max(box_w / src.width, box_h / src.height) * zoom
     rw, rh = int(np.ceil(src.width * scale)), int(np.ceil(src.height * scale))
     src = src.resize((rw, rh), Image.LANCZOS)
-    left, top = (rw - box_w) // 2, (rh - box_h) // 2
+    left = int(np.clip((rw - box_w) / 2 + shift_x * rw, 0, rw - box_w))
+    top = int(np.clip((rh - box_h) / 2 + shift_y * rh, 0, rh - box_h))
     art_box = src.crop((left, top, left + box_w, top + box_h))
     art = Image.new("RGB", (n, n), tuple(int(c) for c in SAND))
     art.paste(art_box, (0, (n - box_h) // 2))
+    if slot == "Desert" and source_path is None:
+        a = np.asarray(art, np.float32) * np.array(DESERT_TAN, np.float32)
+        art = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
+        for i, (fx, fy, fh, arms) in enumerate(DESERT_CACTI):
+            paint_cactus(art, n / 2 + fx * n, n / 2 + fy * n, fh * n, arms, 128 + i)
     art = np.asarray(art, np.float32)
 
     ys, xs = np.mgrid[0:n, 0:n].astype(np.float32)
