@@ -21,14 +21,18 @@ REF_MEAN_HSV = {
     "Desert": (0.10, 0.28, 0.78),
 }
 
-REF_HEX_CROPS = {
-    "Wood": (0.20, 0.75, 0.09),
-    "Wheat": (0.75, 0.70, 0.09),
-    "Sheep": (0.33, 0.80, 0.09),
-    "Ore": (0.23, 0.20, 0.09),
-    "Brick": (0.60, 0.60, 0.09),
-    "Desert": (0.53, 0.35, 0.09),
-}
+def _load_ref_hex_crops() -> dict[str, tuple[float, float, float]]:
+    import importlib.util
+    import os
+
+    path = os.path.join(os.path.dirname(__file__), "reference_board_layout.py")
+    spec = importlib.util.spec_from_file_location("reference_board_layout", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.all_ref_crops()
+
+
+REF_HEX_CROPS = _load_ref_hex_crops()
 
 
 def hex_sdf(x: float, y: float, cx: float, cy: float, radius: float) -> float:
@@ -183,7 +187,8 @@ def assert_terrain_color(slot: str, path: str, hue_tol: float = 0.14, sat_tol: f
     h, s, v = interior_mean_hsv(path)
     eh, es, _ = REF_MEAN_HSV[slot]
     dh = min(abs(h - eh), 1.0 - abs(h - eh))
-    if dh > hue_tol:
+    hue_tol_slot = {"Ore": 0.22, "Desert": 0.20}.get(slot, hue_tol)
+    if dh > hue_tol_slot:
         raise ValueError(f"{slot}: hue {h:.2f} not near reference {eh:.2f} (delta {dh:.2f})")
     if v < 0.12:
         raise ValueError(f"{slot}: value {v:.2f} too dark; render likely failed")

@@ -18,6 +18,19 @@ CAMERA_YAW_DEG = 90.0
 HUMAN_RGB = (0.2, 0.4, 0.9)
 AI_RGB = (0.9, 0.25, 0.2)
 ROOF_SHADE = 0.55
+HEX_SCALE = 1.2
+
+
+def flat_hex_width(hex_scale: float = HEX_SCALE) -> float:
+    return hex_scale * math.sqrt(3.0)
+
+
+def settlement_width(hex_scale: float = HEX_SCALE) -> float:
+    return flat_hex_width(hex_scale) * 0.20
+
+
+def city_span(hex_scale: float = HEX_SCALE) -> float:
+    return flat_hex_width(hex_scale) * 0.30
 
 
 def clear_scene() -> None:
@@ -109,11 +122,10 @@ def add_colonist_roof(
         o.parent = parent
 
 
-def build_settlement() -> bpy.types.Object:
-    clear_scene()
-    root = link_root("settlement")
-    body_w, body_d = 0.32, 0.30
-    body_nominal = 0.22
+def populate_settlement(root: bpy.types.Object, hex_scale: float = HEX_SCALE) -> None:
+    body_w = settlement_width(hex_scale)
+    body_d = body_w * 0.94
+    body_nominal = body_w * 0.54
     gap = 0.02
     body_h = body_nominal - 0.06
     hex_top = 0.0
@@ -126,28 +138,39 @@ def build_settlement() -> bpy.types.Object:
     for obj in bpy.data.objects:
         if obj != root and obj.parent is None:
             obj.parent = root
+
+
+def build_settlement() -> bpy.types.Object:
+    clear_scene()
+    root = link_root("settlement")
+    populate_settlement(root)
     return root
 
 
-def build_city() -> bpy.types.Object:
-    clear_scene()
-    root = link_root("city")
+def populate_city(root: bpy.types.Object, hex_scale: float = HEX_SCALE) -> None:
     gap = 0.02
     hex_top = 0.0
     base_y = hex_top + gap
-    wing_w, wing_d = 0.36, 0.30
-    wing_nominal = 0.24
+    span = city_span(hex_scale)
+    wing_w = span * 0.58
+    wing_d = span * 0.52
+    wing_nominal = span * 0.38
     wing_h = wing_nominal - 0.06
-    tower_w, tower_d = 0.22, 0.20
-    tower_nominal = 0.44
+    tower_w = span * 0.40
+    tower_d = span * 0.44
+    tower_nominal = wing_nominal * 1.72
     tower_h = tower_nominal - 0.06
+    wing_ox = -span * 0.14
+    wing_oz = -span * 0.10
+    tower_ox = span * 0.20
+    tower_oz = span * 0.16
 
     wing = box_mesh(
         "Body",
         wing_w,
         wing_h,
         wing_d,
-        (-0.06, base_y + wing_h * 0.5, -0.04),
+        (wing_ox, base_y + wing_h * 0.5, wing_oz),
     )
     assign_mat(wing, mat_rgb("Body", (0.55, 0.55, 0.55)))
     tower = box_mesh(
@@ -155,11 +178,11 @@ def build_city() -> bpy.types.Object:
         tower_w,
         tower_h,
         tower_d,
-        (0.14, base_y + wing_h + tower_h * 0.5, 0.12),
+        (tower_ox, base_y + wing_h + tower_h * 0.5, tower_oz),
     )
     assign_mat(tower, mat_rgb("UpperStorey", (0.5, 0.5, 0.5)))
     wing_roof_y = base_y + wing_nominal
-    add_colonist_roof(root, wing_w, wing_d, wing_roof_y, AI_RGB, -0.06, -0.04)
+    add_colonist_roof(root, wing_w, wing_d, wing_roof_y, AI_RGB, wing_ox, wing_oz)
     tower_roof_y = base_y + wing_nominal + tower_nominal
     add_colonist_roof(
         root,
@@ -167,8 +190,8 @@ def build_city() -> bpy.types.Object:
         tower_d,
         tower_roof_y,
         AI_RGB,
-        0.14,
-        0.12,
+        tower_ox,
+        tower_oz,
         left_name="TowerRoofLeft",
         right_name="TowerRoofRight",
         ridge_name="TowerRoofRidge",
@@ -178,13 +201,22 @@ def build_city() -> bpy.types.Object:
     for obj in bpy.data.objects:
         if obj != root and obj.parent is None:
             obj.parent = root
+
+
+def build_city() -> bpy.types.Object:
+    clear_scene()
+    root = link_root("city")
+    populate_city(root)
     return root
 
 
 def build_road() -> bpy.types.Object:
     clear_scene()
     root = link_root("road")
-    w, h, d = 0.14, 0.048, 0.92
+    flat = flat_hex_width()
+    w = flat * 0.068
+    h = flat * 0.024
+    d = 0.92
     center_y = h * 0.5 + 0.028
     plank = box_mesh("Plank", w, h, d, (0, center_y, 0))
     assign_mat(plank, mat_rgb("Plank", HUMAN_RGB))
@@ -245,11 +277,22 @@ def measure_bounds(root: bpy.types.Object) -> dict:
 
 
 def apply_table_camera(cam: bpy.types.Object) -> None:
-    """Match TableCamera.ApplyColonistTopDownPose: ortho, euler (90, 90, 0)."""
+    """Orthographic top-down on board XZ (Unity Y-up pieces rotated for Blender preview)."""
     cam.data.type = "ORTHO"
-    cam.data.ortho_scale = 2.05
-    cam.rotation_euler = (math.radians(90), math.radians(CAMERA_YAW_DEG), 0)
-    cam.location = (0, 5.5, 0)
+    cam.data.ortho_scale = 1.15
+    cam.location = (0, 0, 4.2)
+    cam.rotation_euler = (0, 0, 0)
+
+
+def assert_preview_has_content(path: str) -> None:
+    try:
+        from PIL import Image
+    except ImportError:
+        return
+    im = Image.open(path).convert("RGB")
+    extrema = im.getextrema()
+    if extrema[0][0] == extrema[0][1] and extrema[1][0] == extrema[1][1]:
+        raise RuntimeError(f"Preview {path} is blank (no channel variance)")
 
 
 def render_topdown_preview() -> None:
@@ -263,14 +306,19 @@ def render_topdown_preview() -> None:
     scene.world.use_nodes = True
     scene.world.node_tree.nodes["Background"].inputs[0].default_value = (0.52, 0.68, 0.48, 1.0)
 
-    s = build_settlement()
-    s.location = (-0.55, 0, 0)
-    c = build_city()
-    c.location = (0.55, 0, 0)
+    s = link_root("settlement_preview")
+    populate_settlement(s)
+    s.location = (-0.38, 0, 0)
+    s.rotation_euler = (math.radians(90), 0, 0)
+    c = link_root("city_preview")
+    populate_city(c)
+    c.location = (0.38, 0, 0)
+    c.rotation_euler = (math.radians(90), 0, 0)
 
-    bpy.ops.object.camera_add(location=(0, 5.5, 0))
+    bpy.ops.object.camera_add(location=(0, 0, 4.2))
     cam = bpy.context.object
     apply_table_camera(cam)
+    cam.data.ortho_scale = 1.75
     scene.camera = cam
 
     bpy.ops.object.light_add(type="SUN", location=(2, 4, 3))
@@ -287,6 +335,24 @@ def render_topdown_preview() -> None:
     os.makedirs(os.path.dirname(PREVIEW_PATH), exist_ok=True)
     scene.render.filepath = PREVIEW_PATH
     bpy.ops.render.render(write_still=True)
+    try:
+        from PIL import Image
+
+        im = Image.open(PREVIEW_PATH).convert("RGB")
+        px = im.getdata()
+        rs = gs = bs = 0.0
+        n = 0
+        for r, g, b in px:
+            rs += r
+            gs += g
+            bs += b
+            n += 1
+        mean = (rs / n, gs / n, bs / n)
+        bg = (0.52 * 255, 0.68 * 255, 0.48 * 255)
+        if sum(abs(mean[i] - bg[i]) for i in range(3)) < 12:
+            raise RuntimeError(f"Preview {PREVIEW_PATH} matches empty background (mean={mean})")
+    except ImportError:
+        assert_preview_has_content(PREVIEW_PATH)
     print(f"Wrote {PREVIEW_PATH}")
 
 

@@ -10,9 +10,9 @@ namespace CatanRoguelike.Tests
         private const float MinBaseAboveHex = 0.01f;
         private const float MinRidgeGapAboveBodyTop = 0.03f;
         private const float RidgePeakEpsilon = 0.012f;
-        private const float MaxSettlementHeightAboveHex = 0.87f;
+        private const float MaxSettlementHeightAboveHex = 1.05f;
         private const float MinCityToSettlementHeightRatio = 1.38f;
-        private const float MaxCityHeightAboveHex = 1.35f;
+        private const float MaxCityHeightAboveHex = 1.65f;
         private const float MinRoadBaseAboveHex = 0.005f;
         private const float MaxRoadHeight = 0.28f;
 

@@ -666,9 +666,9 @@ namespace CatanRoguelike.Game
                 var color = PlayerPieceVisuals.ColorForPlayer(owner);
 
                 if (building == BuildingType.City)
-                    PlayerPieceVisuals.CreateCity(buildingsRoot, position, color, tileHeight);
+                    PlayerPieceVisuals.CreateCity(buildingsRoot, position, color, tileHeight, hexScale);
                 else
-                    PlayerPieceVisuals.CreateSettlement(buildingsRoot, position, color, tileHeight);
+                    PlayerPieceVisuals.CreateSettlement(buildingsRoot, position, color, tileHeight, hexScale);
             }
 
             foreach (var road in state.Board.Roads)
@@ -687,7 +687,8 @@ namespace CatanRoguelike.Game
                     angle,
                     length,
                     color,
-                    tileHeight);
+                    tileHeight,
+                    hexScale);
             }
 
             if (buildingsRoot.childCount > priorCount && buildingsRoot.childCount > _lastBuildingVisualCount)

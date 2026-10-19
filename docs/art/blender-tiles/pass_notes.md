@@ -14,3 +14,6 @@
 ## Pass 6 (v120)
 - Re-aligned reference_board.jpg crops via HSV match; lowered exposure/sun/fill and saturation.
 - Toned forest/sheep greens; still not photo-close — `Enabled = false`.
+## Pass 7 (v121)
+- Geometric 3-4-5-4-3 crop centers on reference_board.jpg; ambientCG photo textures + scatter + posterize compositor.
+- Still short of printed board; `ColonistBlenderHexTerrainArt.Enabled = false`.

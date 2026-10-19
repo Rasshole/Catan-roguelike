@@ -6,6 +6,8 @@ import math
 import os
 import random
 import shutil
+import subprocess
+import sys
 
 import bpy
 
@@ -21,6 +23,16 @@ REF_PHOTO = os.environ.get(
 
 INNER_R = 0.92
 DENSITY = 1.0 + (PASS - 1) * 0.15
+
+
+def import_terrain_cc0():
+    path = os.path.join(ROOT, "tools/blender/terrain_cc0.py")
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("terrain_cc0", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def import_hex_post():
@@ -51,7 +63,7 @@ def setup_render() -> None:
     scene.render.image_settings.file_format = "PNG"
     scene.render.image_settings.color_mode = "RGBA"
     scene.view_settings.view_transform = "Standard"
-    scene.view_settings.exposure = -0.45
+    scene.view_settings.exposure = -0.55
 
     world = bpy.data.worlds.new("World")
     scene.world = world
@@ -78,6 +90,12 @@ def setup_render() -> None:
     fill.data.energy = 180
     fill.data.size = 7
     fill.rotation_euler = (math.radians(62), 0, math.radians(-28))
+
+    try:
+        tcc = import_terrain_cc0()
+        tcc.setup_painterly_compositor(scene)
+    except Exception as exc:  # noqa: BLE001
+        print(f"Compositor painterly setup skipped: {exc}")
 
 
 def inside_hex(x: float, y: float, r: float = INNER_R) -> bool:
@@ -232,102 +250,64 @@ def displace_grid(strength: float, tex_type: str = "CLOUDS", scale: float = 0.5)
 
 
 def build_forest() -> None:
-    add_hex_floor(mat_solid("Soil", (0.10, 0.28, 0.08)))
+    tcc = import_terrain_cc0()
     rng = random.Random(101 + PASS)
-    spacing = 0.11 / DENSITY
-    for row in range(-8, 9):
-        for col in range(-8, 9):
-            x = col * spacing * 1.05 + (row % 2) * spacing * 0.52
-            y = row * spacing * 0.92
-            x += rng.uniform(-0.02, 0.02)
-            y += rng.uniform(-0.02, 0.02)
-            if not inside_hex(x, y, 0.86):
-                continue
-            rad = rng.uniform(0.09, 0.14)
-            roll = rng.random()
-            if roll < 0.14:
-                col = (0.92, 0.62, 0.12)
-            elif roll < 0.32:
-                col = (0.22, 0.52, 0.14)
-            else:
-                col = (0.08 + rng.uniform(0, 0.05), 0.32 + rng.uniform(0, 0.16), 0.07)
-            bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=rad, location=(x, y, rad * 0.55))
-            t = bpy.context.object
-            t.scale = (1.05, 1.05, 0.65)
-            t.data.materials.append(mat_solid(f"T{row}{col}", col, 0.78))
+    soil = tcc.mat_from_cc0("ForestSoil", "forest", tint=(0.42, 0.55, 0.28), rough=0.88)
+    canopy = tcc.mat_from_cc0("ForestCanopy", "forest", tint=(0.18, 0.42, 0.14), rough=0.92)
+    trunk = tcc.mat_from_cc0("ForestTrunk", "forest", tint=(0.28, 0.20, 0.10), rough=0.95)
+    tcc.add_hex_floor(soil, z=-0.01)
+    tcc.displace_plane(canopy, strength=0.18 + PASS * 0.02)
+    tcc.scatter_cones(rng, int(48 * DENSITY), (0.05, 0.11), (0.10, 0.20), trunk)
 
 
 def build_wheat() -> None:
-    add_hex_floor(mat_solid("Dirt", (0.52, 0.38, 0.14)))
-    parcels = [
-        (-0.35, 0.15, 25, (0.90, 0.72, 0.12), (0.50, 0.34, 0.10)),
-        (0.25, 0.28, 110, (0.86, 0.66, 0.11), (0.48, 0.32, 0.09)),
-        (0.05, -0.32, 70, (0.92, 0.76, 0.14), (0.54, 0.38, 0.10)),
-        (-0.22, -0.18, 155, (0.82, 0.64, 0.10), (0.44, 0.30, 0.08)),
-        (0.38, -0.08, 0, (0.88, 0.70, 0.12), (0.50, 0.34, 0.10)),
-        (-0.05, 0.38, 45, (0.90, 0.74, 0.13), (0.52, 0.36, 0.10)),
-    ]
-    for cx, cy, ang, gold, ochre in parcels:
-        if not inside_hex(cx, cy, 0.78):
+    tcc = import_terrain_cc0()
+    rng = random.Random(202 + PASS)
+    base = tcc.mat_from_cc0("WheatSoil", "wheat_base", tint=(0.72, 0.58, 0.22), rough=0.9)
+    field = tcc.mat_from_cc0("WheatField", "wheat_base", tint=(0.88, 0.72, 0.18), rough=0.86)
+    tcc.add_hex_floor(base, z=-0.01)
+    tcc.displace_plane(field, strength=0.08, inner_r=0.9)
+    for _ in range(int(36 * DENSITY)):
+        ang = rng.random() * math.tau
+        rad = rng.uniform(0.05, 0.78)
+        x = math.cos(ang) * rad
+        y = math.sin(ang) * rad
+        if not inside_hex(x, y, 0.84):
             continue
-        rot = math.radians(ang)
-        for stripe in range(-7, 8):
-            off = stripe * 0.042
-            lx = cx + math.cos(rot) * off
-            ly = cy + math.sin(rot) * off
-            bpy.ops.mesh.primitive_cube_add(size=1, location=(lx, ly, 0.04))
-            s = bpy.context.object
-            s.scale = (0.038, 0.26, 0.012)
-            s.rotation_euler = (0, 0, rot)
-            col = gold if stripe % 2 == 0 else ochre
-            s.data.materials.append(mat_solid(f"St{stripe}", col, 0.82))
-    bpy.ops.mesh.primitive_cube_add(size=1, location=(0.32, -0.28, 0.06))
-    barn = bpy.context.object
-    barn.scale = (0.07, 0.05, 0.045)
-    barn.data.materials.append(mat_solid("Barn", (0.40, 0.26, 0.16)))
+        rot = rng.uniform(0, 180)
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(x, y, 0.05))
+        s = bpy.context.object
+        s.scale = (0.03, 0.22, 0.018)
+        s.rotation_euler = (0, 0, math.radians(rot))
+        s.data.materials.append(field)
 
 
 def build_pasture() -> None:
-    grid = displace_grid(0.07 + PASS * 0.015, "CLOUDS", 0.9)
-    grid.data.materials.append(mat_grass_meadow("Meadow"))
-    add_hex_floor(mat_solid("MeadowBase", (0.22, 0.52, 0.18)))
+    tcc = import_terrain_cc0()
     rng = random.Random(303 + PASS)
-    for flock in range(int(16 * DENSITY)):
-        fx = rng.uniform(-0.7, 0.7)
-        fy = rng.uniform(-0.7, 0.7)
-        if not inside_hex(fx, fy, 0.82):
-            continue
-        for _ in range(rng.randint(3, 7)):
-            ox = fx + rng.uniform(-0.06, 0.06)
-            oy = fy + rng.uniform(-0.06, 0.06)
-            if not inside_hex(ox, oy, 0.84):
-                continue
-            bpy.ops.mesh.primitive_uv_sphere_add(radius=0.022, location=(ox, oy, 0.05))
-            s = bpy.context.object
-            s.scale = (1.0, 1.2, 0.65)
-            s.data.materials.append(mat_solid("Sh", (0.98, 0.98, 0.95), 0.7))
-    bpy.ops.mesh.primitive_plane_add(size=0.35, location=(0.12, 0.08, 0.025))
-    path = bpy.context.object
-    path.rotation_euler = (0, 0, math.radians(35))
-    path.scale = (0.35, 1.6, 1.0)
-    path.data.materials.append(mat_solid("Path", (0.80, 0.84, 0.66), 0.95))
+    grass = tcc.mat_from_cc0("Pasture", "grass", tint=(0.38, 0.68, 0.26), rough=0.9)
+    sheep_mat = mat_solid("Sheep", (0.96, 0.96, 0.93), 0.75)
+    tcc.add_hex_floor(grass, z=-0.01)
+    tcc.displace_plane(grass, strength=0.10 + PASS * 0.01, inner_r=0.9)
+    tcc.scatter_sheep(rng, int(22 * DENSITY), sheep_mat)
 
 
 def build_ore() -> None:
-    grid = displace_grid(0.72 + PASS * 0.1, "MARBLE", 0.38)
-    grid.data.materials.append(mat_mountain("Ore"))
-    disp2 = grid.modifiers.new("Displace", "DISPLACE")
-    tex2 = bpy.data.textures.new("Ridge", "STUCCI")
-    tex2.noise_scale = 0.25
-    disp2.texture = tex2
-    disp2.strength = 0.18
-    bpy.context.view_layer.objects.active = grid
-    bpy.ops.object.modifier_apply(modifier=disp2.name)
+    tcc = import_terrain_cc0()
+    rng = random.Random(404 + PASS)
+    rock = tcc.mat_from_cc0("OreRock", "rock", tint=(0.55, 0.58, 0.62), rough=0.78)
+    tcc.add_hex_floor(rock, z=-0.02)
+    tcc.displace_plane(rock, strength=0.55 + PASS * 0.05, inner_r=0.88)
+    tcc.scatter_icos(rng, int(28 * DENSITY), (0.05, 0.14), rock)
 
 
 def build_clay() -> None:
-    grid = displace_grid(0.38 + PASS * 0.06, "VORONOI", 0.65)
-    grid.data.materials.append(mat_clay_pit("Clay"))
+    tcc = import_terrain_cc0()
+    rng = random.Random(505 + PASS)
+    clay = tcc.mat_from_cc0("Clay", "clay", tint=(0.62, 0.34, 0.18), rough=0.88)
+    tcc.add_hex_floor(clay, z=-0.02)
+    tcc.displace_plane(clay, strength=0.32 + PASS * 0.03, inner_r=0.9)
+    tcc.scatter_icos(rng, int(18 * DENSITY), (0.04, 0.10), clay, inner_r=0.8)
 
 
 def mat_sand_dunes(name: str) -> bpy.types.Material:
@@ -351,21 +331,12 @@ def mat_sand_dunes(name: str) -> bpy.types.Material:
 
 
 def build_desert() -> None:
-    add_hex_floor(mat_solid("SandBase", (0.88, 0.72, 0.46)))
-    grid = displace_grid(0.12 + PASS * 0.02, "CLOUDS", 1.1)
-    grid.data.materials.append(mat_sand_dunes("Sand"))
-    rng = random.Random(505 + PASS)
-    for i in range(22 + PASS * 3):
-        ang = rng.random() * math.tau
-        rad = rng.random() * 0.78
-        x = math.cos(ang) * rad
-        y = math.sin(ang) * rad
-        if not inside_hex(x, y, 0.85):
-            continue
-        bpy.ops.mesh.primitive_cylinder_add(radius=0.005, depth=0.10, location=(x, y, 0.035))
-        tw = bpy.context.object
-        tw.rotation_euler = (rng.uniform(0.4, 1.1), rng.uniform(-0.3, 0.3), ang)
-        tw.data.materials.append(mat_solid(f"Tw{i}", (0.42, 0.30, 0.20)))
+    tcc = import_terrain_cc0()
+    rng = random.Random(606 + PASS)
+    sand = tcc.mat_from_cc0("DesertSand", "sand", tint=(0.92, 0.78, 0.52), rough=0.92)
+    tcc.add_hex_floor(sand, z=-0.01)
+    tcc.displace_plane(sand, strength=0.14 + PASS * 0.02, inner_r=0.9)
+    tcc.scatter_icos(rng, int(12 * DENSITY), (0.03, 0.08), mat_solid("DesertRock", (0.55, 0.42, 0.28)), inner_r=0.75)
 
 
 BUILDERS = {
@@ -438,6 +409,10 @@ def write_pass_notes() -> None:
 - Re-aligned reference_board.jpg crops via HSV match; lowered exposure/sun/fill and saturation.
 - Toned forest/sheep greens; still not photo-close — `Enabled = false`.
 """,
+        7: """## Pass 7 (v121)
+- Geometric 3-4-5-4-3 crop centers on reference_board.jpg; ambientCG photo textures + scatter + posterize compositor.
+- Still short of printed board; `ColonistBlenderHexTerrainArt.Enabled = false`.
+""",
     }
     path = os.path.join(OUT_DOCS, "pass_notes.md")
     with open(path, "w", encoding="utf-8") as f:
@@ -448,6 +423,9 @@ def write_pass_notes() -> None:
 
 
 def main() -> None:
+    dl = os.path.join(ROOT, "tools/blender/download_cc0_textures.py")
+    if os.path.isfile(dl):
+        subprocess.run([sys.executable, dl], check=False)
     print(f"BLENDER_TILE_PASS={PASS}")
     paths = []
     render_paths = {}
