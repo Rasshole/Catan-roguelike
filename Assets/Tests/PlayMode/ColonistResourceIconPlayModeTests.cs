@@ -16,7 +16,7 @@ namespace CatanRoguelike.Tests.PlayMode
 
         [Timeout(90000)]
         [UnityTest]
-        public IEnumerator NonDesertHexes_UseNatureDecorNotCornerResourceGlyphs()
+        public IEnumerator NonDesertHexes_UseTerrainArtNotCornerResourceGlyphs()
         {
             if (!File.Exists(GameScenePath))
             {
@@ -43,9 +43,23 @@ namespace CatanRoguelike.Tests.PlayMode
                 Assert.IsNull(
                     tile.transform.Find("ResourceIcon"),
                     $"Hex {tile.Data.Coord} should not show a corner ResourceIcon (terrain decor only).");
-                Assert.IsNotNull(
-                    tile.transform.Find("TileNatureProps"),
-                    $"Hex {tile.Data.Coord} should have TileNatureProps terrain decor.");
+                var slot = BoardTerrainMaterialSlots.ResourceToSlot(tile.Data.Resource);
+                if (ColonistBoardTextureLoader.UsesBlenderTerrainTextures(slot))
+                {
+                    // Painted tile art carries the terrain picture; no 2D scatter on top of it.
+                    Assert.IsNull(
+                        tile.transform.Find("TileNatureProps"),
+                        $"Hex {tile.Data.Coord} uses painted art and should skip scatter decor.");
+                    var tex = tile.GetComponent<MeshRenderer>().sharedMaterial.mainTexture;
+                    Assert.AreEqual(ColonistBoardTextureLoader.TryLoadBlenderTerrainTexture(slot), tex,
+                        $"Hex {tile.Data.Coord} should show the painted {slot} tile.");
+                }
+                else
+                {
+                    Assert.IsNotNull(
+                        tile.transform.Find("TileNatureProps"),
+                        $"Hex {tile.Data.Coord} should have TileNatureProps terrain decor.");
+                }
                 tilesChecked++;
             }
 

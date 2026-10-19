@@ -35,7 +35,9 @@ namespace CatanRoguelike.Game
         public static readonly Color HumanColor = new(0.2f, 0.4f, 0.9f);
         public static readonly Color AiColor = new(0.9f, 0.25f, 0.2f);
 
-        public const float RoofColorMultiply = 0.55f;
+        public const float RoofColorMultiply = 0.58f;
+        /// <summary>Lift added to roof channels so the darker blue roof still separates from the board.</summary>
+        public const float RoofColorLift = 0.05f;
         public const float EdgeColorMultiply = 0.32f;
 
         /// <summary>Settlement wall width as a fraction of the flat-to-flat hex width (city is 1.5x).</summary>
@@ -61,7 +63,11 @@ namespace CatanRoguelike.Game
         public static Color ColorForPlayer(PlayerId owner) =>
             owner == PlayerId.Human ? HumanColor : AiColor;
 
-        public static Color DarkenForRoof(Color color) => Shade(color, RoofColorMultiply);
+        public static Color DarkenForRoof(Color color)
+        {
+            var c = Shade(color, RoofColorMultiply);
+            return new Color(c.r + RoofColorLift, c.g + RoofColorLift, c.b + RoofColorLift, c.a);
+        }
 
         public static Color DarkenForEdge(Color color) => Shade(color, EdgeColorMultiply);
 

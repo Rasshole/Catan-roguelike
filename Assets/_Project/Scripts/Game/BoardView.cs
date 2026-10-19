@@ -513,15 +513,19 @@ namespace CatanRoguelike.Game
                 collider.sharedMesh = mesh;
             }
 
-            HexCartoonTileDecor.ApplyOutline(go, data.Coord, hexScale, _boardTileCoords);
+            bool blenderTop = ColonistPresentation.IsActive
+                && ColonistBlenderHexTerrainArt.Enabled
+                && !IsSeaFishTile(data)
+                && ColonistBoardTextureLoader.UsesBlenderTerrainTextures(
+                    data.IsDesert
+                        ? BoardTerrainSlot.Desert
+                        : BoardTerrainMaterialSlots.ResourceToSlot(data.Resource));
+            // Painted tiles carry their own cardboard bevel frame; the slate seam strips would
+            // draw a cold line through the middle of the sand borders.
+            if (!blenderTop)
+                HexCartoonTileDecor.ApplyOutline(go, data.Coord, hexScale, _boardTileCoords);
             if (ColonistPresentation.IsActive)
             {
-                bool blenderTop = ColonistBlenderHexTerrainArt.Enabled
-                    && !IsSeaFishTile(data)
-                    && ColonistBoardTextureLoader.UsesBlenderTerrainTextures(
-                        data.IsDesert
-                            ? BoardTerrainSlot.Desert
-                            : BoardTerrainMaterialSlots.ResourceToSlot(data.Resource));
 
                 if (!blenderTop && !data.IsDesert && !IsSeaFishTile(data))
                     ColonistHexTileNatureDecor.Apply(go, data, hexScale);
