@@ -41,6 +41,7 @@ namespace CatanRoguelike.Game
             _chipFaceRenderer != null ? _chipFaceRenderer.bounds.center : transform.position;
 
         public Renderer TokenFaceRenderer => _chipFaceRenderer;
+        public Renderer TileRenderer => _renderer;
 
         public Renderer TokenRimRenderer => _chipRimRenderer;
 

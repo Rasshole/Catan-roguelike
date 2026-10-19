@@ -30,10 +30,6 @@ SOURCE = {
     "Brick": "variants/Brick_A.jpg",
     "Ore": os.environ.get("ORE_SOURCE", "Ore_v127.jpg"),
 }
-# Per-slot crop: (zoom, centre shift x, centre shift y) as fractions of the source size. Clay A's
-# quarry pit is dead centre in the painting, where the number token would hide it; zoom in a
-# little and shift the crop so the pit sits beside the token and still reads as a quarry.
-CROP = {"Brick": tuple(float(v) for v in os.environ.get("BRICK_CROP", "1.25,0.12,0.09").split(","))}
 # The v126 ore is the older painting lifted toward snow in-script; the v127 AI ore is already pale.
 LIFT_ORE_SOURCES = {"Ore.jpg"}
 VARIANT_DIR = os.path.join(SRC, "variants")
@@ -89,7 +85,7 @@ def lift_ore(src):
 
 # Desert: a subtle warm-tan shift (v128) and a few small painted cacti away from the centre, where
 # the robber sits. Screen-space positions (x right, y down) as fractions of the hex width, and
-# height as a fraction of the hex width. The desert is never shown turned 180 deg (cacti stay upright).
+# height as a fraction of the hex width.
 DESERT_TAN = (1.035, 0.985, 0.90)
 DESERT_CACTI = [(-0.27, -0.17, 0.115, True), (0.25, 0.20, 0.10, True), (0.31, -0.13, 0.08, False)]
 
@@ -172,12 +168,10 @@ def bake(slot, source_path=None, grade_key=None):
     src = ImageEnhance.Brightness(src).enhance(bri)
     src = ImageEnhance.Contrast(src).enhance(con)
     box_w, box_h = n, int(round(2 * apothem))
-    zoom, shift_x, shift_y = CROP.get(slot, (1.0, 0.0, 0.0)) if source_path is None else (1.0, 0.0, 0.0)
-    scale = max(box_w / src.width, box_h / src.height) * zoom
+    scale = max(box_w / src.width, box_h / src.height)
     rw, rh = int(np.ceil(src.width * scale)), int(np.ceil(src.height * scale))
     src = src.resize((rw, rh), Image.LANCZOS)
-    left = int(np.clip((rw - box_w) / 2 + shift_x * rw, 0, rw - box_w))
-    top = int(np.clip((rh - box_h) / 2 + shift_y * rh, 0, rh - box_h))
+    left, top = (rw - box_w) // 2, (rh - box_h) // 2
     art_box = src.crop((left, top, left + box_w, top + box_h))
     art = Image.new("RGB", (n, n), tuple(int(c) for c in SAND))
     art.paste(art_box, (0, (n - box_h) // 2))

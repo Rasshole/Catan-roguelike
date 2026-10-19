@@ -845,6 +845,15 @@ namespace CatanRoguelike.Game
             bool sawDesertLake = false;
             foreach (var tile in Object.FindObjectsByType<HexTileView>(FindObjectsSortMode.None))
             {
+                // v129: every painted tile uses the same orientation (no per-tile turn).
+                var tileMat = tile.TileRenderer != null ? tile.TileRenderer.sharedMaterial : null;
+                if (tileMat != null && tileMat.HasProperty("_MainTex"))
+                {
+                    Assert.AreEqual(Vector2.one, tileMat.mainTextureScale, $"Tile {tile.Data.Coord} texture must not be flipped.");
+                    Assert.AreEqual(Vector2.zero, tileMat.mainTextureOffset, $"Tile {tile.Data.Coord} texture must not be offset.");
+                }
+
+
                 if (!tile.Data.IsFishTile)
                     continue;
 

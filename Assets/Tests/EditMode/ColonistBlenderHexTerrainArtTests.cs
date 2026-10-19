@@ -26,36 +26,6 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void IsRotated180_VariesDeterministicallyAcrossTheBoard()
-        {
-            int rotated = 0, total = 0;
-            for (int q = -2; q <= 2; q++)
-            for (int r = -2; r <= 2; r++)
-            {
-                if (Mathf.Abs(q + r) > 2)
-                    continue;
-                var c = new CatanRoguelike.Core.Hex.HexCoord(q, r);
-                Assert.AreEqual(ColonistBlenderHexTerrainArt.IsRotated180(c), ColonistBlenderHexTerrainArt.IsRotated180(c));
-                total++;
-                if (ColonistBlenderHexTerrainArt.IsRotated180(c))
-                    rotated++;
-            }
-
-            Assert.That(rotated, Is.InRange(total / 4, total - total / 4),
-                $"{rotated}/{total} tiles turned 180: repeated terrains need a real mix.");
-        }
-
-        [Test]
-        public void ApplyRotation180_FlipsBothTextureAxes()
-        {
-            var mat = new Material(Shader.Find("Unlit/Texture"));
-            ColonistBlenderHexTerrainArt.ApplyRotation180(mat);
-            Assert.AreEqual(new Vector2(-1f, -1f), mat.mainTextureScale);
-            Assert.AreEqual(new Vector2(1f, 1f), mat.mainTextureOffset);
-            Object.DestroyImmediate(mat);
-        }
-
-        [Test]
         public void FishGroundWater_IsTheReadableAiPainting_WithFishAtEachSchool()
         {
             var water = Resources.Load<Texture2D>("Art/Board/FishGroundWater");
