@@ -120,17 +120,29 @@ namespace CatanRoguelike.Game
             root.transform.rotation = Quaternion.Euler(0f, angleY, 0f);
 
             var mesh = LoadMesh("road", out var slotNames);
-            var plank = CreateMeshChild(root.transform, PlankPartName, mesh, slotNames, color);
             var b = mesh.bounds;
-            // Blender plank runs along model X; the road root's local Z runs along the edge.
-            plank.localRotation = Quaternion.Euler(0f, 90f, 0f);
             float targetWidth = FlatHexWidth(hexScale) * RoadWidthOfHex;
             float targetLength = Mathf.Max(length + 2f * RoadJointOverlapOfWidth * targetWidth, 0.05f);
             float sx = targetLength / Mathf.Max(b.size.x, 1e-4f);
             float sz = targetWidth / Mathf.Max(b.size.z, 1e-4f);
             float sy = sz; // keep the bevel profile square-ish
+
+            // Blender beam runs along model X; the road root's local Z runs along the edge. Same
+            // small lean toward screen-top as the houses, so the beam shows a sliver of side.
+            var localRot = Quaternion.Euler(0f, 90f, 0f);
+            var worldRot = ColonistPresentation.IsActive
+                ? RoadSideLean(root.transform.forward) * root.transform.rotation * localRot
+                : root.transform.rotation * localRot;
+            var instanceMesh = SplitRoofByLight(mesh, slotNames, worldRot, out var instanceSlots);
+            AssignWoodGrainUvs(instanceMesh);
+            var plank = CreateMeshChild(root.transform, PlankPartName, instanceMesh, instanceSlots, color);
+            plank.gameObject.AddComponent<OwnedMeshCleanup>().Owned = instanceMesh;
+            ApplyWoodGrain(plank.GetComponent<MeshRenderer>());
+            plank.rotation = worldRot;
             plank.localScale = new Vector3(sx, sy, sz);
-            plank.localPosition = new Vector3(0f, hexTopY + RoadGapAboveHex - b.min.y * sy - midpoint.y, 0f);
+            plank.localPosition = Vector3.zero;
+            float minY = LowestWorldY(plank, instanceMesh);
+            plank.position += Vector3.up * (hexTopY + RoadGapAboveHex - minY);
             DisableShadows(root);
             return root;
         }
@@ -217,10 +229,86 @@ namespace CatanRoguelike.Game
             if (Vector3.Dot(face * Vector3.up, Vector3.up) < 0.5f)
                 face = Quaternion.LookRotation(Vector3.Cross(-up, Vector3.up), Vector3.up);
             var yaw = Quaternion.AngleAxis(ColonistYawDegrees + extraYaw, Vector3.up);
+            return LeanTowardScreenTop() * yaw * face;
+        }
+
+        /// <summary>The colonist lean: tilt the vertical by <see cref="ColonistLeanDegrees"/> toward screen-top.</summary>
+        internal static Quaternion LeanTowardScreenTop()
+        {
+            Vector3 up = ColonistFlatBoardQuad.GetColonistCameraUpOnBoard();
             var leanTarget = Vector3.up * Mathf.Cos(ColonistLeanDegrees * Mathf.Deg2Rad)
                 + up * Mathf.Sin(ColonistLeanDegrees * Mathf.Deg2Rad);
-            var lean = Quaternion.FromToRotation(Vector3.up, leanTarget);
-            return lean * yaw * face;
+            return Quaternion.FromToRotation(Vector3.up, leanTarget);
+        }
+
+        /// <summary>
+        /// Roads only roll about their own length (a lean along the beam would lift one end and
+        /// open a joint gap): the part of the screen-top lean perpendicular to the road.
+        /// </summary>
+        internal static Quaternion RoadSideLean(Vector3 along)
+        {
+            along.y = 0f;
+            if (along.sqrMagnitude < 1e-8f)
+                return Quaternion.identity;
+            along.Normalize();
+            Vector3 up = ColonistFlatBoardQuad.GetColonistCameraUpOnBoard();
+            var side = up - along * Vector3.Dot(up, along);
+            float amount = side.magnitude;
+            if (amount < 1e-4f)
+                return Quaternion.identity;
+            side /= amount;
+            float deg = ColonistLeanDegrees * amount;
+            var target = Vector3.up * Mathf.Cos(deg * Mathf.Deg2Rad) + side * Mathf.Sin(deg * Mathf.Deg2Rad);
+            return Quaternion.FromToRotation(Vector3.up, target);
+        }
+
+        private static Texture2D _woodGrain;
+
+        /// <summary>Planar UVs for the beam: u along its length, v across (grain streaks run lengthwise).</summary>
+        private static void AssignWoodGrainUvs(Mesh mesh)
+        {
+            var v = mesh.vertices;
+            var b = mesh.bounds;
+            var uv = new Vector2[v.Length];
+            for (int i = 0; i < v.Length; i++)
+                uv[i] = new Vector2(
+                    (v[i].x - b.min.x) / Mathf.Max(b.size.x, 1e-4f),
+                    ((v[i].z - b.min.z) + (v[i].y - b.min.y)) / Mathf.Max(b.size.z + b.size.y, 1e-4f));
+            mesh.uv = uv;
+        }
+
+        /// <summary>Multiplies a soft lengthwise wood grain into the beam's colour slots (white = no change).</summary>
+        private static void ApplyWoodGrain(MeshRenderer renderer)
+        {
+            if (_woodGrain == null)
+            {
+                const int w = 128, h = 64;
+                _woodGrain = new Texture2D(w, h, TextureFormat.RGBA32, true)
+                {
+                    name = "RoadWoodGrain",
+                    wrapMode = TextureWrapMode.Repeat,
+                    filterMode = FilterMode.Trilinear,
+                    anisoLevel = 4
+                };
+                var px = new Color32[w * h];
+                for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    float fy = y / (float)h;
+                    float wave = Mathf.Sin((fy * 9f + Mathf.PerlinNoise(x * 0.03f, fy * 3f) * 1.6f) * Mathf.PI * 2f);
+                    float fine = Mathf.PerlinNoise(x * 0.25f, y * 1.7f);
+                    float k = 0.88f + 0.07f * wave + 0.06f * fine;
+                    byte c = (byte)(Mathf.Clamp01(k) * 255f);
+                    px[y * w + x] = new Color32(c, c, c, 255);
+                }
+
+                _woodGrain.SetPixels32(px);
+                _woodGrain.Apply(true);
+            }
+
+            foreach (var mat in renderer.sharedMaterials)
+                if (mat != null && mat.name != EdgeMaterialName)
+                    mat.mainTexture = _woodGrain;
         }
 
         /// <summary>

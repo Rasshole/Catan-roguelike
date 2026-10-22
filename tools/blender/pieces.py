@@ -4,7 +4,7 @@
 Builds three single, closed meshes and exports them as FBX for Unity:
   settlement.fbx  pentagon prism house (walls + pitched roof)
   city.fbx        long two-storey house joined with a taller tower house (~1.5x settlement footprint)
-  road.fbx        bevelled plank
+  road.fbx        wooden beam: ridged two-plane top, hipped bevelled ends
 Material slots are named Wall / Roof / Edge; Unity tints them per player at runtime
 (Roof darker, Edge = bevel faces darkest so every silhouette edge reads).
 Also renders a 3/4 preview (docs/art/pieces_three_quarter.png).
@@ -154,12 +154,29 @@ def build_city(mats) -> bpy.types.Object:
 
 
 def build_road(mats) -> bpy.types.Object:
+    """Wooden road beam: low ridged top (two roof planes so it shades two-tone like the houses)
+    and hipped, bevelled ends that read clearly from straight above."""
     bm = bmesh.new()
-    bmesh.ops.create_cube(bm, size=1.0)
-    for v in bm.verts:
-        v.co = Vector((v.co.x * 1.0, v.co.y * 0.2, (v.co.z + 0.5) * 0.12))
+    x0, x1, hd, wall, peak, hip = -0.5, 0.5, 0.1, 0.085, 0.125, 0.07
+    lb0, rb0, rt0, lt0 = (bm.verts.new(Vector(c)) for c in ((x0, -hd, 0), (x0, hd, 0), (x0, hd, wall), (x0, -hd, wall)))
+    lb1, rb1, rt1, lt1 = (bm.verts.new(Vector(c)) for c in ((x1, -hd, 0), (x1, hd, 0), (x1, hd, wall), (x1, -hd, wall)))
+    r0 = bm.verts.new(Vector((x0 + hip, 0.0, peak)))
+    r1 = bm.verts.new(Vector((x1 - hip, 0.0, peak)))
+    for f in (
+        (lb0, rb0, rb1, lb1),          # bottom
+        (lb0, lt0, rt0, rb0),          # end wall 0
+        (lb1, rb1, rt1, lt1),          # end wall 1
+        (lb0, lb1, lt1, lt0),          # side -y
+        (rb0, rt0, rt1, rb1),          # side +y
+        (lt0, lt1, r1, r0),            # roof plane -y
+        (rt0, r0, r1, rt1),            # roof plane +y
+        (lt0, r0, rt0),                # hip 0
+        (lt1, rt1, r1),                # hip 1
+    ):
+        bm.faces.new(f)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
     obj = mesh_object("road", bm)
-    finish(obj, mats, bevel=0.03)
+    finish(obj, mats, bevel=0.018)
     return obj
 
 

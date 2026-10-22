@@ -20,7 +20,7 @@ namespace CatanRoguelike.Game
 
         private const float PierLength = 0.36f;
         private const float PierWidth = 0.16f;
-        private const float SeaSlotPlankWidth = 0.15f;
+        private const float SeaSlotPlankWidth = 0.19f;
         private const float SeaSlotPlankHeight = 0.05f;
         /// <summary>Where along the coast edge (from each corner toward the middle) a pier lands.</summary>
         public const float PierLandingAlongEdge = 0.2f;
@@ -32,6 +32,10 @@ namespace CatanRoguelike.Game
         private const float FlagHeight = 0.1f;
         private const float FlagWidth = 0.06f;
         public const float BadgeDiscSizeScale = 1.4f;
+        /// <summary>Painted badge face quad (wood ring + parchment) lying on the badge disc.</summary>
+        public const string BadgeFacePartName = "BadgeFace";
+        /// <summary>The painted ring's outer edge sits at ~0.93 of the image: cover the disc rim.</summary>
+        public const float BadgeFaceOverDisc = 1.08f;
         public static float BadgeDiscWorldRadius => ColonistPortBadgeSizing.ActiveDiscWorldRadius;
         private const float BadgeDiscHeight = 0.012f * BadgeDiscSizeScale;
         public const float BadgeLabelWidthFractionGeneric = 0.78f;
@@ -348,7 +352,7 @@ namespace CatanRoguelike.Game
             part.transform.localScale = new Vector3(width, height, len);
 
             var mat = BuiltInMaterials.CreateMatteOpaque(Color.white);
-            mat.mainTexture = PierBoardTexture(color);
+            mat.mainTexture = PaintedPierTexture() ?? PierBoardTexture(color);
             // Cube top-face V runs along the plank: one board every ~0.4 plank widths.
             mat.mainTextureScale = new Vector2(1f, Mathf.Max(1f, len / (width * 0.4f)));
             mat.renderQueue = 3075;
@@ -359,6 +363,21 @@ namespace CatanRoguelike.Game
         }
 
         private static Texture2D _pierBoards;
+
+        /// <summary>Painted port art folder (tools/art/make_port_art.py).</summary>
+        public const string PortArtFolder = "Art/Board/Ports";
+
+        /// <summary>Painted jetty boards (one tile = one board; repeats along the pier), or null.</summary>
+        internal static Texture2D PaintedPierTexture()
+        {
+            var tex = Resources.Load<Texture2D>($"{PortArtFolder}/PierPlanks");
+            if (tex != null)
+                tex.wrapMode = TextureWrapMode.Repeat;
+            return tex;
+        }
+
+        /// <summary>Painted badge face: carved wooden ring around a parchment disc, or null.</summary>
+        internal static Texture2D PaintedBadgeTexture() => Resources.Load<Texture2D>($"{PortArtFolder}/PortBadge");
 
         /// <summary>
         /// One painted cross-board of a wooden jetty (repeats along the plank): warm boards with
@@ -421,9 +440,29 @@ namespace CatanRoguelike.Game
             var meshFilter = disc.AddComponent<MeshFilter>();
             meshFilter.sharedMesh = ThinDiskMesh.Shared;
             var discRenderer = disc.AddComponent<MeshRenderer>();
-            discRenderer.sharedMaterial = BuiltInMaterials.CreateUnlit(new Color(0.98f, 0.96f, 0.90f, 1f));
+            var badgeArt = PaintedBadgeTexture();
+            // With the painted face the disc body is dark wood (its rim shows as the badge's edge).
+            discRenderer.sharedMaterial = BuiltInMaterials.CreateUnlit(badgeArt != null
+                ? new Color(0.36f, 0.22f, 0.11f, 1f)
+                : new Color(0.98f, 0.96f, 0.90f, 1f));
             discRenderer.sharedMaterial.renderQueue = 3100;
             discRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            if (badgeArt != null)
+            {
+                var face = ColonistFlatBoardQuad.Create(
+                    badgeRoot.transform,
+                    BadgeFacePartName,
+                    new Vector3(0f, discYScale * ThinDiskMesh.TopY + 0.003f, 0f),
+                    discDiameter * BadgeFaceOverDisc,
+                    discDiameter * BadgeFaceOverDisc,
+                    badgeArt,
+                    3150,
+                    placeAbove: null,
+                    alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);
+                ColonistFlatBoardQuad.ApplyWorldSize(
+                    face.transform, badgeRoot.transform, discDiameter * BadgeFaceOverDisc, discDiameter * BadgeFaceOverDisc);
+                ColonistFlatBoardQuad.PlaceWorldYAbove(face.transform, discRenderer);
+            }
 
             float discTopLocalY = discYScale * ThinDiskMesh.TopY;
             float labelLocalY = discTopLocalY + 0.006f;

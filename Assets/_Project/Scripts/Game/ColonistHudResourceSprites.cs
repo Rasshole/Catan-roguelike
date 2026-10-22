@@ -10,12 +10,13 @@ namespace CatanRoguelike.Game
         private static readonly Dictionary<ResourceType, Sprite> Cache = new();
         private static Sprite _fish;
 
-        /// <summary>Fishermen hand-card glyph (Art/Icons/Fish); falls back to Wheat if missing.</summary>
+        /// <summary>Fishermen hand-card glyph (painted Art/Icons/Painted/Fish, else Art/Icons/Fish); falls back to Wheat if missing.</summary>
         public static Sprite GetFish()
         {
             if (_fish != null)
                 return _fish;
-            var texture = UnityEngine.Resources.Load<Texture2D>("Art/Icons/Fish");
+            var texture = ColonistResourceIconTextures.GetPaintedFish()
+                ?? UnityEngine.Resources.Load<Texture2D>("Art/Icons/Fish");
             if (texture == null)
                 return Get(ResourceType.Wheat);
             _fish = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);

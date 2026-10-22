@@ -21,10 +21,27 @@ namespace CatanRoguelike.Game
 
         private static readonly Dictionary<ResourceType, Texture2D> PortDecorCache = new();
 
+        /// <summary>Folder of the AI-painted, keyed resource icons (tools/art/make_painted_icons.py).</summary>
+        public const string PaintedIconFolder = "Art/Icons/Painted";
+
+        /// <summary>The painted icon for <paramref name="resource"/> (Wood, Brick, Wheat, Sheep, Stone), or null.</summary>
+        public static Texture2D GetPainted(ResourceType resource) =>
+            Resources.Load<Texture2D>($"{PaintedIconFolder}/{resource}");
+
+        public static Texture2D GetPaintedFish() => Resources.Load<Texture2D>($"{PaintedIconFolder}/Fish");
+
+        /// <summary>Icon used across the UI (HUD cards, build costs, trade, port badges): the painted icon.</summary>
         public static Texture2D GetForPortBadge(ResourceType resource)
         {
             if (PortDecorCache.TryGetValue(resource, out var cached) && cached != null)
                 return cached;
+
+            var painted = GetPainted(resource);
+            if (painted != null)
+            {
+                PortDecorCache[resource] = painted;
+                return painted;
+            }
 
             if (resource == ResourceType.Wheat)
             {

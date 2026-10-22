@@ -21,8 +21,8 @@ from PIL import Image, ImageEnhance, ImageFilter
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SRC = os.path.join(ROOT, "tools", "art", "ai-tiles-src")
 DST = os.path.join(ROOT, "Assets", "_Project", "Resources", "Art", "Board", "Blender")
-SIZE = 1024
-SS = 2  # supersampling
+SIZE = 2048  # v130: 2048 albedos (the 1280px painting is Lanczos-upscaled before masking)
+SS = 1  # the SDF frame is analytically anti-aliased
 SLOTS = ["Wood", "Wheat", "Sheep", "Ore", "Brick", "Desert"]
 # Source painting per slot (Desert is the dune painting with rocks/shrubs from paint_desert.py).
 SOURCE = {
@@ -152,6 +152,12 @@ def paint_cactus(img, cx, cy, h, arms, seed):
     img.paste(region, (x0, y0))
 
 
+# In-game colour compensation (per-channel multiply on the art, in-build bake only): the lit board
+# shader lifts and desaturates the clay, so it is pre-darkened until the on-screen colour matches
+# the picked reference (docs/art/tile-variants/Brick_A.png). Measured from captures.
+IN_GAME_COMP = {"Brick": tuple(float(v) for v in os.environ.get("BRICK_COMP", "0.89,0.63,0.34").split(","))}
+
+
 def bake(slot, source_path=None, grade_key=None):
     n = SIZE * SS
     radius = n / 2.0
@@ -175,6 +181,9 @@ def bake(slot, source_path=None, grade_key=None):
     art_box = src.crop((left, top, left + box_w, top + box_h))
     art = Image.new("RGB", (n, n), tuple(int(c) for c in SAND))
     art.paste(art_box, (0, (n - box_h) // 2))
+    if slot in IN_GAME_COMP and source_path is None:
+        a = np.asarray(art, np.float32) * np.array(IN_GAME_COMP[slot], np.float32)
+        art = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
     if slot == "Desert" and source_path is None:
         a = np.asarray(art, np.float32) * np.array(DESERT_TAN, np.float32)
         art = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
@@ -206,7 +215,7 @@ def bake(slot, source_path=None, grade_key=None):
     col = np.where(outside, SAND_DARK, col)
 
     img = Image.fromarray(np.clip(col, 0, 255).astype(np.uint8), "RGB")
-    img = img.resize((SIZE, SIZE), Image.LANCZOS).filter(ImageFilter.UnsharpMask(1.2, 40, 2))
+    img = img.resize((SIZE, SIZE), Image.LANCZOS).filter(ImageFilter.UnsharpMask(2.0, 55, 2))
     # Screen space -> texture space: screen-up becomes image-right (90 deg clockwise).
     img = img.transpose(Image.Transpose.ROTATE_270).convert("RGBA")
     return img

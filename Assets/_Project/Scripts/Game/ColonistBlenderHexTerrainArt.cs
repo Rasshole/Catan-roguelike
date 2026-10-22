@@ -10,5 +10,8 @@ namespace CatanRoguelike.Game
         public static bool Enabled { get; internal set; } = true;
 
         public const string TextureFolder = "Art/Board/Blender";
+
+        /// <summary>Mip bias for the 2048 painted albedos: slightly sharper than the default level.</summary>
+        public const float MipMapBias = -0.5f;
     }
 }

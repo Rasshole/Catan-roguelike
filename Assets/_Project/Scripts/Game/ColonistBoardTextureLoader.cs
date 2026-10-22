@@ -66,7 +66,11 @@ namespace CatanRoguelike.Game
             if (slot == BoardTerrainSlot.SeaLake || slot == BoardTerrainSlot.CoastSand
                 || slot == BoardTerrainSlot.FishShoal)
                 return null;
-            return Resources.Load<Texture2D>($"{ColonistBlenderHexTerrainArt.TextureFolder}/{slot}");
+            var tex = Resources.Load<Texture2D>($"{ColonistBlenderHexTerrainArt.TextureFolder}/{slot}");
+            // Mipmapped + trilinear/aniso (import settings); a small negative bias keeps the painting crisp.
+            if (tex != null)
+                tex.mipMapBias = ColonistBlenderHexTerrainArt.MipMapBias;
+            return tex;
         }
 
         public static bool UsesBlenderTerrainTextures(BoardTerrainSlot slot) =>
