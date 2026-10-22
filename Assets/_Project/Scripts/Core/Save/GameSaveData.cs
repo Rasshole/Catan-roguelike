@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Cards;
+using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Events;
 using CatanRoguelike.Core.Leaders;
@@ -171,6 +172,15 @@ namespace CatanRoguelike.Core.Save
         public VertexSaveData EventBlockedPortVertex { get; set; }
         public bool EventStoneDouble { get; set; }
         public int EventShopBonus { get; set; }
+        // v131 (nullable / defaulted so older saves load unchanged)
+        public CivilizationId Civilization { get; set; }
+        public List<CivilizationId> CivilizationOffer { get; set; }
+        public int? EventProductionPercent { get; set; }
+        public ResourceType? EventBlockedResource { get; set; }
+        public ResourceType? EventBonusResource { get; set; }
+        public bool EventFishStorm { get; set; }
+        public string EventDetail { get; set; }
+        public int? EventDay { get; set; }
         public BoardSaveData Board { get; set; }
         public bool FishermenOfCatanEnabled { get; set; }
         public int FishermenRunSeed { get; set; }

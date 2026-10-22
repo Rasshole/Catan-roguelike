@@ -319,8 +319,6 @@ namespace CatanRoguelike.Game
 
             var longestRoad = RouteCalculator.GetLongestRoadOwner(state.Board);
 
-            if (_colonistHumanNameText != null)
-                _colonistHumanNameText.text = ColonistHudCopy.You;
             if (_colonistAiNameText != null)
                 _colonistAiNameText.text = ColonistHudCopy.Opponent;
 

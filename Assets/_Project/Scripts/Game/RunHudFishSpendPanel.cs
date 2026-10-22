@@ -1,4 +1,7 @@
+using System.Collections.Generic;
 using CatanRoguelike.Core;
+using CatanRoguelike.Core.Civilizations;
+using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Yield;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,6 +12,7 @@ namespace CatanRoguelike.Game
     {
         private RectTransform _fishSpendRoot;
         private Text _fishBalanceText;
+        private readonly Dictionary<FishermenSpendAction, Text> _fishCostTexts = new();
 
         private void EnsureFishSpendPanel()
         {
@@ -30,11 +34,12 @@ namespace CatanRoguelike.Game
             BuildFishSpendHeader(go.transform);
 
             float y = -52f;
-            AddFishSpendButton("Robber off", 2, FishermenSpendAction.MoveRobberOffBoard, ref y);
-            AddFishSpendButton("Steal", 3, FishermenSpendAction.StealFromOpponent, ref y);
-            AddFishSpendButton("Resource", 4, FishermenSpendAction.DrawResource, ref y);
-            AddFishSpendButton("Free road", 5, FishermenSpendAction.FreeRoad, ref y);
-            AddFishSpendButton("Dev card", 7, FishermenSpendAction.DrawDevelopmentCard, ref y);
+            // Costs come from the rules (Sea Folk pay 1 less) and refresh with the state.
+            AddFishSpendButton("Robber off", FishermenSpendAction.MoveRobberOffBoard, ref y);
+            AddFishSpendButton("Steal", FishermenSpendAction.StealFromOpponent, ref y);
+            AddFishSpendButton("Free road", FishermenSpendAction.FreeRoad, ref y);
+            AddFishSpendButton("Resource", FishermenSpendAction.DrawResource, ref y);
+            AddFishSpendButton("Dev card", FishermenSpendAction.DrawDevelopmentCard, ref y);
         }
 
         private void BuildFishSpendHeader(Transform parent)
@@ -90,10 +95,16 @@ namespace CatanRoguelike.Game
 
             if (_fishBalanceText != null)
                 _fishBalanceText.text = $"Fish: {state.PlayerFish}";
+            foreach (var kvp in _fishCostTexts)
+            {
+                if (kvp.Value != null)
+                    kvp.Value.text = CivilizationRules.FishCost(state, PlayerId.Human, kvp.Key).ToString();
+            }
         }
 
-        private void AddFishSpendButton(string title, int fishCost, FishermenSpendAction action, ref float y)
+        private void AddFishSpendButton(string title, FishermenSpendAction action, ref float y)
         {
+            int fishCost = FishermenRules.GetFishCost(action);
             var buttonGo = new GameObject($"Fish_{title}");
             buttonGo.transform.SetParent(_fishSpendRoot, false);
             var rect = buttonGo.AddComponent<RectTransform>();
@@ -166,6 +177,7 @@ namespace CatanRoguelike.Game
                 RunHudUiFactory.ColonistTextOnPanel,
                 FontStyle.Bold);
             costText.raycastTarget = false;
+            _fishCostTexts[action] = costText;
             RunHudUiFactory.AddLayoutElement(costText.gameObject, 22f).preferredWidth = 18f;
         }
     }

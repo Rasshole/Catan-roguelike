@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using CatanRoguelike.Core;
+using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Progression;
@@ -23,7 +24,9 @@ namespace CatanRoguelike.Game
         public static void CompleteRunSelect(
             GameController controller,
             MetaProgression meta,
-            bool fishermenOfCatan = true)
+            bool fishermenOfCatan = true,
+            bool stopAtCivilizationPick = false,
+            CivilizationId? civilization = null)
         {
             EnsureHarnessMapUnlocked(meta);
             controller.FishermenMapOption = fishermenOfCatan;
@@ -48,6 +51,10 @@ namespace CatanRoguelike.Game
                 controller.ToggleDraftUnique(id);
 
             controller.ConfirmRunSetup();
+            if (stopAtCivilizationPick && controller.State.Phase == GamePhase.RunSelectCivilization)
+                return;
+            if (controller.State.Phase == GamePhase.RunSelectCivilization)
+                controller.ChooseCivilization(civilization ?? controller.State.CivilizationOffer[0]);
             if (!controller.State.RunSetupComplete)
                 throw new InvalidOperationException("ConfirmRunSetup should mark run setup complete.");
         }

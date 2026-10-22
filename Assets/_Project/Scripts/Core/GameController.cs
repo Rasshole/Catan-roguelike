@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Cards;
+using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Events;
 using CatanRoguelike.Core.Hex;
@@ -51,6 +52,12 @@ namespace CatanRoguelike.Core
         /// <summary>When true, new maps include Seafarers fish hexes and fish spend rules.</summary>
         public bool FishermenMapOption { get; set; } = true;
 
+        /// <summary>
+        /// v131: when true, <see cref="ConfirmRunSetup"/> opens <see cref="GamePhase.RunSelectCivilization"/>
+        /// (pick 1 of 3) before setup. Off by default so headless tests keep the old flow; the game turns it on.
+        /// </summary>
+        public bool CivilizationPickEnabled { get; set; }
+
         public GameController(int? seed = null, MapSize mapSize = MapSize.Small, MetaProgression meta = null)
         {
             Meta = meta;
@@ -68,7 +75,7 @@ namespace CatanRoguelike.Core
             CardEngine = new CardEngine(seed);
             Shop = new ShopGenerator(seed);
             Ai = new AiController(seed);
-            Events = new EventEngine(seed);
+            Events = new EventEngine(seed) { Cards = CardEngine };
         }
 
         public void SetMeta(MetaProgression meta) => Meta = meta;
@@ -86,7 +93,7 @@ namespace CatanRoguelike.Core
             CardEngine = new CardEngine(runSeed);
             Shop = new ShopGenerator(runSeed);
             Ai = new AiController(runSeed);
-            Events = new EventEngine(runSeed);
+            Events = new EventEngine(runSeed) { Cards = CardEngine };
         }
 
         public static GameController FromSave(string json)
@@ -429,6 +436,35 @@ namespace CatanRoguelike.Core
             }
 
             _metaStartCardGranted = false;
+            if (CivilizationPickEnabled)
+            {
+                State.CivilizationOffer.Clear();
+                State.CivilizationOffer.AddRange(CivilizationOffer.Generate(RunSeed));
+                State.Phase = GamePhase.RunSelectCivilization;
+                State.StatusMessage = "Choose your civilization.";
+                NotifyChanged();
+                return;
+            }
+
+            BeginBoardSetup();
+        }
+
+        /// <summary>v131: pick one of the offered civilizations and start board setup.</summary>
+        public bool ChooseCivilization(CivilizationId id)
+        {
+            if (State.Phase != GamePhase.RunSelectCivilization) return false;
+            if (!State.CivilizationOffer.Contains(id)) return false;
+
+            State.Civilization = id;
+            CivilizationRules.ApplyStartBonus(State);
+            var civ = CivilizationLibrary.Get(id);
+            GameLog.Append(State, $"You lead {civ.Name}: {civ.Passive}");
+            BeginBoardSetup();
+            return true;
+        }
+
+        private void BeginBoardSetup()
+        {
             State.RunSetupComplete = true;
             State.Phase = GamePhase.SetupAiSettlement1;
             State.StatusMessage = "AI places first settlement...";
@@ -462,7 +498,7 @@ namespace CatanRoguelike.Core
                 : RollEngine.RollNightly(maxRoll);
             State.TomorrowDiceRolls = DiceRollEngine.RollNightly(rollPasses);
 
-            var eventId = Events.MaybeRollEvent(act);
+            var eventId = Events.RollNightEvent(State, act);
             if (eventId != EventId.None)
                 Events.ApplyEvent(State, eventId);
 
@@ -479,6 +515,7 @@ namespace CatanRoguelike.Core
             int draws = BalanceConfig.CardsDrawnPerNight;
             if (State.HasUnique(UniqueBuildingId.CaravanPost)) draws++;
             if (State.HasPerk(LevelUpPerkId.ExtraCardDraw)) draws++;
+            draws += CivilizationRules.ExtraNightDraws(State);
 
             var humanCardPool = Meta?.GetCardPool().ToList();
             CardEngine.DrawToHand(State, PlayerId.Human, draws, humanPool: humanCardPool);
@@ -534,6 +571,9 @@ namespace CatanRoguelike.Core
             if (SevenRollRules.RolledSeven(State.TodayDiceRolls))
             {
                 GameLog.Append(State, "Rolled 7 — no production.");
+                string civSeven = CivilizationRules.OnSevenRolled(State, _random);
+                if (!string.IsNullOrEmpty(civSeven))
+                    GameLog.Append(State, civSeven);
                 State.PendingSevenDiscard = SevenRollRules.GetDiscardCount(State.PlayerInventory.Total);
                 if (State.PendingSevenDiscard > 0)
                 {
@@ -717,6 +757,9 @@ namespace CatanRoguelike.Core
             var playerProd = ProductionCalculator.CalculateForPlayer(State, PlayerId.Human, State.TodayRolls);
             var aiProd = ProductionCalculator.CalculateForPlayer(State, PlayerId.Ai, State.TodayRolls);
 
+            playerProd.Add(ProductionCalculator.ApplyEventModifiers(State,
+                CivilizationRules.DiceBonus(State, PlayerId.Human, State.TodayDiceRolls)));
+
             var pInv = State.PlayerInventory;
             pInv.Add(playerProd);
             State.PlayerInventory = pInv;
@@ -725,10 +768,11 @@ namespace CatanRoguelike.Core
             aInv.Add(aiProd);
             State.AiInventory = aInv;
 
-            if (FishermenRules.IsEnabled(State))
+            if (FishermenRules.IsEnabled(State) && !State.EventFishStorm)
             {
-                State.PlayerFish += FishProductionCalculator.CalculateForPlayer(
+                int caught = FishProductionCalculator.CalculateForPlayer(
                     State, PlayerId.Human, State.TodayDiceRolls);
+                State.PlayerFish += caught + CivilizationRules.FishCatchBonus(State, PlayerId.Human, caught);
                 State.AiFish += FishProductionCalculator.CalculateForPlayer(
                     State, PlayerId.Ai, State.TodayDiceRolls);
             }

@@ -7,6 +7,7 @@ using CatanRoguelike.Core.Yield;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Cards;
+using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
@@ -145,6 +146,14 @@ namespace CatanRoguelike.Core.Save
                     : null,
                 EventStoneDouble = state.EventStoneDouble,
                 EventShopBonus = state.EventShopBonus,
+                Civilization = state.Civilization,
+                CivilizationOffer = new List<CivilizationId>(state.CivilizationOffer),
+                EventProductionPercent = state.EventProductionPercent,
+                EventBlockedResource = state.EventBlockedResource,
+                EventBonusResource = state.EventBonusResource,
+                EventFishStorm = state.EventFishStorm,
+                EventDetail = state.EventDetail,
+                EventDay = state.EventDay,
                 Board = BuildBoardSaveData(state.Board),
                 FishermenOfCatanEnabled = state.FishermenOfCatanEnabled,
                 FishermenRunSeed = state.FishermenRunSeed,
@@ -222,6 +231,15 @@ namespace CatanRoguelike.Core.Save
                 : null;
             state.EventStoneDouble = data.EventStoneDouble;
             state.EventShopBonus = data.EventShopBonus;
+            state.Civilization = data.Civilization;
+            state.CivilizationOffer.Clear();
+            state.CivilizationOffer.AddRange(data.CivilizationOffer ?? new List<CivilizationId>());
+            state.EventProductionPercent = data.EventProductionPercent ?? 100;
+            state.EventBlockedResource = data.EventBlockedResource;
+            state.EventBonusResource = data.EventBonusResource;
+            state.EventFishStorm = data.EventFishStorm;
+            state.EventDetail = data.EventDetail ?? "";
+            state.EventDay = data.EventDay ?? -1;
             state.FishermenOfCatanEnabled = data.FishermenOfCatanEnabled;
             state.FishermenRunSeed = data.FishermenRunSeed;
             state.PlayerFish = data.PlayerFish;

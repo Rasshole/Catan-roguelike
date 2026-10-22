@@ -202,7 +202,7 @@ namespace CatanRoguelike.Tests
             var second = new EventEngine(18).MaybeRollEvent();
 
             Assert.AreEqual(first, second);
-            Assert.AreEqual(EventId.Storm, first);
+            Assert.AreEqual(EventId.Famine, first, "v131: the larger event pool re-pinned seed 18");
         }
 
         [Test]
@@ -212,63 +212,73 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void MaybeRollEvent_Seed39_ReturnsFamine()
+        public void MaybeRollEvent_Seed39_ReturnsGoodHarvest()
         {
-            Assert.AreEqual(EventId.Famine, new EventEngine(39).MaybeRollEvent());
+            Assert.AreEqual(EventId.GoodHarvest, new EventEngine(39).MaybeRollEvent());
         }
 
         [Test]
-        public void MaybeRollEvent_Seed16_ReturnsMarketDay()
+        public void MaybeRollEvent_Seed16_ReturnsDoubleHarvest()
         {
-            Assert.AreEqual(EventId.MarketDay, new EventEngine(16).MaybeRollEvent());
+            Assert.AreEqual(EventId.DoubleHarvest, new EventEngine(16).MaybeRollEvent());
         }
 
         [Test]
-        public void MaybeRollEvent_Seed60_ReturnsGoldRush()
+        public void MaybeRollEvent_Seed60_ReturnsShiftingFortunes()
         {
-            Assert.AreEqual(EventId.GoldRush, new EventEngine(60).MaybeRollEvent());
+            Assert.AreEqual(EventId.ShiftingFortunes, new EventEngine(60).MaybeRollEvent());
         }
 
         [Test]
-        public void MaybeRollEvent_Seed37_ReturnsGoodHarvest()
+        public void MaybeRollEvent_Seed37_ReturnsHarvestFestival()
         {
-            Assert.AreEqual(EventId.GoodHarvest, new EventEngine(37).MaybeRollEvent());
+            Assert.AreEqual(EventId.HarvestFestival, new EventEngine(37).MaybeRollEvent());
         }
 
         [Test]
-        public void MaybeRollEvent_Seed14_ReturnsBanditRaid()
+        public void MaybeRollEvent_Seed14_ReturnsBountiful()
         {
-            Assert.AreEqual(EventId.BanditRaid, new EventEngine(14).MaybeRollEvent());
+            Assert.AreEqual(EventId.Bountiful, new EventEngine(14).MaybeRollEvent());
         }
 
         [Test]
-        public void MaybeRollEvent_Seed18_ReturnsStorm()
+        public void MaybeRollEvent_Seed18_ReturnsFamine()
         {
-            Assert.AreEqual(EventId.Storm, new EventEngine(18).MaybeRollEvent());
+            Assert.AreEqual(EventId.Famine, new EventEngine(18).MaybeRollEvent());
         }
 
         [Test]
-        public void BeginNight_AppliesSeededEventAndModifiesTomorrowRolls()
+        public void BeginNight_OnCadenceDay_AppliesSameSeededEvent()
         {
-            var baseline = new RollEngine(37).RollNightly(2);
-            var expected = baseline.ToDictionary(kv => kv.Key, kv => System.Math.Min(kv.Value + 1, 2));
+            var a = new GameController(37);
+            var b = new GameController(37);
+            a.State.Board.DayNumber = EventEngine.CadenceDays;
+            b.State.Board.DayNumber = EventEngine.CadenceDays;
+            a.BeginNight();
+            b.BeginNight();
 
+            Assert.AreNotEqual(EventId.None, a.State.ActiveEvent, "Every cadence night announces an event");
+            Assert.AreEqual(a.State.ActiveEvent, b.State.ActiveEvent);
+            Assert.AreEqual(EventEngine.CadenceDays, a.State.EventDay);
+            Assert.That(a.State.StatusMessage, Does.Contain("Event:"));
+        }
+
+        [Test]
+        public void BeginNight_OffCadenceDay_NoEvent()
+        {
             var game = new GameController(37);
+            game.State.Board.DayNumber = EventEngine.CadenceDays + 1;
             game.BeginNight();
 
-            Assert.AreEqual(EventId.GoodHarvest, game.State.ActiveEvent);
-            foreach (var kv in expected)
-                Assert.AreEqual(kv.Value, game.State.TomorrowRolls[kv.Key],
-                    $"Tomorrow roll for {kv.Key} should include Good Harvest bump");
+            Assert.AreEqual(EventId.None, game.State.ActiveEvent);
         }
 
         [Test]
-        public void BeginNight_Seed18_AppliesStormBeforeDayProduction()
+        public void BeginNight_StormPersistsIntoProductionDay()
         {
             var game = new GameController(18);
             game.BeginNight();
-
-            Assert.AreEqual(EventId.Storm, game.State.ActiveEvent);
+            game.Events.ApplyEvent(game.State, EventId.Storm);
             Assert.IsTrue(game.State.EventStormTile.HasValue);
 
             game.State.TodayRolls = new Dictionary<ResourceType, int>(game.State.TomorrowRolls);

@@ -22,6 +22,8 @@ namespace CatanRoguelike.Core.Turn
         DayPlayerActions,
         DayAiTurn,
         LevelUpChoice,
-        GameOver
+        GameOver,
+        /// <summary>v131: pick 1 of 3 offered civilizations (after the unique draft, before setup).</summary>
+        RunSelectCivilization
     }
 }

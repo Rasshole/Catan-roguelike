@@ -69,7 +69,16 @@ namespace CatanRoguelike.Core.Events
                     return false;
 
                 default:
-                    return false;
+                    // v131 data-driven events highlight the tiles they touched.
+                    if (!state.EventHighlightHexes.Contains(coord))
+                        return false;
+                    overlay = EventLibrary.Get(state.ActiveEvent).Category switch
+                    {
+                        EventCategory.Hardship => EventTileOverlayKind.Famine,
+                        EventCategory.Bounty => EventTileOverlayKind.GoodHarvest,
+                        _ => EventTileOverlayKind.GoldRush
+                    };
+                    return true;
             }
         }
     }

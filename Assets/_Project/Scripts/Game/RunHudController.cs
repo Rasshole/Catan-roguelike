@@ -146,6 +146,7 @@ namespace CatanRoguelike.Game
                 RefreshColonistChrome(state);
             RefreshToastWidget(state);
             RefreshIncomingTradePanel(state);
+            RefreshRoguelikeOverlays(state);
         }
 
         private void EnsureCanvasBuilt()

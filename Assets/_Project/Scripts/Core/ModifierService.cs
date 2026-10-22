@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CatanRoguelike.Core.Buildings;
+using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Leaders;
@@ -32,7 +33,7 @@ namespace CatanRoguelike.Core
                 result.Sheep = Math.Max(0, result.Sheep - 1);
             if (isCity && state.HasPerk(LevelUpPerkId.CheapCities))
                 result.Stone = Math.Max(0, result.Stone - 1);
-            return result;
+            return CivilizationRules.ApplyCostModifiers(state, player, result, isSettlement, isCity, isRoad);
         }
 
         public static int GetShopGiveAmount(GameState state, PlayerId player, int baseGive, ResourceType giveResource)
@@ -53,6 +54,7 @@ namespace CatanRoguelike.Core
         {
             if (!state.Board.TryGetTile(hex, out var tile) || !tile.HasRobber) return false;
             if (forPlayer != PlayerId.Human) return true;
+            if (CivilizationRules.IgnoresRobber(state, forPlayer)) return false;
             if (!state.HasUnique(UniqueBuildingId.FortressOutpost)) return true;
             return !IsAdjacentToPlayerCoastalSettlement(state, hex, forPlayer);
         }

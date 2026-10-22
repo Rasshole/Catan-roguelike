@@ -102,7 +102,7 @@ namespace CatanRoguelike.Game
         {
             Meta = MetaProgressionFile.LoadOrCreate();
             var bootMapSize = ColonistPresentation.IsActive ? MapSize.Large : mapSize;
-            Controller = new GameController(randomSeed, bootMapSize, Meta);
+            Controller = new GameController(randomSeed, bootMapSize, Meta) { CivilizationPickEnabled = true };
             Controller.OnStateChanged += HandleStateChanged;
             Controller.OnBoardRebuilt += HandleBoardRebuilt;
             Controller.OnAutosavePoint += HandleAutosavePoint;
@@ -174,7 +174,7 @@ namespace CatanRoguelike.Game
         public void DebugRestart(int seed)
         {
             randomSeed = seed;
-            SwapController(new GameController(randomSeed, mapSize, Meta));
+            SwapController(new GameController(randomSeed, mapSize, Meta) { CivilizationPickEnabled = true });
         }
 
         /// <summary>
@@ -187,7 +187,7 @@ namespace CatanRoguelike.Game
                 return;
 
             Meta = MetaProgressionFile.LoadOrCreate();
-            Controller = new GameController(randomSeed, mapSize, Meta);
+            Controller = new GameController(randomSeed, mapSize, Meta) { CivilizationPickEnabled = true };
             Controller.OnStateChanged += HandleStateChanged;
             Controller.OnBoardRebuilt += HandleBoardRebuilt;
             Controller.OnAutosavePoint += HandleAutosavePoint;

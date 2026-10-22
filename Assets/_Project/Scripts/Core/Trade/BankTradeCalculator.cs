@@ -1,4 +1,5 @@
 using CatanRoguelike.Core;
+using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Shop;
 
@@ -17,7 +18,7 @@ namespace CatanRoguelike.Core.Trade
                 return SpecificPortRate;
             if (PortAccess.HasGenericPort(state.Board, player, state.Ports, blocked))
                 return GenericPortRate;
-            return BankRate;
+            return CivilizationRules.BaseBankRate(state, player, BankRate);
         }
 
         public static bool CanTrade(

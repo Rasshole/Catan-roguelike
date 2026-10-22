@@ -1,5 +1,6 @@
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Cards;
+using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Map;
 
 namespace CatanRoguelike.Core.Yield
@@ -11,7 +12,7 @@ namespace CatanRoguelike.Core.Yield
             if (!FishermenRules.IsEnabled(state))
                 return false;
 
-            int cost = FishermenRules.GetFishCost(action);
+            int cost = CivilizationRules.FishCost(state, player, action);
             if (player == PlayerId.Human)
             {
                 if (state.PlayerFish < cost)
