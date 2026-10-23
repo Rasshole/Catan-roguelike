@@ -1,8 +1,24 @@
-# Multiplayer party mode: 4–5 friends online (design plan, v133)
+# Multiplayer party mode: 4–5 friends online (design plan, v133, decisions recorded v134)
 
 > Status: **design only**. No netcode is implemented yet; this document scopes it.
 > Audience: Rasmus' Catan group. The goal is a 60–90 minute online evening with 4–5 friends that feels like
 > Catan plus a roguelike, with events, civilizations, and a lot of table talk and shenanigans.
+
+## 0. Decisions (Rasmus, 23 Oct 2026)
+
+| Topic | Status | Decision |
+| --- | --- | --- |
+| Secret quests | **DECIDED: YES** | Every player has a hidden quest, picked during setup (see §4.1), revealed and scored at the end. |
+| Vote rounds | **DECIDED: YES, secret ballot** | Votes are cast hidden and simultaneously. Only the totals and the result are shown, never who voted for what. |
+| Bounties (v1) | **DECIDED** | A bounty is claimed by **moving the robber onto one of the bounty-holder's tiles and stealing from them**. The claim is only valid if the target has at least one card. |
+| Alliances and betrayal | **DECIDED: PARKED** | Moved to "Later" (§12). Not in v1. |
+| Auctions | **DECIDED: YES, rare items only** | Only rare cards, or **the right to reroll the number token on one of your own tiles**. No auctions for plain resources or buildings. |
+| Sabotage cards | **DECIDED: YES** | Secret sabotage cards are in v1. |
+| Setup order | **DECIDED** | 1) Pick a **LEADER** before placement, so you place with your leader's ability in mind. 2) Place starting settlements and roads. 3) Pick a secret **QUEST** and a small **TRAIT**, offered based on your board position and what is still available. |
+| Chaos rounds | **DECIDED** | Not a special mode. "Chaos" is just a normal event card in the night event deck. |
+| Turn timer | **DECIDED** | **1.5 minutes per turn.** Each player starts with **1 "extra turn time" charge**, usable on any turn for one big turn. Players gain **+1 charge every 5 rounds**. |
+
+Where an older section and this table disagree, this table wins. The sections below have been updated to match.
 
 ## 1. Goals and non-goals
 
@@ -11,8 +27,9 @@
 - 4–5 human players (AI bots fill empty seats), private lobbies joined with a short code, no accounts needed.
 - Keep the single-player rules engine (`Assets/_Project/Scripts/Core`): one rules implementation, two front-ends.
 - Turn-based, so latency barely matters. Correctness, reconnects and fairness matter far more.
-- Lean into what single-player cannot do: **negotiation, votes, alliances, betrayal, auctions, sabotage**.
-- A match is a self-contained **party run**: 3 acts (days and nights), civ and leader draft, events every night.
+- Lean into what single-player cannot do: **negotiation, secret votes, bounties, secret quests, auctions, sabotage**
+  (alliances and betrayal are parked, see §12).
+- A match is a self-contained **party run**: 3 acts (days and nights), leader pick, secret quests, events every night.
 
 **Non-goals for v1**
 
@@ -71,24 +88,46 @@ but v1 does not depend on it.
 3. **Join**: enter the code, then pick a name and a colour (lobby metadata).
 4. **Lobby screen**, built in the painted parchment style of the run-setup cards:
    - Seats 1–5, each a human, an empty slot, or **Bot (Easy/Normal/Hard)**. The host can kick, and can swap seats by drag.
-   - Settings: map (Base 19 for 3–4 players, Extended 30 for 5–6), Fishermen on/off, **turn timer**, **shenanigan level**
-     (Chill / Spicy / Chaos, which scales event and betrayal weights), and the victory target.
+   - Settings: map (Base 19 for 3–4 players, Extended 30 for 5–6), Fishermen on/off, turn timer (default 1.5 min plus
+     charges, see §5), and the victory target. Chaos is a normal event, so there is no shenanigan-level setting.
    - Ready-up. The host's **Start** is enabled when everyone is ready.
-5. **Party run setup**, all simultaneous and with hidden picks:
-   - The **leader pick** happens simultaneously, and duplicates are allowed.
-   - The **civilization draft** is a **snake draft**: each player sees 3 offers, and picks are unique.
-   - Then the **unique-building draft**. Picks are revealed together with a flourish.
+5. **Party run setup** follows the decided order in §4.1.
 6. **Reconnect**: if a client drops, its seat turns into "Away (bot plays safe)" for up to N minutes. Rejoining with the same code
    and player ID gets a snapshot and the seat back. **Host migration** is not in v1: if the host leaves, the match is
    saved and can be resumed by the same host later from `seed + log`.
+
+### 4.1 Setup order (DECIDED)
+
+1. **Leader pick, before placement.** Every player picks a leader at the same time from the leaders they have unlocked.
+   Duplicates are allowed. Picks are hidden until everyone has chosen, then revealed together. You then know your
+   leader's ability (for example the Merchant's cheaper trades or the Pioneer's free road) **before** you place.
+2. **Starting placement.** Snake order (1→N, then N→1) for settlements and roads, with the starting player chosen by
+   the seeded roll. This uses the normal timer.
+3. **Secret quest and trait.** After placement, each player is offered **3 quests** and **2 small traits** and keeps one of each.
+   - **Offers depend on board position.** Quests are filtered by what your start makes possible, for example "own 2
+     ports" only if you can reach a port within 3 roads, or "control 3 Ore hexes" only next to ore. Each offer
+     includes one "stretch" quest.
+   - **Availability.** Quests and traits are unique per match, and the offers are dealt from one shared seeded pool
+     in reverse placement order. The last player to place picks first, as compensation.
+   - **Traits are small**, for example "+1 card on a roll of 2 or 12", "Robber steals from you show a decoy card",
+     "First port trade each day is 1 better" or "Start with 1 fish".
+   - The quest stays hidden until it completes (it is revealed then and scores) or until the end of the run.
+4. **Civilization and unique-building draft.** Where these sit in multiplayer is still **OPEN**: before placement
+   with the leader, or dropped for v1 to keep setup short. Proposal: keep the leader-only pick for v1 and add civs back after
+   the first playtest.
 
 ## 5. Turn structure, timers and pacing
 
 - **Day turns** follow the standard roll, trade, build order. **Special Build Phase** applies with 5+ players: after each turn,
   the other players may build in seat order, but not trade. This keeps 5-player games from dragging.
-- **Turn timer**: the default is 90 s per turn, with a +30 s **bank** per player that refills each act. When it runs out, the turn auto-ends. Any
-  open trade is cancelled. Any pending forced choice (discard, robber) is resolved by the bot policy.
-- **Simultaneous phases** (nights, votes, auctions, drafts) use a shared 30–45 s timer. Everyone acts at once, and
+- **Turn timer (DECIDED): 1.5 minutes per turn.**
+  - Each player starts with **1 extra-turn-time charge** and gains **+1 charge every 5 rounds**. Unused charges carry over.
+  - A charge can be spent **at any point** during your own turn, for one big turn. Proposed: +90 s, which doubles the
+    turn (tunable). Only one charge per turn.
+  - When the timer runs out, the turn auto-ends. Any open trade offer is cancelled. Pending forced choices (discard,
+    robber, steal target) are resolved by the bot policy.
+  - The HUD shows a ring timer on the active player's row plus the number of charges (hourglass pips) for every player.
+- **Simultaneous phases** (nights, secret ballots, auctions, the leader pick, quest picks) use a shared 30–45 s timer. Everyone acts at once, and
   results are revealed together.
 - **Nights** are where the roguelike part happens: an event card, shop deals, level-ups. These run in parallel for everyone,
   so a night costs about 30 s of wall time, not 5× that.
@@ -100,51 +139,63 @@ but v1 does not depend on it.
   The active player picks one accepted or countered offer, and the host executes it atomically after re-validating both hands.
 - **Counter-offers** are posted on the same board, so everyone sees the haggling.
 - **Promises are not enforced.** Chat-style "I'll give you wheat next turn" is just talk, and that is part of the fun.
-  §7 adds **enforced** contracts for anyone who wants them.
+  Enforced contracts (pacts) are parked, see §12.
 - **Gifts** (giving resources away for free) are allowed but rate-limited, so one player can't kingmake by feeding another.
 - Bank and port trades work as in single-player. The trade dialog grows a "Players" tab.
 - **Quick chat** offers presets ("Anyone have Ore?", "Robber me and you're next"), plus emotes and free text.
 
 ## 7. Multiplayer shenanigans: events and mechanics
 
-Each item is either a **night event** (drawn from the event deck, with weights scaled by the shenanigan level) or a **standing
-mechanic**. All of them reuse a small set of host-side primitives: **Vote**, **SealedBid/Auction**, **Pact (escrow)**,
-**SecretCard**, and **TargetedEffect**.
+Each item is either a **night event** (drawn from the event deck) or a **standing mechanic**. All of them reuse a small set of
+host-side primitives: **SecretBallot**, **SealedBidAuction**, **Bounty**, **SecretCard** and **TargetedEffect**.
+Status tags: **v1** means it is in the first multiplayer release, **later** means parked.
 
-1. **Council Vote**: a decree is proposed, for example "All ports become 3:1 tomorrow" or "Robber is banned from deserts". Players vote
-   simultaneously, and ties go to the player with the fewest VP. Leaders can buy extra votes with resources.
-2. **Bounty Board**: anyone can post a resource bounty on a target, for example "break Anna's longest road" or "rob Mikkel".
-   The bounty pays out automatically when the condition happens. The poster's identity is revealed.
-3. **Alliances (Pacts)**: two players sign a 2-day pact with **escrowed collateral**. They get no robber against each other and a 1:1
-   trade discount. Both partners must accept it.
-4. **Betrayal**: breaking a pact early forfeits the collateral to the victim but grants a big one-off bonus, such as a free
-   settlement or 2 resources of choice. Betrayals are announced with a fanfare.
-5. **Sabotage cards** (secret): place a hidden "Blight" on a hex. It produces nothing for one player at the next roll, and it is
-   revealed when it triggers. Victims may spend fish to find out who did it.
-6. **Night Market Auction**: a rare card or unique building is auctioned. The format is sealed-bid in resources, with **second-price**
-   rules so bluffing matters. The winner's bid goes to the bank, or to the poorest player in Spicy mode.
-7. **Robber for Hire**: when a 7 is rolled, players may secretly bid resources. The highest bidder moves the robber instead of the roller.
-8. **Tribute (rubber band)**: the VP leader must give one card of their choice to the last-place player, who chooses from two options
-   offered by the leader.
-9. **Secret Agendas**: each player gets a hidden objective at the run start, for example "own 3 ports", "never be robbed in act 2" or
-   "betray someone". It is worth 2 VP when revealed at the end.
-10. **Coup**: if one player holds Largest Army **and** Longest Road, the others may vote to strip one title, with a supermajority
-    needed.
-11. **Ransom**: a robber steal becomes an offer. The victim can pay 2 of another resource to keep the stolen card.
-12. **Spy and Rumors**: spend fish to peek at another hand. A "Rumor" card lets you lie: the next peek at you shows a fake hand.
-13. **Duel**: challenge another player to a dice-off for stakes both have agreed. Civs and leaders modify the roll (Warlord +1).
-14. **Shared Calamity** (co-op beat): a plague or a fleet threatens everyone. The group must pool X resources by the end of the night or every
-    player loses a building. It reveals who free-rides.
-15. **Embargo Vote**: players vote to embargo one player's port trades for a day. The target may bribe voters.
-16. **Toll Roads** (civ-flavoured standing rule): Sea Folk or Merchants can charge a 1-resource toll when another player's road
-    extends from theirs, and the payer can refuse by spending a turn.
-17. **Wager on the Dice**: before a roll, anyone may bet resources on the sum (2:1 for 6/8, 5:1 for 2/12).
+### 7.1 Decided for v1
 
-Balance guardrails:
+1. **Secret quests (DECIDED, v1):** each player has a hidden quest from setup step 3 (§4.1). A quest is worth 2 VP and is
+   revealed when it completes, for example "own 3 ports", "never be robbed during act 2" or "claim a bounty". Quests can
+   win the game, so table talk about who is going for what becomes part of the fun.
+2. **Secret-ballot vote rounds (DECIDED, v1):** a night event proposes a decree, for example "all ports are 3:1 tomorrow",
+   "the robber can't enter deserts" or "the richest player discards to 7". Everyone votes **hidden and at the same time**.
+   Only the totals are shown. Ties go to the player with the fewest VP.
+3. **Bounties (DECIDED, v1 rule):** any player can post a resource bounty on another player. It is paid into escrow and shown
+   on the bounty-holder's panel. **The bounty is claimed by moving the robber (a 7 or a Knight) onto one of the bounty-holder's tiles
+   and stealing from them.** The claim is valid **only if the bounty-holder has at least one card**. Otherwise the robber
+   still moves but the bounty stays up. Unclaimed bounties return to the poster at the end of the act.
+4. **Rare auctions (DECIDED, v1):** the Night Market sometimes auctions **one rare item**:
+   - a rare card (for example a legendary development card or a unique building), or
+   - **the right to reroll the number token on one of your own tiles**. The new token is drawn from the remaining pool,
+     and 6/8 can't be placed next to each other, as in normal setup.
 
-- No elimination.
-- Every hostile effect has a counterplay (fish, votes, bribes) or a visible attribution.
-- One shenanigan per night at most in Chill, two in Spicy, and unlimited in Chaos.
+   The format is sealed-bid and simultaneous, in resources, at **second price** (the winner pays the second-highest
+   bid). The payment goes to the bank. Plain resources and buildings are never auctioned.
+5. **Sabotage cards (DECIDED, v1):** secret cards you can buy or win at night and play face-down:
+   - **Blight**: a hex produces nothing for one chosen player on the next roll.
+   - **Washed-out Road**: one road segment can't count toward Longest Road for a day.
+   - **Spoiled Grain**: the target discards 1 Wheat at dawn.
+
+   A sabotage card is revealed (with its author) when it triggers. The victim may spend fish to cancel it if they guess the author correctly.
+6. **Chaos (DECIDED: just an event):** "Chaos" is one ordinary card in the night event deck, with normal weight, for example "all
+   robbers move randomly and everyone swaps one random card to the left". There is no separate chaos mode or shenanigan-level setting.
+
+### 7.2 Other v1 candidates (not decided yet, simple and compatible with the decisions)
+
+7. **Robber for Hire**: on a 7, players may secretly bid to move the robber instead of the roller. This makes bounty claims more fun.
+8. **Tribute**: the VP leader gives one card to the last-place player.
+9. **Coup**: a secret ballot to strip one title (Largest Army or Longest Road) from a player who holds both. Needs a supermajority.
+10. **Ransom**: a stolen card can be bought back for 2 resources of another kind.
+11. **Spy and Rumors**: spend fish to peek at a hand. A Rumor card shows a fake hand to the next peek.
+12. **Shared Calamity**: the group pools X resources by the end of the night, or every player loses a building.
+13. **Embargo**: a secret-ballot vote blocks one player's port trades for a day.
+14. **Wager on the Dice**: before a roll, anyone may bet on the sum.
+
+### 7.3 Parked for later (DECIDED)
+
+- **Alliances (pacts with escrowed collateral)** and **Betrayal** (breaking a pact for a one-off bonus) are parked. See §12.
+- **Duels** and **Toll Roads** are also deferred until the v1 set has been playtested.
+
+Balance guardrails: no elimination. Every hostile effect has a counterplay (fish, votes) or visible attribution when it triggers.
+There is at most one hostile night event per night.
 
 ## 8. 5-player board and expansion rules
 
@@ -163,34 +214,66 @@ Balance guardrails:
 - A **player strip** for 4–5 players: the rail's player panels become compact rows with the leader medallion, civ emblem, VP,
   card count and a turn-timer ring. The v133 leader portraits are meant to be reused here.
 - **Trade dialog**: a "Players" tab with an offer board, plus incoming-offer toasts.
-- **Vote, auction and pact modals** are built from the same painted card frames as the civ and leader cards.
+- **Quest card** (hidden, peekable) and **trait chip** on your own row. Bounty badges on targeted players.
+- **Secret-ballot, auction and sabotage modals** are built from the same painted card frames as the civ and leader cards.
 - **Event log** gets per-player colours. Chat is wired to the network.
 
-## 10. First implementation steps (in order, each one shippable and tested)
+## 10. Phased implementation plan (DECIDED: single device first, then netcode)
 
-1. **Seat refactor (no networking):** replace the binary `PlayerId` with `SeatId` (0..N-1). Make `GameState` per-seat lists, and add
-   a `ISeatController` (LocalHuman, Bot). Single-player stays green. Add 3- and 4-bot simulation tests.
-2. **Command layer:** add `IGameCommand` records (serializable) and `GameController.Apply(SeatId, command)` → `Result`.
-   Route every HUD action through it. Test: each HUD action maps to exactly one command.
-3. **Deterministic RNG plus a state hash:** use PCG32 streams per subsystem and `GameState.ComputeHash()`. Test: replaying a recorded log gives an identical
-   hash.
-4. **Snapshot and redaction:** `GameStateView ForSeat(SeatId)` with JSON round-trip tests. Make sure hidden info never appears in other
-   seats' views.
-5. **Hot-seat mode (pass-and-play):** 2–5 local humans on one screen. This proves the N-player UI, trading and votes with no network.
-6. **Transport interface:** `INetSession` (Create/Join(code)/Send/OnMessage/OnPeerLeft), with one implementation on Unity
-   Multiplayer Services (Sessions API: Lobby + Relay, anonymous auth) and an in-memory loopback for tests.
-7. **Lobby UI** (code, seats, bots, settings, ready) on the parchment kit, then host-start into the party-run setup.
-8. **Turn timers, the away-bot and reconnect** (snapshot plus log tail).
-9. **Human trading:** the offer board, counters and atomic execution.
-10. **Shenanigan primitives** (Vote, SealedBid, Pact/escrow, SecretCard), then the first 5 events: Council Vote, Bounty Board,
-    Night Market Auction, Robber for Hire and Shared Calamity.
-11. **5-player rules:** the Extended map tokens and ports, Special Build Phase, and 2 new seat colours.
-12. **Playtest night** with the group, then tune timers and shenanigan weights. Add Steam as a second transport if the group
-    wants friend invites.
+Every phase ends green in EditMode and PlayMode, with screenshots, and is playable on its own. Netcode is deliberately
+last. Everything before it is useful immediately as **local hot-seat** (pass-and-play) on one PC, which is also
+how the group can playtest the rules before any server exists.
+
+### Phase 1: N-player core (no UI change for single-player)
+- Replace the binary `PlayerId { Human, Ai }` with `SeatId` 0..N-1 (N = 2..5). Make the "player vs AI" pairs in `GameState`
+  per-seat lists. Add `ISeatController` (LocalHuman, Bot).
+- Add a **command layer**: serializable `IGameCommand` records and `GameController.Apply(SeatId, command)` → `Result`.
+  The HUD sends commands and no longer mutates state directly.
+- Tests: the existing suites stay green. Add headless 4- and 5-bot full games to completion (seeded).
+- **Exit:** single-player is unchanged, and a 5-bot game finishes deterministically.
+
+### Phase 2: Local hot-seat for 4–5 players and the turn timer
+- A 4–5 seat player strip on the rail (leader medallion, VP, card count, timer ring, extra-time pips).
+- **Hand-off screen** between human turns ("Pass to Anna"), which hides the previous hand.
+- **Turn timer: 1.5 min, 1 starting extra-time charge, +1 every 5 rounds**, auto-end, and bot resolution of pending choices.
+- 5-player rules: Extended board tokens and ports, Special Build Phase, 2 extra seat colours, 24 cards per resource.
+- **Exit:** a full 4-human hot-seat game on Base and a 5-human game on Extended, with the timer and charges working.
+
+### Phase 3: Decided setup flow
+- **Leader first** (hidden simultaneous picks via hand-off), then snake placement, then the **quest and trait offer**.
+- Quest engine: data-driven `QuestDefinition` (condition, VP, board-feasibility filter) with a seeded unique pool. Traits work the same way.
+- **Exit:** offers change with board position (tested), and quests reveal and score correctly.
+
+### Phase 4: Shenanigans on one device
+- Primitives: `SecretBallot`, `SealedBidAuction`, `Bounty` (robber-claim rule), `SecretCard` (sabotage).
+- Content: secret-ballot decrees, bounties, rare auctions (rare card / reroll one of your own tokens), the 3 sabotage cards, and the Chaos event.
+- Hidden inputs on hot-seat use the hand-off screen, one voter or bidder at a time.
+- **Exit:** a playtest evening on one PC with the Catan group. Tune weights, prices and quest VP.
+
+### Phase 5: Network-ready core
+- PCG32 RNG streams per subsystem, `GameState.ComputeHash()`, and a recorded log that replays to the same hash.
+- `GameStateView ForSeat(SeatId)` redaction (hands, quests, traits, sabotage, sealed bids) plus JSON snapshots.
+- An in-memory loopback "network" in tests: 5 virtual clients play through commands and views only.
+- **Exit:** a loopback 5-seat game is identical to hot-seat, and no hidden info appears in any other seat's view.
+
+### Phase 6: Netcode (online with friends)
+- `INetSession` implemented on Unity Multiplayer Services (Lobby + Relay, anonymous sign-in, join code).
+- Lobby UI (seats, bots, settings, ready). The host-authoritative loop sends commands in and views out.
+- Reconnect (snapshot plus log tail) and an away-bot. Saved matches can be resumed by the host.
+- **Exit:** an online 5-player evening runs through without desyncs or lost turns.
+
+### Phase 7: Later
+- Alliances and betrayal (parked), duels, toll roads, Steam transport and friend invites, spectators and replays.
 
 ## 11. Open questions for the group
 
+- Where do civilizations and the unique-building draft go in multiplayer setup (§4.1, point 4)?
+- How much time should an extra-time charge add: +90 s as proposed, or a full extra 1.5 min turn?
+- Quest VP value (2 proposed). Should a player get one quest or two (keep one, discard one)?
 - Are bots allowed in a 5-seat game, or must everyone be human?
-- Should betrayal be hidden or public? Should agendas be secret?
-- Is a 75-minute target right, or do we want a "long campaign" mode across several evenings, saved from `seed + log`?
-- Is a Steam release planned? That decides whether a Steam transport is worth building early.
+
+## 12. Later (parked)
+
+- **Alliances (DECIDED: parked):** a 2-day pact with escrowed collateral: no robber against each other, and 1:1 trades between the pair.
+- **Betrayal (DECIDED: parked):** breaking a pact early forfeits the collateral but grants a one-off bonus, announced publicly.
+- These build on the v1 primitives (escrow from bounties, attribution from sabotage), so they are cheap to add once v1 has been playtested.
