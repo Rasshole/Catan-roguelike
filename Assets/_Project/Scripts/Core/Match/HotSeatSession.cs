@@ -35,11 +35,13 @@ namespace CatanRoguelike.Core.Match
         public MatchState State => Match.State;
         public bool IsOver => Match.IsOver;
         public MatchSeatState Current => Match.State.Current;
+        /// <summary>v135: the seat holding the device: the current seat, or a seat discarding after a 7.</summary>
+        public MatchSeatState Acting => Match.State.Acting;
         public int HumanCount => Match.State.Config.HumanCount;
 
         /// <summary>A seat's hand may be shown only to itself, on its own turn, after the pass screen.</summary>
         public bool IsHandVisible(int seat) =>
-            !PassScreenPending && !Match.State.Seats[seat].IsAi && seat == Match.State.CurrentSeat && !IsOver;
+            !PassScreenPending && !Match.State.Seats[seat].IsAi && seat == Match.State.ActingSeat && !IsOver;
 
         public bool CanUseExtraTime
         {
@@ -56,7 +58,7 @@ namespace CatanRoguelike.Core.Match
             if (!PassScreenPending)
                 return;
             PassScreenPending = false;
-            LastRevealedHumanSeat = Match.State.CurrentSeat;
+            LastRevealedHumanSeat = Match.State.ActingSeat;
             Clock.StartTurn();
             Changed?.Invoke();
         }
@@ -66,7 +68,7 @@ namespace CatanRoguelike.Core.Match
         {
             if (IsOver)
                 return;
-            if (Current.IsAi)
+            if (MatchRunner.HasAiWork(Match))
             {
                 RunAi();
                 return;
@@ -77,7 +79,7 @@ namespace CatanRoguelike.Core.Match
             Clock.Tick(deltaSeconds);
             if (Clock.Expired)
             {
-                LastMessage = $"{Current.Name} ran out of time.";
+                LastMessage = $"{Acting.Name} ran out of time.";
                 MatchRunner.ResolveTimeout(Match);
                 AfterChange();
                 RunAi();
@@ -99,6 +101,8 @@ namespace CatanRoguelike.Core.Match
             if (command.Type == MatchCommandType.UseExtraTime)
                 Clock.AddExtraTime();
             AfterChange();
+            if (MatchRunner.HasAiWork(Match))
+                RunAi();
             return result;
         }
 
@@ -114,7 +118,7 @@ namespace CatanRoguelike.Core.Match
         /// <summary>One suggested action for the current human (the AI policy), e.g. for setup placement.</summary>
         public MatchCommandResult ApplySuggested()
         {
-            if (IsOver || Current.IsAi || PassScreenPending)
+            if (IsOver || Acting.IsAi || PassScreenPending)
                 return MatchCommandResult.Rejected("Not a human turn.");
             return Apply(MatchAi.ChooseCommand(Match));
         }
@@ -122,11 +126,11 @@ namespace CatanRoguelike.Core.Match
         /// <summary>Applies suggestions until the policy would end the turn (it never ends the turn itself).</summary>
         public int AutoBuild(int maxCommands = 32)
         {
-            int seat = Match.State.CurrentSeat;
+            int seat = Match.State.ActingSeat;
             int turn = Match.State.TurnNumber;
             int applied = 0;
             while (applied < maxCommands && !IsOver && !PassScreenPending
-                   && Match.State.CurrentSeat == seat && Match.State.TurnNumber == turn)
+                   && Match.State.ActingSeat == seat && Match.State.TurnNumber == turn)
             {
                 var command = MatchAi.ChooseCommand(Match);
                 if (command.Type == MatchCommandType.EndTurn)
@@ -143,7 +147,7 @@ namespace CatanRoguelike.Core.Match
 
         private void RunAi()
         {
-            if (!Current.IsAi || IsOver)
+            if (!MatchRunner.HasAiWork(Match))
                 return;
             MatchRunner.AdvanceAi(Match);
             AfterChange();
@@ -170,7 +174,7 @@ namespace CatanRoguelike.Core.Match
         private void BeginTurn(bool force)
         {
             Clock.StartTurn();
-            if (IsOver || Current.IsAi)
+            if (IsOver || Acting.IsAi)
             {
                 PassScreenPending = false;
                 return;
@@ -178,7 +182,7 @@ namespace CatanRoguelike.Core.Match
 
             // A pass screen whenever a different human takes the device (always for the first human turn
             // in a game with 2+ humans; never in a 1-human game, where nobody else is looking).
-            int seat = Match.State.CurrentSeat;
+            int seat = Match.State.ActingSeat;
             PassScreenPending = HumanCount >= 2 && seat != LastRevealedHumanSeat;
             if (!PassScreenPending)
                 LastRevealedHumanSeat = seat;
@@ -187,6 +191,6 @@ namespace CatanRoguelike.Core.Match
         }
 
         private (int seat, int turn, int step, MatchPhase phase) Key() =>
-            (Match.State.CurrentSeat, Match.State.TurnNumber, Match.State.SetupStep, Match.State.Phase);
+            (Match.State.ActingSeat, Match.State.TurnNumber, Match.State.SetupStep, Match.State.Phase);
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Victory;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
@@ -25,6 +26,10 @@ namespace CatanRoguelike.Core.Match
         public const int DiscardLimit = 7;
         public const int LongestRoadMinimum = 5;
         public const int LongestRoadPoints = 2;
+        public static readonly ResourceBundle DevCardCost = new() { Wheat = 1, Sheep = 1, Stone = 1 };
+        public const int LargestArmyMinimum = 3;
+        public const int LargestArmyPoints = 2;
+        public const int RoadBuildingRoads = 2;
 
         private readonly PlacementValidator _placement = new();
         private readonly List<MatchCommand> _log = new();
@@ -52,12 +57,33 @@ namespace CatanRoguelike.Core.Match
                 });
             }
 
+            // v135: harbours (same discovery as the single-player board, so the 3D view and the rules agree).
+            State.Ports.AddRange(PortAccess.DiscoverPorts(board));
+            // v135: development deck — classic 25 (14 K, 5 VP, 2 RB, 2 YoP, 2 Mono); 5–6 player extension 34.
+            bool big = config.SeatCount >= 5;
+            AddCards(MatchDevCard.Knight, big ? 20 : 14);
+            AddCards(MatchDevCard.VictoryPoint, 5);
+            AddCards(MatchDevCard.RoadBuilding, big ? 3 : 2);
+            AddCards(MatchDevCard.YearOfPlenty, big ? 3 : 2);
+            AddCards(MatchDevCard.Monopoly, big ? 3 : 2);
+            for (int i = State.DevDeck.Count - 1; i > 0; i--)
+            {
+                int j = State.Rng.Next(i + 1);
+                (State.DevDeck[i], State.DevDeck[j]) = (State.DevDeck[j], State.DevDeck[i]);
+            }
+
             // Snake setup order 0..N-1, N-1..0.
             for (int i = 0; i < config.SeatCount; i++) State.SetupOrder.Add(i);
             for (int i = config.SeatCount - 1; i >= 0; i--) State.SetupOrder.Add(i);
             State.Phase = MatchPhase.SetupSettlement;
             State.CurrentSeat = State.SetupOrder[0];
             AppendLog($"{State.Current.Name} places a settlement.");
+        }
+
+        private void AddCards(MatchDevCard card, int count)
+        {
+            for (int i = 0; i < count; i++)
+                State.DevDeck.Add(card);
         }
 
         /// <summary>Rebuild a match from its config and an ordered command log (replay / reconnect).</summary>
@@ -85,8 +111,16 @@ namespace CatanRoguelike.Core.Match
                 return MatchCommandResult.Rejected("The match is over.");
             if (command.Seat < 0 || command.Seat >= State.Seats.Count)
                 return MatchCommandResult.Rejected("Unknown seat.");
-            if (command.Seat != State.CurrentSeat)
-                return MatchCommandResult.Rejected($"Not seat {command.Seat}'s turn (seat {State.CurrentSeat} acts).");
+            if (command.Type == MatchCommandType.RespondTrade)
+            {
+                // Any other seat may answer the open offer.
+                if (State.ActiveTrade == null)
+                    return MatchCommandResult.Rejected("No open trade offer.");
+                if (command.Seat == State.ActiveTrade.From)
+                    return MatchCommandResult.Rejected("You can't answer your own offer.");
+            }
+            else if (command.Seat != State.ActingSeat)
+                return MatchCommandResult.Rejected($"Not seat {command.Seat}'s turn (seat {State.ActingSeat} acts).");
 
             var result = command.Type switch
             {
@@ -100,6 +134,16 @@ namespace CatanRoguelike.Core.Match
                 MatchCommandType.BankTrade => BankTrade(command),
                 MatchCommandType.UseExtraTime => UseExtraTime(command),
                 MatchCommandType.EndTurn => EndTurn(command),
+                MatchCommandType.BuyDevCard => BuyDevCard(command),
+                MatchCommandType.PlayKnight => PlayDevCard(command, MatchDevCard.Knight),
+                MatchCommandType.PlayRoadBuilding => PlayDevCard(command, MatchDevCard.RoadBuilding),
+                MatchCommandType.PlayYearOfPlenty => PlayDevCard(command, MatchDevCard.YearOfPlenty),
+                MatchCommandType.PlayMonopoly => PlayDevCard(command, MatchDevCard.Monopoly),
+                MatchCommandType.Discard => Discard(command),
+                MatchCommandType.ProposeTrade => ProposeTrade(command),
+                MatchCommandType.RespondTrade => RespondTrade(command),
+                MatchCommandType.ConfirmTrade => ConfirmTrade(command),
+                MatchCommandType.CancelTrade => CancelTrade(command),
                 _ => MatchCommandResult.Rejected("Unknown command.")
             };
 
@@ -203,6 +247,39 @@ namespace CatanRoguelike.Core.Match
             return victims;
         }
 
+        /// <summary>v135: bank rate for giving <paramref name="give"/>: 2 with that resource's harbour, 3 with a generic one, else 4.</summary>
+        public int BankRatio(int seat, ResourceType give)
+        {
+            var owner = MatchSeats.ToPlayerId(seat);
+            int best = BankTradeRatio;
+            foreach (var port in State.Ports)
+            {
+                if (!PortAccess.PlayerControlsVertex(State.Board, owner, port.Vertex))
+                    continue;
+                if (port.SpecificResource == give)
+                    return 2;
+                if (port.IsGeneric)
+                    best = Math.Min(best, 3);
+            }
+
+            return best;
+        }
+
+        /// <summary>Whether <paramref name="seat"/> may play <paramref name="card"/> now (owned since before this turn, one per turn).</summary>
+        public bool CanPlayDevCard(int seat, MatchDevCard card)
+        {
+            if (card == MatchDevCard.VictoryPoint || seat != State.CurrentSeat)
+                return false;
+            if (State.Phase != MatchPhase.Main && State.Phase != MatchPhase.Roll)
+                return false;
+            var s = State.Seats[seat];
+            return !s.PlayedDevCardThisTurn && s.DevCards.Contains(card) && State.ActiveTrade == null;
+        }
+
+        public bool CanBuyDevCard(int seat) =>
+            seat == State.CurrentSeat && State.Phase == MatchPhase.Main && State.DevDeck.Count > 0
+            && State.Seats[seat].Hand.CanAfford(DevCardCost);
+
         public int CountRoads(int seat) => State.Board.CountRoads(MatchSeats.ToPlayerId(seat));
         public int CountSettlements(int seat) => State.Board.CountBuildings(MatchSeats.ToPlayerId(seat), BuildingType.Settlement);
         public int CountCities(int seat) => State.Board.CountBuildings(MatchSeats.ToPlayerId(seat), BuildingType.City);
@@ -276,9 +353,15 @@ namespace CatanRoguelike.Core.Match
             AppendLog($"{State.Current.Name} rolled {roll}.");
             if (roll == 7)
             {
+                State.PendingDiscards.Clear();
                 foreach (var seat in State.Seats)
-                    AutoDiscard(seat);
-                State.Phase = MatchPhase.MoveRobber;
+                    if (seat.CardCount > DiscardLimit)
+                        State.PendingDiscards[seat.Index] = seat.CardCount / 2;
+                State.ResumePhase = MatchPhase.Main;
+                State.Phase = State.PendingDiscards.Count > 0 ? MatchPhase.Discard : MatchPhase.MoveRobber;
+                if (State.PendingDiscards.Count > 0)
+                    AppendLog("Seven! " + string.Join(", ",
+                        State.PendingDiscards.Select(kv => $"{State.Seats[kv.Key].Name} discards {kv.Value}")) + ".");
             }
             else
             {
@@ -314,23 +397,41 @@ namespace CatanRoguelike.Core.Match
             }
         }
 
-        /// <summary>Phase 1 policy: over 7 cards, discard half (rounded down) from the largest piles.</summary>
-        private void AutoDiscard(MatchSeatState seat)
+        /// <summary>v135: a seat that owes a discard (hand over 7 on a 7) picks exactly half its cards.</summary>
+        private MatchCommandResult Discard(MatchCommand c)
         {
-            int total = seat.CardCount;
-            if (total <= DiscardLimit)
-                return;
-            int toDiscard = total / 2;
+            if (State.Phase != MatchPhase.Discard || !State.PendingDiscards.TryGetValue(c.Seat, out int owed))
+                return MatchCommandResult.Rejected("Nothing to discard.");
+            if (!IsValidBundle(c.Offer) || c.Offer.Total != owed)
+                return MatchCommandResult.Rejected($"Discard exactly {owed} cards.");
+            var seat = State.Seats[c.Seat];
             var hand = seat.Hand;
-            for (int i = 0; i < toDiscard; i++)
+            if (!hand.CanAfford(c.Offer))
+                return MatchCommandResult.Rejected("You don't have those cards.");
+            hand.Pay(c.Offer);
+            seat.Hand = hand;
+            State.PendingDiscards.Remove(c.Seat);
+            AppendLog($"{seat.Name} discarded {owed}.");
+            if (State.PendingDiscards.Count == 0)
+                State.Phase = MatchPhase.MoveRobber;
+            return MatchCommandResult.Accepted;
+        }
+
+        /// <summary>Largest-piles-first discard of <paramref name="count"/> cards (AI / timeout policy).</summary>
+        public static ResourceBundle SuggestDiscard(ResourceBundle hand, int count)
+        {
+            var discard = ResourceBundle.Zero;
+            for (int i = 0; i < count; i++)
             {
-                var largest = AllResources.OrderByDescending(r => hand[r]).ThenBy(r => (int)r).First();
-                hand.Add(largest, -1);
+                var largest = AllResources.OrderByDescending(r => hand[r] - discard[r]).ThenBy(r => (int)r).First();
+                discard.Add(largest, 1);
             }
 
-            seat.Hand = hand;
-            AppendLog($"{seat.Name} discarded {toDiscard}.");
+            return discard;
         }
+
+        private static bool IsValidBundle(ResourceBundle b) =>
+            b.Wood >= 0 && b.Brick >= 0 && b.Wheat >= 0 && b.Sheep >= 0 && b.Stone >= 0;
 
         private MatchCommandResult MoveRobber(MatchCommand c)
         {
@@ -371,23 +472,229 @@ namespace CatanRoguelike.Core.Match
                 AppendLog($"{State.Current.Name} robbed {victim.Name}.");
             }
 
-            State.Phase = MatchPhase.Main;
+            State.Phase = State.ResumePhase;
+            State.ResumePhase = MatchPhase.Main;
             return MatchCommandResult.Accepted;
         }
 
         private MatchCommandResult BuildRoad(MatchCommand c)
         {
-            if (State.Phase != MatchPhase.Main)
+            bool free = State.Phase == MatchPhase.RoadBuilding;
+            if (State.Phase != MatchPhase.Main && !free)
                 return MatchCommandResult.Rejected("Roll first.");
+            if (State.ActiveTrade != null)
+                return MatchCommandResult.Rejected("Close the trade offer first.");
             var e = NormalizeEdge(c.Edge);
             if (CountRoads(c.Seat) >= BuildingPieceLimits.MaxRoads)
                 return MatchCommandResult.Rejected("No roads left.");
             if (!_placement.CanPlaceRoad(State.Board, e, State.Current.Owner))
                 return MatchCommandResult.Rejected("Invalid road.");
-            if (!TryPay(RoadCost))
+            if (!free && !TryPay(RoadCost))
                 return MatchCommandResult.Rejected("Can't afford a road.");
             State.Board.Roads[e] = State.Current.Owner;
+            if (free)
+            {
+                State.FreeRoadsLeft--;
+                if (State.FreeRoadsLeft <= 0 || !ValidRoads(c.Seat).Any()
+                                             || CountRoads(c.Seat) >= BuildingPieceLimits.MaxRoads)
+                    FinishRoadBuilding();
+            }
+
             AfterBuild();
+            return MatchCommandResult.Accepted;
+        }
+
+        private void FinishRoadBuilding()
+        {
+            State.FreeRoadsLeft = 0;
+            State.Phase = State.ResumePhase;
+            State.ResumePhase = MatchPhase.Main;
+        }
+
+        // ---------- v135: development cards ----------
+
+        private MatchCommandResult BuyDevCard(MatchCommand c)
+        {
+            if (State.Phase != MatchPhase.Main)
+                return MatchCommandResult.Rejected("Roll first.");
+            if (State.ActiveTrade != null)
+                return MatchCommandResult.Rejected("Close the trade offer first.");
+            if (State.DevDeck.Count == 0)
+                return MatchCommandResult.Rejected("The development deck is empty.");
+            if (!TryPay(DevCardCost))
+                return MatchCommandResult.Rejected("Can't afford a development card.");
+            var card = State.DevDeck[State.DevDeck.Count - 1];
+            State.DevDeck.RemoveAt(State.DevDeck.Count - 1);
+            State.Current.NewDevCards.Add(card);
+            AppendLog($"{State.Current.Name} bought a development card.");
+            AfterBuild();
+            return MatchCommandResult.Accepted;
+        }
+
+        private MatchCommandResult PlayDevCard(MatchCommand c, MatchDevCard card)
+        {
+            if (!CanPlayDevCard(c.Seat, card))
+            {
+                if (State.Current.PlayedDevCardThisTurn)
+                    return MatchCommandResult.Rejected("Only one development card per turn.");
+                return MatchCommandResult.Rejected(State.Current.NewDevCards.Contains(card) && !State.Current.DevCards.Contains(card)
+                    ? "Cards bought this turn can be played next turn."
+                    : $"You can't play {card} now.");
+            }
+
+            var seat = State.Current;
+            var resume = State.Phase;
+            switch (card)
+            {
+                case MatchDevCard.Knight:
+                    seat.KnightsPlayed++;
+                    State.ResumePhase = resume;
+                    State.Phase = MatchPhase.MoveRobber;
+                    AppendLog($"{seat.Name} played a Knight.");
+                    break;
+                case MatchDevCard.RoadBuilding:
+                {
+                    if (!ValidRoads(c.Seat).Any() || CountRoads(c.Seat) >= BuildingPieceLimits.MaxRoads)
+                        return MatchCommandResult.Rejected("No room for a road.");
+                    State.ResumePhase = resume;
+                    State.FreeRoadsLeft = Math.Min(RoadBuildingRoads, BuildingPieceLimits.MaxRoads - CountRoads(c.Seat));
+                    State.Phase = MatchPhase.RoadBuilding;
+                    AppendLog($"{seat.Name} played Road Building.");
+                    break;
+                }
+                case MatchDevCard.YearOfPlenty:
+                {
+                    var hand = seat.Hand;
+                    hand.Add(c.Give, 1);
+                    hand.Add(c.Receive, 1);
+                    seat.Hand = hand;
+                    AppendLog($"{seat.Name} played Year of Plenty.");
+                    break;
+                }
+                case MatchDevCard.Monopoly:
+                {
+                    int taken = 0;
+                    foreach (var other in State.Seats)
+                    {
+                        if (other.Index == seat.Index || other.Hand[c.Receive] == 0)
+                            continue;
+                        var oh = other.Hand;
+                        taken += oh[c.Receive];
+                        oh.Set(c.Receive, 0);
+                        other.Hand = oh;
+                    }
+
+                    var mine = seat.Hand;
+                    mine.Add(c.Receive, taken);
+                    seat.Hand = mine;
+                    AppendLog($"{seat.Name} played Monopoly on {c.Receive} (+{taken}).");
+                    break;
+                }
+            }
+
+            seat.DevCards.Remove(card);
+            seat.PlayedDevCardThisTurn = true;
+            AfterBuild();
+            return MatchCommandResult.Accepted;
+        }
+
+        // ---------- v135: player trading (offer / counter-offer board) ----------
+
+        private MatchCommandResult ProposeTrade(MatchCommand c)
+        {
+            if (State.Phase != MatchPhase.Main)
+                return MatchCommandResult.Rejected("Roll first.");
+            if (!IsValidBundle(c.Offer) || !IsValidBundle(c.Request) || c.Offer.Total == 0 || c.Request.Total == 0)
+                return MatchCommandResult.Rejected("Offer at least one card and ask for at least one.");
+            if (AllResources.Any(r => c.Offer[r] > 0 && c.Request[r] > 0))
+                return MatchCommandResult.Rejected("Don't offer and ask for the same resource.");
+            if (!State.Current.Hand.CanAfford(c.Offer))
+                return MatchCommandResult.Rejected("You don't have the cards you offer.");
+            State.ActiveTrade = new MatchTradeOffer { From = c.Seat, Give = c.Offer, Get = c.Request };
+            for (int i = 0; i < State.Seats.Count; i++)
+                State.ActiveTrade.Responses.Add(new MatchTradeResponse
+                {
+                    Kind = i == c.Seat ? TradeResponseKind.Declined : TradeResponseKind.Pending
+                });
+            AppendLog($"{State.Current.Name} offers a trade.");
+            return MatchCommandResult.Accepted;
+        }
+
+        private MatchCommandResult RespondTrade(MatchCommand c)
+        {
+            var trade = State.ActiveTrade;
+            var responder = State.Seats[c.Seat];
+            var response = trade.Responses[c.Seat];
+            switch (c.Response)
+            {
+                case TradeResponseKind.Accepted:
+                    if (!responder.Hand.CanAfford(trade.Get))
+                        return MatchCommandResult.Rejected("You don't have the cards they ask for.");
+                    response.Kind = TradeResponseKind.Accepted;
+                    break;
+                case TradeResponseKind.Declined:
+                    response.Kind = TradeResponseKind.Declined;
+                    break;
+                case TradeResponseKind.Countered:
+                    if (!IsValidBundle(c.Offer) || !IsValidBundle(c.Request) || c.Offer.Total == 0 || c.Request.Total == 0)
+                        return MatchCommandResult.Rejected("A counter needs cards on both sides.");
+                    if (!responder.Hand.CanAfford(c.Request))
+                        return MatchCommandResult.Rejected("You don't have the cards you counter with.");
+                    response.Kind = TradeResponseKind.Countered;
+                    response.CounterGive = c.Offer;
+                    response.CounterGet = c.Request;
+                    break;
+                default:
+                    return MatchCommandResult.Rejected("Accept, decline or counter.");
+            }
+
+            return MatchCommandResult.Accepted;
+        }
+
+        private MatchCommandResult ConfirmTrade(MatchCommand c)
+        {
+            var trade = State.ActiveTrade;
+            if (trade == null || trade.From != c.Seat)
+                return MatchCommandResult.Rejected("No offer of yours is open.");
+            if (c.Victim < 0 || c.Victim >= State.Seats.Count || c.Victim == c.Seat)
+                return MatchCommandResult.Rejected("Pick a trade partner.");
+            var response = trade.Responses[c.Victim];
+            ResourceBundle give, get;
+            if (response.Kind == TradeResponseKind.Accepted)
+            {
+                give = trade.Give;
+                get = trade.Get;
+            }
+            else if (response.Kind == TradeResponseKind.Countered)
+            {
+                give = response.CounterGive;
+                get = response.CounterGet;
+            }
+            else
+                return MatchCommandResult.Rejected("That player hasn't accepted.");
+
+            var me = State.Current;
+            var partner = State.Seats[c.Victim];
+            if (!me.Hand.CanAfford(give) || !partner.Hand.CanAfford(get))
+                return MatchCommandResult.Rejected("Someone no longer has the cards.");
+            var mh = me.Hand;
+            mh.Pay(give);
+            mh.Add(get);
+            me.Hand = mh;
+            var ph = partner.Hand;
+            ph.Pay(get);
+            ph.Add(give);
+            partner.Hand = ph;
+            State.ActiveTrade = null;
+            AppendLog($"{me.Name} traded with {partner.Name}.");
+            return MatchCommandResult.Accepted;
+        }
+
+        private MatchCommandResult CancelTrade(MatchCommand c)
+        {
+            if (State.ActiveTrade == null || State.ActiveTrade.From != c.Seat)
+                return MatchCommandResult.Rejected("No offer of yours is open.");
+            State.ActiveTrade = null;
             return MatchCommandResult.Accepted;
         }
 
@@ -400,6 +707,8 @@ namespace CatanRoguelike.Core.Match
                 return MatchCommandResult.Rejected("No settlements left.");
             if (!_placement.CanPlaceSettlement(State.Board, v, State.Current.Owner))
                 return MatchCommandResult.Rejected("Invalid settlement spot.");
+            if (State.ActiveTrade != null)
+                return MatchCommandResult.Rejected("Close the trade offer first.");
             if (!TryPay(SettlementCost))
                 return MatchCommandResult.Rejected("Can't afford a settlement.");
             State.Board.VertexBuildings[v] = (BuildingType.Settlement, State.Current.Owner);
@@ -417,6 +726,8 @@ namespace CatanRoguelike.Core.Match
                 return MatchCommandResult.Rejected("No cities left.");
             if (!_placement.CanUpgradeToCity(State.Board, v, State.Current.Owner))
                 return MatchCommandResult.Rejected("Upgrade one of your settlements.");
+            if (State.ActiveTrade != null)
+                return MatchCommandResult.Rejected("Close the trade offer first.");
             if (!TryPay(CityCost))
                 return MatchCommandResult.Rejected("Can't afford a city.");
             State.Board.VertexBuildings[v] = (BuildingType.City, State.Current.Owner);
@@ -432,9 +743,10 @@ namespace CatanRoguelike.Core.Match
             if (c.Give == c.Receive)
                 return MatchCommandResult.Rejected("Pick two different resources.");
             var hand = State.Current.Hand;
-            if (hand[c.Give] < BankTradeRatio)
-                return MatchCommandResult.Rejected($"Need {BankTradeRatio} {c.Give}.");
-            hand.Add(c.Give, -BankTradeRatio);
+            int ratio = BankRatio(c.Seat, c.Give);
+            if (hand[c.Give] < ratio)
+                return MatchCommandResult.Rejected($"Need {ratio} {c.Give}.");
+            hand.Add(c.Give, -ratio);
             hand.Add(c.Receive, 1);
             State.Current.Hand = hand;
             return MatchCommandResult.Accepted;
@@ -460,6 +772,11 @@ namespace CatanRoguelike.Core.Match
             if (State.Phase != MatchPhase.Main)
                 return MatchCommandResult.Rejected(State.Phase == MatchPhase.Roll ? "Roll first." : "Finish the robber first.");
             State.Current.ExtraTimeUsedThisTurn = false;
+            // v135: cards bought this turn become playable; any open offer lapses.
+            State.Current.DevCards.AddRange(State.Current.NewDevCards);
+            State.Current.NewDevCards.Clear();
+            State.Current.PlayedDevCardThisTurn = false;
+            State.ActiveTrade = null;
             State.CurrentSeat = (State.CurrentSeat + 1) % State.Seats.Count;
             State.TurnNumber++;
             if (State.CurrentSeat == 0)
@@ -505,6 +822,9 @@ namespace CatanRoguelike.Core.Match
             }
         }
 
+        /// <summary>Recompute longest road, largest army and VP (for edited states, e.g. tests and tooling).</summary>
+        public void RecomputeScores() => RefreshVictoryPoints();
+
         private void RefreshVictoryPoints()
         {
             // Longest road: ≥5 and strictly longer than everyone else; the holder keeps it on ties.
@@ -525,12 +845,29 @@ namespace CatanRoguelike.Core.Match
                 AppendLog($"{State.Seats[holder.Value].Name} takes Longest Road.");
             State.LongestRoadSeat = holder;
 
+            // v135 Largest Army: ≥3 knights and strictly more than the holder.
+            int? army = State.LargestArmySeat;
+            foreach (var seat in State.Seats)
+            {
+                if (seat.KnightsPlayed < LargestArmyMinimum)
+                    continue;
+                if (!army.HasValue || seat.KnightsPlayed > State.Seats[army.Value].KnightsPlayed)
+                    army = seat.Index;
+            }
+
+            if (army != State.LargestArmySeat && army.HasValue)
+                AppendLog($"{State.Seats[army.Value].Name} takes Largest Army.");
+            State.LargestArmySeat = army;
+
             foreach (var seat in State.Seats)
             {
                 int vp = State.Board.CountBuildings(seat.Owner, BuildingType.Settlement)
                          + 2 * State.Board.CountBuildings(seat.Owner, BuildingType.City);
                 if (State.LongestRoadSeat == seat.Index)
                     vp += LongestRoadPoints;
+                if (State.LargestArmySeat == seat.Index)
+                    vp += LargestArmyPoints;
+                vp += seat.HiddenVictoryPoints;
                 seat.VictoryPoints = vp;
             }
         }

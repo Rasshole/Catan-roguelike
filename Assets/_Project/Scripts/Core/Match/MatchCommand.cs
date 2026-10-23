@@ -18,7 +18,24 @@ namespace CatanRoguelike.Core.Match
         BuildCity = 6,
         BankTrade = 7,
         UseExtraTime = 8,
-        EndTurn = 9
+        EndTurn = 9,
+        // ---- v135 (appended: the int values are the wire format) ----
+        BuyDevCard = 10,
+        PlayKnight = 11,
+        PlayRoadBuilding = 12,
+        /// <summary>Give = first resource, Receive = second (may be equal).</summary>
+        PlayYearOfPlenty = 13,
+        /// <summary>Receive = the resource to monopolise.</summary>
+        PlayMonopoly = 14,
+        /// <summary>Any seat that owes a discard after a 7; Offer = the cards discarded.</summary>
+        Discard = 15,
+        /// <summary>Offerer posts Offer (they give) / Request (they get) on the trade board.</summary>
+        ProposeTrade = 16,
+        /// <summary>Another seat answers: Response = Accept/Decline/Counter (counter terms in Offer/Request, offerer's view).</summary>
+        RespondTrade = 17,
+        /// <summary>Offerer closes the deal with Victim = the partner seat (their accepted or countered terms).</summary>
+        ConfirmTrade = 18,
+        CancelTrade = 19
     }
 
     /// <summary>
@@ -47,6 +64,12 @@ namespace CatanRoguelike.Core.Match
 
         public ResourceType Give { get; set; }
         public ResourceType Receive { get; set; }
+
+        /// <summary>v135: Discard cards / trade: what the offerer gives.</summary>
+        public ResourceBundle Offer { get; set; }
+        /// <summary>v135: trade: what the offerer gets.</summary>
+        public ResourceBundle Request { get; set; }
+        public TradeResponseKind Response { get; set; }
 
         [JsonIgnore]
         public Vertex Vertex => new(new HexCoord(Q, R), Corner);
@@ -81,6 +104,22 @@ namespace CatanRoguelike.Core.Match
             Type = MatchCommandType.BankTrade, Seat = seat, Give = give, Receive = receive
         };
 
+        public static MatchCommand Card(MatchCommandType type, int seat, ResourceType a = default, ResourceType b = default) =>
+            new() { Type = type, Seat = seat, Give = a, Receive = b };
+
+        public static MatchCommand DiscardCards(int seat, ResourceBundle cards) =>
+            new() { Type = MatchCommandType.Discard, Seat = seat, Offer = cards };
+
+        public static MatchCommand Propose(int seat, ResourceBundle give, ResourceBundle get) =>
+            new() { Type = MatchCommandType.ProposeTrade, Seat = seat, Offer = give, Request = get };
+
+        public static MatchCommand Respond(int seat, TradeResponseKind response, ResourceBundle counterGive = default,
+            ResourceBundle counterGet = default) =>
+            new() { Type = MatchCommandType.RespondTrade, Seat = seat, Response = response, Offer = counterGive, Request = counterGet };
+
+        public static MatchCommand Confirm(int seat, int partner) =>
+            new() { Type = MatchCommandType.ConfirmTrade, Seat = seat, Victim = partner };
+
         public string ToJson() => JsonConvert.SerializeObject(this);
 
         public static MatchCommand FromJson(string json) => JsonConvert.DeserializeObject<MatchCommand>(json);
@@ -93,7 +132,11 @@ namespace CatanRoguelike.Core.Match
         public bool Equals(MatchCommand other) =>
             other != null && Type == other.Type && Seat == other.Seat && Q == other.Q && R == other.R
             && Corner == other.Corner && Q2 == other.Q2 && R2 == other.R2 && Corner2 == other.Corner2
-            && Victim == other.Victim && Give == other.Give && Receive == other.Receive;
+            && Victim == other.Victim && Give == other.Give && Receive == other.Receive
+            && SameBundle(Offer, other.Offer) && SameBundle(Request, other.Request) && Response == other.Response;
+
+        private static bool SameBundle(ResourceBundle a, ResourceBundle b) =>
+            a.Wood == b.Wood && a.Brick == b.Brick && a.Wheat == b.Wheat && a.Sheep == b.Sheep && a.Stone == b.Stone;
 
         public override bool Equals(object obj) => obj is MatchCommand other && Equals(other);
 
@@ -106,6 +149,12 @@ namespace CatanRoguelike.Core.Match
             MatchCommandType.PlaceSetupRoad or MatchCommandType.BuildRoad => $"{Type}(seat {Seat}, {Edge})",
             MatchCommandType.MoveRobber => $"{Type}(seat {Seat}, {Hex}, victim {Victim})",
             MatchCommandType.BankTrade => $"{Type}(seat {Seat}, {Give}->{Receive})",
+            MatchCommandType.Discard => $"{Type}(seat {Seat}, {Offer.Total} cards)",
+            MatchCommandType.ProposeTrade => $"{Type}(seat {Seat}, give {Offer.Total} get {Request.Total})",
+            MatchCommandType.RespondTrade => $"{Type}(seat {Seat}, {Response})",
+            MatchCommandType.ConfirmTrade => $"{Type}(seat {Seat} with {Victim})",
+            MatchCommandType.PlayYearOfPlenty => $"{Type}(seat {Seat}, {Give}+{Receive})",
+            MatchCommandType.PlayMonopoly => $"{Type}(seat {Seat}, {Receive})",
             _ => $"{Type}(seat {Seat})"
         };
     }

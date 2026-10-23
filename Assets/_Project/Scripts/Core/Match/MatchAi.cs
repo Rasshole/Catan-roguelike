@@ -18,7 +18,7 @@ namespace CatanRoguelike.Core.Match
         public static MatchCommand ChooseCommand(MatchController match)
         {
             var state = match.State;
-            int seat = state.CurrentSeat;
+            int seat = state.ActingSeat;
             switch (state.Phase)
             {
                 case MatchPhase.SetupSettlement:
@@ -28,7 +28,13 @@ namespace CatanRoguelike.Core.Match
                     return MatchCommand.AtEdge(MatchCommandType.PlaceSetupRoad, seat,
                         Best(match.ValidSetupRoads(), e => RoadScore(match, e, seat)));
                 case MatchPhase.Roll:
-                    return MatchCommand.Simple(MatchCommandType.RollDice, seat);
+                    return KnightIfBlocked(match, seat) ?? MatchCommand.Simple(MatchCommandType.RollDice, seat);
+                case MatchPhase.Discard:
+                    return MatchCommand.DiscardCards(seat,
+                        MatchController.SuggestDiscard(state.Seats[seat].Hand, state.PendingDiscards[seat]));
+                case MatchPhase.RoadBuilding:
+                    return MatchCommand.AtEdge(MatchCommandType.BuildRoad, seat,
+                        Best(match.ValidRoads(seat), e => RoadScore(match, e, seat)));
                 case MatchPhase.MoveRobber:
                     return ChooseRobber(match, seat);
                 case MatchPhase.Main:
@@ -38,10 +44,45 @@ namespace CatanRoguelike.Core.Match
             }
         }
 
+        /// <summary>v135: AI answer to an open offer: accept when it can pay and doesn't lose cards, else decline.</summary>
+        public static MatchCommand ChooseTradeResponse(MatchController match, int seat)
+        {
+            var trade = match.State.ActiveTrade;
+            var hand = match.State.Seats[seat].Hand;
+            bool accept = trade != null && hand.CanAfford(trade.Get) && trade.Give.Total >= trade.Get.Total;
+            return MatchCommand.Respond(seat, accept ? TradeResponseKind.Accepted : TradeResponseKind.Declined);
+        }
+
+        /// <summary>Play a knight when the robber sits on one of our producing tiles (or it clinches Largest Army).</summary>
+        private static MatchCommand KnightIfBlocked(MatchController match, int seat)
+        {
+            if (!match.CanPlayDevCard(seat, MatchDevCard.Knight))
+                return null;
+            var state = match.State;
+            var me = state.Seats[seat];
+            bool blocked = false;
+            for (int c = 0; c < 6 && !blocked && state.Board.RobberTile.HasValue; c++)
+            {
+                var v = VertexGraph.Canonicalize(new Vertex(state.Board.RobberTile.Value, c));
+                blocked = state.Board.VertexBuildings.TryGetValue(v, out var b) && MatchSeats.ToSeat(b.owner) == seat;
+            }
+
+            bool army = state.LargestArmySeat != seat && me.KnightsPlayed + 1 >= MatchController.LargestArmyMinimum
+                        && (!state.LargestArmySeat.HasValue
+                            || me.KnightsPlayed + 1 > state.Seats[state.LargestArmySeat.Value].KnightsPlayed);
+            return blocked || army ? MatchCommand.Simple(MatchCommandType.PlayKnight, seat) : null;
+        }
+
         private static MatchCommand ChooseMainAction(MatchController match, int seat)
         {
             var state = match.State;
             var hand = state.Seats[seat].Hand;
+            if (state.ActiveTrade != null)
+                return null;
+
+            var knight = KnightIfBlocked(match, seat);
+            if (knight != null)
+                return knight;
 
             var spots = match.CountSettlements(seat) < BuildingPieceLimits.MaxSettlements
                 ? match.ValidSettlements(seat).ToList()
@@ -58,17 +99,49 @@ namespace CatanRoguelike.Core.Match
                     Best(upgradable, v => VertexScore(state, v, seat)));
 
             // Roads only when they lead somewhere: no free spot yet, or racing for longest road.
-            if (spots.Count == 0 && match.CountRoads(seat) < BuildingPieceLimits.MaxRoads
-                                 && hand.CanAfford(MatchController.RoadCost))
+            bool wantsRoad = false;
+            if (spots.Count == 0 && match.CountRoads(seat) < BuildingPieceLimits.MaxRoads)
             {
                 var roads = match.ValidRoads(seat).ToList();
                 if (roads.Count > 0)
                 {
                     var best = Best(roads, e => RoadScore(match, e, seat));
-                    if (RoadScore(match, best, seat) > 0)
+                    wantsRoad = RoadScore(match, best, seat) > 0;
+                    if (wantsRoad && match.CanPlayDevCard(seat, MatchDevCard.RoadBuilding))
+                        return MatchCommand.Simple(MatchCommandType.PlayRoadBuilding, seat);
+                    if (wantsRoad && hand.CanAfford(MatchController.RoadCost))
                         return MatchCommand.AtEdge(MatchCommandType.BuildRoad, seat, best);
                 }
             }
+
+            // v135 development cards: Monopoly when the table holds 3+ of something we lack,
+            // Year of Plenty toward the current build, buy cards with spare grain/wool/ore.
+            if (match.CanPlayDevCard(seat, MatchDevCard.Monopoly))
+            {
+                var target = MatchController.AllResources
+                    .OrderByDescending(r => state.Seats.Where(o => o.Index != seat).Sum(o => o.Hand[r]))
+                    .ThenBy(r => (int)r).First();
+                if (state.Seats.Where(o => o.Index != seat).Sum(o => o.Hand[target]) >= 3)
+                    return MatchCommand.Card(MatchCommandType.PlayMonopoly, seat, target, target);
+            }
+
+            if (match.CanPlayDevCard(seat, MatchDevCard.YearOfPlenty))
+            {
+                var cost = spots.Count > 0 ? MatchController.SettlementCost
+                    : upgradable.Count > 0 ? MatchController.CityCost : MatchController.DevCardCost;
+                var needs = new List<ResourceType>();
+                var h = hand;
+                foreach (var r in MatchController.AllResources)
+                    for (int i = h[r]; i < cost[r] && needs.Count < 2; i++)
+                        needs.Add(r);
+                if (needs.Count > 0)
+                    return MatchCommand.Card(MatchCommandType.PlayYearOfPlenty, seat, needs[0],
+                        needs.Count > 1 ? needs[1] : needs[0]);
+            }
+
+            if (match.CanBuyDevCard(seat) && (spots.Count == 0 || hand.Total >= 7)
+                                          && (upgradable.Count == 0 || hand.Stone > 3 || hand.Wheat > 2))
+                return MatchCommand.Simple(MatchCommandType.BuyDevCard, seat);
 
             // Bank trade 4:1 toward the current goal (capped per turn so a flipping goal can never loop).
             if (TradesThisTurn(match, seat) >= MaxBankTradesPerTurn)
@@ -87,7 +160,7 @@ namespace CatanRoguelike.Core.Match
                 if (hand[need] >= goal[need])
                     continue;
                 var give = MatchController.AllResources
-                    .Where(r => r != need && hand[r] - goal[r] >= MatchController.BankTradeRatio)
+                    .Where(r => r != need && hand[r] - goal[r] >= match.BankRatio(seat, r))
                     .OrderByDescending(r => hand[r] - goal[r]).ThenBy(r => (int)r)
                     .Cast<ResourceType?>().FirstOrDefault();
                 if (give.HasValue)
@@ -208,9 +281,16 @@ namespace CatanRoguelike.Core.Match
         public static int AdvanceAi(MatchController match, int maxCommands = 100000)
         {
             int applied = 0;
-            while (!match.IsOver && match.State.Current.IsAi && applied < maxCommands)
+            while (!match.IsOver && applied < maxCommands)
             {
-                var command = MatchAi.ChooseCommand(match);
+                var command = PendingAiResponse(match);
+                if (command == null)
+                {
+                    if (!match.State.Acting.IsAi)
+                        break;
+                    command = MatchAi.ChooseCommand(match);
+                }
+
                 var result = match.Apply(command);
                 if (!result.Ok)
                     throw new System.InvalidOperationException($"AI proposed an invalid command {command}: {result.Error}");
@@ -219,6 +299,21 @@ namespace CatanRoguelike.Core.Match
 
             return applied;
         }
+
+        /// <summary>v135: an AI seat that still owes an answer to the open trade offer, answered by the policy.</summary>
+        public static MatchCommand PendingAiResponse(MatchController match)
+        {
+            var trade = match.State.ActiveTrade;
+            if (trade == null)
+                return null;
+            for (int i = 0; i < match.State.Seats.Count; i++)
+                if (i != trade.From && match.State.Seats[i].IsAi && trade.Responses[i].Kind == TradeResponseKind.Pending)
+                    return MatchAi.ChooseTradeResponse(match, i);
+            return null;
+        }
+
+        public static bool HasAiWork(MatchController match) =>
+            !match.IsOver && (match.State.Acting.IsAi || PendingAiResponse(match) != null);
 
         /// <summary>
         /// Play the whole match, using <see cref="MatchAi"/> for every seat (humans included, as scripted stand-ins).
@@ -239,9 +334,18 @@ namespace CatanRoguelike.Core.Match
         /// <summary>A human's turn timer ran out: resolve forced choices with the AI policy, then end the turn.</summary>
         public static void ResolveTimeout(MatchController match)
         {
-            int seat = match.State.CurrentSeat;
+            int seat = match.State.ActingSeat;
+            if (match.State.ActiveTrade != null)
+                match.Apply(MatchCommand.Simple(MatchCommandType.CancelTrade, match.State.ActiveTrade.From));
+            if (match.State.Phase == MatchPhase.Discard)
+            {
+                // Only the timed-out discarder is resolved; the next one gets their own clock.
+                match.Apply(MatchAi.ChooseCommand(match));
+                return;
+            }
+
             int guard = 0;
-            while (!match.IsOver && match.State.CurrentSeat == seat && guard++ < 64)
+            while (!match.IsOver && match.State.CurrentSeat == seat && match.State.ActingSeat == seat && guard++ < 64)
             {
                 MatchCommand command = match.State.Phase == MatchPhase.Main
                     ? MatchCommand.Simple(MatchCommandType.EndTurn, seat)

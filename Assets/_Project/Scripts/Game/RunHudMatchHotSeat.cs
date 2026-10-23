@@ -13,8 +13,9 @@ namespace CatanRoguelike.Game
     /// v134 Phase 2 (started): pass-and-play on one device. A lobby with 2–5 seats (any Human/AI mix, open seats
     /// filled with AI), then an N-player table HUD driven by <see cref="HotSeatSession"/>: seat strip, 1.5 min
     /// turn timer with a manual "+90 s" charge button whose number grows and pulses in the last 5 s, and a pass
-    /// screen that hides hands while the device changes hands. Board clicks for human seats are not wired yet;
-    /// humans act through the action buttons (roll, suggested placement / auto-build, trade-free end turn).
+    /// screen that hides hands while the device changes hands. v135: humans place by clicking the board
+    /// (<see cref="HotSeatBoardInput"/>; the suggestion buttons stay as a shortcut), and the table has
+    /// development cards, a trade board and a per-player discard on 7 (see RunHudMatchHotSeatPanels).
     /// </summary>
     public sealed partial class RunHudController
     {
@@ -30,6 +31,9 @@ namespace CatanRoguelike.Game
         private Text _hsTimerText;
         private Image _hsTimerDisc;
         private static Sprite _discSprite;
+        private HotSeatBoardInput _hsBoardInput;
+
+        public HotSeatBoardInput HotSeatBoardInputForTests => _hsBoardInput;
 
         public bool IsHotSeatActive => _hotSeat != null;
         public bool IsHotSeatLobbyOpenForTests => _hotSeatLobbyOpen;
@@ -215,6 +219,15 @@ namespace CatanRoguelike.Game
                 boardView.Rebuild(_hotSeatDisplay);
             if (_boardInput != null)
                 _boardInput.enabled = false;
+            _hsTradeOpen = false;
+            _hsPicker = null;
+            _hsCounterSeat = -1;
+            _hsDiscardSeat = -1;
+            _hsGive = _hsGet = _hsDiscard = ResourceBundle.Zero;
+            _hsBoardInput = GetComponent<HotSeatBoardInput>();
+            if (_hsBoardInput == null)
+                _hsBoardInput = gameObject.AddComponent<HotSeatBoardInput>();
+            _hsBoardInput.Bind(_hotSeat, boardView);
 
             if (_preGameRoot != null)
                 _preGameRoot.gameObject.SetActive(false);
@@ -231,6 +244,8 @@ namespace CatanRoguelike.Game
             if (_hotSeat == null)
                 return;
             _hotSeat = null;
+            if (_hsBoardInput != null)
+                _hsBoardInput.Unbind();
             if (_hotSeatRoot != null)
                 ColonistSceneDestroy.SafeDestroy(_hotSeatRoot.gameObject);
             _hotSeatRoot = null;
@@ -318,12 +333,19 @@ namespace CatanRoguelike.Game
             BuildSeatStrip(state);
             BuildTimerAndCharge();
             BuildHotSeatHand();
+            BuildHotSeatDevCards();
             BuildHotSeatActions();
+            if (!s.IsOver && !s.PassScreenPending)
+            {
+                BuildTradeBoard();
+                BuildDiscardPicker();
+                BuildDevCardPicker();
+            }
 
             if (s.IsOver)
                 BuildGameOver(state);
             else if (s.PassScreenPending)
-                BuildPassScreen(state.Current);
+                BuildPassScreen(state.Acting);
 
             SetLayerRecursively(_hotSeatRoot.gameObject, HudCaptureUiLayer);
             HideRunHudForHotSeat();
@@ -340,11 +362,14 @@ namespace CatanRoguelike.Game
                 MatchPhase.SetupSettlement => "place a settlement",
                 MatchPhase.SetupRoad => "place a road",
                 MatchPhase.Roll => "roll the dice",
-                MatchPhase.MoveRobber => "move the robber",
+                MatchPhase.MoveRobber => "move the robber (click a tile)",
+                MatchPhase.Discard => $"{state.Acting.Name} discards half (rolled 7)",
+                MatchPhase.RoadBuilding => $"place {state.FreeRoadsLeft} free road{(state.FreeRoadsLeft == 1 ? "" : "s")}",
                 MatchPhase.Main => state.LastRoll > 0 ? $"rolled {state.LastRoll} · build or end turn" : "build or end turn",
                 _ => "game over"
             };
-            string round = state.Round > 0 ? $"ROUND {state.Round}" : "SETUP";
+            bool setup = state.Phase == MatchPhase.SetupSettlement || state.Phase == MatchPhase.SetupRoad;
+            string round = setup ? "SETUP" : $"ROUND {state.Round + 1}";
             var ink = ColonistUiKit.TextOn(UiKitPiece.Badge);
             var top = RunHudUiFactory.CreateText(banner.rectTransform, "Title",
                 $"PASS & PLAY  ·  {round}  ·  {state.Current.Name}: {phase}", 22, TextAnchor.MiddleCenter, ink,
@@ -397,10 +422,11 @@ namespace CatanRoguelike.Game
                 var name = RunHudUiFactory.CreateText(row.rectTransform, "Name", seat.Name, 22, TextAnchor.MiddleLeft,
                     ink, FontStyle.Bold);
                 SetRect(name.rectTransform, new Vector2(0f, 0.5f), new Vector2(170f, 18f), new Vector2(150f, 30f));
-                string detail = $"{(seat.IsAi ? "AI" : "Human")} · {seat.CardCount} cards";
+                string detail = $"{seat.CardCount} cards · {seat.DevCardCount} dev" +
+                                (seat.KnightsPlayed > 0 ? $" · {seat.KnightsPlayed} kn" : "");
                 var det = RunHudUiFactory.CreateText(row.rectTransform, "Detail", detail, 16, TextAnchor.MiddleLeft,
                     ColonistUiKit.InkMuted, FontStyle.Normal);
-                SetRect(det.rectTransform, new Vector2(0f, 0.5f), new Vector2(170f, -8f), new Vector2(150f, 24f));
+                SetRect(det.rectTransform, new Vector2(0f, 0.5f), new Vector2(180f, -8f), new Vector2(170f, 24f));
 
                 // Extra-time charges as small gold pips.
                 for (int c = 0; c < Mathf.Min(seat.ExtraTimeCharges, 6); c++)
@@ -409,11 +435,12 @@ namespace CatanRoguelike.Game
                     SetRect(pip.rectTransform, new Vector2(0f, 0.5f), new Vector2(102f + c * 18f, -32f), new Vector2(14f, 14f));
                 }
 
-                var vp = RunHudUiFactory.CreateText(row.rectTransform, "VP", seat.VictoryPoints.ToString(), 36,
+                // Victory-point cards stay hidden: everyone sees public points only.
+                var vp = RunHudUiFactory.CreateText(row.rectTransform, "VP", seat.PublicVictoryPoints.ToString(), 36,
                     TextAnchor.MiddleCenter, ink, FontStyle.Bold);
                 SetRect(vp.rectTransform, new Vector2(1f, 0.5f), new Vector2(-40f, 8f), new Vector2(64f, 44f));
                 var vpl = RunHudUiFactory.CreateText(row.rectTransform, "VPLabel",
-                    state.LongestRoadSeat == i ? "VP · road" : "VP", 13, TextAnchor.MiddleCenter, ColonistUiKit.InkMuted,
+                    "VP" + (state.LongestRoadSeat == i ? " · road" : "") + (state.LargestArmySeat == i ? " · army" : ""), 13, TextAnchor.MiddleCenter, ColonistUiKit.InkMuted,
                     FontStyle.Bold);
                 SetRect(vpl.rectTransform, new Vector2(1f, 0.5f), new Vector2(-40f, -24f), new Vector2(80f, 18f));
             }
@@ -430,7 +457,7 @@ namespace CatanRoguelike.Game
             Stretch(ring.rectTransform);
             _hsTimerDisc = CreateDisc(holder, "Disc", new Color(0.16f, 0.11f, 0.07f, 0.96f), 136f);
             SetRect(_hsTimerDisc.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(136f, 136f));
-            var label = RunHudUiFactory.CreateText(holder, "Label", s.Current.IsAi ? "AI TURN" : "TURN TIME", 13,
+            var label = RunHudUiFactory.CreateText(holder, "Label", s.Acting.IsAi ? "AI TURN" : "TURN TIME", 13,
                 TextAnchor.MiddleCenter, ColonistUiKit.Cream, FontStyle.Bold);
             SetRect(label.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 38f), new Vector2(130f, 18f));
             _hsTimerText = RunHudUiFactory.CreateText(holder, "Seconds", "", 46, TextAnchor.MiddleCenter,
@@ -469,7 +496,7 @@ namespace CatanRoguelike.Game
             if (_hotSeat == null || _hsTimerText == null)
                 return;
             var clock = _hotSeat.Clock;
-            if (_hotSeat.Current.IsAi || _hotSeat.IsOver)
+            if (_hotSeat.Acting.IsAi || _hotSeat.IsOver)
             {
                 _hsTimerText.text = "—";
                 _hsTimerRoot.localScale = Vector3.one;
@@ -492,14 +519,14 @@ namespace CatanRoguelike.Game
         private void BuildHotSeatHand()
         {
             var s = _hotSeat;
-            int seat = s.State.CurrentSeat;
+            int seat = s.State.ActingSeat;
             var panel = CreateImage(_hotSeatRoot, "Hand", null);
             panel.preserveAspect = false;
             ColonistUiKit.Apply(panel, UiKitPiece.FrameMedium);
             SetRect(panel.rectTransform, new Vector2(0f, 0f), new Vector2(330f, 120f), new Vector2(580f, 170f));
             var ink = ColonistUiKit.TextOn(UiKitPiece.FrameMedium);
             bool visible = s.IsHandVisible(seat);
-            string title = visible ? $"YOUR HAND  ·  {s.Current.Name}" : s.Current.IsAi ? "AI IS PLAYING" : "HAND HIDDEN";
+            string title = visible ? $"YOUR HAND  ·  {s.Acting.Name}" : s.Acting.IsAi ? "AI IS PLAYING" : "HAND HIDDEN";
             var t = RunHudUiFactory.CreateText(panel.rectTransform, "Title", title, 16, TextAnchor.MiddleCenter, ink,
                 FontStyle.Bold);
             SetRect(t.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -28f), new Vector2(520f, 22f));
@@ -512,7 +539,7 @@ namespace CatanRoguelike.Game
                 return;
             }
 
-            var hand = s.Current.Hand;
+            var hand = s.Acting.Hand;
             var resources = MatchController.AllResources;
             for (int i = 0; i < resources.Length; i++)
             {
@@ -530,31 +557,59 @@ namespace CatanRoguelike.Game
         {
             var s = _hotSeat;
             var state = s.State;
-            bool human = !s.Current.IsAi && !s.IsOver && !s.PassScreenPending;
+            bool human = !s.Acting.IsAi && !s.IsOver && !s.PassScreenPending;
+            bool free = state.ActiveTrade == null;
             var buttons = new List<(string label, bool green, bool enabled, System.Action click)>();
+            string hint = null;
             switch (state.Phase)
             {
                 case MatchPhase.SetupSettlement:
-                    buttons.Add(("Place settlement (best spot)", true, human, () => s.ApplySuggested()));
+                    buttons.Add(("Best spot", true, human, () => s.ApplySuggested()));
+                    hint = "Click a glowing corner to place your settlement";
                     break;
                 case MatchPhase.SetupRoad:
-                    buttons.Add(("Place road", true, human, () => s.ApplySuggested()));
+                    buttons.Add(("Best road", true, human, () => s.ApplySuggested()));
+                    hint = "Click a glowing edge next to it for your road";
                     break;
                 case MatchPhase.Roll:
                     buttons.Add(("Roll dice", true, human, () => s.Roll()));
                     break;
                 case MatchPhase.MoveRobber:
-                    buttons.Add(("Move robber", true, human, () => s.ApplySuggested()));
+                    buttons.Add(("Best tile", false, human, () => s.ApplySuggested()));
+                    hint = "Click a tile to move the robber (robs the richest neighbour)";
+                    break;
+                case MatchPhase.RoadBuilding:
+                    buttons.Add(("Best road", true, human, () => s.ApplySuggested()));
+                    hint = "Road Building: click glowing edges for your free roads";
                     break;
                 case MatchPhase.Main:
-                    buttons.Add(("Auto-build", false, human, () => s.AutoBuild()));
-                    buttons.Add(("End turn", true, human, () => s.EndTurn()));
+                    buttons.Add((_hsTradeOpen && free ? "Close trade" : "Trade", false, human && free, () =>
+                    {
+                        _hsTradeOpen = !_hsTradeOpen;
+                        _hsPicker = null;
+                    }));
+                    buttons.Add(("Buy card", false, human && s.Match.CanBuyDevCard(state.CurrentSeat) && free,
+                        () => s.Apply(MatchCommand.Simple(MatchCommandType.BuyDevCard, state.CurrentSeat))));
+                    buttons.Add(("Auto-build", false, human && free, () => s.AutoBuild()));
+                    buttons.Add(("End turn", true, human && free, () => s.EndTurn()));
+                    if (human && free)
+                        hint = "Click glowing spots on the board to build";
                     break;
             }
 
-            const float h = 60f, gap = 16f, w = 250f;
+            if (hint != null && human)
+            {
+                var ht = RunHudUiFactory.CreateText(_hotSeatRoot, "BoardHint", hint, 17, TextAnchor.MiddleCenter,
+                    ColonistUiKit.Cream, FontStyle.Italic);
+                SetRect(ht.rectTransform, new Vector2(0.5f, 0f), new Vector2(150f, 112f), new Vector2(760f, 24f));
+                AddShadow(ht.gameObject, 1.2f);
+            }
+
+            const float h = 60f, gap = 14f;
+            float w = buttons.Count > 2 ? 190f : 250f;
             float total = buttons.Count * w + (buttons.Count - 1) * gap;
-            float x = 70f - total / 2f + w / 2f; // clear of the hand panel (left 40..620 px)
+            // Left edge clear of the hand panel (screen x 40..620 of 1920), centre-relative.
+            float x = Mathf.Max(70f - total / 2f, 640f - 960f) + w / 2f;
             for (int i = 0; i < buttons.Count; i++)
             {
                 var (label, green, enabled, click) = buttons[i];
@@ -571,7 +626,11 @@ namespace CatanRoguelike.Game
                 }
 
                 b.interactable = enabled;
-                b.onClick.AddListener(() => click());
+                b.onClick.AddListener(() =>
+                {
+                    click();
+                    _hotSeatDirty = true;
+                });
             }
         }
 
@@ -596,11 +655,15 @@ namespace CatanRoguelike.Game
             var name = RunHudUiFactory.CreateText(card, "Name", seat.Name, 50, TextAnchor.MiddleCenter, ColonistUiKit.Ink,
                 FontStyle.Bold);
             SetRect(name.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -244f), new Vector2(640f, 62f));
-            var body = RunHudUiFactory.CreateText(card, "Body",
-                $"Everyone else, look away. {seat.Name}'s hand stays hidden until they tap below; the turn timer starts then.",
+            bool discard = _hotSeat.State.Phase == MatchPhase.Discard && seat.Index != _hotSeat.State.CurrentSeat;
+            string why = discard && _hotSeat.State.PendingDiscards.TryGetValue(seat.Index, out int owed)
+                ? $"A 7 was rolled: {seat.Name} must discard {owed}. Everyone else, look away."
+                : $"Everyone else, look away. {seat.Name}'s hand stays hidden until they tap below; the turn timer starts then.";
+            var body = RunHudUiFactory.CreateText(card, "Body", why,
                 19, TextAnchor.MiddleCenter, ColonistUiKit.InkMuted, FontStyle.Italic);
             SetRect(body.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -304f), new Vector2(600f, 56f));
-            AddLobbyButton(card, "ConfirmPass", $"I'm {seat.Name} · start my turn", new Vector2(0f, 74f),
+            AddLobbyButton(card, "ConfirmPass", discard ? $"I'm {seat.Name} · discard" : $"I'm {seat.Name} · start my turn",
+                new Vector2(0f, 74f),
                 new Vector2(380f, 62f), true, true, () => _hotSeat?.ConfirmPass(), anchorBottom: true);
         }
 

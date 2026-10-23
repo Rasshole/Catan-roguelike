@@ -15,7 +15,48 @@ namespace CatanRoguelike.Core.Match
         Roll = 2,
         MoveRobber = 3,
         Main = 4,
-        GameOver = 5
+        GameOver = 5,
+        /// <summary>v135: a 7 was rolled and some seats (see <see cref="MatchState.PendingDiscards"/>) must discard.</summary>
+        Discard = 6,
+        /// <summary>v135: Road Building dev card — place up to <see cref="MatchState.FreeRoadsLeft"/> free roads.</summary>
+        RoadBuilding = 7
+    }
+
+    /// <summary>v135: classic development cards.</summary>
+    public enum MatchDevCard
+    {
+        Knight = 0,
+        VictoryPoint = 1,
+        RoadBuilding = 2,
+        YearOfPlenty = 3,
+        Monopoly = 4
+    }
+
+    public enum TradeResponseKind
+    {
+        Pending = 0,
+        Accepted = 1,
+        Declined = 2,
+        Countered = 3
+    }
+
+    /// <summary>One seat's answer on the trade board. A counter is stored from the OFFERER's point of view.</summary>
+    [Serializable]
+    public sealed class MatchTradeResponse
+    {
+        public TradeResponseKind Kind { get; set; }
+        public ResourceBundle CounterGive { get; set; }
+        public ResourceBundle CounterGet { get; set; }
+    }
+
+    /// <summary>v135: the open player-to-player offer (offer/counter-offer board). Give/Get are the offerer's view.</summary>
+    [Serializable]
+    public sealed class MatchTradeOffer
+    {
+        public int From { get; set; }
+        public ResourceBundle Give { get; set; }
+        public ResourceBundle Get { get; set; }
+        public List<MatchTradeResponse> Responses { get; set; } = new();
     }
 
     /// <summary>Per-seat state of an N-player match.</summary>
@@ -29,6 +70,20 @@ namespace CatanRoguelike.Core.Match
         public int VictoryPoints { get; set; }
         public int ExtraTimeCharges { get; set; } = TurnClock.StartingCharges;
         public bool ExtraTimeUsedThisTurn { get; set; }
+
+        /// <summary>v135: playable development cards (hidden from other seats).</summary>
+        public List<MatchDevCard> DevCards { get; set; } = new();
+        /// <summary>v135: cards bought this turn — not playable until the next turn.</summary>
+        public List<MatchDevCard> NewDevCards { get; set; } = new();
+        public int KnightsPlayed { get; set; }
+        public bool PlayedDevCardThisTurn { get; set; }
+
+        /// <summary>Hidden VP from Victory Point cards (counted for winning, not shown to others).</summary>
+        public int HiddenVictoryPoints =>
+            DevCards.Count(c => c == MatchDevCard.VictoryPoint) + NewDevCards.Count(c => c == MatchDevCard.VictoryPoint);
+        /// <summary>VP everyone can see (buildings, longest road, largest army).</summary>
+        public int PublicVictoryPoints => VictoryPoints - HiddenVictoryPoints;
+        public int DevCardCount => DevCards.Count + NewDevCards.Count;
 
         public PlayerId Owner => MatchSeats.ToPlayerId(Index);
         public bool IsAi => Kind == SeatKind.Ai;
@@ -67,7 +122,30 @@ namespace CatanRoguelike.Core.Match
         public MatchRng Rng { get; set; }
         public List<string> Log { get; } = new();
 
+        // ---- v135 ----
+        /// <summary>Harbours of this board (2:1 specific, 3:1 generic).</summary>
+        public List<Shop.PortDefinition> Ports { get; } = new();
+        /// <summary>Development card draw pile (top = last).</summary>
+        public List<MatchDevCard> DevDeck { get; } = new();
+        public int? LargestArmySeat { get; set; }
+        /// <summary>Seat → cards still to discard after a 7.</summary>
+        public SortedDictionary<int, int> PendingDiscards { get; } = new();
+        public int FreeRoadsLeft { get; set; }
+        /// <summary>Phase to return to after the robber (knight) or road building (Roll or Main).</summary>
+        public MatchPhase ResumePhase { get; set; } = MatchPhase.Main;
+        public MatchTradeOffer ActiveTrade { get; set; }
+
         public MatchSeatState Current => Seats[CurrentSeat];
+
+        /// <summary>
+        /// v135: the seat that must act now. Usually <see cref="CurrentSeat"/>; during <see cref="MatchPhase.Discard"/>
+        /// it is the lowest seat that still owes a discard.
+        /// </summary>
+        public int ActingSeat => Phase == MatchPhase.Discard && PendingDiscards.Count > 0
+            ? PendingDiscards.Keys.First()
+            : CurrentSeat;
+
+        public MatchSeatState Acting => Seats[ActingSeat];
 
         public MatchState(MatchConfig config, BoardState board)
         {
@@ -92,7 +170,23 @@ namespace CatanRoguelike.Core.Match
             {
                 var h = s.Hand;
                 sb.Append($"S{s.Index}:{h.Wood},{h.Brick},{h.Wheat},{h.Sheep},{h.Stone},{s.VictoryPoints},"
-                          + $"{s.ExtraTimeCharges},{(s.ExtraTimeUsedThisTurn ? 1 : 0)};");
+                          + $"{s.ExtraTimeCharges},{(s.ExtraTimeUsedThisTurn ? 1 : 0)},"
+                          + $"{string.Join("", s.DevCards.Select(c => (int)c))}/{string.Join("", s.NewDevCards.Select(c => (int)c))},"
+                          + $"{s.KnightsPlayed},{(s.PlayedDevCardThisTurn ? 1 : 0)};");
+            }
+
+            sb.Append("D").Append(string.Join("", DevDeck.Select(c => (int)c))).Append('|')
+                .Append(LargestArmySeat?.ToString() ?? "-").Append('|').Append(FreeRoadsLeft).Append('|')
+                .Append(ResumePhase).Append('|');
+            foreach (var kv in PendingDiscards)
+                sb.Append($"X{kv.Key}={kv.Value};");
+            if (ActiveTrade != null)
+            {
+                var t = ActiveTrade;
+                sb.Append($"T{t.From}:{Bundle(t.Give)}>{Bundle(t.Get)}:");
+                foreach (var r in t.Responses)
+                    sb.Append($"{(int)r.Kind}{Bundle(r.CounterGive)}>{Bundle(r.CounterGet)},");
+                sb.Append('|');
             }
 
             foreach (var line in Board.VertexBuildings
@@ -103,6 +197,8 @@ namespace CatanRoguelike.Core.Match
                          .Select(kv => $"R{kv.Key.A.Hex.Q},{kv.Key.A.Hex.R},{kv.Key.A.CornerIndex}-{kv.Key.B.Hex.Q},{kv.Key.B.Hex.R},{kv.Key.B.CornerIndex}={(int)kv.Value}")
                          .OrderBy(x => x, StringComparer.Ordinal))
                 sb.Append(line).Append(';');
+
+            static string Bundle(ResourceBundle b) => $"{b.Wood}.{b.Brick}.{b.Wheat}.{b.Sheep}.{b.Stone}";
 
             ulong hash = 14695981039346656037UL;
             foreach (char c in sb.ToString())
