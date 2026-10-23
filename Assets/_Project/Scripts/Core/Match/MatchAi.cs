@@ -39,6 +39,15 @@ namespace CatanRoguelike.Core.Match
                     return ChooseRobber(match, seat);
                 case MatchPhase.Main:
                     return ChooseMainAction(match, seat) ?? MatchCommand.Simple(MatchCommandType.EndTurn, seat);
+                case MatchPhase.CivPick:
+                    return MatchCommand.PickCiv(seat, state.Seats[seat].CivOffer[0]);
+                case MatchPhase.QuestPick:
+                {
+                    // Easiest quest offered (the 1-VP one), first trait.
+                    var me = state.Seats[seat];
+                    var quest = me.QuestOffer.OrderBy(q => MatchPartyLibrary.Quest(q)?.Points ?? 9).First();
+                    return MatchCommand.PickQuestTrait(seat, quest, me.TraitOffer[0]);
+                }
                 default:
                     return null;
             }
@@ -87,14 +96,14 @@ namespace CatanRoguelike.Core.Match
             var spots = match.CountSettlements(seat) < BuildingPieceLimits.MaxSettlements
                 ? match.ValidSettlements(seat).ToList()
                 : new List<Vertex>();
-            if (spots.Count > 0 && hand.CanAfford(MatchController.SettlementCost))
+            if (spots.Count > 0 && hand.CanAfford(match.SettlementCostFor(seat)))
                 return MatchCommand.AtVertex(MatchCommandType.BuildSettlement, seat,
                     Best(spots, v => VertexScore(state, v, seat)));
 
             var upgradable = match.CountCities(seat) < BuildingPieceLimits.MaxCities
                 ? match.UpgradableSettlements(seat).ToList()
                 : new List<Vertex>();
-            if (upgradable.Count > 0 && hand.CanAfford(MatchController.CityCost))
+            if (upgradable.Count > 0 && hand.CanAfford(match.CityCostFor(seat)))
                 return MatchCommand.AtVertex(MatchCommandType.BuildCity, seat,
                     Best(upgradable, v => VertexScore(state, v, seat)));
 
@@ -109,7 +118,7 @@ namespace CatanRoguelike.Core.Match
                     wantsRoad = RoadScore(match, best, seat) > 0;
                     if (wantsRoad && match.CanPlayDevCard(seat, MatchDevCard.RoadBuilding))
                         return MatchCommand.Simple(MatchCommandType.PlayRoadBuilding, seat);
-                    if (wantsRoad && hand.CanAfford(MatchController.RoadCost))
+                    if (wantsRoad && hand.CanAfford(match.RoadCostFor(seat)))
                         return MatchCommand.AtEdge(MatchCommandType.BuildRoad, seat, best);
                 }
             }
@@ -127,8 +136,8 @@ namespace CatanRoguelike.Core.Match
 
             if (match.CanPlayDevCard(seat, MatchDevCard.YearOfPlenty))
             {
-                var cost = spots.Count > 0 ? MatchController.SettlementCost
-                    : upgradable.Count > 0 ? MatchController.CityCost : MatchController.DevCardCost;
+                var cost = spots.Count > 0 ? match.SettlementCostFor(seat)
+                    : upgradable.Count > 0 ? match.CityCostFor(seat) : match.DevCardCostFor(seat);
                 var needs = new List<ResourceType>();
                 var h = hand;
                 foreach (var r in MatchController.AllResources)
@@ -148,13 +157,13 @@ namespace CatanRoguelike.Core.Match
                 return null;
             ResourceBundle goal;
             if (spots.Count > 0)
-                goal = MatchController.SettlementCost;
+                goal = match.SettlementCostFor(seat);
             else if (upgradable.Count > 0
-                     && (Deficit(hand, MatchController.CityCost) <= Deficit(hand, MatchController.RoadCost) + 1
+                     && (Deficit(hand, match.CityCostFor(seat)) <= Deficit(hand, match.RoadCostFor(seat)) + 1
                          || match.CountRoads(seat) >= BuildingPieceLimits.MaxRoads))
-                goal = MatchController.CityCost;
+                goal = match.CityCostFor(seat);
             else
-                goal = MatchController.RoadCost;
+                goal = match.RoadCostFor(seat);
             foreach (var need in MatchController.AllResources)
             {
                 if (hand[need] >= goal[need])

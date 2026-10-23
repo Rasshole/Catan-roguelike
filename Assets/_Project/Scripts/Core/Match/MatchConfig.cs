@@ -44,6 +44,11 @@ namespace CatanRoguelike.Core.Match
         public MapSize MapSize { get; set; } = MapSize.Large;
         public int Seed { get; set; }
         public int VictoryPoints { get; set; } = DefaultVictoryPoints;
+        /// <summary>
+        /// v136 party rules: civ pick before placement, secret quest + trait pick after, and an event card each round.
+        /// Off = the plain v134/v135 classic match.
+        /// </summary>
+        public bool PartyRules { get; set; }
 
         public int SeatCount => Seats.Count;
         public int HumanCount => Seats.Count(s => s.Kind == SeatKind.Human);
@@ -53,11 +58,11 @@ namespace CatanRoguelike.Core.Match
         public static MapSize RecommendedMap(int seatCount) => seatCount >= 5 ? MapSize.Extended : MapSize.Large;
 
         /// <summary>Builds a config with <paramref name="humans"/> human seats first, then AI seats filling the rest.</summary>
-        public static MatchConfig Create(int seatCount, int humans, int seed, MapSize? mapSize = null)
+        public static MatchConfig Create(int seatCount, int humans, int seed, MapSize? mapSize = null, bool partyRules = false)
         {
             if (humans < 0 || humans > seatCount)
                 throw new ArgumentOutOfRangeException(nameof(humans));
-            var config = new MatchConfig { Seed = seed, MapSize = mapSize ?? RecommendedMap(seatCount) };
+            var config = new MatchConfig { Seed = seed, MapSize = mapSize ?? RecommendedMap(seatCount), PartyRules = partyRules };
             for (int i = 0; i < seatCount; i++)
             {
                 bool human = i < humans;

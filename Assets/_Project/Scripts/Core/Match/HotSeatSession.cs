@@ -48,7 +48,7 @@ namespace CatanRoguelike.Core.Match
             get
             {
                 var s = Current;
-                return !IsOver && !s.IsAi && !PassScreenPending && !Match.IsSetup
+                return !IsOver && !s.IsAi && !PassScreenPending && !Match.IsPregame
                        && s.ExtraTimeCharges > 0 && !s.ExtraTimeUsedThisTurn;
             }
         }

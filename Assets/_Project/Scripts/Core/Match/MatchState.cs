@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using CatanRoguelike.Core.Civilizations;
+using CatanRoguelike.Core.Events;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
@@ -19,7 +21,12 @@ namespace CatanRoguelike.Core.Match
         /// <summary>v135: a 7 was rolled and some seats (see <see cref="MatchState.PendingDiscards"/>) must discard.</summary>
         Discard = 6,
         /// <summary>v135: Road Building dev card — place up to <see cref="MatchState.FreeRoadsLeft"/> free roads.</summary>
-        RoadBuilding = 7
+        RoadBuilding = 7,
+        // ---- v136 party rules (appended: the int values are the wire format) ----
+        /// <summary>Before placement: each seat in turn picks 1 of 3 civilizations (privately).</summary>
+        CivPick = 8,
+        /// <summary>After placement: each seat (last placer first) picks a secret quest (1 of 3) and a trait (1 of 2).</summary>
+        QuestPick = 9
     }
 
     /// <summary>v135: classic development cards.</summary>
@@ -78,9 +85,27 @@ namespace CatanRoguelike.Core.Match
         public int KnightsPlayed { get; set; }
         public bool PlayedDevCardThisTurn { get; set; }
 
-        /// <summary>Hidden VP from Victory Point cards (counted for winning, not shown to others).</summary>
+        // ---- v136 party rules ----
+        public CivilizationId Civilization { get; set; }
+        public List<CivilizationId> CivOffer { get; set; } = new();
+        public List<MatchQuestId> QuestOffer { get; set; } = new();
+        public List<MatchTraitId> TraitOffer { get; set; } = new();
+        /// <summary>Secret quest: only its owner sees it until the game-over reveal.</summary>
+        public MatchQuestId Quest { get; set; }
+        public MatchTraitId Trait { get; set; }
+        public bool QuestDone { get; set; }
+        /// <summary>Completed player-to-player trades (either side).</summary>
+        public int PlayerTrades { get; set; }
+        public int BankTradesThisTurn { get; set; }
+        /// <summary>Round in which the Prospector trait last paid out (-1 = never).</summary>
+        public int ProspectorRound { get; set; } = -1;
+
+        public int QuestVictoryPoints => QuestDone ? MatchPartyLibrary.Quest(Quest)?.Points ?? 0 : 0;
+
+        /// <summary>Hidden VP: Victory Point cards + a completed secret quest (counted for winning, not shown to others).</summary>
         public int HiddenVictoryPoints =>
-            DevCards.Count(c => c == MatchDevCard.VictoryPoint) + NewDevCards.Count(c => c == MatchDevCard.VictoryPoint);
+            DevCards.Count(c => c == MatchDevCard.VictoryPoint) + NewDevCards.Count(c => c == MatchDevCard.VictoryPoint)
+            + QuestVictoryPoints;
         /// <summary>VP everyone can see (buildings, longest road, largest army).</summary>
         public int PublicVictoryPoints => VictoryPoints - HiddenVictoryPoints;
         public int DevCardCount => DevCards.Count + NewDevCards.Count;
@@ -134,6 +159,23 @@ namespace CatanRoguelike.Core.Match
         /// <summary>Phase to return to after the robber (knight) or road building (Roll or Main).</summary>
         public MatchPhase ResumePhase { get; set; } = MatchPhase.Main;
         public MatchTradeOffer ActiveTrade { get; set; }
+
+        // ---- v136 party rules ----
+        /// <summary>Seats in pick order for <see cref="MatchPhase.CivPick"/> / <see cref="MatchPhase.QuestPick"/>.</summary>
+        public List<int> PickOrder { get; } = new();
+        public int PickStep { get; set; }
+        public List<CivilizationId> CivDeck { get; } = new();
+        public List<MatchQuestId> QuestDeck { get; } = new();
+        public List<MatchTraitId> TraitDeck { get; } = new();
+        public List<EventId> EventDeck { get; } = new();
+        /// <summary>This round's event card (None before round 2).</summary>
+        public EventId ActiveEvent { get; set; }
+        /// <summary>Storm: the hex that produces nothing this round.</summary>
+        public HexCoord? EventTile { get; set; }
+        /// <summary>Separate stream for dealing offers / events so dice sequences don't depend on party rules.</summary>
+        public MatchRng PartyRng { get; set; }
+
+        public bool IsPicking => Phase == MatchPhase.CivPick || Phase == MatchPhase.QuestPick;
 
         public MatchSeatState Current => Seats[CurrentSeat];
 
@@ -197,6 +239,21 @@ namespace CatanRoguelike.Core.Match
                          .Select(kv => $"R{kv.Key.A.Hex.Q},{kv.Key.A.Hex.R},{kv.Key.A.CornerIndex}-{kv.Key.B.Hex.Q},{kv.Key.B.Hex.R},{kv.Key.B.CornerIndex}={(int)kv.Value}")
                          .OrderBy(x => x, StringComparer.Ordinal))
                 sb.Append(line).Append(';');
+
+            if (Config.PartyRules)
+            {
+                sb.Append("P").Append(PickStep).Append(':').Append(PartyRng?.State ?? 0).Append(':')
+                    .Append((int)ActiveEvent).Append(':').Append(EventTile.HasValue ? $"{EventTile.Value.Q},{EventTile.Value.R}" : "-")
+                    .Append(':').Append(string.Join(",", CivDeck.Select(c => (int)c)))
+                    .Append(':').Append(string.Join(",", QuestDeck.Select(c => (int)c)))
+                    .Append(':').Append(string.Join(",", TraitDeck.Select(c => (int)c)))
+                    .Append(':').Append(string.Join(",", EventDeck.Select(c => (int)c))).Append('|');
+                foreach (var s in Seats)
+                    sb.Append($"Q{s.Index}:{(int)s.Civilization},{(int)s.Quest},{(int)s.Trait},{(s.QuestDone ? 1 : 0)},"
+                              + $"{s.PlayerTrades},{s.BankTradesThisTurn},{s.ProspectorRound},"
+                              + $"{string.Join(".", s.CivOffer.Select(c => (int)c))}/{string.Join(".", s.QuestOffer.Select(c => (int)c))}/"
+                              + $"{string.Join(".", s.TraitOffer.Select(c => (int)c))};");
+            }
 
             static string Bundle(ResourceBundle b) => $"{b.Wood}.{b.Brick}.{b.Wheat}.{b.Sheep}.{b.Stone}";
 

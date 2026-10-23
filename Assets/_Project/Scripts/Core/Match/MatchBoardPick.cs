@@ -24,6 +24,8 @@ namespace CatanRoguelike.Core.Match
     public static class MatchBoardPick
     {
         public const float DefaultRadius = 0.35f;
+        /// <summary>v136: robber click on a hex touching 2+ robbable opponents — the HUD must ask whom to rob.</summary>
+        public const int VictimPending = -2;
 
         public static MatchCommand Pick(MatchController match, MatchBuildMode mode, float x, float z, float scale,
             float radius = DefaultRadius)
@@ -68,17 +70,17 @@ namespace CatanRoguelike.Core.Match
                     var e = new List<Edge>();
                     bool cities = false;
                     if ((mode == MatchBuildMode.Auto || mode == MatchBuildMode.Settlement)
-                        && hand.CanAfford(MatchController.SettlementCost)
+                        && hand.CanAfford(match.SettlementCostFor(seat))
                         && match.CountSettlements(seat) < BuildingPieceLimits.MaxSettlements)
                         v.AddRange(match.ValidSettlements(seat));
-                    if ((mode == MatchBuildMode.Auto || mode == MatchBuildMode.City) && hand.CanAfford(MatchController.CityCost)
+                    if ((mode == MatchBuildMode.Auto || mode == MatchBuildMode.City) && hand.CanAfford(match.CityCostFor(seat))
                         && match.CountCities(seat) < BuildingPieceLimits.MaxCities)
                     {
                         v.AddRange(match.UpgradableSettlements(seat));
-                        cities = mode == MatchBuildMode.City || v.Count > 0 && !hand.CanAfford(MatchController.SettlementCost);
+                        cities = mode == MatchBuildMode.City || v.Count > 0 && !hand.CanAfford(match.SettlementCostFor(seat));
                     }
 
-                    if ((mode == MatchBuildMode.Auto || mode == MatchBuildMode.Road) && hand.CanAfford(MatchController.RoadCost)
+                    if ((mode == MatchBuildMode.Auto || mode == MatchBuildMode.Road) && hand.CanAfford(match.RoadCostFor(seat))
                         && match.CountRoads(seat) < BuildingPieceLimits.MaxRoads)
                         e.AddRange(match.ValidRoads(seat));
                     return (v, e, cities);
@@ -124,9 +126,10 @@ namespace CatanRoguelike.Core.Match
             // Clicks beyond a tile's reach (in the sea) don't count.
             if (!best.HasValue || bestD > scale * scale * 1.1f)
                 return null;
-            // Rob the victim with the most cards (ties: lowest seat), the usual human pick.
-            int victim = match.RobberVictims(seat, best.Value)
-                .OrderByDescending(s => state.Seats[s].CardCount).ThenBy(s => s).DefaultIfEmpty(-1).First();
+            // v136: one possible victim is robbed directly; with two or more the player chooses (victim picker):
+            // the command comes back with Victim = VictimPending and the HUD asks before applying it.
+            var victims = match.RobberVictims(seat, best.Value).ToList();
+            int victim = victims.Count == 0 ? -1 : victims.Count == 1 ? victims[0] : VictimPending;
             return MatchCommand.Robber(seat, best.Value, victim);
         }
 

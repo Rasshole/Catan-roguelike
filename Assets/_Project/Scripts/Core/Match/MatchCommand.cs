@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Hex;
 using Newtonsoft.Json;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
@@ -35,7 +36,12 @@ namespace CatanRoguelike.Core.Match
         RespondTrade = 17,
         /// <summary>Offerer closes the deal with Victim = the partner seat (their accepted or countered terms).</summary>
         ConfirmTrade = 18,
-        CancelTrade = 19
+        CancelTrade = 19,
+        // ---- v136 party rules ----
+        /// <summary>Pick = the CivilizationId (one of the seat's offer).</summary>
+        PickCivilization = 20,
+        /// <summary>Pick = the MatchQuestId, Pick2 = the MatchTraitId (from the seat's offers).</summary>
+        PickQuest = 21
     }
 
     /// <summary>
@@ -70,6 +76,11 @@ namespace CatanRoguelike.Core.Match
         /// <summary>v135: trade: what the offerer gets.</summary>
         public ResourceBundle Request { get; set; }
         public TradeResponseKind Response { get; set; }
+
+        /// <summary>v136: civ / quest id picked.</summary>
+        public int Pick { get; set; }
+        /// <summary>v136: trait id picked with the quest.</summary>
+        public int Pick2 { get; set; }
 
         [JsonIgnore]
         public Vertex Vertex => new(new HexCoord(Q, R), Corner);
@@ -117,6 +128,12 @@ namespace CatanRoguelike.Core.Match
             ResourceBundle counterGet = default) =>
             new() { Type = MatchCommandType.RespondTrade, Seat = seat, Response = response, Offer = counterGive, Request = counterGet };
 
+        public static MatchCommand PickCiv(int seat, CivilizationId civ) =>
+            new() { Type = MatchCommandType.PickCivilization, Seat = seat, Pick = (int)civ };
+
+        public static MatchCommand PickQuestTrait(int seat, MatchQuestId quest, MatchTraitId trait) =>
+            new() { Type = MatchCommandType.PickQuest, Seat = seat, Pick = (int)quest, Pick2 = (int)trait };
+
         public static MatchCommand Confirm(int seat, int partner) =>
             new() { Type = MatchCommandType.ConfirmTrade, Seat = seat, Victim = partner };
 
@@ -133,7 +150,8 @@ namespace CatanRoguelike.Core.Match
             other != null && Type == other.Type && Seat == other.Seat && Q == other.Q && R == other.R
             && Corner == other.Corner && Q2 == other.Q2 && R2 == other.R2 && Corner2 == other.Corner2
             && Victim == other.Victim && Give == other.Give && Receive == other.Receive
-            && SameBundle(Offer, other.Offer) && SameBundle(Request, other.Request) && Response == other.Response;
+            && SameBundle(Offer, other.Offer) && SameBundle(Request, other.Request) && Response == other.Response
+            && Pick == other.Pick && Pick2 == other.Pick2;
 
         private static bool SameBundle(ResourceBundle a, ResourceBundle b) =>
             a.Wood == b.Wood && a.Brick == b.Brick && a.Wheat == b.Wheat && a.Sheep == b.Sheep && a.Stone == b.Stone;
@@ -155,6 +173,8 @@ namespace CatanRoguelike.Core.Match
             MatchCommandType.ConfirmTrade => $"{Type}(seat {Seat} with {Victim})",
             MatchCommandType.PlayYearOfPlenty => $"{Type}(seat {Seat}, {Give}+{Receive})",
             MatchCommandType.PlayMonopoly => $"{Type}(seat {Seat}, {Receive})",
+            MatchCommandType.PickCivilization => $"{Type}(seat {Seat}, {(CivilizationId)Pick})",
+            MatchCommandType.PickQuest => $"{Type}(seat {Seat}, {(MatchQuestId)Pick}+{(MatchTraitId)Pick2})",
             _ => $"{Type}(seat {Seat})"
         };
     }

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Events;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Shop;
@@ -17,7 +19,7 @@ namespace CatanRoguelike.Core.Match
     /// commands are appended to <see cref="CommandLog"/>. Same config + same log ⇒ same <see cref="MatchState.ComputeHash"/>.
     /// Humans and AIs act the same way: AI seats just get their commands from <see cref="MatchAi"/>.
     /// </summary>
-    public sealed class MatchController
+    public sealed partial class MatchController
     {
         public static readonly ResourceBundle RoadCost = new() { Wood = 1, Brick = 1 };
         public static readonly ResourceBundle SettlementCost = new() { Wood = 1, Brick = 1, Wheat = 1, Sheep = 1 };
@@ -44,7 +46,10 @@ namespace CatanRoguelike.Core.Match
         {
             config.Validate();
             var board = MapPresets.CreateBoard(config.MapSize, config.Seed);
-            State = new MatchState(config, board) { Rng = new MatchRng(config.Seed, 0x5EA7) };
+            State = new MatchState(config, board)
+            {
+                Rng = new MatchRng(config.Seed, 0x5EA7), PartyRng = new MatchRng(config.Seed, 0x9A27)
+            };
             for (int i = 0; i < config.SeatCount; i++)
             {
                 State.Seats.Add(new MatchSeatState
@@ -77,7 +82,10 @@ namespace CatanRoguelike.Core.Match
             for (int i = config.SeatCount - 1; i >= 0; i--) State.SetupOrder.Add(i);
             State.Phase = MatchPhase.SetupSettlement;
             State.CurrentSeat = State.SetupOrder[0];
-            AppendLog($"{State.Current.Name} places a settlement.");
+            if (config.PartyRules)
+                BeginCivPick();
+            else
+                AppendLog($"{State.Current.Name} places a settlement.");
         }
 
         private void AddCards(MatchDevCard card, int count)
@@ -101,6 +109,9 @@ namespace CatanRoguelike.Core.Match
         }
 
         public bool IsSetup => State.Phase == MatchPhase.SetupSettlement || State.Phase == MatchPhase.SetupRoad;
+        /// <summary>v136: before the first roll (civ pick, placement, quest pick).</summary>
+        public bool IsPregame => IsSetup || State.IsPicking;
+        public bool PartyRules => State.Config.PartyRules;
         public bool IsOver => State.Phase == MatchPhase.GameOver;
 
         public MatchCommandResult Apply(MatchCommand command)
@@ -144,11 +155,15 @@ namespace CatanRoguelike.Core.Match
                 MatchCommandType.RespondTrade => RespondTrade(command),
                 MatchCommandType.ConfirmTrade => ConfirmTrade(command),
                 MatchCommandType.CancelTrade => CancelTrade(command),
+                MatchCommandType.PickCivilization => PickCivilization(command),
+                MatchCommandType.PickQuest => PickQuest(command),
                 _ => MatchCommandResult.Rejected("Unknown command.")
             };
 
             if (result.Ok)
             {
+                if (PartyRules)
+                    AfterPartyCommand();
                 _log.Add(command);
                 CommandApplied?.Invoke(command);
             }
@@ -251,18 +266,48 @@ namespace CatanRoguelike.Core.Match
         public int BankRatio(int seat, ResourceType give)
         {
             var owner = MatchSeats.ToPlayerId(seat);
+            var s = State.Seats[seat];
             int best = BankTradeRatio;
+            // v136 party rules: civ base rate, Market Day, Sea Folk harbours, Harbour Pilot.
+            if (s.Civilization == CivilizationId.NorthernRaiders) best = 5;
+            if (s.Civilization == CivilizationId.MerchantRepublic) best = 3;
+            if (State.ActiveEvent == EventId.MarketDay) best = Math.Min(best, 3);
+            int generic = s.Civilization == CivilizationId.SeaFolk ? 2 : 3;
             foreach (var port in State.Ports)
             {
                 if (!PortAccess.PlayerControlsVertex(State.Board, owner, port.Vertex))
                     continue;
                 if (port.SpecificResource == give)
-                    return 2;
+                    best = Math.Min(best, 2);
                 if (port.IsGeneric)
-                    best = Math.Min(best, 3);
+                    best = Math.Min(best, generic);
             }
 
+            if (s.Trait == MatchTraitId.HarbourPilot && s.BankTradesThisTurn == 0)
+                best = Math.Max(2, best - 1);
             return best;
+        }
+
+        // v136: per-seat build costs (civilization + trait modifiers; the classic costs when party rules are off).
+        public ResourceBundle RoadCostFor(int seat) =>
+            MatchCivRules.RoadCost(State.Seats[seat].Civilization, State.Seats[seat].Trait);
+        public ResourceBundle SettlementCostFor(int seat) =>
+            MatchCivRules.SettlementCost(State.Seats[seat].Civilization, State.Seats[seat].Trait);
+        public ResourceBundle CityCostFor(int seat) =>
+            MatchCivRules.CityCost(State.Seats[seat].Civilization, State.Seats[seat].Trait);
+        public ResourceBundle DevCardCostFor(int seat) =>
+            MatchCivRules.DevCardCost(State.Seats[seat].Civilization, State.Seats[seat].Trait);
+
+        /// <summary>v136: hand size above which a 7 forces a discard (Granary raises it).</summary>
+        public int DiscardLimitFor(int seat) => DiscardLimit + (State.Seats[seat].Trait == MatchTraitId.Granary ? 2 : 0);
+
+        /// <summary>v136: cards owed on a 7 (0 = none).</summary>
+        public int DiscardOwed(int seat)
+        {
+            var s = State.Seats[seat];
+            if (s.CardCount <= DiscardLimitFor(seat))
+                return 0;
+            return Math.Max(0, s.CardCount / 2 - (s.Trait == MatchTraitId.ToughHide ? 1 : 0));
         }
 
         /// <summary>Whether <paramref name="seat"/> may play <paramref name="card"/> now (owned since before this turn, one per turn).</summary>
@@ -278,7 +323,7 @@ namespace CatanRoguelike.Core.Match
 
         public bool CanBuyDevCard(int seat) =>
             seat == State.CurrentSeat && State.Phase == MatchPhase.Main && State.DevDeck.Count > 0
-            && State.Seats[seat].Hand.CanAfford(DevCardCost);
+            && State.Seats[seat].Hand.CanAfford(DevCardCostFor(seat));
 
         public int CountRoads(int seat) => State.Board.CountRoads(MatchSeats.ToPlayerId(seat));
         public int CountSettlements(int seat) => State.Board.CountBuildings(MatchSeats.ToPlayerId(seat), BuildingType.Settlement);
@@ -325,7 +370,11 @@ namespace CatanRoguelike.Core.Match
             State.Board.Roads[e] = State.Current.Owner;
             State.LastSetupSettlement = null;
             State.SetupStep++;
-            if (State.SetupStep >= State.SetupOrder.Count)
+            if (State.SetupStep >= State.SetupOrder.Count && PartyRules)
+            {
+                BeginQuestPick();
+            }
+            else if (State.SetupStep >= State.SetupOrder.Count)
             {
                 State.CurrentSeat = 0;
                 State.TurnNumber = 1;
@@ -354,9 +403,14 @@ namespace CatanRoguelike.Core.Match
             if (roll == 7)
             {
                 State.PendingDiscards.Clear();
+                if (PartyRules)
+                    OnSevenParty();
                 foreach (var seat in State.Seats)
-                    if (seat.CardCount > DiscardLimit)
-                        State.PendingDiscards[seat.Index] = seat.CardCount / 2;
+                {
+                    int owed = DiscardOwed(seat.Index);
+                    if (owed > 0)
+                        State.PendingDiscards[seat.Index] = owed;
+                }
                 State.ResumePhase = MatchPhase.Main;
                 State.Phase = State.PendingDiscards.Count > 0 ? MatchPhase.Discard : MatchPhase.MoveRobber;
                 if (State.PendingDiscards.Count > 0)
@@ -365,26 +419,40 @@ namespace CatanRoguelike.Core.Match
             }
             else
             {
-                Produce(roll);
+                var gained = Produce(roll);
+                if (PartyRules)
+                    OnRollParty(roll, gained);
                 State.Phase = MatchPhase.Main;
             }
 
             return MatchCommandResult.Accepted;
         }
 
-        private void Produce(int roll)
+        private ResourceBundle[] Produce(int roll)
         {
             var gains = new ResourceBundle[State.Seats.Count];
             foreach (var tile in State.Board.Tiles.Values)
             {
-                if (tile.IsDesert || tile.NumberToken != roll || tile.HasRobber)
+                if (tile.IsDesert || tile.NumberToken != roll)
                     continue;
+                // v136 events: Storm silences one hex, Famine all grain; Gold Rush / Good Harvest double ore / grain.
+                if (State.ActiveEvent == EventId.Storm && State.EventTile == tile.Coord)
+                    continue;
+                if (State.ActiveEvent == EventId.Famine && tile.Resource == ResourceType.Wheat)
+                    continue;
+                int factor = State.ActiveEvent == EventId.GoldRush && tile.Resource == ResourceType.Stone
+                             || State.ActiveEvent == EventId.GoodHarvest && tile.Resource == ResourceType.Wheat ? 2 : 1;
                 for (int corner = 0; corner < 6; corner++)
                 {
                     var v = VertexGraph.Canonicalize(new Vertex(tile.Coord, corner));
                     if (!State.Board.VertexBuildings.TryGetValue(v, out var b))
                         continue;
-                    gains[MatchSeats.ToSeat(b.owner)].Add(tile.Resource, b.type == BuildingType.City ? 2 : 1);
+                    int seat = MatchSeats.ToSeat(b.owner);
+                    var civ = State.Seats[seat].Civilization;
+                    if (tile.HasRobber && civ != CivilizationId.SunKingdom)
+                        continue;
+                    int amount = MatchCivRules.HitAmount(civ, tile.Resource, b.type == BuildingType.City ? 2 : 1) * factor;
+                    gains[seat].Add(tile.Resource, amount);
                 }
             }
 
@@ -395,6 +463,8 @@ namespace CatanRoguelike.Core.Match
                 hand.Add(gains[i]);
                 State.Seats[i].Hand = hand;
             }
+
+            return gains;
         }
 
         /// <summary>v135: a seat that owes a discard (hand over 7 on a 7) picks exactly half its cards.</summary>
@@ -489,7 +559,7 @@ namespace CatanRoguelike.Core.Match
                 return MatchCommandResult.Rejected("No roads left.");
             if (!_placement.CanPlaceRoad(State.Board, e, State.Current.Owner))
                 return MatchCommandResult.Rejected("Invalid road.");
-            if (!free && !TryPay(RoadCost))
+            if (!free && !TryPay(RoadCostFor(c.Seat)))
                 return MatchCommandResult.Rejected("Can't afford a road.");
             State.Board.Roads[e] = State.Current.Owner;
             if (free)
@@ -521,7 +591,7 @@ namespace CatanRoguelike.Core.Match
                 return MatchCommandResult.Rejected("Close the trade offer first.");
             if (State.DevDeck.Count == 0)
                 return MatchCommandResult.Rejected("The development deck is empty.");
-            if (!TryPay(DevCardCost))
+            if (!TryPay(DevCardCostFor(c.Seat)))
                 return MatchCommandResult.Rejected("Can't afford a development card.");
             var card = State.DevDeck[State.DevDeck.Count - 1];
             State.DevDeck.RemoveAt(State.DevDeck.Count - 1);
@@ -686,6 +756,8 @@ namespace CatanRoguelike.Core.Match
             ph.Add(give);
             partner.Hand = ph;
             State.ActiveTrade = null;
+            me.PlayerTrades++;
+            partner.PlayerTrades++;
             AppendLog($"{me.Name} traded with {partner.Name}.");
             return MatchCommandResult.Accepted;
         }
@@ -709,7 +781,7 @@ namespace CatanRoguelike.Core.Match
                 return MatchCommandResult.Rejected("Invalid settlement spot.");
             if (State.ActiveTrade != null)
                 return MatchCommandResult.Rejected("Close the trade offer first.");
-            if (!TryPay(SettlementCost))
+            if (!TryPay(SettlementCostFor(c.Seat)))
                 return MatchCommandResult.Rejected("Can't afford a settlement.");
             State.Board.VertexBuildings[v] = (BuildingType.Settlement, State.Current.Owner);
             AppendLog($"{State.Current.Name} built a settlement.");
@@ -728,7 +800,7 @@ namespace CatanRoguelike.Core.Match
                 return MatchCommandResult.Rejected("Upgrade one of your settlements.");
             if (State.ActiveTrade != null)
                 return MatchCommandResult.Rejected("Close the trade offer first.");
-            if (!TryPay(CityCost))
+            if (!TryPay(CityCostFor(c.Seat)))
                 return MatchCommandResult.Rejected("Can't afford a city.");
             State.Board.VertexBuildings[v] = (BuildingType.City, State.Current.Owner);
             AppendLog($"{State.Current.Name} built a city.");
@@ -749,12 +821,13 @@ namespace CatanRoguelike.Core.Match
             hand.Add(c.Give, -ratio);
             hand.Add(c.Receive, 1);
             State.Current.Hand = hand;
+            State.Current.BankTradesThisTurn++;
             return MatchCommandResult.Accepted;
         }
 
         private MatchCommandResult UseExtraTime(MatchCommand c)
         {
-            if (IsSetup || State.Phase == MatchPhase.GameOver)
+            if (IsPregame || State.Phase == MatchPhase.GameOver)
                 return MatchCommandResult.Rejected("Extra time is for normal turns.");
             var seat = State.Current;
             if (seat.ExtraTimeUsedThisTurn)
@@ -776,6 +849,7 @@ namespace CatanRoguelike.Core.Match
             State.Current.DevCards.AddRange(State.Current.NewDevCards);
             State.Current.NewDevCards.Clear();
             State.Current.PlayedDevCardThisTurn = false;
+            State.Current.BankTradesThisTurn = 0;
             State.ActiveTrade = null;
             State.CurrentSeat = (State.CurrentSeat + 1) % State.Seats.Count;
             State.TurnNumber++;
@@ -788,6 +862,9 @@ namespace CatanRoguelike.Core.Match
                         seat.ExtraTimeCharges++;
                     AppendLog($"Round {State.Round}: everyone gains an extra-time charge.");
                 }
+
+                if (PartyRules)
+                    DrawEvent();
             }
 
             State.Phase = MatchPhase.Roll;
