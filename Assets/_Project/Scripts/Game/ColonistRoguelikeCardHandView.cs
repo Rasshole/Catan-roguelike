@@ -94,7 +94,8 @@ namespace CatanRoguelike.Game
             rect.anchoredPosition = Vector2.zero;
             rect.sizeDelta = new Vector2(72f, 44f);
             var bg = chipGo.AddComponent<Image>();
-            ColonistKenneyHudArt.ApplyColonistCountBadge(bg);
+            if (!ColonistUiKit.Apply(bg, UiKitPiece.ButtonWood, 0.8f))
+                ColonistKenneyHudArt.ApplyColonistCountBadge(bg);
             bg.raycastTarget = false;
             var label = RunHudUiFactory.CreateText(
                 chipGo.transform,
@@ -102,8 +103,9 @@ namespace CatanRoguelike.Game
                 text,
                 13,
                 TextAnchor.MiddleCenter,
-                RunHudUiFactory.ColonistTextOnPanel,
+                ColonistUiKit.Cream,
                 FontStyle.Bold);
+            ColonistUiKit.AddTextShadow(label);
             label.raycastTarget = false;
             return label;
         }
@@ -255,7 +257,9 @@ namespace CatanRoguelike.Game
             rect.anchorMax = new Vector2(0.5f, 0f);
 
             var bg = go.AddComponent<Image>();
-            ColonistKenneyHudArt.ApplyColonistResourceCardBackground(bg, new Color(0.94f, 0.88f, 0.74f, 1f));
+            // v132: painted parchment mini card with a thin wood rim, like the civ / event cards.
+            if (!ColonistUiKit.Apply(bg, UiKitPiece.FrameThin))
+                ColonistKenneyHudArt.ApplyColonistResourceCardBackground(bg, new Color(0.94f, 0.88f, 0.74f, 1f));
 
             var frameGo = new GameObject("Frame");
             frameGo.transform.SetParent(go.transform, false);
@@ -267,7 +271,9 @@ namespace CatanRoguelike.Game
             // Warm inner parchment over the framed background (the CardBack_blue frame made every
             // card blue, v109 review).
             var frame = frameGo.AddComponent<Image>();
-            frame.color = new Color(0.99f, 0.95f, 0.85f, 1f);
+            frame.color = ColonistUiKit.Get(UiKitPiece.FrameThin) != null
+                ? new Color(1f, 1f, 1f, 0f)
+                : new Color(0.99f, 0.95f, 0.85f, 1f);
             frame.raycastTarget = false;
             frameRect.offsetMin = new Vector2(5f, 5f);
             frameRect.offsetMax = new Vector2(-5f, -5f);
@@ -278,7 +284,8 @@ namespace CatanRoguelike.Game
             borderRect.anchorMin = new Vector2(0f, 1f);
             borderRect.anchorMax = new Vector2(1f, 1f);
             borderRect.pivot = new Vector2(0.5f, 1f);
-            borderRect.sizeDelta = new Vector2(0f, 6f);
+            borderRect.sizeDelta = new Vector2(-10f, 5f);
+            borderRect.anchoredPosition = new Vector2(0f, -5f);
             var borderImg = border.AddComponent<Image>();
             borderImg.raycastTarget = false;
 

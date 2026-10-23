@@ -15,7 +15,8 @@ namespace CatanRoguelike.Game
             }
 
             dieBackground.sprite = sprite;
-            dieBackground.color = Color.white;
+            // v132: ivory bone dice to sit on the parchment bar (the Kenney faces are pure white).
+            dieBackground.color = ColonistPresentation.IsActive ? new Color(1f, 0.95f, 0.84f, 1f) : Color.white;
             if (pipImages != null)
             {
                 foreach (var pip in pipImages)

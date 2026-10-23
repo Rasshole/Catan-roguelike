@@ -136,7 +136,7 @@ namespace CatanRoguelike.Game
             badgeRect.pivot = new Vector2(1f, 1f);
             badgeRect.anchoredPosition = new Vector2(-4f, -4f);
             badgeRect.sizeDelta = new Vector2(28f, 24f);
-            badgeGo.AddComponent<Image>().color = new Color(0.08f, 0.10f, 0.14f, 0.92f);
+            ColonistKenneyHudArt.ApplyColonistCountBadge(badgeGo.AddComponent<Image>());
 
             var count = RunHudUiFactory.CreateText(
                 badgeGo.transform,
@@ -144,7 +144,7 @@ namespace CatanRoguelike.Game
                 "0",
                 16,
                 TextAnchor.MiddleCenter,
-                RunHudUiFactory.TextPrimary,
+                ColonistUiKit.Cream,
                 FontStyle.Bold);
             _resourceAmountTexts.Add(count);
 
@@ -154,7 +154,7 @@ namespace CatanRoguelike.Game
                 ResourceDisplayNames.GetEnglish(resource),
                 11,
                 TextAnchor.LowerCenter,
-                new Color(0.12f, 0.14f, 0.18f, 1f),
+                ColonistUiKit.Ink,
                 FontStyle.Bold);
             var nameRect = name.rectTransform;
             nameRect.anchorMin = new Vector2(0f, 0f);
@@ -178,19 +178,20 @@ namespace CatanRoguelike.Game
                 "YourTurnBanner",
                 new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f),
-                new Vector2(-150f, -(top + RunHudLayout.ColonistYourTurnBannerHeight)),
-                new Vector2(150f, -top));
+                new Vector2(-160f, -(top + RunHudLayout.ColonistYourTurnBannerHeight)),
+                new Vector2(160f, -top));
             banner.pivot = new Vector2(0.5f, 1f);
             banner.anchoredPosition = new Vector2((left - right) * 0.5f, -top);
             ColonistKenneyHudArt.ApplyTurnBannerImage(banner.GetComponent<Image>());
-            RunHudUiFactory.CreateText(
+            var bannerLabel = RunHudUiFactory.CreateText(
                 banner,
                 "Label",
                 ColonistHudCopy.YourTurn,
-                20,
+                21,
                 TextAnchor.MiddleCenter,
-                RunHudUiFactory.ColonistTextOnPanel,
+                ColonistUiKit.Cream,
                 FontStyle.Bold);
+            ColonistUiKit.AddTextShadow(bannerLabel, 1.5f);
             _colonistTurnBanner = banner.gameObject;
             _colonistTurnBanner.SetActive(false);
         }
@@ -215,9 +216,11 @@ namespace CatanRoguelike.Game
                 new Vector2(1f, 1f),
                 new Vector2(-(width + margin), margin),
                 new Vector2(-margin, -(RunHudLayout.GetColonistBottomChromeHeight() + margin * 2f)));
+            // v132: the rail is one painted card (ornate frame), sections are parchment insets / rules.
+            ColonistKenneyHudArt.ApplyOrnatePanelImage(_colonistRightRail.GetComponent<Image>());
 
             var layout = _colonistRightRail.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(12, 12, 12, 12);
+            layout.padding = new RectOffset(18, 18, 20, 20);
             layout.spacing = 8f;
             layout.childForceExpandWidth = true;
             layout.childControlWidth = true;
@@ -250,6 +253,7 @@ namespace CatanRoguelike.Game
                 Vector2.zero,
                 Vector2.zero);
             RunHudUiFactory.AddLayoutElement(logPanel.gameObject, 220f, 1f);
+            MakeRailSection(logPanel);
             RunHudUiFactory.CreateRailSectionTitle(logPanel, ColonistHudCopy.GameLog);
             var logScrollGo = new GameObject("LogScroll");
             logScrollGo.transform.SetParent(logPanel, false);
@@ -287,6 +291,7 @@ namespace CatanRoguelike.Game
                 Vector2.zero,
                 Vector2.zero);
             RunHudUiFactory.AddLayoutElement(chatPanel.gameObject, 120f);
+            MakeRailSection(chatPanel);
             RunHudUiFactory.CreateRailSectionTitle(chatPanel, ColonistHudCopy.Chat);
             _colonistChatText = RunHudUiFactory.CreateText(
                 chatPanel,
@@ -307,9 +312,32 @@ namespace CatanRoguelike.Game
                 Vector2.zero,
                 Vector2.zero);
             RunHudUiFactory.AddLayoutElement(bankStrip.gameObject, 64f);
+            var bankImage = bankStrip.GetComponent<Image>();
+            bankImage.color = new Color(1f, 1f, 1f, 0f);
+            bankImage.raycastTarget = false;
             SetBankFlyTarget(bankStrip);
             _colonistBankStripRoot = bankStrip;
             _colonistBankStrip = ColonistHudBankStrip.Build(bankStrip);
+        }
+
+        /// <summary>Log / chat sections sit straight on the rail parchment under a thin brown rule.</summary>
+        private static void MakeRailSection(RectTransform section)
+        {
+            var image = section.GetComponent<Image>();
+            if (image != null)
+            {
+                image.sprite = null;
+                image.color = new Color(1f, 1f, 1f, 0f);
+                image.raycastTarget = false;
+            }
+
+            var rule = ColonistUiKit.CreateRule(section);
+            var rect = rule.rectTransform;
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.offsetMin = new Vector2(4f, -2f);
+            rect.offsetMax = new Vector2(-4f, 0f);
         }
 
         private void RefreshColonistPresentation(GameState state)
@@ -407,7 +435,9 @@ namespace CatanRoguelike.Game
             var swatchGo = new GameObject("Swatch");
             swatchGo.transform.SetParent(nameRow.transform, false);
             RunHudUiFactory.AddLayoutElement(swatchGo, 18f).preferredWidth = 18f;
-            swatchGo.AddComponent<Image>().color = avatarColor;
+            var swatch = swatchGo.AddComponent<Image>();
+            if (!ColonistUiKit.Apply(swatch, UiKitPiece.Badge, 0.5f, Color.Lerp(avatarColor, Color.white, 0.25f)))
+                swatch.color = avatarColor;
 
             var nameGo = new GameObject("Name");
             nameGo.transform.SetParent(nameRow.transform, false);

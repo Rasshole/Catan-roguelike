@@ -80,7 +80,15 @@ def pier(w=128, boards=4, board_h=48):
         tone = base_tones[b % len(base_tones)]
         g = noise(board_h, w, 10)
         streak = 0.5 + 0.5 * np.sin((ys[sl] - y0) / board_h * math.pi * (5 + b) + g * 5 + xs[sl] * 0.02)
-        c = tone * (0.82 + 0.16 * streak + 0.1 * noise(board_h, w, 3))[..., None]
+        # v132: stronger, readable grain (was a soft 0.82-0.98 wash): broad streaks + thin dark grain lines
+        # + one knot per board.
+        fine = 0.5 + 0.5 * np.sin((ys[sl] - y0) / board_h * math.pi * (13 + 2 * b) + g * 9 + xs[sl] * 0.035)
+        lines = np.clip((fine - 0.86) / 0.14, 0, 1)
+        c = tone * (0.70 + 0.30 * streak + 0.10 * noise(board_h, w, 3) - 0.30 * lines)[..., None]
+        kx, ky = (0.3 + 0.4 * ((b * 0.37) % 1.0)) * w, y0 + board_h * (0.35 + 0.3 * ((b * 0.61) % 1.0))
+        kd = np.hypot((xs[sl] - kx) / 7.0, (ys[sl] - ky) / 4.0)
+        ring = 0.5 + 0.5 * np.cos(kd * 5.0)
+        c *= (1 - 0.35 * np.clip(1.6 - kd, 0, 1) * (0.6 + 0.4 * ring))[..., None]
         yy = (ys[sl] - y0) / board_h
         c *= (0.80 + 0.2 * np.sin(np.clip(yy, 0, 1) * math.pi) ** 0.5)[..., None]  # rounded board edges
         col[sl] = c

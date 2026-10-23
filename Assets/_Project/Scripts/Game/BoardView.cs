@@ -520,6 +520,8 @@ namespace CatanRoguelike.Game
                     data.IsDesert
                         ? BoardTerrainSlot.Desert
                         : BoardTerrainMaterialSlots.ResourceToSlot(data.Resource));
+            if (blenderTop && renderer.sharedMaterial != null && renderer.sharedMaterial.HasProperty("_Color"))
+                renderer.sharedMaterial.color *= BoardTerrainMaterialSlots.PerTileTint(data.Coord);
             // Painted tiles carry their own cardboard bevel frame; the slate seam strips would
             // draw a cold line through the middle of the sand borders.
             if (!blenderTop)

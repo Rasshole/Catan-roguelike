@@ -29,6 +29,29 @@ namespace CatanRoguelike.Game
 
         public static Sprite GetCardFrame(bool wide) => Load(CardFolder + "/" + (wide ? WideFrame : PortraitFrame));
 
+        /// <summary>Texture-pixel slice border of the painted card frames (wood moulding + gold corner piece).</summary>
+        public const float CardFrameSliceBorder = 180f;
+
+        /// <summary>
+        /// v132: the wide painted frame as a 9-slice so the event card can be any height (it hugs its text)
+        /// and any width. Set Image.pixelsPerUnitMultiplier to texWidth / cardWidth to keep proportions.
+        /// </summary>
+        public static Sprite GetCardFrameSliced(bool wide)
+        {
+            string path = CardFolder + "/" + (wide ? WideFrame : PortraitFrame) + "#sliced";
+            if (Cache.TryGetValue(path, out var cached) && cached != null)
+                return cached;
+            var tex = Resources.Load<Texture2D>(CardFolder + "/" + (wide ? WideFrame : PortraitFrame));
+            if (tex == null)
+                return null;
+            float b = CardFrameSliceBorder;
+            var sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f, 0,
+                SpriteMeshType.FullRect, new Vector4(b, b, b, b));
+            sprite.name = path;
+            Cache[path] = sprite;
+            return sprite;
+        }
+
         private static Sprite Load(string path)
         {
             if (Cache.TryGetValue(path, out var cached) && cached != null)

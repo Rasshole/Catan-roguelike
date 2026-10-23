@@ -17,14 +17,18 @@ namespace CatanRoguelike.Tests
         {
             var painted = ColonistResourceIconTextures.GetPainted(resource);
             Assert.IsNotNull(painted, $"painted icon for {resource}");
-            Assert.AreSame(painted, ColonistResourceIconTextures.GetForPortBadge(resource));
-            Assert.AreSame(painted, ColonistHudResourceSprites.Get(resource).texture);
+            // v132: the UI uses the crisp small-size variant of the same painted icon.
+            var small = ColonistResourceIconTextures.GetPaintedSmall(resource);
+            Assert.IsNotNull(small, $"small painted icon for {resource}");
+            Assert.AreSame(small, ColonistResourceIconTextures.GetForPortBadge(resource));
+            Assert.AreSame(small, ColonistHudResourceSprites.Get(resource).texture);
         }
 
         [Test]
         public void PaintedFish_IsTheFishermenGlyph()
         {
-            var fish = ColonistResourceIconTextures.GetPaintedFish();
+            Assert.IsNotNull(ColonistResourceIconTextures.GetPaintedFish());
+            var fish = ColonistResourceIconTextures.GetPaintedFishSmall();
             Assert.IsNotNull(fish);
             Assert.AreSame(fish, ColonistHudResourceSprites.GetFish().texture);
         }

@@ -30,13 +30,22 @@ namespace CatanRoguelike.Game
 
         public static Texture2D GetPaintedFish() => Resources.Load<Texture2D>($"{PaintedIconFolder}/Fish");
 
+        /// <summary>
+        /// v132: crisp 96px variant ({Name}Small: bolder outline, sharpened, thickened wheat stalks) for every
+        /// UI use where the icon shows at ~30-60px. Null if missing.
+        /// </summary>
+        public static Texture2D GetPaintedSmall(ResourceType resource) =>
+            Resources.Load<Texture2D>($"{PaintedIconFolder}/{resource}Small");
+
+        public static Texture2D GetPaintedFishSmall() => Resources.Load<Texture2D>($"{PaintedIconFolder}/FishSmall");
+
         /// <summary>Icon used across the UI (HUD cards, build costs, trade, port badges): the painted icon.</summary>
         public static Texture2D GetForPortBadge(ResourceType resource)
         {
             if (PortDecorCache.TryGetValue(resource, out var cached) && cached != null)
                 return cached;
 
-            var painted = GetPainted(resource);
+            var painted = GetPaintedSmall(resource) ?? GetPainted(resource);
             if (painted != null)
             {
                 PortDecorCache[resource] = painted;

@@ -22,8 +22,11 @@ namespace CatanRoguelike.Game
         private static readonly Color InkBad = new(0.58f, 0.17f, 0.10f, 1f);
         private static readonly Color TitleCream = new(0.98f, 0.92f, 0.76f, 1f);
 
-        private const float EventCardWidth = 960f;
-        private const float EventCardHeight = 540f;
+        // v132: the event card is a compact side card (top-left, beside the board) that hugs its text, so
+        // the swapped numbers / highlighted hexes on the board stay visible while it is up.
+        public const float EventCardWidth = 560f;
+        public const float EventCardMinHeight = 236f;
+        public const float EventCardMargin = 24f;
 
         private RectTransform _civPickRoot;
         private string _civPickOfferKey;
@@ -36,6 +39,18 @@ namespace CatanRoguelike.Game
         public bool IsCivilizationPickVisibleForTests => _civPickRoot != null && _civPickRoot.gameObject.activeSelf;
         public bool IsEventCardVisibleForTests => _eventCardRoot != null && _eventCardRoot.gameObject.activeSelf;
 
+        /// <summary>Screen-space (canvas) rect of the event card, for layout tests.</summary>
+        public Rect GetEventCardCanvasRectForTests()
+        {
+            if (_eventCardRoot == null)
+                return default;
+            var card = _eventCardRoot.Find("Card") as RectTransform;
+            return card != null ? card.rect : _eventCardRoot.rect;
+        }
+
+        public RectTransform GetEventCardRectTransformForTests() =>
+            _eventCardRoot != null ? _eventCardRoot.Find("Card") as RectTransform : null;
+
         private void RefreshRoguelikeOverlays(GameState state)
         {
             if (_canvas == null)
@@ -43,6 +58,7 @@ namespace CatanRoguelike.Game
             RefreshCivilizationPick(state);
             RefreshEventCard(state);
             RefreshCivilizationBadge(state);
+            RefreshRewardOverlays(state);
         }
 
         // ---------- civilization pick ----------
@@ -170,53 +186,92 @@ namespace CatanRoguelike.Game
         {
             var def = EventLibrary.Get(state.ActiveEvent);
             string key = $"{state.EventDay}:{state.ActiveEvent}";
-            var root = CreateFullscreenDim("EventCard", new Color(0.04f, 0.03f, 0.02f, 0.45f));
-            var dimButton = root.gameObject.AddComponent<Button>();
-            dimButton.transition = Selectable.Transition.None;
-            dimButton.onClick.AddListener(() => DismissEventCard(key));
 
+            // Non-blocking holder: no full-screen dim, the board stays visible and clickable.
+            var root = new GameObject("EventCard").AddComponent<RectTransform>();
+            root.SetParent(_canvas.transform, false);
+            root.gameObject.layer = _canvas.gameObject.layer;
+            root.anchorMin = Vector2.zero;
+            root.anchorMax = Vector2.one;
+            root.offsetMin = Vector2.zero;
+            root.offsetMax = Vector2.zero;
+
+            const float w = EventCardWidth;
             var card = CreateCardFrame(root, "Card", wide: true);
-            SetRect(card, new Vector2(0.5f, 0.5f), new Vector2(-40f, 60f), new Vector2(EventCardWidth, EventCardHeight));
+            var cardImage = card.GetComponent<Image>();
+            var sliced = ColonistRoguelikeArt.GetCardFrameSliced(true);
+            if (sliced != null)
+            {
+                cardImage.sprite = sliced;
+                cardImage.type = Image.Type.Sliced;
+                cardImage.preserveAspect = false;
+                cardImage.pixelsPerUnitMultiplier = sliced.texture.width / w;
+            }
+
             var cardButton = card.gameObject.AddComponent<Button>();
-            cardButton.targetGraphic = card.GetComponent<Image>();
+            cardButton.targetGraphic = cardImage;
             cardButton.onClick.AddListener(() => DismissEventCard(key));
 
-            var emblem = CreateImage(card, "Emblem", ColonistRoguelikeArt.GetEventEmblem(state.ActiveEvent));
-            SetRect(emblem.rectTransform, new Vector2(0f, 0.5f), new Vector2(215f, 4f), new Vector2(250f, 250f));
+            float border = sliced != null ? 96f * w / sliced.texture.width : 40f;
+            const float emblemSize = 124f;
+            float textX = border + 18f + emblemSize + 18f;
+            float textW = w - textX - border - 16f;
+            float y = border + 14f;
 
-            float textX = 368f, textW = EventCardWidth - textX - 100f;
-            var kicker = RunHudUiFactory.CreateText(card, "Kicker",
-                $"EVENT  ·  DAY {state.EventDay}  ·  {CategoryLabel(def.Category)}", 18, TextAnchor.MiddleLeft,
-                new Color(0.56f, 0.40f, 0.14f, 1f), FontStyle.Bold);
-            SetRect(kicker.rectTransform, new Vector2(0f, 1f), new Vector2(textX + textW / 2f, -112f),
-                new Vector2(textW, 24f));
+            Text AddLine(string name, string text, int size, Color color, FontStyle style, float gapAfter)
+            {
+                var t = RunHudUiFactory.CreateText(card, name, text, size, TextAnchor.UpperLeft, color, style);
+                var r = t.rectTransform;
+                r.anchorMin = r.anchorMax = new Vector2(0f, 1f);
+                r.pivot = new Vector2(0f, 1f);
+                r.sizeDelta = new Vector2(textW, 400f);
+                t.verticalOverflow = VerticalWrapMode.Overflow;
+                float h = Mathf.Ceil(t.preferredHeight);
+                r.sizeDelta = new Vector2(textW, h);
+                r.anchoredPosition = new Vector2(textX, -y);
+                y += h + gapAfter;
+                return t;
+            }
 
-            var name = RunHudUiFactory.CreateText(card, "Name", def.Name, 46, TextAnchor.MiddleLeft, InkBrown,
-                FontStyle.Bold);
-            SetRect(name.rectTransform, new Vector2(0f, 1f), new Vector2(textX + textW / 2f, -156f),
-                new Vector2(textW, 52f));
-
-            var body = RunHudUiFactory.CreateText(card, "Description", def.Description, 23, TextAnchor.UpperLeft,
-                InkBrown);
-            SetRect(body.rectTransform, new Vector2(0f, 1f), new Vector2(textX + textW / 2f, -236f),
-                new Vector2(textW, 84f));
-
+            AddLine("Kicker", $"EVENT  ·  DAY {state.EventDay}  ·  {CategoryLabel(def.Category)}", 13,
+                ColonistUiKit.InkGold, FontStyle.Bold, 2f);
+            AddLine("Name", def.Name, 28, InkBrown, FontStyle.Bold, 6f);
+            AddLine("Description", def.Description, 16, InkBrown, FontStyle.Normal, 6f);
             if (!string.IsNullOrEmpty(state.EventDetail))
             {
-                var detail = RunHudUiFactory.CreateText(card, "Detail", state.EventDetail, 23, TextAnchor.UpperLeft,
+                AddLine("Detail", state.EventDetail, 16,
                     def.Category == EventCategory.Hardship || def.Category == EventCategory.Robber ? InkBad : InkGood,
-                    FontStyle.Bold);
-                SetRect(detail.rectTransform, new Vector2(0f, 1f), new Vector2(textX + textW / 2f, -322f),
-                    new Vector2(textW, 64f));
+                    FontStyle.Bold, 6f);
             }
 
             int act = Core.Progression.ActProgression.GetAct(state.Board.DayNumber);
             int next = EventEngine.DaysUntilNextEvent(state.Board.DayNumber + 1, act) + 1;
-            var hint = RunHudUiFactory.CreateText(card, "Hint",
-                $"Next event in {next} day{(next == 1 ? "" : "s")}   ·   click to continue", 17, TextAnchor.MiddleLeft, InkMuted,
-                FontStyle.Italic);
-            SetRect(hint.rectTransform, new Vector2(0f, 0f), new Vector2(textX + textW / 2f, 104f),
-                new Vector2(textW, 22f));
+            AddLine("Hint", $"Next event in {next} day{(next == 1 ? "" : "s")}  ·  click to close", 12, InkMuted,
+                FontStyle.Italic, 0f);
+
+            float height = Mathf.Max(EventCardMinHeight, y + border + 10f);
+            card.anchorMin = card.anchorMax = new Vector2(0f, 1f);
+            card.pivot = new Vector2(0f, 1f);
+            card.sizeDelta = new Vector2(w, height);
+            card.anchoredPosition = new Vector2(EventCardMargin, -EventCardMargin);
+
+            // Centre the text block vertically when the card is taller than its text (short cards).
+            float spare = height - (y + border + 10f);
+            if (spare > 0f)
+            {
+                foreach (Transform child in card)
+                {
+                    if (child is RectTransform r && child.GetComponent<Text>() != null)
+                        r.anchoredPosition += new Vector2(0f, -spare * 0.5f);
+                }
+            }
+
+            var emblem = CreateImage(card, "Emblem", ColonistRoguelikeArt.GetEventEmblem(state.ActiveEvent));
+            var er = emblem.rectTransform;
+            er.anchorMin = er.anchorMax = new Vector2(0f, 0.5f);
+            er.pivot = new Vector2(0.5f, 0.5f);
+            er.sizeDelta = new Vector2(emblemSize, emblemSize);
+            er.anchoredPosition = new Vector2(border + 18f + emblemSize / 2f, 0f);
             return root;
         }
 

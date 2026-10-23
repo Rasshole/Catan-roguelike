@@ -35,23 +35,42 @@ namespace CatanRoguelike.Game
             iconRect.offsetMin = Vector2.zero;
             iconRect.offsetMax = Vector2.zero;
             var iconImg = iconGo.AddComponent<Image>();
-            ColonistHudIconGraphic.ApplyCardIcon(iconImg, ColonistHudResourceSprites.GetFish(), fill: 0.56f, centerY: 0.52f);
+            ColonistHudIconGraphic.ApplyCardIcon(iconImg, ColonistHudResourceSprites.GetFish(), fill: 0.60f, centerY: 0.47f);
 
+            // v132: same layout as the resource cards (wood count badge top-right, name at the foot).
             var countGo = new GameObject("Count");
             countGo.transform.SetParent(cardGo.transform, false);
             var countRect = countGo.AddComponent<RectTransform>();
-            countRect.anchorMin = new Vector2(0f, 0f);
-            countRect.anchorMax = new Vector2(1f, 0.28f);
-            countRect.offsetMin = Vector2.zero;
-            countRect.offsetMax = Vector2.zero;
+            countRect.anchorMin = new Vector2(1f, 1f);
+            countRect.anchorMax = new Vector2(1f, 1f);
+            countRect.pivot = new Vector2(1f, 1f);
+            countRect.anchoredPosition = new Vector2(-4f, -4f);
+            countRect.sizeDelta = new Vector2(28f, 24f);
+            ColonistKenneyHudArt.ApplyColonistCountBadge(countGo.AddComponent<Image>());
             _fishHandCountText = RunHudUiFactory.CreateText(
                 countGo.transform,
                 "Value",
                 "0",
-                20,
+                16,
                 TextAnchor.MiddleCenter,
-                Color.white,
+                ColonistUiKit.Cream,
                 FontStyle.Bold);
+
+            var name = RunHudUiFactory.CreateText(
+                cardGo.transform,
+                "Name",
+                "Fish",
+                11,
+                TextAnchor.LowerCenter,
+                ColonistUiKit.Ink,
+                FontStyle.Bold);
+            var nameRect = name.rectTransform;
+            nameRect.anchorMin = new Vector2(0f, 0f);
+            nameRect.anchorMax = new Vector2(1f, 0f);
+            nameRect.pivot = new Vector2(0.5f, 0f);
+            nameRect.anchoredPosition = new Vector2(0f, 6f);
+            nameRect.sizeDelta = new Vector2(0f, 18f);
+            name.horizontalOverflow = HorizontalWrapMode.Overflow;
 
             _fishHandCard = cardGo;
         }
@@ -96,9 +115,9 @@ namespace CatanRoguelike.Game
                 badgeGo.transform,
                 "Count",
                 "0",
-                13,
+                12,
                 TextAnchor.MiddleCenter,
-                RunHudUiFactory.ColonistTextOnPanel,
+                ColonistUiKit.Cream,
                 FontStyle.Bold);
             _fishBankCountText.raycastTarget = false;
             _fishBankCountText.verticalOverflow = VerticalWrapMode.Overflow;

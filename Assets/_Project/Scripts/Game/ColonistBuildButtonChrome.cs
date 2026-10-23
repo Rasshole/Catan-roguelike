@@ -59,9 +59,9 @@ namespace CatanRoguelike.Game
                 titleRow.transform,
                 "Title",
                 shortTitle,
-                11,
+                12,
                 TextAnchor.MiddleLeft,
-                RunHudUiFactory.TextPrimary,
+                RunHudUiFactory.ColonistTextOnPanel,
                 FontStyle.Bold);
             title.horizontalOverflow = HorizontalWrapMode.Overflow;
             title.verticalOverflow = VerticalWrapMode.Truncate;
@@ -75,7 +75,7 @@ namespace CatanRoguelike.Game
                 string.Empty,
                 10,
                 TextAnchor.MiddleCenter,
-                RunHudUiFactory.TextMuted);
+                RunHudUiFactory.ColonistTextMutedOnPanel);
             cost.horizontalOverflow = HorizontalWrapMode.Overflow;
             cost.gameObject.SetActive(false);
             RunHudUiFactory.AddLayoutElement(cost.gameObject, 14f);
@@ -99,7 +99,7 @@ namespace CatanRoguelike.Game
             chipRect.pivot = new Vector2(1f, 1f);
             chipRect.anchoredPosition = new Vector2(-2f, -2f);
             chipRect.sizeDelta = new Vector2(22f, 18f);
-            chipGo.AddComponent<Image>().color = new Color(0.1f, 0.12f, 0.16f, 0.9f);
+            ColonistKenneyHudArt.ApplyColonistCountBadge(chipGo.AddComponent<Image>());
             chipGo.AddComponent<LayoutElement>().ignoreLayout = true;
             pieceCountChip = RunHudUiFactory.CreateText(
                 chipGo.transform,
@@ -107,7 +107,7 @@ namespace CatanRoguelike.Game
                 "0",
                 12,
                 TextAnchor.MiddleCenter,
-                RunHudUiFactory.TextPrimary,
+                ColonistUiKit.Cream,
                 FontStyle.Bold);
             pieceCountChip.raycastTarget = false;
 
@@ -201,7 +201,7 @@ namespace CatanRoguelike.Game
                     amount.ToString(),
                     13,
                     TextAnchor.MiddleLeft,
-                    canAfford ? RunHudUiFactory.ColonistTextOnPanel : new Color(0.58f, 0.10f, 0.08f, 1f),
+                    canAfford ? RunHudUiFactory.ColonistTextOnPanel : ColonistUiKit.InkBad,
                     FontStyle.Bold);
                 amt.raycastTarget = false;
                 RunHudUiFactory.AddLayoutElement(amt.gameObject, 20f).preferredWidth = 11f;

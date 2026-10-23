@@ -91,9 +91,9 @@ namespace CatanRoguelike.Game
                 badgeGo.transform,
                 "Label",
                 "0",
-                13,
+                12,
                 TextAnchor.MiddleCenter,
-                RunHudUiFactory.ColonistTextOnPanel,
+                ColonistUiKit.Cream,
                 FontStyle.Bold);
             countLabel.raycastTarget = false;
             countLabel.verticalOverflow = VerticalWrapMode.Overflow;

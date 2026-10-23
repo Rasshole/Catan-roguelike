@@ -26,14 +26,14 @@ namespace CatanRoguelike.Game
             _fishSpendRoot.anchorMax = new Vector2(0f, 0.42f);
             _fishSpendRoot.pivot = new Vector2(0f, 0.5f);
             _fishSpendRoot.anchoredPosition = new Vector2(12f, 0f);
-            _fishSpendRoot.sizeDelta = new Vector2(188f, 248f);
+            _fishSpendRoot.sizeDelta = new Vector2(196f, 266f);
 
             var bg = go.AddComponent<Image>();
-            ColonistKenneyHudArt.ApplyPanelImage(bg);
+            ColonistKenneyHudArt.ApplyWoodBarImage(bg);
 
             BuildFishSpendHeader(go.transform);
 
-            float y = -52f;
+            float y = -60f;
             // Costs come from the rules (Sea Folk pay 1 less) and refresh with the state.
             AddFishSpendButton("Robber off", FishermenSpendAction.MoveRobberOffBoard, ref y);
             AddFishSpendButton("Steal", FishermenSpendAction.StealFromOpponent, ref y);
@@ -50,8 +50,8 @@ namespace CatanRoguelike.Game
             headerRect.anchorMin = new Vector2(0f, 1f);
             headerRect.anchorMax = new Vector2(1f, 1f);
             headerRect.pivot = new Vector2(0.5f, 1f);
-            headerRect.anchoredPosition = new Vector2(0f, -10f);
-            headerRect.sizeDelta = new Vector2(-16f, 36f);
+            headerRect.anchoredPosition = new Vector2(0f, -16f);
+            headerRect.sizeDelta = new Vector2(-32f, 36f);
 
             var row = headerGo.AddComponent<HorizontalLayoutGroup>();
             row.spacing = 8f;
@@ -112,13 +112,17 @@ namespace CatanRoguelike.Game
             rect.anchorMax = new Vector2(1f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
             rect.anchoredPosition = new Vector2(0f, y);
-            rect.sizeDelta = new Vector2(-16f, 36f);
+            rect.sizeDelta = new Vector2(-32f, 36f);
             y -= 40f;
 
             var image = buttonGo.AddComponent<Image>();
-            ColonistKenneyHudArt.ApplyColonistWarmButton(image, primaryGreen: true);
+            ColonistKenneyHudArt.ApplyColonistWarmButton(image, primaryGreen: false);
             var button = buttonGo.AddComponent<Button>();
             button.targetGraphic = image;
+            var fishColors = button.colors;
+            fishColors.highlightedColor = new Color(1f, 0.97f, 0.88f, 1f);
+            fishColors.pressedColor = new Color(0.86f, 0.80f, 0.70f, 1f);
+            button.colors = fishColors;
             button.onClick.AddListener(() =>
             {
                 if (_controller != null && _controller.TrySpendFish(action))

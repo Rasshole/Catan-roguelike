@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using CatanRoguelike.Core.Ai;
 using CatanRoguelike.Core.Cards;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Hex;
@@ -267,6 +268,7 @@ namespace CatanRoguelike.Core
                 score += NumberTokenLibrary.GetPipWeight(tile.NumberToken.Value);
                 if (game.State.TodayRolls.TryGetValue(tile.Resource, out int roll))
                     score += roll;
+                score += AiAwareness.SettlementHexEventBonus(game.State, tile);
             }
             return score;
         }
@@ -309,19 +311,22 @@ namespace CatanRoguelike.Core
 
         private HexCoord? PickRobberTarget(GameController game)
         {
-            var candidates = game.State.Board.VertexBuildings
-                .Where(kv => kv.Value.owner == PlayerId.Human)
+            var board = game.State.Board;
+            var candidates = board.VertexBuildings
+                .Where(kv => kv.Value.owner == PlayerId.Human && kv.Value.type != BuildingType.None)
                 .SelectMany(kv => VertexGraph.GetHexesForVertex(kv.Key))
-                .Where(h => game.State.Board.TryGetTile(h, out _))
+                .Where(h => board.TryGetTile(h, out _))
                 .GroupBy(h => h)
                 .Select(g =>
                 {
-                    game.State.Board.TryGetTile(g.Key, out var tile);
-                    int pip = tile.NumberToken.HasValue
-                        ? NumberTokenLibrary.GetPipWeight(tile.NumberToken.Value)
-                        : 1;
-                    return (coord: g.Key, score: g.Count() * pip);
+                    board.TryGetTile(g.Key, out var tile);
+                    int aiBuildings = board.VertexBuildings.Count(kv =>
+                        kv.Value.owner == PlayerId.Ai && kv.Value.type != BuildingType.None
+                        && VertexGraph.GetHexesForVertex(kv.Key).Contains(g.Key));
+                    // v132: civ / event aware (Sun Kingdom ignores blocking, favoured + bounty hexes hurt more).
+                    return (coord: g.Key, score: AiAwareness.RobberHexScore(game.State, tile, g.Count(), aiBuildings));
                 })
+                .Where(x => x.score > 0f)
                 .OrderByDescending(x => x.score)
                 .ToList();
 

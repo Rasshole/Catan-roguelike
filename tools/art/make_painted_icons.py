@@ -100,5 +100,69 @@ def main():
         print("wrote", name)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and os.environ.get("V132", "1") != "1":
     main()
+
+
+# ---------------------------------------------------------------- v132 additions
+SMALL = 96
+
+
+def tint_ore(img):
+    """Ore read as flat grey: grade it to blue-slate stone with cool highlights (luminance gradient map)."""
+    arr = np.asarray(img, np.float32)
+    rgb, a = arr[..., :3], arr[..., 3:]
+    lum = (rgb @ np.array([0.299, 0.587, 0.114], np.float32))[..., None] / 255.0
+    stops = np.array([[0.00, 22, 26, 44], [0.30, 52, 66, 98], [0.60, 104, 128, 168],
+                      [0.85, 182, 202, 228], [1.00, 238, 244, 252]], np.float32)
+    out = np.zeros_like(rgb)
+    for c in range(3):
+        out[..., c] = np.interp(lum[..., 0], stops[:, 0], stops[:, c + 1])
+    graded = rgb * 0.30 + out * 0.70
+    return Image.fromarray(np.dstack([np.clip(graded, 0, 255), a]).astype(np.uint8), "RGBA")
+
+
+def crisp_small(full, name):
+    """Small-size variant (96px): bolder outline, local contrast + unsharp mask so it survives 30-50px."""
+    big = full.resize((SMALL * 4, SMALL * 4), Image.LANCZOS)
+    a = big.getchannel("A")
+    if name == "Wheat":
+        # Thin stalks/awns vanish when minified: thicken the silhouette before the outline.
+        a = a.filter(ImageFilter.MaxFilter(5))
+    outline = a.filter(ImageFilter.MaxFilter(9)).filter(ImageFilter.GaussianBlur(1.2))
+    canvas = Image.new("RGBA", big.size, (0, 0, 0, 0))
+    ink = Image.new("RGBA", big.size, (46, 30, 16, 0))
+    ink.putalpha(outline.point(lambda v: int(v * 0.95)))
+    canvas = Image.alpha_composite(canvas, ink)
+    body = big
+    if name == "Wheat":
+        # Fill the thickened silhouette with a blurred copy of the colour so gaps read as straw, not ink.
+        fill = big.filter(ImageFilter.GaussianBlur(3)).copy()
+        fill_rgb = np.asarray(fill, np.float32)[..., :3]
+        fill_rgb = fill_rgb / np.maximum(np.asarray(fill, np.float32)[..., 3:] / 255.0, 0.05)
+        fill_img = Image.fromarray(np.clip(fill_rgb * 0.9, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
+        fill_img.putalpha(a)
+        canvas = Image.alpha_composite(canvas, fill_img)
+    canvas = Image.alpha_composite(canvas, body)
+    small = canvas.resize((SMALL, SMALL), Image.LANCZOS)
+    rgb = small.convert("RGB").filter(ImageFilter.UnsharpMask(radius=1.4, percent=90, threshold=1))
+    from PIL import ImageEnhance
+    rgb = ImageEnhance.Contrast(rgb).enhance(1.12)
+    rgb = ImageEnhance.Color(rgb).enhance(1.18 if name in ("Wheat", "Stone") else 1.04)
+    out = rgb.convert("RGBA")
+    out.putalpha(small.getchannel("A"))
+    return out
+
+
+def main_v132():
+    for src, name in NAMES.items():
+        full = finish(cut(os.path.join(SRC, f"{src}.jpg")))
+        if name == "Stone":
+            full = tint_ore(full)
+        full.save(os.path.join(DST, f"{name}.png"), optimize=True)
+        crisp_small(full, name).save(os.path.join(DST, f"{name}Small.png"), optimize=True)
+        print("wrote", name, "+ small")
+
+
+if __name__ == "__main__" and os.environ.get("V132", "1") == "1":
+    main_v132()

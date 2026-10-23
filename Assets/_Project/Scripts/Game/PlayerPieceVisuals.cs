@@ -297,7 +297,11 @@ namespace CatanRoguelike.Game
                     float fy = y / (float)h;
                     float wave = Mathf.Sin((fy * 9f + Mathf.PerlinNoise(x * 0.03f, fy * 3f) * 1.6f) * Mathf.PI * 2f);
                     float fine = Mathf.PerlinNoise(x * 0.25f, y * 1.7f);
-                    float k = 0.88f + 0.07f * wave + 0.06f * fine;
+                    // v132: stronger grain (was 0.88 +/- 0.13): broad waves, thin dark grain lines and two
+                    // plank seams across the beam so the road reads as wood from the board camera.
+                    float line = Mathf.Clamp01((Mathf.Abs(wave) - 0.86f) / 0.14f);
+                    float seam = (x % 43) < 2 ? 0.22f : 0f;
+                    float k = 0.80f + 0.11f * wave + 0.10f * fine - 0.16f * line - seam;
                     byte c = (byte)(Mathf.Clamp01(k) * 255f);
                     px[y * w + x] = new Color32(c, c, c, 255);
                 }

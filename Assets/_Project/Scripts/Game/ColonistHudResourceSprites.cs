@@ -15,7 +15,8 @@ namespace CatanRoguelike.Game
         {
             if (_fish != null)
                 return _fish;
-            var texture = ColonistResourceIconTextures.GetPaintedFish()
+            var texture = ColonistResourceIconTextures.GetPaintedFishSmall()
+                ?? ColonistResourceIconTextures.GetPaintedFish()
                 ?? UnityEngine.Resources.Load<Texture2D>("Art/Icons/Fish");
             if (texture == null)
                 return Get(ResourceType.Wheat);

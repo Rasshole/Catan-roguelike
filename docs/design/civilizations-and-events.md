@@ -39,7 +39,7 @@ The chosen civilization appears in the "You" player panel as its emblem plus a s
 |---|---|---|---|
 | **The Sea Folk** | +1 fish whenever your fishing grounds catch anything. Every fish-shop action costs 1 fish less (minimum 1). | none | `FishCatchBonus`, `FishCost` |
 | **The Forest Folk** | When a 2 or 12 is rolled, gain 1 Lumber per forest you border (at least 1). | none | `DiceBonus` |
-| **Merchant Republic** | Bank trades are 3:1 everywhere. 2:1 ports still apply. | none | `BaseBankRate` |
+| **Merchant Republic** | Bank trades are 3:1 everywhere. 2:1 ports still apply. | Whenever a 7 is rolled, lose 1 random resource (pirate tariff, added in v132). | `BaseBankRate`, `OnSevenRolled` |
 | **Steppe Nomads** | Settlements cost no Brick. | Cities cost 1 more Ore. | `ApplyCostModifiers` |
 | **Highland Clans** | Mountains yield +1 Ore per hit. | Pastures yield 1 less Wool per hit (floored at 0). | `HexYieldDeltaPerHit` |
 | **Shepherd Kingdom** | Start with 2 extra Wool. Pastures yield +1 Wool per hit. | Cities cost 1 more Wheat. | `ApplyStartBonus`, `HexYieldDeltaPerHit`, `ApplyCostModifiers` |

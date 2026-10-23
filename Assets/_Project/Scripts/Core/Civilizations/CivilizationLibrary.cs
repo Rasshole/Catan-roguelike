@@ -42,7 +42,7 @@ namespace CatanRoguelike.Core.Civilizations
                 "", "ForestFolk"),
             new CivilizationDefinition(CivilizationId.MerchantRepublic, "Merchant Republic", "Every coin finds a purse",
                 "Bank trades are 3:1 everywhere (2:1 ports still apply).",
-                "", "MerchantRepublic"),
+                "Whenever a 7 is rolled, lose 1 random resource (pirate tariff).", "MerchantRepublic"),
             new CivilizationDefinition(CivilizationId.SteppeNomads, "Steppe Nomads", "Home is where the herd rests",
                 "Settlements cost no Brick.",
                 "Cities cost 1 more Ore.", "SteppeNomads"),

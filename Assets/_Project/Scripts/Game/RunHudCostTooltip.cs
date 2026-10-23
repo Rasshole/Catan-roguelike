@@ -33,7 +33,7 @@ namespace CatanRoguelike.Game
                 string.Empty,
                 14,
                 TextAnchor.MiddleCenter,
-                RunHudUiFactory.TextPrimary);
+                ColonistPresentation.IsActive ? ColonistUiKit.Ink : RunHudUiFactory.TextPrimary);
         }
 
         public void SetTooltip(string text) => _tooltipText = text ?? string.Empty;

@@ -67,6 +67,19 @@ namespace CatanRoguelike.Core.Civilizations
                 return "Brickwrights: +1 Brick from the kilns.";
             }
 
+            if (state.Civilization == CivilizationId.MerchantRepublic)
+            {
+                // v132 drawback: a pirate tariff on the shipping lanes.
+                var me = state.PlayerInventory;
+                var owned = ResourceTypes.Productive.Where(r => me[r] > 0).ToList();
+                if (owned.Count == 0)
+                    return "Pirate tariff: your warehouses were empty.";
+                var pick = owned[random != null ? random.Next(owned.Count) : 0];
+                me.Set(pick, me[pick] - 1);
+                state.PlayerInventory = me;
+                return $"Pirate tariff: lost 1 {Events.EventText.ResourceName(pick)}.";
+            }
+
             if (state.Civilization == CivilizationId.NorthernRaiders)
             {
                 var ai = state.AiInventory;

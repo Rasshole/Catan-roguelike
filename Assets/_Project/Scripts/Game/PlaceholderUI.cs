@@ -50,6 +50,9 @@ namespace CatanRoguelike.Game
             var state = _controller.State;
             if (!PlaceholderHudLayout.IsPreGamePhase(state.Phase))
                 return;
+            // v132: Colonist mode draws the run setup as painted cards on the HUD canvas.
+            if (RunHudController.PaintedPreGameMenusVisible)
+                return;
 
             var panelRect = PlaceholderHudLayout.GetPanelRect(state.Phase, Screen.width, Screen.height);
             PlaceholderHudLayout.SetActivePanelWidth(panelRect.width);

@@ -198,8 +198,8 @@ namespace CatanRoguelike.Core.Data
 
         public static string GetDescription(MapSize size) => size switch
         {
-            MapSize.Small => "Hurtig tutorial — lille blomst.",
-            MapSize.Medium => "19-hex form uden de 6 yderhjørner — flade kanter som mini-Catan.",
+            MapSize.Small => "Quick tutorial — a small flower of seven hexes.",
+            MapSize.Medium => "The 19-hex shape without its six corners — flat edges, a mini Catan.",
             MapSize.Large => "Standard Catan: 18 tokens, 9 ports, desert center.",
             MapSize.Extended => "Colonist extended table — 30 land hexes.",
             MapSize.Huge => "Full radius-3 island — largest standard hexagon.",

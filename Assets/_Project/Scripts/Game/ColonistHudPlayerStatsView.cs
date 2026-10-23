@@ -49,7 +49,7 @@ namespace CatanRoguelike.Game
             var row = new GameObject("StatRow");
             row.transform.SetParent(transform, false);
             var h = row.AddComponent<HorizontalLayoutGroup>();
-            h.spacing = 10f;
+            h.spacing = 6f;
             h.childAlignment = TextAnchor.MiddleLeft;
             h.childForceExpandWidth = false;
             h.childControlWidth = true;
@@ -105,7 +105,9 @@ namespace CatanRoguelike.Game
             _rows[0].value.text = state.PlayerVictoryPoints.ToString();
             _rows[1].value.text = state.PlayerInventory.Total.ToString();
             _rows[2].value.text = state.PlayerHand.Count.ToString();
-            _rows[3].value.text = showFish ? $"{roads} · Fish {fishCount}" : roads.ToString();
+            // v132: fish already has its own count in the hand and the fish panel; appending it here
+            // pushed the knight icon into the text.
+            _rows[3].value.text = roads.ToString();
             _rows[4].value.text = hasLongestRoad ? "✓" : "—";
             _rows[5].value.text = hasLargestArmy ? "✓" : "—";
         }

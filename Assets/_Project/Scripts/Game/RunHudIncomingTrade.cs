@@ -25,10 +25,13 @@ namespace CatanRoguelike.Game
                 new Vector2(0.5f, 1f),
                 new Vector2(-240f, -120f),
                 new Vector2(240f, -24f));
-            _incomingTradePanel.GetComponent<Image>().color = new Color(0.12f, 0.18f, 0.28f, 0.94f);
+            if (ColonistPresentation.IsActive)
+                ColonistKenneyHudArt.ApplyWoodBarImage(_incomingTradePanel.GetComponent<Image>());
+            else
+                _incomingTradePanel.GetComponent<Image>().color = new Color(0.12f, 0.18f, 0.28f, 0.94f);
 
             var layout = _incomingTradePanel.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(10, 10, 8, 8);
+            layout.padding = new RectOffset(18, 18, 14, 14);
             layout.spacing = 6f;
             layout.childAlignment = TextAnchor.UpperCenter;
             layout.childControlWidth = true;
@@ -40,7 +43,7 @@ namespace CatanRoguelike.Game
                 string.Empty,
                 15,
                 TextAnchor.UpperCenter,
-                RunHudUiFactory.TextPrimary);
+                ColonistPresentation.IsActive ? ColonistUiKit.Ink : RunHudUiFactory.TextPrimary);
             RunHudUiFactory.AddLayoutElement(_incomingTradeText.gameObject, 44f);
 
             var row = new GameObject("Buttons");

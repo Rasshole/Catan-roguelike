@@ -23,14 +23,17 @@ namespace CatanRoguelike.Game
                 new Vector2(0.5f, 1f),
                 new Vector2(-220f, -72f),
                 new Vector2(220f, -24f));
-            _toastPanel.GetComponent<Image>().color = new Color(0.08f, 0.12f, 0.18f, 0.92f);
+            if (ColonistPresentation.IsActive)
+                ColonistKenneyHudArt.ApplyWoodBarImage(_toastPanel.GetComponent<Image>());
+            else
+                _toastPanel.GetComponent<Image>().color = new Color(0.08f, 0.12f, 0.18f, 0.92f);
             _toastText = RunHudUiFactory.CreateText(
                 _toastPanel,
                 "Message",
                 string.Empty,
                 16,
                 TextAnchor.MiddleCenter,
-                RunHudUiFactory.TextPrimary,
+                ColonistPresentation.IsActive ? ColonistUiKit.Ink : RunHudUiFactory.TextPrimary,
                 FontStyle.Bold);
             _toastPanel.gameObject.SetActive(false);
         }

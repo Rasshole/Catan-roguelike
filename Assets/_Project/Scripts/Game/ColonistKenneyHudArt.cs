@@ -8,9 +8,15 @@ namespace CatanRoguelike.Game
     {
         private static Sprite _cardFrameSprite;
 
+        // v132: every Apply* below draws the painted UI kit (ColonistUiKit) first and only falls back to the
+        // old Kenney-derived sprites when the kit textures are missing.
+
+        /// <summary>Default HUD panel: parchment inside a thin painted-wood rim.</summary>
         public static void ApplyPanelImage(Image image)
         {
             if (image == null)
+                return;
+            if (ColonistUiKit.Apply(image, UiKitPiece.FrameThin))
                 return;
 
             var sprite = PanelSpriteSliced();
@@ -22,10 +28,19 @@ namespace CatanRoguelike.Game
             image.color = new Color(0.96f, 0.90f, 0.76f, 0.98f);
         }
 
-        /// <summary>Warm wood/parchment tint for bottom hand and action bars.</summary>
+        /// <summary>Large framed panel (rail, dialogs, menus): parchment in the ornate gold-cornered frame.</summary>
+        public static void ApplyOrnatePanelImage(Image image)
+        {
+            if (!ColonistUiKit.Apply(image, UiKitPiece.FrameOrnate, 0.8f))
+                ApplyPanelImage(image);
+        }
+
+        /// <summary>Bottom hand and action bars: parchment in a medium painted-wood frame.</summary>
         public static void ApplyWoodBarImage(Image image)
         {
             if (image == null)
+                return;
+            if (ColonistUiKit.Apply(image, UiKitPiece.FrameMedium))
                 return;
 
             var sprite = PanelSpriteSliced();
@@ -42,6 +57,8 @@ namespace CatanRoguelike.Game
         {
             if (image == null)
                 return;
+            if (ColonistUiKit.Apply(image, UiKitPiece.ButtonGreen))
+                return;
 
             var sprite = ButtonSprite();
             if (sprite == null)
@@ -56,6 +73,8 @@ namespace CatanRoguelike.Game
         {
             if (image == null)
                 return;
+            if (ColonistUiKit.Apply(image, UiKitPiece.ButtonParchment))
+                return;
 
             var sprite = ButtonSprite();
             if (sprite == null)
@@ -66,9 +85,12 @@ namespace CatanRoguelike.Game
             image.color = new Color(0.55f, 0.72f, 0.82f, 1f);
         }
 
+        /// <summary>Green lacquer (primary) or parchment (secondary) painted button.</summary>
         public static void ApplyColonistWarmButton(Image image, bool primaryGreen = false)
         {
             if (image == null)
+                return;
+            if (ColonistUiKit.Apply(image, primaryGreen ? UiKitPiece.ButtonGreen : UiKitPiece.ButtonParchment))
                 return;
 
             var sprite = ButtonSpriteSliced();
@@ -85,9 +107,12 @@ namespace CatanRoguelike.Game
 
         public static void ApplyColonistEndTurnButton(Image image) => ApplyColonistWarmButton(image, primaryGreen: true);
 
+        /// <summary>"Your turn" plaque: dark wood with a gold inlay (cream text).</summary>
         public static void ApplyTurnBannerImage(Image image)
         {
             if (image == null)
+                return;
+            if (ColonistUiKit.Apply(image, UiKitPiece.Banner))
                 return;
 
             var sprite = PanelSpriteSliced();
@@ -100,9 +125,12 @@ namespace CatanRoguelike.Game
             image.color = new Color(0.98f, 0.84f, 0.36f, 0.98f);
         }
 
+        /// <summary>Round dark-wood count badge with gold rim (cream digits).</summary>
         public static void ApplyColonistCountBadge(Image image)
         {
             if (image == null)
+                return;
+            if (ColonistUiKit.Apply(image, UiKitPiece.Badge, 0.7f))
                 return;
 
             var sprite = PanelSpriteSliced();
@@ -115,9 +143,14 @@ namespace CatanRoguelike.Game
             image.color = new Color(0.94f, 0.86f, 0.70f, 0.98f);
         }
 
+        /// <summary>Mini parchment card with a faint wash of the resource colour.</summary>
         public static void ApplyColonistResourceCardBackground(Image image, Color resourceTint)
         {
             if (image == null)
+                return;
+            var wash = Color.Lerp(Color.white, resourceTint, 0.30f);
+            wash.a = 1f;
+            if (ColonistUiKit.Apply(image, UiKitPiece.FrameThin, 1f, wash))
                 return;
 
             var sprite = PanelSpriteSliced();

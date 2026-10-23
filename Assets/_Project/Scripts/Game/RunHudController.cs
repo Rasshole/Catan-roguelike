@@ -65,7 +65,8 @@ namespace CatanRoguelike.Game
             EnsureCanvasBuilt();
 
             bool inRun = !PlaceholderHudLayout.IsPreGamePhase(state.Phase);
-            _canvas.gameObject.SetActive(inRun);
+            bool paintedPreGame = RefreshPreGameMenus(state, !inRun);
+            _canvas.gameObject.SetActive(inRun || paintedPreGame);
 
             if (!inRun)
                 return;
@@ -561,6 +562,11 @@ namespace CatanRoguelike.Game
             _buildSettlementButton = null;
             _buildCityButton = null;
 
+            // v132: in Colonist mode the run end and the level-up perks are painted card overlays
+            // (RunHudRewardOverlays); the action bar stays empty underneath them.
+            if (ColonistPresentation.IsActive && (state.Winner.HasValue || state.Phase == GamePhase.LevelUpChoice))
+                return;
+
             if (state.Winner.HasValue)
             {
                 var restart = RunHudUiFactory.CreateButton(_actionBarBuildRoot, ColonistHudCopy.Restart, RunHudUiFactory.ButtonFill);
@@ -598,6 +604,8 @@ namespace CatanRoguelike.Game
                     ColonistPresentation.IsActive ? "Continue" : "Skip to day",
                     RunHudUiFactory.ButtonSecondary);
                 skip.onClick.AddListener(() => _controller.SkipNightCard());
+                if (ColonistPresentation.IsActive)
+                    StyleColonistBarButton(skip, 190f, primaryGreen: true);
                 _actionButtons.Add(skip);
                 return;
             }
@@ -611,12 +619,33 @@ namespace CatanRoguelike.Game
                 {
                     var cancel = RunHudUiFactory.CreateButton(_actionBarBuildRoot, ColonistHudCopy.CancelPlacement, RunHudUiFactory.ButtonSecondary);
                     cancel.onClick.AddListener(() => _boardInput.CancelBuildMode());
+                    if (ColonistPresentation.IsActive)
+                        StyleColonistBarButton(cancel, 190f, primaryGreen: false);
                     _actionButtons.Add(cancel);
                 }
             }
 
             if (ColonistPresentation.IsActive)
                 EnsureColonistTradeButton();
+        }
+
+        /// <summary>v132: painted wood/green button with a fixed width for the Colonist action bar.</summary>
+        private static void StyleColonistBarButton(Button button, float width, bool primaryGreen)
+        {
+            var layout = button.GetComponent<LayoutElement>();
+            if (layout == null)
+                layout = button.gameObject.AddComponent<LayoutElement>();
+            layout.minWidth = width;
+            layout.preferredWidth = width;
+            layout.flexibleWidth = 0f;
+            ColonistKenneyHudArt.ApplyColonistWarmButton(button.GetComponent<Image>(), primaryGreen);
+            var text = button.GetComponentInChildren<Text>();
+            if (text != null)
+            {
+                text.color = primaryGreen ? ColonistUiKit.Cream : ColonistUiKit.Ink;
+                text.fontSize = 18;
+                text.fontStyle = FontStyle.Bold;
+            }
         }
 
         private void AddBuildModeButton(string label, UnityEngine.Events.UnityAction action)

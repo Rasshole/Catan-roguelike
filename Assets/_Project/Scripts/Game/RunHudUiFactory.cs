@@ -13,8 +13,9 @@ namespace CatanRoguelike.Game
         public static readonly Color ButtonSecondary = new(0.30f, 0.40f, 0.52f, 1f);
         public static readonly Color HandBackdrop = new(0.10f, 0.12f, 0.16f, 0.82f);
         public static readonly Color ColonistWoodBarFill = new(0.84f, 0.72f, 0.54f, 0.94f);
-        public static readonly Color ColonistTextOnPanel = new(0.16f, 0.20f, 0.26f, 1f);
-        public static readonly Color ColonistTextMutedOnPanel = new(0.36f, 0.40f, 0.46f, 1f);
+        // v132: ink-brown text on the painted parchment kit (matches the civ-pick / event cards).
+        public static readonly Color ColonistTextOnPanel = ColonistUiKit.Ink;
+        public static readonly Color ColonistTextMutedOnPanel = ColonistUiKit.InkMuted;
 
         public static Canvas CreateCanvas(Transform parent)
         {
@@ -105,13 +106,22 @@ namespace CatanRoguelike.Game
 
             var button = go.AddComponent<Button>();
             var colors = button.colors;
-            colors.highlightedColor = Color.Lerp(image.color, Color.white, 0.15f);
-            colors.pressedColor = Color.Lerp(image.color, Color.black, 0.12f);
+            colors.highlightedColor = new Color(1f, 0.97f, 0.88f, 1f);
+            colors.pressedColor = new Color(0.86f, 0.80f, 0.70f, 1f);
+            colors.disabledColor = new Color(0.78f, 0.74f, 0.68f, 0.75f);
             button.colors = colors;
 
-            var labelColor = ColonistPresentation.IsActive ? ColonistTextOnPanel : TextPrimary;
+            bool onLacquer = image.sprite == ColonistUiKit.Get(UiKitPiece.ButtonGreen)
+                             || image.sprite == ColonistUiKit.Get(UiKitPiece.ButtonWood)
+                             || image.sprite == ColonistUiKit.Get(UiKitPiece.ButtonRed);
+            var labelColor = onLacquer ? ColonistUiKit.Cream
+                : ColonistPresentation.IsActive || image.sprite == ColonistUiKit.Get(UiKitPiece.ButtonParchment)
+                    ? ColonistTextOnPanel
+                    : TextPrimary;
             var text = CreateText(go.transform, "Label", label, 16, TextAnchor.MiddleCenter, labelColor, FontStyle.Bold);
             text.raycastTarget = false;
+            if (onLacquer)
+                ColonistUiKit.AddTextShadow(text);
             return button;
         }
 
@@ -157,7 +167,7 @@ namespace CatanRoguelike.Game
             label.text = title;
             label.fontSize = 14;
             label.alignment = TextAnchor.UpperLeft;
-            label.color = ColonistTextMutedOnPanel;
+            label.color = ColonistPresentation.IsActive ? ColonistUiKit.InkGold : ColonistTextMutedOnPanel;
             label.fontStyle = FontStyle.Bold;
             label.horizontalOverflow = HorizontalWrapMode.Wrap;
             label.verticalOverflow = VerticalWrapMode.Truncate;
