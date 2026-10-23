@@ -63,18 +63,22 @@ namespace CatanRoguelike.Core.Data
             return BuildFromSpiral(2, resources);
         }
 
-        /// <summary>Classic 5–6 player island (30 land hexes) — row widths 3,4,5,6,5,4,3.</summary>
+        /// <summary>
+        /// Classic 5–6 player island (30 land hexes) — row widths 3,4,5,6,5,4,3. v135: every row is centred on the
+        /// same axis (world x = −½ hex, through the middle of the 6-wide row), so the island mirrors left/right and
+        /// top/bottom instead of leaning like a parallelogram. The desert (0,0) is one of the two middle hexes.
+        /// </summary>
         private static readonly int[] ExtendedThirtyHexRowR = { -3, -2, -1, 0, 1, 2, 3 };
 
         private static readonly int[][] ExtendedThirtyHexRowQ =
         {
-            new[] { -1, 0, 1 },
-            new[] { -2, -1, 0, 1 },
+            new[] { 0, 1, 2 },
+            new[] { -1, 0, 1, 2 },
             new[] { -2, -1, 0, 1, 2 },
             new[] { -3, -2, -1, 0, 1, 2 },
-            new[] { -2, -1, 0, 1, 2 },
-            new[] { -1, 0, 1, 2 },
-            new[] { -1, 0, 1 }
+            new[] { -3, -2, -1, 0, 1 },
+            new[] { -3, -2, -1, 0 },
+            new[] { -3, -2, -1 }
         };
 
         public static IEnumerable<HexCoord> ExtendedThirtyHexCoords()

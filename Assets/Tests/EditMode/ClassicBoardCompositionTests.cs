@@ -55,6 +55,28 @@ namespace CatanRoguelike.Tests.EditMode
             Assert.AreEqual(30, coords.Count);
         }
 
+        [Test]
+        public void ExtendedThirtyHexCoords_AreMirrorSymmetric_AndCentred()
+        {
+            // v135: the 5–6 player island must not lean. In doubled pointy-top x (2q + r) every row is centred on
+            // x = −1, and the shape mirrors left/right and top/bottom.
+            var coords = MapPresets.ExtendedThirtyHexCoords().ToList();
+            var set = coords.ToHashSet();
+            Assert.IsTrue(set.Contains(new HexCoord(0, 0)), "desert hex is on the island");
+            CollectionAssert.AreEqual(new[] { 3, 4, 5, 6, 5, 4, 3 },
+                coords.GroupBy(c => c.R).OrderBy(g => g.Key).Select(g => g.Count()).ToArray());
+            foreach (var c in coords)
+            {
+                Assert.IsTrue(set.Contains(new HexCoord(-1 - c.Q - c.R, c.R)), $"left/right mirror of {c}");
+                Assert.IsTrue(set.Contains(new HexCoord(c.Q + c.R, -c.R)), $"top/bottom mirror of {c}");
+            }
+
+            double meanX = coords.Average(c => HexMath.ToWorldPosition(c).x);
+            double meanZ = coords.Average(c => HexMath.ToWorldPosition(c).z);
+            Assert.AreEqual(-0.5 * 1.7320508 * HexMath.OuterRadius, meanX, 1e-3);
+            Assert.AreEqual(0.0, meanZ, 1e-3);
+        }
+
         [TestCase(MapSize.Extended, 30)]
         [TestCase(MapSize.Huge, 37)]
         public void CreateBoard_HasExpectedLandCount(MapSize size, int expected)

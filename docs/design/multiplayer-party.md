@@ -210,7 +210,9 @@ There is at most one hostile night event per night.
 ## 8. 5-player board and expansion rules
 
 - **3–4 players**: Base map (19 hexes, 9 ports). This is the current default.
-- **5 players**: **Extended** map: `MapSize.Extended` (30 land hexes, the "5–6 players" board) already exists. Extend it to
+- **5 players**: **Extended** map: `MapSize.Extended` (30 land hexes, the "5–6 players" board) already exists. In v135
+  it became the symmetric 3-4-5-6-5-4-3 island. It mirrors left/right and top/bottom about its own centre, and the
+  camera frames it centred. Extend it to
   **11 ports** and a 28-token number set, following the 5–6 expansion distribution. Also add more bank cards: 24 per resource instead of 19.
 - **Special Build Phase** is on for 5+ players (see §5). The **discard limit stays at 7**.
 - Pieces per player stay the same (15 roads, 5 settlements, 4 cities).
@@ -262,8 +264,24 @@ how the group can playtest the rules before any server exists.
   and `RunHudMatchHotSeat` renders the table. You reach it from **Pass & play (2–5)** on the map screen. The lobby has a seat count
   stepper, Human / AI / Open per seat and **Fill open seats with AI**. The table shows a seat strip, the timer with a
   +90 s charge button that pulses in the last 5 s, a hand panel that is hidden on others' turns, and a pass screen.
-  Still to do: human actions by clicking the board (humans currently act through the
-  Roll / suggested placement / Auto-build / End turn buttons), player trades, and the 5-player rules above.
+  v135 filled the rule gaps:
+  - **Board clicks** (`MatchBoardPick` + `HotSeatBoardInput`). Every spot the acting human can use glows: setup
+    corners and edges, affordable settlements, cities and roads, free roads, and robber tiles. A click becomes the
+    matching command. The suggestion buttons stay as shortcuts.
+  - **Real harbours.** These are the same ports as the 3D board (`PortAccess.DiscoverPorts`). A seat trades 2:1 at
+    its resource's harbour, 3:1 at a generic one, and 4:1 otherwise. The trade board shows each seat's rates.
+  - **Development cards.** The deck has 25 cards (14 Knights, 5 VP, 2 Road Building, 2 Year of Plenty, 2 Monopoly).
+    For 5+ seats it has 34 (20 / 5 / 3 / 3 / 3). A card costs 1 grain, 1 wool and 1 ore. You can play one card per
+    turn, and not one bought this turn. Knights can be played before the roll. **Largest Army** is 3+ knights for
+    2 VP. VP cards count at once but stay hidden: the seat strip shows public VP only.
+  - **Trade board.** The current player offers give/get terms. Every other seat answers Accept, Decline or
+    **Counter**; AI seats answer at once. The offerer then confirms one partner, on the original or the countered
+    terms. Building waits while an offer is open, and the offer lapses at end of turn.
+  - **Manual discard on a 7.** Each seat over 7 cards picks exactly half. In pass & play, every human discarder gets
+    their **own pass screen**, so hands stay hidden. AI seats discard automatically, and a timeout discards for that
+    seat only.
+
+  Still to do: Special Build Phase, 24 bank cards per resource, and the 28-token / 11-port Extended set (§8).
 
 ### Phase 3: Decided setup flow
 - **Civilization (= leader) first** (hidden simultaneous picks via hand-off, 3 offered each), then snake placement, then
@@ -304,8 +322,10 @@ Resolved in v134 (see §0):
 Still open:
 - Unique-building draft in multiplayer: skip in v1 (proposed) or keep after the civ pick?
 - Should a player get one quest or two (keep one, discard one)?
-- Dedicated portraits for the 6 civs that still use their emblem (Sea Folk, Steppe Nomads, Highland Clans, Shepherd
-  Kingdom, Academy, Sun Kingdom). Prompts are in the v134 report.
+- ~~Dedicated portraits for the 6 emblem-only civs~~ **DONE (v135).** All 10 civs have a leader portrait, and each
+  civ's leader has its own passive (`LeaderTraits`). For example, the Sea Folk's Tidecaller gives 1 fish each
+  morning, and the Sun Kingdom's Sun Tithe gives 1 grain on a 7. The four archetype passives (Merchant, Pioneer,
+  Warlord, Architect) apply only to their own civ.
 
 ## 12. Later (parked)
 
