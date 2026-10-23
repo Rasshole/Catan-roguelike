@@ -68,7 +68,7 @@ namespace CatanRoguelike.Tests.PlayMode
 
         [Timeout(90000)]
         [UnityTest]
-        public IEnumerator CivilizationPick_ShowsThreeCards_AndChoosingStartsSetup()
+        public IEnumerator CivilizationPick_ShowsThreeCards_AndChoosingSetsLeaderThenDraft()
         {
             yield return LoadScene();
             var gameManager = Object.FindFirstObjectByType<GameManager>();
@@ -85,14 +85,22 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsTrue(hud.IsCivilizationPickVisibleForTests, "Civilization pick overlay should be visible");
             Assert.IsNotNull(ColonistRoguelikeArt.GetCardFrame(false), "Card frame art should load");
             foreach (var civ in CivilizationLibrary.Pool)
+            {
                 Assert.IsNotNull(ColonistRoguelikeArt.GetCivilizationEmblem(civ.Id), civ.Name + " emblem");
+                Assert.IsNotNull(ColonistRoguelikeArt.GetCivilizationPortrait(civ.Id), civ.Name + " portrait/placeholder");
+            }
+
+            foreach (var id in new[] { CivilizationId.MerchantRepublic, CivilizationId.ForestFolk,
+                         CivilizationId.NorthernRaiders, CivilizationId.Brickwrights })
+                Assert.IsTrue(ColonistRoguelikeArt.HasCivilizationPortrait(id), id + " reuses a leader painting");
             MaybeWrite(hud, "COLONIST_CIV_SHOT");
 
             var pick = gameManager.Controller.State.CivilizationOffer[0];
             Assert.IsTrue(gameManager.Controller.ChooseCivilization(pick));
             hud.Refresh(gameManager.Controller.State);
             Assert.IsFalse(hud.IsCivilizationPickVisibleForTests);
-            Assert.IsTrue(gameManager.Controller.State.IsSetupPhase);
+            Assert.AreEqual(GamePhase.RunSelectDraft, gameManager.Controller.State.Phase, "v134: civ → draft");
+            Assert.AreEqual(CivilizationLibrary.Get(pick).Leader, gameManager.Controller.State.Leader);
         }
 
         [Timeout(90000)]

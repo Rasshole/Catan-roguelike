@@ -23,7 +23,7 @@ namespace CatanRoguelike.Core.Turn
         DayAiTurn,
         LevelUpChoice,
         GameOver,
-        /// <summary>v131: pick 1 of 3 offered civilizations (after the unique draft, before setup).</summary>
+        /// <summary>v134: pick 1 of 3 offered civilizations, each led by its leader (after the map, before the draft).</summary>
         RunSelectCivilization
     }
 }

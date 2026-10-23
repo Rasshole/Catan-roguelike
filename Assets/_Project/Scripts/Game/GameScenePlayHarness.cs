@@ -31,15 +31,26 @@ namespace CatanRoguelike.Game
             EnsureHarnessMapUnlocked(meta);
             controller.FishermenMapOption = fishermenOfCatan;
             controller.SelectMap(DefaultHarnessMapSize);
-            if (controller.State.Phase != GamePhase.RunSelectLeader)
+            if (controller.State.Phase == GamePhase.RunSelectCivilization)
+            {
+                // v134: civ (with its leader) is step 2, right after the map.
+                if (stopAtCivilizationPick)
+                    return;
+                ChooseCivilizationForTest(controller, civilization);
+            }
+            else if (controller.State.Phase == GamePhase.RunSelectLeader)
+            {
+                controller.SelectLeader(meta.GetAvailableLeaders().First());
+            }
+            else
+            {
                 throw new InvalidOperationException(
-                    $"SelectMap should advance to leader select, got {controller.State.Phase}.");
+                    $"SelectMap should advance to civilization or leader select, got {controller.State.Phase}.");
+            }
 
-            var leader = meta.GetAvailableLeaders().First();
-            controller.SelectLeader(leader);
             if (controller.State.Phase != GamePhase.RunSelectDraft)
                 throw new InvalidOperationException(
-                    $"SelectLeader should advance to unique draft, got {controller.State.Phase}.");
+                    $"Civ/leader pick should advance to unique draft, got {controller.State.Phase}.");
 
             int pickCount = meta.GetDraftPickCount();
             var draftIds = meta.GetDraftPool().Take(pickCount).ToList();
@@ -54,7 +65,7 @@ namespace CatanRoguelike.Game
             if (stopAtCivilizationPick && controller.State.Phase == GamePhase.RunSelectCivilization)
                 return;
             if (controller.State.Phase == GamePhase.RunSelectCivilization)
-                controller.ChooseCivilization(civilization ?? controller.State.CivilizationOffer[0]);
+                ChooseCivilizationForTest(controller, civilization);
             if (!controller.State.RunSetupComplete)
                 throw new InvalidOperationException("ConfirmRunSetup should mark run setup complete.");
         }
@@ -205,6 +216,16 @@ namespace CatanRoguelike.Game
             if (!meta.TryPurchase(unlock.Value))
                 throw new InvalidOperationException(
                     $"Harness could not unlock {DefaultHarnessMapSize} for scripted SelectMap.");
+        }
+
+        /// <summary>Picks the requested civ (swapping it into the offer if the meta filter left it out) or offer[0].</summary>
+        private static void ChooseCivilizationForTest(GameController controller, CivilizationId? civilization)
+        {
+            var offer = controller.State.CivilizationOffer;
+            if (civilization.HasValue && !offer.Contains(civilization.Value))
+                offer[0] = civilization.Value;
+            if (!controller.ChooseCivilization(civilization ?? offer[0]))
+                throw new System.InvalidOperationException($"ChooseCivilization({civilization}) was rejected.");
         }
     }
 }

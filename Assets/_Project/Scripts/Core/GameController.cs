@@ -139,6 +139,8 @@ namespace CatanRoguelike.Core
             State.Ports = PortAccess.DiscoverPorts(board);
             State.StatusMessage = "Vælg din leader.";
             _lastPlacedSettlement = null;
+            if (CivilizationPickEnabled)
+                OpenCivilizationPick();
 
             OnBoardRebuilt?.Invoke();
             NotifyChanged();
@@ -436,30 +438,54 @@ namespace CatanRoguelike.Core
             }
 
             _metaStartCardGranted = false;
-            if (CivilizationPickEnabled)
+            if (CivilizationPickEnabled && State.Civilization == CivilizationId.None)
             {
-                State.CivilizationOffer.Clear();
-                State.CivilizationOffer.AddRange(CivilizationOffer.Generate(RunSeed));
-                State.Phase = GamePhase.RunSelectCivilization;
-                State.StatusMessage = "Choose your civilization.";
-                NotifyChanged();
+                // Legacy path (e.g. a save made mid-setup before v134): pick the civilization last.
+                OpenCivilizationPick();
                 return;
             }
 
             BeginBoardSetup();
         }
 
-        /// <summary>v131: pick one of the offered civilizations and start board setup.</summary>
+        /// <summary>
+        /// v134: civs and leaders are merged — the civilization pick (1 of 3, each with its leader portrait) is step 2,
+        /// right after the map, and replaces the separate leader step. Only civs whose leader is unlocked are offered.
+        /// </summary>
+        private void OpenCivilizationPick()
+        {
+            State.CivilizationOffer.Clear();
+            State.CivilizationOffer.AddRange(CivilizationOffer.Generate(RunSeed, CivilizationOffer.OfferSize,
+                def => Meta == null || Meta.IsLeaderAvailable(def.Leader)));
+            State.Phase = GamePhase.RunSelectCivilization;
+            State.StatusMessage = "Choose your civilization.";
+            NotifyChanged();
+        }
+
+        /// <summary>
+        /// v131/v134: pick one of the offered civilizations. Sets its leader (passive + level-up perks), applies the
+        /// start bonus and continues to the unique-building draft (or straight to board setup on the legacy path).
+        /// </summary>
         public bool ChooseCivilization(CivilizationId id)
         {
             if (State.Phase != GamePhase.RunSelectCivilization) return false;
             if (!State.CivilizationOffer.Contains(id)) return false;
 
-            State.Civilization = id;
-            CivilizationRules.ApplyStartBonus(State);
             var civ = CivilizationLibrary.Get(id);
-            GameLog.Append(State, $"You lead {civ.Name}: {civ.Passive}");
-            BeginBoardSetup();
+            bool draftDone = State.DraftedUniques.Count == GetRequiredDraftCount() && GetRequiredDraftCount() > 0;
+            State.Civilization = id;
+            State.Leader = civ.Leader;
+            CivilizationRules.ApplyStartBonus(State);
+            GameLog.Append(State, $"You lead {civ.Name} under {civ.LeaderName}: {civ.Passive}");
+            if (draftDone)
+            {
+                BeginBoardSetup();
+                return true;
+            }
+
+            State.Phase = GamePhase.RunSelectDraft;
+            State.StatusMessage = $"{civ.LeaderName} leads {civ.Name}. Draft {GetRequiredDraftCount()} uniques.";
+            NotifyChanged();
             return true;
         }
 

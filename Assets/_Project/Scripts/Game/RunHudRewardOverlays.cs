@@ -77,6 +77,10 @@ namespace CatanRoguelike.Game
         {
             var root = CreateFullscreenDim("LevelUp", new Color(0.05f, 0.04f, 0.03f, 0.72f));
             string leader = LeaderLibrary.All.TryGetValue(state.Leader, out var def) ? def.Name : "your leader";
+            // v134: the civ's named leader when a civilization was chosen (civs and leaders are one concept).
+            if (Core.Civilizations.CivilizationLibrary.TryGet(state.Civilization, out var civDef)
+                && !string.IsNullOrEmpty(civDef.LeaderName))
+                leader = civDef.LeaderName;
 
             var title = RunHudUiFactory.CreateText(root, "Title", "Level up!", 46, TextAnchor.MiddleCenter, TitleCream,
                 FontStyle.Bold);
@@ -88,7 +92,9 @@ namespace CatanRoguelike.Game
             AddShadow(subtitle.gameObject, 1.5f);
 
             // v133: the leader's medallion beside the title.
-            var portraitSprite = ColonistRoguelikeArt.GetLeaderPortrait(state.Leader);
+            var portraitSprite = state.Civilization != Core.Civilizations.CivilizationId.None
+                ? ColonistRoguelikeArt.GetCivilizationPortrait(state.Civilization)
+                : ColonistRoguelikeArt.GetLeaderPortrait(state.Leader);
             if (portraitSprite != null)
             {
                 var portrait = CreateImage(root, "LeaderPortrait", portraitSprite);
@@ -191,25 +197,28 @@ namespace CatanRoguelike.Game
                 cardImage.pixelsPerUnitMultiplier = sliced.texture.width / w;
             }
 
-            bool hasEmblem = state.Civilization != Core.Civilizations.CivilizationId.None;
-            var leaderPortrait = ColonistRoguelikeArt.GetLeaderPortrait(state.Leader);
-            bool hasArt = hasEmblem || leaderPortrait != null;
+            // v134: the civ's face is its leader portrait; the emblem only shows separately when a real portrait exists
+            // (otherwise the emblem itself stands in as the portrait).
+            bool hasCiv = state.Civilization != Core.Civilizations.CivilizationId.None;
+            bool hasEmblem = hasCiv && ColonistRoguelikeArt.HasCivilizationPortrait(state.Civilization);
+            var leaderPortrait = hasCiv
+                ? ColonistRoguelikeArt.GetCivilizationPortrait(state.Civilization)
+                : ColonistRoguelikeArt.GetLeaderPortrait(state.Leader);
+            bool hasArt = leaderPortrait != null;
             float textX = hasArt ? 250f : 80f;
             float textW = w - textX - 80f;
-            if (hasEmblem)
-            {
-                var emblem = CreateImage(card, "Emblem", ColonistRoguelikeArt.GetCivilizationEmblem(state.Civilization));
-                SetRect(emblem.rectTransform, new Vector2(0f, 0.5f),
-                    new Vector2(150f, leaderPortrait != null ? 62f : 18f), new Vector2(150f, 150f));
-            }
-
             if (leaderPortrait != null)
             {
-                // v133: the run's leader medallion under (or instead of) the civilization emblem.
+                // v133/v134: the run's leader medallion (= the civilization's face), emblem as a small crest.
                 var portrait = CreateImage(card, "LeaderPortrait", leaderPortrait);
-                float size = hasEmblem ? 112f : 160f;
-                SetRect(portrait.rectTransform, new Vector2(0f, 0.5f),
-                    new Vector2(150f, hasEmblem ? -84f : 18f), new Vector2(size, size));
+                SetRect(portrait.rectTransform, new Vector2(0f, 0.5f), new Vector2(150f, 18f), new Vector2(170f, 170f));
+                if (hasEmblem)
+                {
+                    var crest = CreateImage(card, "Emblem",
+                        ColonistRoguelikeArt.GetCivilizationEmblem(state.Civilization));
+                    SetRect(crest.rectTransform, new Vector2(0f, 0.5f), new Vector2(214f, -52f), new Vector2(64f, 64f));
+                }
+
                 var ps = portrait.gameObject.AddComponent<Shadow>();
                 ps.effectColor = new Color(0.20f, 0.12f, 0.05f, 0.45f);
                 ps.effectDistance = new Vector2(2f, -3f);

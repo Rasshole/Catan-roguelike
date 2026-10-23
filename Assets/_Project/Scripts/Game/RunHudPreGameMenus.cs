@@ -65,7 +65,7 @@ namespace CatanRoguelike.Game
         {
             string drafted = string.Join(",", state.DraftedUniques.OrderBy(x => x));
             return $"{state.Phase}|{state.MapSize}|{drafted}|{_meta?.Stars}|{_unlockPanelOpen}|" +
-                   $"{_controller.FishermenMapOption}|{OnboardingTipsStore.TipsEnabled}|" +
+                   $"{_controller.FishermenMapOption}|{OnboardingTipsStore.TipsEnabled}|{HotSeatLobbyKey()}|" +
                    (_meta != null ? string.Join(",", _meta.GetPurchasableUnlocks()) : "");
         }
 
@@ -86,6 +86,8 @@ namespace CatanRoguelike.Game
             foreach (Transform child in _canvas.transform)
             {
                 if (_preGameRoot != null && child == _preGameRoot)
+                    continue;
+                if (_civPickRoot != null && child == _civPickRoot)
                     continue;
                 var group = child.GetComponent<CanvasGroup>();
                 if (group == null)
@@ -111,15 +113,15 @@ namespace CatanRoguelike.Game
             switch (state.Phase)
             {
                 case GamePhase.RunSelectLeader:
-                    step = "STEP 2 OF 4  ·  LEADER";
+                    step = "STEP 2 OF 3  ·  LEADER";
                     title = "Choose your leader";
                     break;
                 case GamePhase.RunSelectDraft:
-                    step = "STEP 3 OF 4  ·  UNIQUE BUILDINGS";
+                    step = "STEP 3 OF 3  ·  UNIQUE BUILDINGS";
                     title = "Draft your buildings";
                     break;
                 default:
-                    step = "STEP 1 OF 4  ·  MAP";
+                    step = "STEP 1 OF 3  ·  MAP";
                     title = "Choose your map";
                     break;
             }
@@ -161,6 +163,8 @@ namespace CatanRoguelike.Game
             BuildPreGameFooter(root, state);
             if (state.Phase == GamePhase.RunSelectMap && _unlockPanelOpen && _meta != null)
                 BuildUnlockPanel(root);
+            if (state.Phase == GamePhase.RunSelectMap && _hotSeatLobbyOpen)
+                BuildHotSeatLobby(root);
             return root;
         }
 
@@ -530,6 +534,12 @@ namespace CatanRoguelike.Game
                         _unlockPanelOpen = !_unlockPanelOpen;
                         RebuildPreGame();
                     }));
+                buttons.Add(("Pass & play (2–5)", false, true, () =>
+                {
+                    _hotSeatLobbyOpen = !_hotSeatLobbyOpen;
+                    _unlockPanelOpen = false;
+                    RebuildPreGame();
+                }));
             }
 
             if (state.Phase == GamePhase.RunSelectDraft)

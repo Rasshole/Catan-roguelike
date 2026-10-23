@@ -69,8 +69,24 @@ namespace CatanRoguelike.Game
         public static float FlatHexWidth(float hexScale) =>
             hexScale * Mathf.Sqrt(3f) * HexMath.OuterRadius;
 
-        public static Color ColorForPlayer(PlayerId owner) =>
-            owner == PlayerId.Human ? HumanColor : AiColor;
+        /// <summary>v134: seats 2–4 of an N-player match (owner = (PlayerId)seat): orange, white, green.</summary>
+        public static readonly Color[] ExtraSeatColors =
+        {
+            new(0.95f, 0.58f, 0.12f),
+            new(0.93f, 0.92f, 0.88f),
+            new(0.22f, 0.62f, 0.28f)
+        };
+
+        public static Color ColorForPlayer(PlayerId owner)
+        {
+            int seat = (int)owner;
+            if (seat == 0) return HumanColor;
+            if (seat == 1) return AiColor;
+            int extra = seat - 2;
+            return extra >= 0 && extra < ExtraSeatColors.Length ? ExtraSeatColors[extra] : Color.gray;
+        }
+
+        public static Color ColorForSeat(int seat) => ColorForPlayer((PlayerId)seat);
 
         public static Color DarkenForRoof(Color color) => Shade(color, RoofColorMultiply);
 

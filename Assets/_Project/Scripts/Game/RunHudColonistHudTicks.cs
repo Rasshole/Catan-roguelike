@@ -8,6 +8,7 @@ namespace CatanRoguelike.Game
 
         private void Update()
         {
+            TickHotSeat();
             if (!ColonistPresentation.IsActive)
                 return;
 

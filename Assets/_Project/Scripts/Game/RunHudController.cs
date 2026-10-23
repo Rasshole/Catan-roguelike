@@ -63,13 +63,19 @@ namespace CatanRoguelike.Game
                 return;
 
             EnsureCanvasBuilt();
+            if (_hotSeat != null)
+                return; // v134: the pass-and-play table owns the canvas while it runs.
 
             bool inRun = !PlaceholderHudLayout.IsPreGamePhase(state.Phase);
             bool paintedPreGame = RefreshPreGameMenus(state, !inRun);
             _canvas.gameObject.SetActive(inRun || paintedPreGame);
 
             if (!inRun)
+            {
+                // v134: civ pick → unique draft goes back to a pre-game menu; close the civ overlay.
+                RefreshCivilizationPick(state);
                 return;
+            }
 
             if (ColonistPresentation.IsActive)
                 PlaceholderHudLayout.SetActivePanelWidth(0f);
@@ -148,6 +154,9 @@ namespace CatanRoguelike.Game
             RefreshToastWidget(state);
             RefreshIncomingTradePanel(state);
             RefreshRoguelikeOverlays(state);
+            // v134: the civ (= leader) pick now comes before the board exists; keep the in-run rails hidden behind it.
+            if (state.Phase == GamePhase.RunSelectCivilization && ColonistPresentation.IsActive)
+                SetInRunHudHidden(true);
         }
 
         private void EnsureCanvasBuilt()

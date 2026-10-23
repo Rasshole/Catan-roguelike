@@ -79,6 +79,7 @@ namespace CatanRoguelike.Tests.PlayMode
             {
                 GamePhase.RunSelectMap,
                 GamePhase.RunSelectLeader,
+                GamePhase.RunSelectCivilization,
                 GamePhase.RunSelectDraft,
                 GamePhase.SetupAiSettlement1,
                 GamePhase.SetupAiRoad1,

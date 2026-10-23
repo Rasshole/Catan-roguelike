@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Civilizations;
+using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Events;
 using CatanRoguelike.Core.Turn;
 using UnityEngine;
@@ -37,6 +38,7 @@ namespace CatanRoguelike.Game
         private int _humanNameBaseFontSize;
 
         public bool IsCivilizationPickVisibleForTests => _civPickRoot != null && _civPickRoot.gameObject.activeSelf;
+        public RectTransform CivilizationPickRootForTests => _civPickRoot;
         public bool IsEventCardVisibleForTests => _eventCardRoot != null && _eventCardRoot.gameObject.activeSelf;
 
         /// <summary>Screen-space (canvas) rect of the event card, for layout tests.</summary>
@@ -90,23 +92,29 @@ namespace CatanRoguelike.Game
         {
             var root = CreateFullscreenDim("CivilizationPick", OverlayDim);
 
+            // v134: civs and leaders are one pick — step 2, right after the map.
+            var kicker = RunHudUiFactory.CreateText(root, "Step", "STEP 2 OF 3  ·  CIVILIZATION & LEADER", 16,
+                TextAnchor.MiddleCenter, new Color(0.93f, 0.80f, 0.50f, 1f), FontStyle.Bold);
+            SetRect(kicker.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -86f), new Vector2(900f, 24f));
+            AddShadow(kicker.gameObject, 1.5f);
+
             var title = RunHudUiFactory.CreateText(root, "Title", "Choose your civilization", 46,
                 TextAnchor.MiddleCenter, TitleCream, FontStyle.Bold);
-            SetRect(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -96f), new Vector2(1200f, 64f));
+            SetRect(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -128f), new Vector2(1200f, 64f));
             AddShadow(title.gameObject, 2f);
 
             var subtitle = RunHudUiFactory.CreateText(root, "Subtitle",
-                "Your people shape the whole run. Three have answered your call.", 21,
+                "Each people follows its leader. Three have answered your call.", 21,
                 TextAnchor.MiddleCenter, new Color(0.90f, 0.84f, 0.70f, 1f), FontStyle.Italic);
-            SetRect(subtitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -146f), new Vector2(1200f, 32f));
+            SetRect(subtitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -174f), new Vector2(1200f, 32f));
             AddShadow(subtitle.gameObject, 1.5f);
 
-            const float cardW = 392f, cardH = 560f, gap = 44f;
+            const float cardW = 404f, cardH = 660f, gap = 40f;
             float total = offer.Count * cardW + (offer.Count - 1) * gap;
             for (int i = 0; i < offer.Count; i++)
             {
                 float x = -total / 2f + cardW / 2f + i * (cardW + gap);
-                BuildCivilizationCard(root, offer[i], new Vector2(x, -36f), new Vector2(cardW, cardH));
+                BuildCivilizationCard(root, offer[i], new Vector2(x, -66f), new Vector2(cardW, cardH));
             }
 
             return root;
@@ -115,6 +123,7 @@ namespace CatanRoguelike.Game
         private void BuildCivilizationCard(RectTransform parent, CivilizationId id, Vector2 pos, Vector2 size)
         {
             var def = CivilizationLibrary.Get(id);
+            var leader = LeaderLibrary.Get(def.Leader);
             var card = CreateCardFrame(parent, "Civ_" + id, wide: false);
             SetRect(card, new Vector2(0.5f, 0.5f), pos, size);
             var button = card.gameObject.AddComponent<Button>();
@@ -129,29 +138,49 @@ namespace CatanRoguelike.Game
                     Refresh(_controller.State);
             });
 
-            var emblem = CreateImage(card, "Emblem", ColonistRoguelikeArt.GetCivilizationEmblem(id));
-            SetRect(emblem.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -150f), new Vector2(206f, 206f));
+            // The civ's face is its leader (portrait); the emblem rides on the medallion as a crest.
+            bool hasPortrait = ColonistRoguelikeArt.HasCivilizationPortrait(id);
+            var portrait = CreateImage(card, "Portrait", ColonistRoguelikeArt.GetCivilizationPortrait(id));
+            SetRect(portrait.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -148f), new Vector2(214f, 214f));
+            if (hasPortrait)
+            {
+                var crest = CreateImage(card, "Crest", ColonistRoguelikeArt.GetCivilizationEmblem(id));
+                SetRect(crest.rectTransform, new Vector2(0.5f, 1f), new Vector2(92f, -224f), new Vector2(78f, 78f));
+            }
 
             var name = RunHudUiFactory.CreateText(card, "Name", def.Name, 29, TextAnchor.MiddleCenter, InkBrown,
                 FontStyle.Bold);
-            SetRect(name.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -278f), new Vector2(size.x - 70f, 38f));
+            SetRect(name.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -284f), new Vector2(size.x - 70f, 38f));
 
-            var tagline = RunHudUiFactory.CreateText(card, "Tagline", def.Tagline, 17, TextAnchor.MiddleCenter,
+            var ledBy = RunHudUiFactory.CreateText(card, "LedBy", "Led by " + def.LeaderName, 18,
+                TextAnchor.MiddleCenter, InkBrown, FontStyle.Normal);
+            SetRect(ledBy.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -314f), new Vector2(size.x - 70f, 24f));
+
+            var tagline = RunHudUiFactory.CreateText(card, "Tagline", def.Tagline, 16, TextAnchor.MiddleCenter,
                 InkMuted, FontStyle.Italic);
-            SetRect(tagline.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -308f), new Vector2(size.x - 70f, 24f));
+            SetRect(tagline.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -338f), new Vector2(size.x - 70f, 22f));
 
             var rule = CreateImage(card, "Rule", null);
             rule.color = new Color(0.55f, 0.40f, 0.22f, 0.55f);
-            SetRect(rule.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -330f), new Vector2(size.x - 120f, 2f));
+            SetRect(rule.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -358f), new Vector2(size.x - 120f, 2f));
 
-            var passive = RunHudUiFactory.CreateText(card, "Passive", def.Passive, 19, TextAnchor.UpperCenter,
+            var passive = RunHudUiFactory.CreateText(card, "Passive", def.Passive, 18, TextAnchor.UpperCenter,
                 InkGood, FontStyle.Bold);
-            SetRect(passive.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -384f), new Vector2(size.x - 80f, 90f));
+            SetRect(passive.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -408f), new Vector2(size.x - 80f, 82f));
+
+            var abilityLabel = RunHudUiFactory.CreateText(card, "LeaderLabel",
+                "LEADER  ·  " + leader.Name.ToUpperInvariant(), 13, TextAnchor.MiddleCenter,
+                new Color(0.55f, 0.38f, 0.12f, 1f), FontStyle.Bold);
+            SetRect(abilityLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -462f), new Vector2(size.x - 80f, 20f));
+
+            var ability = RunHudUiFactory.CreateText(card, "LeaderAbility", def.LeaderAbility, 16,
+                TextAnchor.UpperCenter, InkBrown, FontStyle.Normal);
+            SetRect(ability.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -497f), new Vector2(size.x - 80f, 46f));
 
             var drawback = RunHudUiFactory.CreateText(card, "Drawback",
-                def.HasDrawback ? "Drawback: " + def.Drawback : "No drawback.", 17, TextAnchor.UpperCenter,
+                def.HasDrawback ? "Drawback: " + def.Drawback : "No drawback.", 16, TextAnchor.UpperCenter,
                 def.HasDrawback ? InkBad : InkMuted, def.HasDrawback ? FontStyle.Normal : FontStyle.Italic);
-            SetRect(drawback.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -462f), new Vector2(size.x - 80f, 52f));
+            SetRect(drawback.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -566f), new Vector2(size.x - 80f, 52f));
         }
 
         // ---------- event card ----------

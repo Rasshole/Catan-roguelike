@@ -1,10 +1,10 @@
-# Multiplayer party mode: 4–5 friends online (design plan, v133, decisions recorded v134)
+# Multiplayer party mode: 4–5 friends online (design plan, v133; decisions recorded a728fcc and v134)
 
 > Status: **design only**. No netcode is implemented yet; this document scopes it.
 > Audience: Rasmus' Catan group. The goal is a 60–90 minute online evening with 4–5 friends that feels like
 > Catan plus a roguelike, with events, civilizations, and a lot of table talk and shenanigans.
 
-## 0. Decisions (Rasmus, 23 Oct 2026)
+## 0. Decisions (Rasmus, 23 Oct 2026; second round v134)
 
 | Topic | Status | Decision |
 | --- | --- | --- |
@@ -14,9 +14,13 @@
 | Alliances and betrayal | **DECIDED: PARKED** | Moved to "Later" (§12). Not in v1. |
 | Auctions | **DECIDED: YES, rare items only** | Only rare cards, or **the right to reroll the number token on one of your own tiles**. No auctions for plain resources or buildings. |
 | Sabotage cards | **DECIDED: YES** | Secret sabotage cards are in v1. |
-| Setup order | **DECIDED** | 1) Pick a **LEADER** before placement, so you place with your leader's ability in mind. 2) Place starting settlements and roads. 3) Pick a secret **QUEST** and a small **TRAIT**, offered based on your board position and what is still available. |
+| Setup order | **DECIDED** | 1) Pick a **CIVILIZATION** (= its leader, see the next row) before placement, so you place with its ability in mind. 2) Place starting settlements and roads. 3) Pick a secret **QUEST** and a small **TRAIT**, offered based on your board position and what is still available. |
+| Civilizations vs leaders | **DECIDED (v134): ONE concept** | A **Civilization is led by a Leader**; the leader's portrait is the civ's face. There is **one pick: choose 1 of 3 civs**, each card showing its leader portrait, the civ passive, the leader ability and any drawback. The separate leader step is removed. Each civ maps to a leader archetype (Merchant, Pioneer, Warlord, Architect) whose passive and level-up perk pool remain as the run-progression layer. Implemented in single-player in v134 (map → civ → unique draft → board). |
 | Chaos rounds | **DECIDED** | Not a special mode. "Chaos" is just a normal event card in the night event deck. |
-| Turn timer | **DECIDED** | **1.5 minutes per turn.** Each player starts with **1 "extra turn time" charge**, usable on any turn for one big turn. Players gain **+1 charge every 5 rounds**. |
+| Turn timer | **DECIDED** | **1.5 minutes per turn.** Each player starts with **1 "extra turn time" charge** and gains **+1 charge every 5 rounds**. |
+| Extra-time charge | **DECIDED (v134)** | The player **activates it manually** (a button) and gets **+90 s**, at most once per turn. In the **last 5 seconds** of the turn timer the number **grows and pulses**, so you know it is time to use a charge. |
+| Quest VP | **DECIDED (v134)** | A **mix of 1-VP (easier) and 2-VP (harder) quests**, so opponents cannot easily tell how many points you are missing. |
+| Bots | **DECIDED (v134): bots = AI players** | Lobby and setup support **any mix of humans and AI**. Empty seats can be filled with AI, for example 3 humans + 1 AI for a 4-player game. |
 
 Where an older section and this table disagree, this table wins. The sections below have been updated to match.
 
@@ -29,7 +33,7 @@ Where an older section and this table disagree, this table wins. The sections be
 - Turn-based, so latency barely matters. Correctness, reconnects and fairness matter far more.
 - Lean into what single-player cannot do: **negotiation, secret votes, bounties, secret quests, auctions, sabotage**
   (alliances and betrayal are parked, see §12).
-- A match is a self-contained **party run**: 3 acts (days and nights), leader pick, secret quests, events every night.
+- A match is a self-contained **party run**: 3 acts (days and nights), civilization (= leader) pick, secret quests, events every night.
 
 **Non-goals for v1**
 
@@ -87,7 +91,9 @@ but v1 does not depend on it.
 2. **Host** creates a session (Lobby + Relay allocation) and gets a **6-character join code**, for example `KT4-9QX`, plus a "copy code" button.
 3. **Join**: enter the code, then pick a name and a colour (lobby metadata).
 4. **Lobby screen**, built in the painted parchment style of the run-setup cards:
-   - Seats 1–5, each a human, an empty slot, or **Bot (Easy/Normal/Hard)**. The host can kick, and can swap seats by drag.
+   - Seats 1–5 (minimum 2), each a human, an empty slot, or an **AI player** (DECIDED v134: any human/AI mix). A
+     **"Fill empty seats with AI"** button turns every empty slot into an AI, so 3 friends can start a 4-player game.
+     The host can kick, and can swap seats by drag.
    - Settings: map (Base 19 for 3–4 players, Extended 30 for 5–6), Fishermen on/off, turn timer (default 1.5 min plus
      charges, see §5), and the victory target. Chaos is a normal event, so there is no shenanigan-level setting.
    - Ready-up. The host's **Start** is enabled when everyone is ready.
@@ -98,9 +104,11 @@ but v1 does not depend on it.
 
 ### 4.1 Setup order (DECIDED)
 
-1. **Leader pick, before placement.** Every player picks a leader at the same time from the leaders they have unlocked.
-   Duplicates are allowed. Picks are hidden until everyone has chosen, then revealed together. You then know your
-   leader's ability (for example the Merchant's cheaper trades or the Pioneer's free road) **before** you place.
+1. **Civilization pick (= leader), before placement (DECIDED v134).** Civs and leaders are one concept: each player is
+   offered **3 civilizations**, each led by a named leader whose portrait is the civ's face, and keeps one. Picks are hidden until
+   everyone has chosen, then revealed together. Offers are dealt from one shared seeded pool, so no two players get the same civ. You then
+   know your civ passive and your leader ability (for example the Merchant Republic's 3:1 trades plus the Merchant's
+   cheaper shop) **before** you place. AI seats pick with the same rules.
 2. **Starting placement.** Snake order (1→N, then N→1) for settlements and roads, with the starting player chosen by
    the seeded roll. This uses the normal timer.
 3. **Secret quest and trait.** After placement, each player is offered **3 quests** and **2 small traits** and keeps one of each.
@@ -111,10 +119,11 @@ but v1 does not depend on it.
      in reverse placement order. The last player to place picks first, as compensation.
    - **Traits are small**, for example "+1 card on a roll of 2 or 12", "Robber steals from you show a decoy card",
      "First port trade each day is 1 better" or "Start with 1 fish".
+   - **Quest VP (DECIDED v134): a mix of 1-VP (easier) and 2-VP (harder) quests.** Every offer contains both kinds, so
+     nobody can tell from the outside how many points a hidden quest is worth.
    - The quest stays hidden until it completes (it is revealed then and scores) or until the end of the run.
-4. **Civilization and unique-building draft.** Where these sit in multiplayer is still **OPEN**: before placement
-   with the leader, or dropped for v1 to keep setup short. Proposal: keep the leader-only pick for v1 and add civs back after
-   the first playtest.
+4. **Unique-building draft.** The civilization question is settled by step 1. The unique-building draft is still open for
+   multiplayer: proposal is to skip it in v1 to keep setup short. In single-player it stays as step 3 (map → civ → draft).
 
 ## 5. Turn structure, timers and pacing
 
@@ -122,12 +131,13 @@ but v1 does not depend on it.
   the other players may build in seat order, but not trade. This keeps 5-player games from dragging.
 - **Turn timer (DECIDED): 1.5 minutes per turn.**
   - Each player starts with **1 extra-turn-time charge** and gains **+1 charge every 5 rounds**. Unused charges carry over.
-  - A charge can be spent **at any point** during your own turn, for one big turn. Proposed: +90 s, which doubles the
-    turn (tunable). Only one charge per turn.
+  - **DECIDED (v134):** the player **activates a charge manually** (a button next to the timer) at any point during
+    their own turn and gets **+90 s**. At most one charge per turn.
+  - **Last 5 seconds:** the timer number grows and pulses (bigger as time runs out), so you notice in time to use a charge.
   - When the timer runs out, the turn auto-ends. Any open trade offer is cancelled. Pending forced choices (discard,
     robber, steal target) are resolved by the bot policy.
   - The HUD shows a ring timer on the active player's row plus the number of charges (hourglass pips) for every player.
-- **Simultaneous phases** (nights, secret ballots, auctions, the leader pick, quest picks) use a shared 30–45 s timer. Everyone acts at once, and
+- **Simultaneous phases** (nights, secret ballots, auctions, the civilization pick, quest picks) use a shared 30–45 s timer. Everyone acts at once, and
   results are revealed together.
 - **Nights** are where the roguelike part happens: an event card, shop deals, level-ups. These run in parallel for everyone,
   so a night costs about 30 s of wall time, not 5× that.
@@ -152,8 +162,8 @@ Status tags: **v1** means it is in the first multiplayer release, **later** mean
 
 ### 7.1 Decided for v1
 
-1. **Secret quests (DECIDED, v1):** each player has a hidden quest from setup step 3 (§4.1). A quest is worth 2 VP and is
-   revealed when it completes, for example "own 3 ports", "never be robbed during act 2" or "claim a bounty". Quests can
+1. **Secret quests (DECIDED, v1):** each player has a hidden quest from setup step 3 (§4.1). A quest is worth **1 VP
+   (easier) or 2 VP (harder)** (DECIDED v134, so the value can't be read from the outside) and is revealed when it completes, for example "own 3 ports", "never be robbed during act 2" or "claim a bounty". Quests can
    win the game, so table talk about who is going for what becomes part of the fun.
 2. **Secret-ballot vote rounds (DECIDED, v1):** a night event proposes a decree, for example "all ports are 3:1 tomorrow",
    "the robber can't enter deserts" or "the richest player discards to 7". Everyone votes **hidden and at the same time**.
@@ -224,24 +234,42 @@ Every phase ends green in EditMode and PlayMode, with screenshots, and is playab
 last. Everything before it is useful immediately as **local hot-seat** (pass-and-play) on one PC, which is also
 how the group can playtest the rules before any server exists.
 
-### Phase 1: N-player core (no UI change for single-player)
-- Replace the binary `PlayerId { Human, Ai }` with `SeatId` 0..N-1 (N = 2..5). Make the "player vs AI" pairs in `GameState`
-  per-seat lists. Add `ISeatController` (LocalHuman, Bot).
-- Add a **command layer**: serializable `IGameCommand` records and `GameController.Apply(SeatId, command)` → `Result`.
-  The HUD sends commands and no longer mutates state directly.
-- Tests: the existing suites stay green. Add headless 4- and 5-bot full games to completion (seeded).
-- **Exit:** single-player is unchanged, and a 5-bot game finishes deterministically.
+### Phase 1: N-player core (no UI change for single-player) — **DONE in v134**
+- Implemented as a separate match core, `Core/Match` (`MatchConfig`, `MatchController`, `MatchCommand`, `MatchAi`,
+  `TurnClock`), so the single-player roguelike `GameController` is untouched. Seats 0..N-1 (N = 2..5) map 1:1 to board
+  owners, so `BoardState`, `PlacementValidator` and `RouteCalculator` are reused as-is.
+- `MatchConfig`: 2–5 seats, **any human/AI mix** (`SeatKind.Human`/`Ai`), `FillEmptySeatsWithAi()`, Base 19 board up to 4
+  seats and Extended 30 for 5.
+- **Command layer:** every action is a serializable `MatchCommand` (JSON) applied with `MatchController.Apply(command)` →
+  `MatchCommandResult`. Wrong-seat or illegal commands are rejected and not logged. Accepted commands form a log;
+  `MatchController.Replay(config, log)` rebuilds the same state (`MatchState.ComputeHash()`).
+- Rules in the core: snake setup (the 2nd settlement pays out), roll, robber + steal, automatic discard on 7, roads, settlements,
+  cities, 4:1 bank trades, longest road (2 VP), the win at 10 VP, and the extra-time charge (`UseExtraTime`, +1 per 5 rounds).
+  Not yet: ports, development cards, player-to-player trades, Special Build Phase.
+- `MatchAi` is the deterministic AI player, used for AI seats and as the timeout policy for humans.
+- Tests: `MatchCoreV134Tests`. Seeded all-AI games for 2–5 seats finish, the same seed gives the same log and hash, and a JSON log replays to the same hash.
+- Still to do from the original Phase 1 text: the single-player `GameController` itself is **not** command-based yet.
+  That is deferred to Phase 5, where it matters for netcode.
 
 ### Phase 2: Local hot-seat for 4–5 players and the turn timer
-- A 4–5 seat player strip on the rail (leader medallion, VP, card count, timer ring, extra-time pips).
+- A 4–5 seat player strip on the rail (civ/leader medallion, VP, card count, timer ring, extra-time pips).
 - **Hand-off screen** between human turns ("Pass to Anna"), which hides the previous hand.
-- **Turn timer: 1.5 min, 1 starting extra-time charge, +1 every 5 rounds**, auto-end, and bot resolution of pending choices.
+- **Turn timer: 1.5 min, 1 starting extra-time charge, +1 every 5 rounds**, a manual **"+90 s" charge button**, the
+  number growing and pulsing in the last 5 s, auto-end, and AI resolution of pending choices.
 - 5-player rules: Extended board tokens and ports, Special Build Phase, 2 extra seat colours, 24 cards per resource.
 - **Exit:** a full 4-human hot-seat game on Base and a 5-human game on Extended, with the timer and charges working.
+- **Status (v134): started.** `Core/Match/HotSeatSession` drives the timer, the charges, the pass screen and the AI seats,
+  and `RunHudMatchHotSeat` renders the table. You reach it from **Pass & play (2–5)** on the map screen. The lobby has a seat count
+  stepper, Human / AI / Open per seat and **Fill open seats with AI**. The table shows a seat strip, the timer with a
+  +90 s charge button that pulses in the last 5 s, a hand panel that is hidden on others' turns, and a pass screen.
+  Still to do: human actions by clicking the board (humans currently act through the
+  Roll / suggested placement / Auto-build / End turn buttons), player trades, and the 5-player rules above.
 
 ### Phase 3: Decided setup flow
-- **Leader first** (hidden simultaneous picks via hand-off), then snake placement, then the **quest and trait offer**.
-- Quest engine: data-driven `QuestDefinition` (condition, VP, board-feasibility filter) with a seeded unique pool. Traits work the same way.
+- **Civilization (= leader) first** (hidden simultaneous picks via hand-off, 3 offered each), then snake placement, then
+  the **quest and trait offer**.
+- Quest engine: data-driven `QuestDefinition` (condition, **1 or 2 VP**, board-feasibility filter) with a seeded unique
+  pool. Every offer mixes 1-VP and 2-VP quests. Traits work the same way.
 - **Exit:** offers change with board position (tested), and quests reveal and score correctly.
 
 ### Phase 4: Shenanigans on one device
@@ -267,10 +295,17 @@ how the group can playtest the rules before any server exists.
 
 ## 11. Open questions for the group
 
-- Where do civilizations and the unique-building draft go in multiplayer setup (§4.1, point 4)?
-- How much time should an extra-time charge add: +90 s as proposed, or a full extra 1.5 min turn?
-- Quest VP value (2 proposed). Should a player get one quest or two (keep one, discard one)?
-- Are bots allowed in a 5-seat game, or must everyone be human?
+Resolved in v134 (see §0):
+- ~~Where do civilizations go in multiplayer setup?~~ **DECIDED:** civs and leaders are merged, and the civ (= leader) pick comes before placement.
+- ~~How much time does an extra-time charge add?~~ **DECIDED:** +90 s. It is activated manually, and the timer pulses in the last 5 s.
+- ~~Quest VP value?~~ **DECIDED:** a mix of 1-VP (easier) and 2-VP (harder) quests.
+- ~~Are bots allowed?~~ **DECIDED:** bots = AI players. Any human/AI mix is allowed, and empty seats can be filled with AI.
+
+Still open:
+- Unique-building draft in multiplayer: skip in v1 (proposed) or keep after the civ pick?
+- Should a player get one quest or two (keep one, discard one)?
+- Dedicated portraits for the 6 civs that still use their emblem (Sea Folk, Steppe Nomads, Highland Clans, Shepherd
+  Kingdom, Academy, Sun Kingdom). Prompts are in the v134 report.
 
 ## 12. Later (parked)
 

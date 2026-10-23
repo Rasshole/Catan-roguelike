@@ -53,14 +53,18 @@ namespace CatanRoguelike.Tests
 
         private static GameController ControllerAtCivPick(int seed = 7)
         {
+            // v134: civ pick (leader merged in) is step 2, right after the map.
             var game = new GameController(seed, MapSize.Small) { CivilizationPickEnabled = true };
             game.SelectMap(MapSize.Small);
-            game.SelectLeader(LeaderId.Merchant);
+            return game;
+        }
+
+        private static void DraftAndConfirm(GameController game)
+        {
             var uniques = (UniqueBuildingId[])Enum.GetValues(typeof(UniqueBuildingId));
             game.ToggleDraftUnique(uniques[0]);
             game.ToggleDraftUnique(uniques[1]);
             game.ConfirmRunSetup();
-            return game;
         }
 
         // ---------------- library + offer ----------------
@@ -115,7 +119,7 @@ namespace CatanRoguelike.Tests
 
         [Timeout(4000)]
         [Test]
-        public void ConfirmRunSetup_WithPickEnabled_OffersThreeAndWaits()
+        public void SelectMap_WithPickEnabled_OffersThreeCivsAndWaits()
         {
             var game = ControllerAtCivPick();
 
@@ -128,7 +132,7 @@ namespace CatanRoguelike.Tests
 
         [Timeout(4000)]
         [Test]
-        public void ChooseCivilization_RejectsUnofferedAndStartsBoardSetup()
+        public void ChooseCivilization_RejectsUnoffered_SetsLeader_ThenDraftThenBoard()
         {
             var game = ControllerAtCivPick();
             var notOffered = CivilizationLibrary.Pool.Select(c => c.Id)
@@ -140,8 +144,12 @@ namespace CatanRoguelike.Tests
             var pick = game.State.CivilizationOffer[1];
             Assert.IsTrue(game.ChooseCivilization(pick));
             Assert.AreEqual(pick, game.State.Civilization);
-            Assert.AreEqual(GamePhase.SetupPlayerSettlement1, game.State.Phase);
+            Assert.AreEqual(CivilizationLibrary.Get(pick).Leader, game.State.Leader, "the civ brings its leader");
+            Assert.AreEqual(GamePhase.RunSelectDraft, game.State.Phase, "v134: civ → draft → board");
             Assert.IsFalse(game.ChooseCivilization(pick), "Cannot pick twice");
+            DraftAndConfirm(game);
+            Assert.AreEqual(GamePhase.SetupPlayerSettlement1, game.State.Phase);
+            Assert.AreEqual(pick, game.State.Civilization);
         }
 
         [Timeout(2000)]

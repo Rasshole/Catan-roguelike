@@ -120,15 +120,20 @@ namespace CatanRoguelike.Tests.PlayMode
             var map = FindButton(hud, "Map_");
             Assert.IsNotNull(map, "an available map card");
             map.onClick.Invoke();
-            Assert.AreEqual(GamePhase.RunSelectLeader, controller.State.Phase);
+            // v134: civs and leaders are merged — the civ pick (with leader portraits) is step 2.
+            Assert.AreEqual(GamePhase.RunSelectCivilization, controller.State.Phase);
             yield return Settle(gameManager, h => hud = h);
-            Assert.IsTrue(hud.IsPreGameMenuVisibleForTests);
-            MaybeWrite(hud, "menu-leader");
+            Assert.IsTrue(hud.IsCivilizationPickVisibleForTests);
+            MaybeWrite(hud, "menu-civ");
 
-            var leader = FindButton(hud, "Leader_");
-            Assert.IsNotNull(leader, "an available leader card");
-            leader.onClick.Invoke();
+            var civ = hud.CivilizationPickRootForTests.GetComponentsInChildren<Button>(true)
+                .FirstOrDefault(b => b.name.StartsWith("Civ_"));
+            Assert.IsNotNull(civ, "a civilization card");
+            Assert.IsNotNull(civ.transform.Find("Portrait"), "civ card shows the leader portrait");
+            Assert.IsNotNull(civ.transform.Find("LedBy"), "civ card names its leader");
+            civ.onClick.Invoke();
             Assert.AreEqual(GamePhase.RunSelectDraft, controller.State.Phase);
+            Assert.AreNotEqual(CatanRoguelike.Core.Civilizations.CivilizationId.None, controller.State.Civilization);
             yield return Settle(gameManager, h => hud = h);
 
             int picks = gameManager.Meta != null ? gameManager.Meta.GetDraftPickCount() : 2;

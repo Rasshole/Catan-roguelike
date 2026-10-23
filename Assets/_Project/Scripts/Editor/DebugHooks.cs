@@ -255,6 +255,12 @@ namespace CatanRoguelike.Editor
                 return;
             }
 
+            if (phase == GamePhase.RunSelectCivilization && game.State.CivilizationOffer.Count > 0)
+            {
+                game.ChooseCivilization(game.State.CivilizationOffer[0]);
+                return;
+            }
+
             if (phase == GamePhase.RunSelectDraft)
             {
                 if (game.State.DraftedUniques.Count < RunProgression.DraftPickCount)

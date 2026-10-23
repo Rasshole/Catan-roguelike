@@ -28,6 +28,26 @@ namespace CatanRoguelike.Game
         /// <summary>Circular gold-rim portrait of a leader (transparent outside the medallion).</summary>
         public static Sprite GetLeaderPortrait(LeaderId id) => Load(LeaderFolder + "/" + id);
 
+        /// <summary>
+        /// v134: the civilization's face = its leader's portrait. Tries Art/Leaders/{CivId} (dedicated portrait,
+        /// drop-in), then the reused archetype painting (<see cref="CivilizationDefinition.PortraitKey"/>), and
+        /// finally the civ emblem as a placeholder.
+        /// </summary>
+        public static Sprite GetCivilizationPortrait(CivilizationId id)
+        {
+            if (!CivilizationLibrary.TryGet(id, out var def))
+                return null;
+            return Load(LeaderFolder + "/" + def.Id)
+                   ?? (string.IsNullOrEmpty(def.PortraitKey) ? null : Load(LeaderFolder + "/" + def.PortraitKey))
+                   ?? GetCivilizationEmblem(id);
+        }
+
+        /// <summary>True when the civ has a real leader painting (not the emblem placeholder).</summary>
+        public static bool HasCivilizationPortrait(CivilizationId id) =>
+            CivilizationLibrary.TryGet(id, out var def)
+            && (Load(LeaderFolder + "/" + def.Id) != null
+                || (!string.IsNullOrEmpty(def.PortraitKey) && Load(LeaderFolder + "/" + def.PortraitKey) != null));
+
         public static Sprite GetEventEmblem(EventId id) =>
             id == EventId.None ? null : Load(EventFolder + "/" + EventLibrary.Get(id).Category);
 
@@ -58,13 +78,20 @@ namespace CatanRoguelike.Game
             return sprite;
         }
 
+        private static readonly HashSet<string> Missing = new();
+
         private static Sprite Load(string path)
         {
             if (Cache.TryGetValue(path, out var cached) && cached != null)
                 return cached;
+            if (Missing.Contains(path))
+                return null;
             var tex = Resources.Load<Texture2D>(path);
             if (tex == null)
+            {
+                Missing.Add(path);
                 return null;
+            }
             var sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
             sprite.name = path;
             Cache[path] = sprite;

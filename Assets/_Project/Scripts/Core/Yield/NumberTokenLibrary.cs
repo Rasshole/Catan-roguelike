@@ -68,7 +68,8 @@ namespace CatanRoguelike.Core.Yield
                 foreach (var coord in coords)
                     board.Tiles[coord].NumberToken = null;
 
-                if (TryAssignInOrder(board, order, 0, pool) && !HasAdjacentRedTokens(board))
+                int budget = MaxBacktrackNodesPerAttempt;
+                if (TryAssignInOrder(board, order, 0, pool, ref budget) && !HasAdjacentRedTokens(board))
                     return;
             }
 
@@ -100,26 +101,41 @@ namespace CatanRoguelike.Core.Yield
                 ^ (attempt * unchecked((int)0x9E3779B9))
                 ^ (tileCount * unchecked((int)0x85EBCA6B)));
 
-        private static bool TryAssignInOrder(BoardState board, IList<HexCoord> coords, int index, List<int> available)
+        /// <summary>
+        /// v134: cap on backtracking nodes per attempt. Before, duplicate token values were each retried (identical
+        /// subtrees), which made some 30-hex seeds (e.g. Extended seed 3) search effectively forever.
+        /// </summary>
+        private const int MaxBacktrackNodesPerAttempt = 20000;
+
+        private static bool TryAssignInOrder(BoardState board, IList<HexCoord> coords, int index, List<int> available,
+            ref int budget)
         {
             if (index >= coords.Count)
                 return true;
+            if (--budget < 0)
+                return false;
 
             var coord = coords[index];
+            // Distinct values only: retrying a second copy of a token that already failed explores the same subtree,
+            // so skipping it keeps the first solution found (and therefore every existing seed's board) unchanged.
             foreach (var token in available
+                         .Distinct()
                          .OrderByDescending(GetPipWeight)
-                         .ThenBy(t => t))
+                         .ThenBy(t => t)
+                         .ToList())
             {
                 if (!CanPlaceToken(board, coord, token))
                     continue;
 
                 board.Tiles[coord].NumberToken = token;
                 available.Remove(token);
-                if (TryAssignInOrder(board, coords, index + 1, available))
+                if (TryAssignInOrder(board, coords, index + 1, available, ref budget))
                     return true;
 
                 available.Add(token);
                 board.Tiles[coord].NumberToken = null;
+                if (budget < 0)
+                    return false;
             }
 
             return false;
