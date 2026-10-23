@@ -5,6 +5,9 @@ namespace CatanRoguelike.Game
 {
     internal static class ColonistHudIconGraphic
     {
+        public const float IconOutlineAlpha = 0.28f;
+        public const float IconOutlineDistance = 0.5f;
+
         public static void ApplyCardIcon(Image target, Sprite sprite, float fill = 0.6f, float centerY = 0.5f)
         {
             if (target == null)
@@ -26,8 +29,9 @@ namespace CatanRoguelike.Game
             var outline = target.GetComponent<Outline>();
             if (outline == null)
                 outline = target.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.05f, 0.06f, 0.08f, 0.95f);
-            outline.effectDistance = new Vector2(1.5f, -1.5f);
+            // v133: barely-there edge (the painted icons carry their own faint ink ring now).
+            outline.effectColor = new Color(0.16f, 0.10f, 0.05f, IconOutlineAlpha);
+            outline.effectDistance = new Vector2(IconOutlineDistance, -IconOutlineDistance);
             outline.useGraphicAlpha = true;
         }
     }

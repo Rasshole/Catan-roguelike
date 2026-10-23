@@ -181,5 +181,154 @@ def main():
     print(BORDERS)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and os.environ.get("V133", "1") != "1":
     main()
+
+
+# ---------------------------------------------------------------------------------------------- v133
+# "Parchment everywhere": every light piece (FrameOrnate/Medium/Thin, Chip, ButtonParchment) now carries the
+# leader card's old-scroll parchment (Resources/Art/Cards/CardFramePortrait.png) at native detail instead of a
+# blurred, stretched crop. Layout per piece: [B | L | B] where the L x L centre is a SEAMLESS parchment tile
+# and the B-wide border holds the wood frame plus the card's darker mottled aged edge. ColonistUiKit draws
+# these with Image.Type.Tiled, so the centre repeats at native scale (never stretches) and the edge strips
+# repeat with the same period L (the wood grain and edge mottle are built periodic in L, so they tile too).
+CARD = Image.open(os.path.join(RES, "Cards", "CardFramePortrait.png")).convert("RGB")
+CARD_ARR = np.asarray(CARD, dtype=np.float32)
+PARCH_MEAN = CARD_ARR[400:800, 250:600].mean(axis=(0, 1))
+
+
+def _crossfade_periodic(a, axis):
+    """Make an array seamless along `axis`: blend with itself rolled by half, weighted to hide both seams."""
+    n = a.shape[axis]
+    t = np.abs(np.linspace(-1, 1, n, dtype=np.float32))  # 1 at the ends, 0 in the middle
+    w = np.clip((t - 0.15) / 0.7, 0, 1)
+    w = w * w * (3 - 2 * w)
+    shape = [1] * a.ndim
+    shape[axis] = n
+    w = w.reshape(shape)
+    rolled = np.roll(a, n // 2, axis=axis)
+    return a * (1 - w) + rolled * w
+
+
+def parchment_tile(size):
+    """Seamless size x size tile of the card parchment: 576 px crop, flattened (no vignette), wrapped."""
+    crop = CARD_ARR[260:900, 112:752]
+    low = np.asarray(Image.fromarray(crop.astype(np.uint8)).filter(ImageFilter.GaussianBlur(110)), np.float32)
+    flat = crop / np.maximum(low, 1) * PARCH_MEAN  # remove the card's own large-scale shading
+    t = _crossfade_periodic(_crossfade_periodic(flat, 0), 1)
+    img = Image.fromarray(np.clip(t, 0, 255).astype(np.uint8)).resize((size, size), Image.LANCZOS)
+    a = np.asarray(img, dtype=np.float32)
+    # the 3x minification (and the crossfade) halves the mottle; restore the card's grain contrast
+    m = a.mean(axis=(0, 1), keepdims=True)
+    return m + (a - m) * 1.8
+
+
+def edge_band(length, depth):
+    """Ratio map (depth x length, periodic along length) of the card's aged inner edge: the soft frame shadow
+    and the darker mottled, torn-looking parchment rim, relative to the clean centre parchment."""
+    # left inner edge (cols 62..202) of the portrait card, turned to run along the strip
+    strip = CARD_ARR[200:952, 62:202].transpose(1, 0, 2)
+    ratio = (strip / PARCH_MEAN) ** 1.6  # deepen the aged rim a little for small HUD panels
+    ratio = _crossfade_periodic(ratio, 1)
+    img = Image.fromarray(np.clip(ratio * 160, 0, 255).astype(np.uint8)).resize((length, depth), Image.LANCZOS)
+    r = np.asarray(img, dtype=np.float32) / 160.0
+    fade = np.clip(np.linspace(1, 0, depth, dtype=np.float32) / 0.35, 0, 1)  # exactly 1.0 at the tile edge
+    return 1 + (np.minimum(r, 1.03) - 1) * fade[:, None, None] * 1.15
+
+
+def periodic_wood_profile(length, depth):
+    prof = PROFILE.crop((0, 0, PROFILE.width, PROFILE_DEPTH)).resize((length, depth), Image.LANCZOS)
+    return _crossfade_periodic(np.asarray(prof, dtype=np.float32), 1)
+
+
+def tiled_canvas(B, L):
+    tile = parchment_tile(L)
+    n = 2 * B + L
+    ys, xs = np.mgrid[0:n, 0:n]
+    return tile[(ys - B) % L, (xs - B) % L], ys, xs
+
+
+def apply_band(img, ys, xs, B, L, start, band):
+    n = img.shape[0]
+    r = edge_band(L, band)
+    for d, along in ((ys, xs), (n - 1 - ys, xs), (xs, ys), (n - 1 - xs, ys)):
+        k = d - start
+        m = (k >= 0) & (k < band)
+        idx = np.clip(k, 0, band - 1)
+        img = np.where(m[..., None], img * r[idx, (along - B) % L], img)
+    return img
+
+
+def framed_tiled(B, L, depth, band, ornament=False):
+    img, ys, xs = tiled_canvas(B, L)
+    n = img.shape[0]
+    img = apply_band(img, ys, xs, B, L, depth, band)
+    prof = periodic_wood_profile(L, depth)
+    stack = np.stack([ys, n - 1 - ys, xs, n - 1 - xs])
+    side = stack.argmin(axis=0)
+    d = stack.min(axis=0)
+    along = (np.where(side < 2, xs, ys) - B) % L
+    mask = d < depth
+    img = np.where(mask[..., None], prof[np.clip(d, 0, depth - 1), along], img)
+    out = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8))
+    if ornament:
+        scale = depth / PROFILE_DEPTH
+        size = int(round(175 * scale))
+        corners = {
+            (0, 0): SRC.crop((0, 0, 175, 175)),
+            (1, 0): SRC.crop((SRC.width - 175, 0, SRC.width, 175)),
+            (0, 1): SRC.crop((0, SRC.height - 175, 175, SRC.height)),
+            (1, 1): SRC.crop((SRC.width - 175, SRC.height - 175, SRC.width, SRC.height)),
+        }
+        ramp = max(2, size // 8)
+        for (cx, cy), crop in corners.items():
+            patch = crop.resize((size, size), Image.LANCZOS)
+            yy, xx = np.mgrid[0:size, 0:size]
+            ox = xx if cx == 0 else (size - 1 - xx)
+            oy = yy if cy == 0 else (size - 1 - yy)
+            keep = (np.minimum(ox, oy) < depth).astype(np.float32)
+            fade = np.clip(np.minimum(size - 1 - ox, size - 1 - oy) / ramp, 0, 1)
+            a = Image.fromarray((keep * fade * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.6))
+            out.paste(patch, (0 if cx == 0 else n - size, 0 if cy == 0 else n - size), a)
+    return out
+
+
+def parchment_plaque(B, L, r, band, rim=(168, 128, 66), rim_w=2, outline=(70, 44, 20)):
+    """Rounded parchment button / chip with an aged edge; light bevel only inside the border."""
+    img, ys, xs = tiled_canvas(B, L)
+    n = img.shape[0]
+    img = apply_band(img, ys, xs, B, L, rim_w + 1, band)
+    # bevel: top border a touch lighter, bottom border a touch darker (centre untouched so it tiles)
+    top = np.clip((B - ys) / B, 0, 1)[..., None]
+    bot = np.clip((ys - (n - 1 - B)) / B, 0, 1)[..., None]
+    img = img * (1 + 0.06 * top - 0.14 * bot)
+    base = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)).convert("RGBA")
+    s = 4
+    layer = Image.new("RGBA", (n * s, n * s), (0, 0, 0, 0))
+    dr = ImageDraw.Draw(layer)
+    dr.rounded_rectangle((0, 0, n * s - 1, n * s - 1), r * s, outline=outline + (255,), width=s)
+    dr.rounded_rectangle((s, s, n * s - 1 - s, n * s - 1 - s), (r - 1) * s, outline=rim + (255,), width=s * rim_w)
+    layer = layer.resize((n, n), Image.LANCZOS)
+    out = Image.alpha_composite(base, layer)
+    out.putalpha(rounded_mask(n, n, r))
+    return out
+
+
+def main_v133():
+    # (border B, tile L): keep in sync with ColonistUiKit.Borders (border = B).
+    big = framed_tiled(74, 256, 22, 52, ornament=True)
+    save("FrameOrnate", big, 74)
+    med = framed_tiled(42, 256, 12, 30)
+    dm = ImageDraw.Draw(med)
+    n = med.width
+    for (x, y) in ((5, 5), (n - 6, 5), (5, n - 6), (n - 6, n - 6)):
+        dm.ellipse((x - 2.5, y - 2.5, x + 2.5, y + 2.5), fill=(214, 172, 86), outline=(70, 44, 18))
+    save("FrameMedium", med, 42)
+    save("FrameThin", framed_tiled(22, 192, 5, 17), 22)
+    save("Chip", parchment_plaque(12, 96, 7, 8, rim=(150, 112, 62), rim_w=1, outline=(78, 52, 28)), 12)
+    save("ButtonParchment", parchment_plaque(16, 128, 10, 10), 16)
+    print(BORDERS)
+
+
+if __name__ == "__main__" and os.environ.get("V133", "1") == "1":
+    main_v133()

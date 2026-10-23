@@ -75,7 +75,7 @@ namespace CatanRoguelike.Game
 
         private RectTransform BuildLevelUp(GameState state)
         {
-            var root = CreateFullscreenDim("LevelUp", new Color(0.05f, 0.04f, 0.03f, 0.62f));
+            var root = CreateFullscreenDim("LevelUp", new Color(0.05f, 0.04f, 0.03f, 0.72f));
             string leader = LeaderLibrary.All.TryGetValue(state.Leader, out var def) ? def.Name : "your leader";
 
             var title = RunHudUiFactory.CreateText(root, "Title", "Level up!", 46, TextAnchor.MiddleCenter, TitleCream,
@@ -86,6 +86,16 @@ namespace CatanRoguelike.Game
                 TextAnchor.MiddleCenter, new Color(0.90f, 0.84f, 0.70f, 1f), FontStyle.Italic);
             SetRect(subtitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -200f), new Vector2(1200f, 32f));
             AddShadow(subtitle.gameObject, 1.5f);
+
+            // v133: the leader's medallion beside the title.
+            var portraitSprite = ColonistRoguelikeArt.GetLeaderPortrait(state.Leader);
+            if (portraitSprite != null)
+            {
+                var portrait = CreateImage(root, "LeaderPortrait", portraitSprite);
+                SetRect(portrait.rectTransform, new Vector2(0.5f, 1f), new Vector2(-230f, -172f),
+                    new Vector2(118f, 118f));
+                AddShadow(portrait.gameObject, 2f);
+            }
 
             var perks = state.PendingLevelUpChoices.ToList();
             const float cardW = 300f, cardH = 420f, gap = 40f;
@@ -166,7 +176,7 @@ namespace CatanRoguelike.Game
         private RectTransform BuildRunEnd(GameState state)
         {
             bool won = state.Winner == PlayerId.Human;
-            var root = CreateFullscreenDim("RunEnd", new Color(0.05f, 0.04f, 0.03f, 0.55f));
+            var root = CreateFullscreenDim("RunEnd", new Color(0.05f, 0.04f, 0.03f, 0.72f));
 
             const float w = 760f, h = 440f;
             var card = CreateCardFrame(root, "Card", wide: true);
@@ -182,12 +192,27 @@ namespace CatanRoguelike.Game
             }
 
             bool hasEmblem = state.Civilization != Core.Civilizations.CivilizationId.None;
-            float textX = hasEmblem ? 250f : 80f;
+            var leaderPortrait = ColonistRoguelikeArt.GetLeaderPortrait(state.Leader);
+            bool hasArt = hasEmblem || leaderPortrait != null;
+            float textX = hasArt ? 250f : 80f;
             float textW = w - textX - 80f;
             if (hasEmblem)
             {
                 var emblem = CreateImage(card, "Emblem", ColonistRoguelikeArt.GetCivilizationEmblem(state.Civilization));
-                SetRect(emblem.rectTransform, new Vector2(0f, 0.5f), new Vector2(150f, 18f), new Vector2(160f, 160f));
+                SetRect(emblem.rectTransform, new Vector2(0f, 0.5f),
+                    new Vector2(150f, leaderPortrait != null ? 62f : 18f), new Vector2(150f, 150f));
+            }
+
+            if (leaderPortrait != null)
+            {
+                // v133: the run's leader medallion under (or instead of) the civilization emblem.
+                var portrait = CreateImage(card, "LeaderPortrait", leaderPortrait);
+                float size = hasEmblem ? 112f : 160f;
+                SetRect(portrait.rectTransform, new Vector2(0f, 0.5f),
+                    new Vector2(150f, hasEmblem ? -84f : 18f), new Vector2(size, size));
+                var ps = portrait.gameObject.AddComponent<Shadow>();
+                ps.effectColor = new Color(0.20f, 0.12f, 0.05f, 0.45f);
+                ps.effectDistance = new Vector2(2f, -3f);
             }
 
             Text Line(string name, string text, int size, Color color, FontStyle style, float top, float height)

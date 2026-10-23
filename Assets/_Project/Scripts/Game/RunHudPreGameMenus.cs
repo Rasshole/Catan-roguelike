@@ -197,6 +197,16 @@ namespace CatanRoguelike.Game
             var card = CreateCardFrame(parent, name, wide: false);
             SetRect(card, new Vector2(0.5f, 0.5f), pos, size);
             var img = card.GetComponent<Image>();
+            // v133: 9-slice the portrait frame so taller cards (leader medallion) keep undistorted corners.
+            var sliced = ColonistRoguelikeArt.GetCardFrameSliced(false);
+            if (sliced != null)
+            {
+                img.sprite = sliced;
+                img.type = Image.Type.Sliced;
+                img.preserveAspect = false;
+                img.pixelsPerUnitMultiplier = sliced.texture.width / size.x;
+            }
+
             if (!enabled)
                 img.color = new Color(0.72f, 0.68f, 0.62f, 1f);
             else if (selected)
@@ -419,7 +429,8 @@ namespace CatanRoguelike.Game
                 leaders.Add((leader, available, cost));
             }
 
-            const float cardW = 320f, cardH = 448f;
+            // v133: taller card with the leader's painted medallion above the name.
+            const float cardW = 320f, cardH = 584f;
             var xs = RowPositions(leaders.Count, cardW, 30f);
             for (int i = 0; i < leaders.Count; i++)
             {
@@ -432,19 +443,34 @@ namespace CatanRoguelike.Game
                         RebuildPreGame();
                     });
                 const float inner = 244f;
+                var portraitSprite = ColonistRoguelikeArt.GetLeaderPortrait(id);
+                if (portraitSprite != null)
+                {
+                    var portrait = CreateImage(card, "Portrait", portraitSprite);
+                    portrait.preserveAspect = true;
+                    if (!available)
+                        portrait.color = new Color(0.62f, 0.58f, 0.54f, 1f);
+                    SetRect(portrait.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -54f - 74f),
+                        new Vector2(148f, 148f));
+                    var ps = portrait.gameObject.AddComponent<Shadow>();
+                    ps.effectColor = new Color(0.20f, 0.12f, 0.05f, 0.45f);
+                    ps.effectDistance = new Vector2(2f, -3f);
+                }
+
+                const float y0 = 206f;
                 CardLine(card, "Kicker", available ? "LEADER" : $"LOCKED  ·  {cost} ★", 14,
-                    available ? ColonistUiKit.InkGold : InkBad, FontStyle.Bold, 76f, 20f, inner);
-                CardLine(card, "Name", def.Name, 28, InkBrown, FontStyle.Bold, 100f, 40f, inner,
+                    available ? ColonistUiKit.InkGold : InkBad, FontStyle.Bold, y0, 20f, inner);
+                CardLine(card, "Name", def.Name, 28, InkBrown, FontStyle.Bold, y0 + 22f, 40f, inner,
                     TextAnchor.MiddleCenter);
-                CardRule(card, 150f, inner - 40f);
+                CardRule(card, y0 + 70f, inner - 40f);
                 CardLine(card, "Passive", def.PassiveDescription, 17, available ? InkGood : InkMuted, FontStyle.Bold,
-                    164f, 104f, inner);
+                    y0 + 82f, 96f, inner);
                 if (def.PerkPool != null && def.PerkPool.Count > 0)
                 {
-                    CardLine(card, "PerksHeader", "LEVEL-UP PERKS", 12, ColonistUiKit.InkGold, FontStyle.Bold, 276f,
-                        18f, inner);
+                    CardLine(card, "PerksHeader", "LEVEL-UP PERKS", 12, ColonistUiKit.InkGold, FontStyle.Bold,
+                        y0 + 184f, 18f, inner);
                     CardLine(card, "Perks", string.Join("\n", def.PerkPool.Take(4).Select(PerkDisplayName)), 14,
-                        InkMuted, FontStyle.Normal, 296f, 76f, inner);
+                        InkMuted, FontStyle.Normal, y0 + 204f, 76f, inner);
                 }
 
                 CardLine(card, "Hint", available ? "click to choose" : "unlock with stars", 13, InkMuted,

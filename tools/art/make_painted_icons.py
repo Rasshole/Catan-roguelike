@@ -164,5 +164,120 @@ def main_v132():
         print("wrote", name, "+ small")
 
 
-if __name__ == "__main__" and os.environ.get("V132", "1") == "1":
+if __name__ == "__main__" and os.environ.get("V133", "1") != "1" and os.environ.get("V132", "1") == "1":
     main_v132()
+
+
+# ---------------------------------------------------------------- v133: barely-there outline
+# Rasmus: "make the outline MUCH thinner on all resource icons". The baked ink ring drops from ~6px to
+# ~1px at 256 (soft, 45% ink) and the small variant from a 9px dilation to a 3px one at 35% ink.
+# New wool (sheep on grass) and wheat (sheaf) sources replaced tools/art/ai-icons-src/{wool,wheat}.jpg.
+def finish_thin(obj):
+    big = 4 * OUT
+    scale = (big * (1 - 2 * MARGIN)) / max(obj.size)
+    obj = obj.resize((max(1, int(obj.width * scale)), max(1, int(obj.height * scale))), Image.LANCZOS)
+    canvas = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    ox, oy = (big - obj.width) // 2, (big - obj.height) // 2
+    full_a = Image.new("L", (big, big), 0)
+    full_a.paste(obj.getchannel("A"), (ox, oy))
+    shadow = full_a.filter(ImageFilter.GaussianBlur(big * 0.014))
+    shadow = shadow.transform(shadow.size, Image.AFFINE, (1, 0, -big * 0.008, 0, 1, -big * 0.012))
+    shadow = shadow.point(lambda v: int(v * 0.30))
+    outline = full_a.filter(ImageFilter.MaxFilter(5)).filter(ImageFilter.GaussianBlur(1.0))
+    outline = outline.point(lambda v: int(v * 0.45))
+    canvas = Image.alpha_composite(canvas, Image.merge("RGBA", (*[Image.new("L", (big, big), 0)] * 3, shadow)))
+    ink = Image.new("RGBA", (big, big), (52, 36, 22, 0))
+    ink.putalpha(outline)
+    canvas = Image.alpha_composite(canvas, ink)
+    layer = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    layer.paste(obj, (ox, oy))
+    canvas = Image.alpha_composite(canvas, layer)
+    return canvas.resize((OUT, OUT), Image.LANCZOS)
+
+
+def crisp_small_thin(full, name):
+    from PIL import ImageEnhance
+    big = full.resize((SMALL * 4, SMALL * 4), Image.LANCZOS)
+    a = big.getchannel("A")
+    if name == "Wheat":
+        a = a.filter(ImageFilter.MaxFilter(3))
+    outline = a.filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(0.8))
+    canvas = Image.new("RGBA", big.size, (0, 0, 0, 0))
+    ink = Image.new("RGBA", big.size, (46, 30, 16, 0))
+    ink.putalpha(outline.point(lambda v: int(v * 0.35)))
+    canvas = Image.alpha_composite(canvas, ink)
+    if name == "Wheat":
+        fill = big.filter(ImageFilter.GaussianBlur(2))
+        fa = np.maximum(np.asarray(fill, np.float32)[..., 3:] / 255.0, 0.05)
+        fill_rgb = np.asarray(fill, np.float32)[..., :3] / fa
+        fill_img = Image.fromarray(np.clip(fill_rgb * 0.92, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
+        fill_img.putalpha(a)
+        canvas = Image.alpha_composite(canvas, fill_img)
+    canvas = Image.alpha_composite(canvas, big)
+    small = canvas.resize((SMALL, SMALL), Image.LANCZOS)
+    rgb = small.convert("RGB").filter(ImageFilter.UnsharpMask(radius=1.2, percent=80, threshold=1))
+    rgb = ImageEnhance.Contrast(rgb).enhance(1.10)
+    rgb = ImageEnhance.Color(rgb).enhance(1.15 if name in ("Wheat", "Stone") else 1.04)
+    out = rgb.convert("RGBA")
+    out.putalpha(small.getchannel("A"))
+    return out
+
+
+def enclosed_white(dist, bg, min_px=200, max_mean=8.0):
+    """Near-pure-white pockets enclosed by the object (the gap under the new sheep's belly, between its
+    legs) are background too; cream wool sits well above max_mean so it is kept."""
+    cand = (dist < T_HARD) & ~bg
+    seen = np.zeros_like(cand)
+    out = np.zeros_like(cand)
+    h, w = dist.shape
+    for y, x in zip(*np.nonzero(cand)):
+        if seen[y, x]:
+            continue
+        q = deque([(y, x)])
+        seen[y, x] = True
+        pts = []
+        while q:
+            cy, cx = q.popleft()
+            pts.append((cy, cx))
+            for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                ny, nx = cy + dy, cx + dx
+                if 0 <= ny < h and 0 <= nx < w and cand[ny, nx] and not seen[ny, nx]:
+                    seen[ny, nx] = True
+                    q.append((ny, nx))
+        pa = np.array(pts)
+        if len(pts) >= min_px and dist[pa[:, 0], pa[:, 1]].mean() < max_mean:
+            out[pa[:, 0], pa[:, 1]] = True
+    return out
+
+
+def cut_v133(path):
+    im = np.asarray(Image.open(path).convert("RGB"), np.float32)
+    border = np.concatenate([im[0], im[-1], im[:, 0], im[:, -1]])
+    bgc = np.median(border, axis=0)
+    dist = np.sqrt(((im - bgc) ** 2).sum(-1))
+    bg = flood_background(dist, T_HARD)
+    bg |= enclosed_white(dist, bg)
+    alpha = np.where(bg, np.clip((dist - T_SOFT) / (T_HARD - T_SOFT), 0, 1), 1.0)
+    a_img = Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.MinFilter(3))
+    a_img = a_img.filter(ImageFilter.GaussianBlur(0.7))
+    alpha = np.asarray(a_img, np.float32) / 255.0
+    a = np.maximum(alpha, 1e-3)[..., None]
+    rgb = np.clip((im - bgc * (1 - a)) / a, 0, 255)
+    rgb = np.where(alpha[..., None] > 0.02, rgb, 0)
+    rgba = Image.fromarray(np.dstack([rgb, alpha * 255]).astype(np.uint8), "RGBA")
+    bbox = Image.fromarray((alpha > 0.1).astype(np.uint8) * 255).getbbox()
+    return rgba.crop(bbox)
+
+
+def main_v133():
+    for src, name in NAMES.items():
+        full = finish_thin(cut_v133(os.path.join(SRC, f"{src}.jpg")))
+        if name == "Stone":
+            full = tint_ore(full)
+        full.save(os.path.join(DST, f"{name}.png"), optimize=True)
+        crisp_small_thin(full, name).save(os.path.join(DST, f"{name}Small.png"), optimize=True)
+        print("wrote", name, "+ small (thin outline)")
+
+
+if __name__ == "__main__" and os.environ.get("V133", "1") == "1":
+    main_v133()

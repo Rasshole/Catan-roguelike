@@ -38,14 +38,14 @@ namespace CatanRoguelike.Game
         // Slice borders in texture pixels (keep in sync with BORDERS in tools/art/make_ui_kit.py).
         private static readonly Dictionary<UiKitPiece, float> Borders = new()
         {
-            { UiKitPiece.FrameOrnate, 44f },
-            { UiKitPiece.FrameMedium, 20f },
-            { UiKitPiece.FrameThin, 10f },
-            { UiKitPiece.Chip, 10f },
+            { UiKitPiece.FrameOrnate, 74f },
+            { UiKitPiece.FrameMedium, 42f },
+            { UiKitPiece.FrameThin, 22f },
+            { UiKitPiece.Chip, 12f },
             { UiKitPiece.ButtonGreen, 14f },
             { UiKitPiece.ButtonWood, 14f },
             { UiKitPiece.ButtonRed, 14f },
-            { UiKitPiece.ButtonParchment, 14f },
+            { UiKitPiece.ButtonParchment, 16f },
             { UiKitPiece.Badge, 15f },
             { UiKitPiece.Banner, 16f },
         };
@@ -82,12 +82,17 @@ namespace CatanRoguelike.Game
             if (sprite == null)
                 return false;
             image.sprite = sprite;
-            image.type = Image.Type.Sliced;
+            // v133: light pieces are [border | seamless parchment tile | border] (tools/art/make_ui_kit.py
+            // main_v133), drawn Tiled so the leader-card parchment repeats at native scale instead of stretching.
+            image.type = UsesTiledParchment(piece) ? Image.Type.Tiled : Image.Type.Sliced;
             image.fillCenter = true;
             image.pixelsPerUnitMultiplier = 1f / Mathf.Max(0.05f, scale);
             image.color = tint ?? Color.white;
             return true;
         }
+
+        /// <summary>Parchment pieces whose centre is a seamless tile of the leader-card parchment.</summary>
+        public static bool UsesTiledParchment(UiKitPiece piece) => IsLightPiece(piece);
 
         public static bool IsLightPiece(UiKitPiece piece) =>
             piece is UiKitPiece.FrameOrnate or UiKitPiece.FrameMedium or UiKitPiece.FrameThin or UiKitPiece.Chip

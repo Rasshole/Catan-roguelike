@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Events;
+using CatanRoguelike.Core.Leaders;
 using UnityEngine;
 
 namespace CatanRoguelike.Game
@@ -14,6 +15,8 @@ namespace CatanRoguelike.Game
         public const string CivilizationFolder = "Art/Civilizations";
         public const string EventFolder = "Art/Events";
         public const string CardFolder = "Art/Cards";
+        /// <summary>v133 round leader medallions (tools/art/make_leader_portraits.py).</summary>
+        public const string LeaderFolder = "Art/Leaders";
         public const string PortraitFrame = "CardFramePortrait";
         public const string WideFrame = "CardFrameWide";
 
@@ -21,6 +24,9 @@ namespace CatanRoguelike.Game
 
         public static Sprite GetCivilizationEmblem(CivilizationId id) =>
             CivilizationLibrary.TryGet(id, out var def) ? Load(CivilizationFolder + "/" + def.EmblemKey) : null;
+
+        /// <summary>Circular gold-rim portrait of a leader (transparent outside the medallion).</summary>
+        public static Sprite GetLeaderPortrait(LeaderId id) => Load(LeaderFolder + "/" + id);
 
         public static Sprite GetEventEmblem(EventId id) =>
             id == EventId.None ? null : Load(EventFolder + "/" + EventLibrary.Get(id).Category);
