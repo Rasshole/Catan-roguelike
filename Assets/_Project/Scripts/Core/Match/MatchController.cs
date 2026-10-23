@@ -45,7 +45,8 @@ namespace CatanRoguelike.Core.Match
         public MatchController(MatchConfig config)
         {
             config.Validate();
-            var board = MapPresets.CreateBoard(config.MapSize, config.Seed);
+            // v137: every match shuffles its terrain per seed, like dealing the tiles at a real table.
+            var board = MapPresets.CreateBoard(config.MapSize, config.Seed, new MapGenerationOptions(shuffleTerrain: true));
             State = new MatchState(config, board)
             {
                 Rng = new MatchRng(config.Seed, 0x5EA7), PartyRng = new MatchRng(config.Seed, 0x9A27)

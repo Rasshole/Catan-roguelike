@@ -95,16 +95,116 @@ namespace CatanRoguelike.Core.Data
         public static IEnumerable<HexCoord> HugeThirtySevenHexCoords() =>
             HexMath.Spiral(new HexCoord(0, 0), 3);
 
-        public static IReadOnlyList<(HexCoord coord, ResourceType resource)> ExtendedThirtyHex()
+        /// <summary>
+        /// v137: the ratio multiset is spread over the island per seed (it used to be laid out in coordinate order,
+        /// which grouped every terrain into one band). The same seed always gives the same island.
+        /// </summary>
+        public static IReadOnlyList<(HexCoord coord, ResourceType resource)> ExtendedThirtyHex(int? seed = null)
         {
             var coords = ExtendedThirtyHexCoords().ToList();
-            return BuildFromCoords(coords, BuildResourcesForLandCoords(coords, new HexCoord(0, 0)));
+            return ShuffleTerrain(BuildFromCoords(coords, BuildResourcesForLandCoords(coords, new HexCoord(0, 0))),
+                new HexCoord(0, 0), seed ?? 0);
         }
 
-        public static IReadOnlyList<(HexCoord coord, ResourceType resource)> HugeThirtySevenHex()
+        public static IReadOnlyList<(HexCoord coord, ResourceType resource)> HugeThirtySevenHex(int? seed = null)
         {
             var coords = HugeThirtySevenHexCoords().ToList();
-            return BuildFromCoords(coords, BuildResourcesForLandCoords(coords, new HexCoord(0, 0)));
+            return ShuffleTerrain(BuildFromCoords(coords, BuildResourcesForLandCoords(coords, new HexCoord(0, 0))),
+                new HexCoord(0, 0), seed ?? 0);
+        }
+
+        /// <summary>Largest same-terrain group allowed by <see cref="ShuffleTerrain"/>.</summary>
+        public const int MaxTerrainClusterSize = 2;
+
+        /// <summary>
+        /// Seeded shuffle of the productive terrain (the <paramref name="fixedCoord"/> placeholder, the desert,
+        /// stays put), then swaps that break up same-terrain neighbours until no group is larger than
+        /// <see cref="MaxTerrainClusterSize"/> and only a few same-terrain edges remain, like a well-shuffled table.
+        /// </summary>
+        public static List<(HexCoord coord, ResourceType resource)> ShuffleTerrain(
+            IReadOnlyList<(HexCoord coord, ResourceType resource)> preset, HexCoord fixedCoord, int seed)
+        {
+            var coords = preset.Where(p => !p.coord.Equals(fixedCoord)).Select(p => p.coord).ToList();
+            var types = preset.Where(p => !p.coord.Equals(fixedCoord)).Select(p => p.resource).ToArray();
+            var rng = new System.Random(unchecked(seed * 31 + 0x7E11A1));
+            for (int i = types.Length - 1; i > 0; i--)
+            {
+                int j = rng.Next(i + 1);
+                (types[i], types[j]) = (types[j], types[i]);
+            }
+
+            var index = new Dictionary<HexCoord, int>();
+            for (int i = 0; i < coords.Count; i++)
+                index[coords[i]] = i;
+            var neighbours = coords.Select(c => HexCoord.Directions.Select(d => c + d)
+                .Where(index.ContainsKey).Select(n => index[n]).ToArray()).ToArray();
+            int edges = neighbours.Sum(n => n.Length) / 2;
+            int targetPairs = System.Math.Max(1, edges / 16);
+
+            int Score() => SameTerrainPairs(types, neighbours) * 4
+                           + System.Math.Max(0, LargestCluster(types, neighbours) - MaxTerrainClusterSize) * 10;
+
+            int score = Score();
+            for (int step = 0; step < 4000; step++)
+            {
+                if (SameTerrainPairs(types, neighbours) <= targetPairs
+                    && LargestCluster(types, neighbours) <= MaxTerrainClusterSize)
+                    break;
+                int a = rng.Next(types.Length), b = rng.Next(types.Length);
+                if (types[a] == types[b])
+                    continue;
+                (types[a], types[b]) = (types[b], types[a]);
+                int next = Score();
+                if (next <= score)
+                    score = next;
+                else
+                    (types[a], types[b]) = (types[b], types[a]);
+            }
+
+            var byCoord = new Dictionary<HexCoord, ResourceType>();
+            for (int i = 0; i < coords.Count; i++)
+                byCoord[coords[i]] = types[i];
+            return preset.Select(p => (p.coord, byCoord.TryGetValue(p.coord, out var t) ? t : p.resource)).ToList();
+        }
+
+        private static int SameTerrainPairs(ResourceType[] types, int[][] neighbours)
+        {
+            int pairs = 0;
+            for (int i = 0; i < types.Length; i++)
+                foreach (int n in neighbours[i])
+                    if (n > i && types[n] == types[i])
+                        pairs++;
+            return pairs;
+        }
+
+        private static int LargestCluster(ResourceType[] types, int[][] neighbours)
+        {
+            var seen = new bool[types.Length];
+            int best = 0;
+            var stack = new Stack<int>();
+            for (int i = 0; i < types.Length; i++)
+            {
+                if (seen[i])
+                    continue;
+                int size = 0;
+                seen[i] = true;
+                stack.Push(i);
+                while (stack.Count > 0)
+                {
+                    int c = stack.Pop();
+                    size++;
+                    foreach (int n in neighbours[c])
+                        if (!seen[n] && types[n] == types[i])
+                        {
+                            seen[n] = true;
+                            stack.Push(n);
+                        }
+                }
+
+                best = System.Math.Max(best, size);
+            }
+
+            return best;
         }
 
         private static ResourceType[] BuildResourcesForLandCoords(
@@ -243,7 +343,7 @@ namespace CatanRoguelike.Core.Data
         /// </summary>
         public static int ExpandBoard(BoardState board, MapSize targetSize, int? seed = null)
         {
-            var preset = GetLandPreset(targetSize);
+            var preset = GetLandPreset(targetSize, seed);
 
             int added = 0;
             foreach (var (coord, resource) in preset)
@@ -277,7 +377,9 @@ namespace CatanRoguelike.Core.Data
             int? seed = null,
             MapGenerationOptions options = default)
         {
-            var preset = GetLandPreset(size);
+            var preset = GetLandPreset(size, seed);
+            if (options.ShuffleTerrain && size == MapSize.Large)
+                preset = ShuffleTerrain(preset, new HexCoord(0, 0), seed ?? 0);
 
             var board = new BoardState();
             var coords = new HashSet<HexCoord>();
@@ -314,13 +416,13 @@ namespace CatanRoguelike.Core.Data
             return board;
         }
 
-        private static IReadOnlyList<(HexCoord coord, ResourceType resource)> GetLandPreset(MapSize size) =>
+        private static IReadOnlyList<(HexCoord coord, ResourceType resource)> GetLandPreset(MapSize size, int? seed) =>
             size switch
             {
                 MapSize.Medium => MediumThirteenHex(),
                 MapSize.Large => LargeNineteenHex(),
-                MapSize.Extended => ExtendedThirtyHex(),
-                MapSize.Huge => HugeThirtySevenHex(),
+                MapSize.Extended => ExtendedThirtyHex(seed),
+                MapSize.Huge => HugeThirtySevenHex(seed),
                 _ => SmallSevenHex()
             };
 

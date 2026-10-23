@@ -304,6 +304,13 @@ how the group can playtest the rules before any server exists.
   - Hot-seat table framing: dedicated play-area insets (board clear of the timer ring), robber capped at 1.35× and
     pushed off the number token. Pieces already use the single-player rule (settlement 0.18 of the hex width, city
     1.5×); a PlayMode test asserts it.
+- **v137 fixes:**
+  - Terrain is shuffled per seed for every match (19-hex and 30-hex), like dealing the tiles at a real table: no
+    same-terrain group larger than 2 and only a few same-terrain edges, desert in the centre, no adjacent 6/8. The
+    30/37-hex islands used to fill the ratio multiset in coordinate order (all ore on one side); they are now shuffled
+    for single-player too (map pick and act expansion), while the designed single-player 7/13/19-hex maps are unchanged.
+  - The seat strip shows each seat's own leader in a seat-coloured ring with the civ name (seat number / AI tag on a
+    badge); before the civs are revealed every seat shows a neutral silhouette.
 
 ### Phase 4: Shenanigans on one device
 - Primitives: `SecretBallot`, `SealedBidAuction`, `Bounty` (robber-claim rule), `SecretCard` (sabotage).

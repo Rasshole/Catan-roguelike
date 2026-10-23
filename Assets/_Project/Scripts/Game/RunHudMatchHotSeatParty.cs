@@ -169,6 +169,54 @@ namespace CatanRoguelike.Game
             }
         }
 
+        // ---------- seat strip leader ----------
+
+        /// <summary>Civs are public on the strip once every seat has picked (never during the civ pick).</summary>
+        private static bool SeatCivRevealed(MatchState state, MatchSeatState seat) =>
+            state.Phase != MatchPhase.CivPick && seat.Civilization != CivilizationId.None;
+
+        /// <summary>Test hook: the sprite shown in a seat's strip ring.</summary>
+        public Sprite HotSeatStripPortraitForTests(int seat) =>
+            _hotSeatRoot == null ? null : _hotSeatRoot.Find($"SeatStrip/Seat_{seat}/Civ")?.GetComponent<Image>()?.sprite;
+
+        public static Sprite NeutralLeaderSpriteForTests => NeutralLeaderSprite();
+
+        private static Sprite _neutralLeader;
+
+        /// <summary>Head-and-shoulders silhouette on parchment grey, for seats whose civ is not revealed yet.</summary>
+        private static Sprite NeutralLeaderSprite()
+        {
+            if (_neutralLeader != null)
+                return _neutralLeader;
+            const int n = 128;
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, name = "NeutralLeader" };
+            var px = new Color32[n * n];
+            float c = (n - 1) / 2f, r = n / 2f - 1f;
+            var bg = new Color(0.78f, 0.72f, 0.6f, 1f);
+            var fig = new Color(0.36f, 0.31f, 0.26f, 1f);
+            for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float d = Mathf.Sqrt((x - c) * (x - c) + (y - c) * (y - c));
+                float a = Mathf.Clamp01(r - d + 0.5f);
+                float head = Mathf.Sqrt((x - c) * (x - c) + (y - 80f) * (y - 80f));
+                float sx = (x - c) / 46f, sy = (y - 14f) / 40f;
+                bool body = head < 22f || (sx * sx + sy * sy < 1f && y < 56f);
+                var col = body ? fig : bg;
+                // Soft gold rim so it reads like the painted portraits' frame.
+                if (d > r - 5f)
+                    col = new Color(0.74f, 0.58f, 0.26f, 1f);
+                col.a = a;
+                px[y * n + x] = col;
+            }
+
+            tex.SetPixels32(px);
+            tex.Apply();
+            _neutralLeader = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
+            _neutralLeader.name = "NeutralLeader";
+            return _neutralLeader;
+        }
+
         // ---------- secret quest + trait ----------
 
         private void BuildQuestPick(MatchSeatState seat)

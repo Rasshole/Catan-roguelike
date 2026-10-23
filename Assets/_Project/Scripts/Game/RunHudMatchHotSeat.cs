@@ -426,7 +426,7 @@ namespace CatanRoguelike.Game
             var panel = CreateImage(_hotSeatRoot, "SeatStrip", null);
             panel.preserveAspect = false;
             ColonistUiKit.Apply(panel, UiKitPiece.FrameMedium);
-            float h = 64f + n * rowH;
+            float h = 64f + n * rowH + 14f; // bottom padding: the last row's pips/civ name clear the frame
             SetRect(panel.rectTransform, new Vector2(1f, 1f), new Vector2(-width / 2f - 20f, -24f - h / 2f),
                 new Vector2(width, h));
             var ink = ColonistUiKit.TextOn(UiKitPiece.FrameMedium);
@@ -444,20 +444,34 @@ namespace CatanRoguelike.Game
                 row.color = active ? new Color(1f, 0.82f, 0.36f, 0.55f) : new Color(0f, 0f, 0f, 0.08f);
                 SetRect(row.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, y), new Vector2(width - 36f, rowH - 10f));
 
-                var disc = CreateDisc(row.rectTransform, "Disc", PlayerPieceVisuals.ColorForSeat(i), 62f);
-                SetRect(disc.rectTransform, new Vector2(0f, 0.5f), new Vector2(44f, 0f), new Vector2(62f, 62f));
-                var num = RunHudUiFactory.CreateText(disc.rectTransform, "N", seat.IsAi ? "AI" : (i + 1).ToString(),
-                    seat.IsAi ? 20 : 28, TextAnchor.MiddleCenter, SeatInk(i), FontStyle.Bold);
-                Stretch(num.rectTransform);
-
-                // v136: civilizations are public once every seat has picked (quests never show here).
-                float shift = 0f;
-                if (state.Config.PartyRules && state.Phase != MatchPhase.CivPick
-                    && seat.Civilization != Core.Civilizations.CivilizationId.None)
+                const float shift = 0f;
+                string civLabel = null;
+                if (state.Config.PartyRules)
                 {
-                    var face = CreateImage(row.rectTransform, "Civ", ColonistRoguelikeArt.GetCivilizationPortrait(seat.Civilization));
-                    SetRect(face.rectTransform, new Vector2(0f, 0.5f), new Vector2(110f, 4f), new Vector2(54f, 54f));
-                    shift = 46f;
+                    // v137: with party rules the seat's own leader fills the seat-coloured ring (a neutral
+                    // silhouette until every civ is revealed); the seat number / AI tag moves to a small badge.
+                    bool revealed = SeatCivRevealed(state, seat);
+                    var ring = CreateDisc(row.rectTransform, "Disc", PlayerPieceVisuals.ColorForSeat(i), 78f);
+                    SetRect(ring.rectTransform, new Vector2(0f, 0.5f), new Vector2(46f, 0f), new Vector2(78f, 78f));
+                    var face = CreateImage(row.rectTransform, "Civ",
+                        revealed ? ColonistRoguelikeArt.GetCivilizationPortrait(seat.Civilization) : NeutralLeaderSprite());
+                    face.preserveAspect = true;
+                    SetRect(face.rectTransform, new Vector2(0f, 0.5f), new Vector2(46f, 0f), new Vector2(68f, 68f));
+                    var badge = CreateDisc(row.rectTransform, "Badge", PlayerPieceVisuals.ColorForSeat(i), 30f);
+                    SetRect(badge.rectTransform, new Vector2(0f, 0.5f), new Vector2(76f, -28f), new Vector2(30f, 30f));
+                    var tag = RunHudUiFactory.CreateText(badge.rectTransform, "N", seat.IsAi ? "AI" : (i + 1).ToString(),
+                        seat.IsAi ? 12 : 16, TextAnchor.MiddleCenter, SeatInk(i), FontStyle.Bold);
+                    Stretch(tag.rectTransform);
+                    if (revealed && Core.Civilizations.CivilizationLibrary.TryGet(seat.Civilization, out var civDef))
+                        civLabel = civDef.Name;
+                }
+                else
+                {
+                    var disc = CreateDisc(row.rectTransform, "Disc", PlayerPieceVisuals.ColorForSeat(i), 62f);
+                    SetRect(disc.rectTransform, new Vector2(0f, 0.5f), new Vector2(44f, 0f), new Vector2(62f, 62f));
+                    var num = RunHudUiFactory.CreateText(disc.rectTransform, "N", seat.IsAi ? "AI" : (i + 1).ToString(),
+                        seat.IsAi ? 20 : 28, TextAnchor.MiddleCenter, SeatInk(i), FontStyle.Bold);
+                    Stretch(num.rectTransform);
                 }
 
                 var name = RunHudUiFactory.CreateText(row.rectTransform, "Name", seat.Name, 22, TextAnchor.MiddleLeft,
@@ -467,8 +481,7 @@ namespace CatanRoguelike.Game
                                 (seat.KnightsPlayed > 0 ? $" · {seat.KnightsPlayed} kn" : "");
                 var det = RunHudUiFactory.CreateText(row.rectTransform, "Detail", detail, 16, TextAnchor.MiddleLeft,
                     ColonistUiKit.InkMuted, FontStyle.Normal);
-                // With a civ portrait the line must stop before the VP number: shrink to fit instead of overlapping.
-                float detW = shift > 0f ? 120f : 170f;
+                float detW = 160f;
                 SetRect(det.rectTransform, new Vector2(0f, 0.5f), new Vector2(95f + shift + detW / 2f, -8f), new Vector2(detW, 24f));
                 det.resizeTextForBestFit = true;
                 det.resizeTextMinSize = 11;
@@ -479,6 +492,18 @@ namespace CatanRoguelike.Game
                 {
                     var pip = CreateDisc(row.rectTransform, "Charge_" + c, new Color(0.93f, 0.72f, 0.22f, 1f), 14f);
                     SetRect(pip.rectTransform, new Vector2(0f, 0.5f), new Vector2(102f + shift + c * 18f, -32f), new Vector2(14f, 14f));
+                }
+
+                if (civLabel != null)
+                {
+                    float x0 = 95f + Mathf.Min(seat.ExtraTimeCharges, 6) * 18f + 6f;
+                    var civText = RunHudUiFactory.CreateText(row.rectTransform, "CivName", civLabel, 13, TextAnchor.MiddleLeft,
+                        ColonistUiKit.InkMuted, FontStyle.Italic);
+                    float w = 252f - x0;
+                    SetRect(civText.rectTransform, new Vector2(0f, 0.5f), new Vector2(x0 + w / 2f, -32f), new Vector2(w, 18f));
+                    civText.resizeTextForBestFit = true;
+                    civText.resizeTextMinSize = 9;
+                    civText.resizeTextMaxSize = 13;
                 }
 
                 // Victory-point cards stay hidden: everyone sees public points only.

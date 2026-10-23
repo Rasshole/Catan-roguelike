@@ -126,6 +126,26 @@ namespace CatanRoguelike.Tests.PlayMode
             return false;
         }
 
+        /// <summary>The offered quest the seat is closest to (progress / target), as a sensible player would pick.</summary>
+        private static int BestQuest(HotSeatSession s, int seat)
+        {
+            var offer = s.State.Seats[seat].QuestOffer;
+            int best = 0;
+            double bestValue = -1;
+            for (int i = 0; i < offer.Count; i++)
+            {
+                var q = MatchPartyLibrary.Quest(offer[i]);
+                double v = q.CurrentProgress(s.Match, seat) / (double)q.Target;
+                if (v > bestValue + 1e-9)
+                {
+                    bestValue = v;
+                    best = i;
+                }
+            }
+
+            return best;
+        }
+
         [Timeout(300000)]
         [UnityTest]
         public IEnumerator FiveSeatParty_CivPick_QuestPick_Event_GameOverReveal()
@@ -140,7 +160,8 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsTrue(hud.LobbyPartyRules);
             Assert.IsTrue(hud.BuildLobbyConfig(1).PartyRules);
 
-            var config = PartyConfig(1361, (SeatKind.Human, "Rasmus"), (SeatKind.Ai, "AI 2"), (SeatKind.Human, "Freja"),
+            // v137: seed 1 ends with Freja winning on her secret quest (found with the Core harness, same driving policy).
+            var config = PartyConfig(1, (SeatKind.Human, "Rasmus"), (SeatKind.Ai, "AI 2"), (SeatKind.Human, "Freja"),
                 (SeatKind.Ai, "AI 4"), (SeatKind.Ai, "AI 5"));
             hud.HotSeatClockFrozenForTests = true;
             hud.StartHotSeat(config);
@@ -177,7 +198,9 @@ namespace CatanRoguelike.Tests.PlayMode
             yield return Settle(hud);
             var frejaOffer = state.Seats[2].CivOffer.ToList();
             Assert.IsFalse(frejaOffer.Intersect(rasmusOffer.Take(1)).Any(), "Rasmus's civ is gone from the deck");
-            Assert.IsNull(hud.HotSeatRootForTests.Find("SeatStrip/Seat_0/Civ"), "picks stay hidden until all chose");
+            for (int i = 0; i < 5; i++)
+                Assert.AreSame(RunHudController.NeutralLeaderSpriteForTests, hud.HotSeatStripPortraitForTests(i),
+                    "neutral silhouette until every civ is revealed");
             MaybeWrite(hud, "civ-pick-freja.png");
             FindButton(hud.HotSeatRootForTests, "PickCiv_1").onClick.Invoke();
             yield return Settle(hud);
@@ -191,27 +214,38 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.AreNotEqual(MatchQuestId.None, state.Seats[3].Quest);
             yield return Settle(hud);
             var root = hud.HotSeatRootForTests;
-            Assert.IsNotNull(root.Find("SeatStrip/Seat_0/Civ"), "civs public after the civ pick");
+            for (int i = 0; i < 5; i++)
+            {
+                var sprite = hud.HotSeatStripPortraitForTests(i);
+                Assert.AreSame(ColonistRoguelikeArt.GetCivilizationPortrait(state.Seats[i].Civilization), sprite,
+                    "seat " + i + " shows its own leader");
+                Assert.IsTrue(ColonistRoguelikeArt.HasCivilizationPortrait(state.Seats[i].Civilization),
+                    "a painted leader for " + state.Seats[i].Civilization);
+            }
+
+            Assert.AreEqual(5, Enumerable.Range(0, 5).Select(i => hud.HotSeatStripPortraitForTests(i)).Distinct().Count(),
+                "every seat has a different portrait");
             Assert.IsNotNull(root.Find("QuestPick"));
             var offer = state.Seats[2].QuestOffer.ToList();
             Assert.AreEqual(3, offer.Count);
             var points = offer.Select(q => MatchPartyLibrary.Quest(q).Points).ToList();
             Assert.IsTrue(points.Contains(1) && points.Contains(2), "mix of easier 1 VP and harder 2 VP");
             Assert.IsFalse(FindButton(root, "QuestConfirm").interactable);
-            FindButton(root, "Quest_2").onClick.Invoke();
+            FindButton(root, "Quest_" + BestQuest(s, 2)).onClick.Invoke();
             FindButton(root, "Trait_0").onClick.Invoke();
             yield return Settle(hud);
             root = hud.HotSeatRootForTests;
             Assert.IsTrue(FindButton(root, "QuestConfirm").interactable);
             MaybeWrite(hud, "quest-pick.png");
+            int frejaQuest = BestQuest(s, 2);
             FindButton(root, "QuestConfirm").onClick.Invoke();
-            Assert.AreEqual(offer[2], state.Seats[2].Quest);
+            Assert.AreEqual(offer[frejaQuest], state.Seats[2].Quest);
             yield return Settle(hud);
 
             // Rasmus picks last.
             Assert.IsTrue(Drive(s, () => state.Phase == MatchPhase.QuestPick && state.ActingSeat == 0, 50));
             yield return Settle(hud);
-            FindButton(hud.HotSeatRootForTests, "Quest_0").onClick.Invoke();
+            FindButton(hud.HotSeatRootForTests, "Quest_" + BestQuest(s, 0)).onClick.Invoke();
             FindButton(hud.HotSeatRootForTests, "Trait_1").onClick.Invoke();
             yield return Settle(hud);
             FindButton(hud.HotSeatRootForTests, "QuestConfirm").onClick.Invoke();
@@ -246,11 +280,17 @@ namespace CatanRoguelike.Tests.PlayMode
             yield return Settle(hud);
             root = hud.HotSeatRootForTests;
             Assert.IsNotNull(root.Find("GameOver/GameOverCard/Reveal"));
+            int ticks = 0;
             for (int i = 0; i < 5; i++)
             {
                 var line = root.Find($"GameOver/GameOverCard/Quest_{i}").GetComponent<Text>().text;
                 StringAssert.StartsWith("Quest: ", line);
+                if (line.Contains("✓"))
+                    ticks++;
             }
+
+            Assert.AreEqual(state.Seats.Count(x => x.QuestDone), ticks, "one ✓ per completed quest");
+            Assert.GreaterOrEqual(ticks, 1, "the reveal shows at least one completed quest");
 
             Debug.Log("v136 reveal: " + string.Join(" | ", state.Seats.Select(x =>
                 $"{x.Name} {x.Civilization} {x.Quest} done={x.QuestDone} vp={x.VictoryPoints} public={x.PublicVictoryPoints}")));
