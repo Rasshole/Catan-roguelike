@@ -27,7 +27,7 @@ namespace CatanRoguelike.Core
             var result = cost;
             // Architect: 10% off settlement costs that include the threshold surcharge only.
             // Master Builder discount lives in GameController.GetEffectiveCost (0.65 vs 0.75).
-            if (isSettlement && state.Leader == LeaderId.Architect && IsAtSettlementThreshold(state, player))
+            if (isSettlement && LeaderTraits.HasArchetypePassive(state, LeaderId.Architect) && IsAtSettlementThreshold(state, player))
                 result = DiscountPercent(result, 0.1f);
             if (isSettlement && state.HasPerk(LevelUpPerkId.CheapSettlements))
                 result.Sheep = Math.Max(0, result.Sheep - 1);
@@ -39,7 +39,7 @@ namespace CatanRoguelike.Core
         public static int GetShopGiveAmount(GameState state, PlayerId player, int baseGive, ResourceType giveResource)
         {
             int give = baseGive - state.EventShopBonus;
-            if (player == PlayerId.Human && state.Leader == LeaderId.Merchant)
+            if (player == PlayerId.Human && LeaderTraits.HasArchetypePassive(state, LeaderId.Merchant))
                 give = Math.Max(2, give - 1);
             if (player == PlayerId.Human && state.HasPerk(LevelUpPerkId.PortDiscount)
                 && state.Ports.Any(p => PortAccess.PlayerControlsVertex(state.Board, player, p.Vertex)))
@@ -48,7 +48,7 @@ namespace CatanRoguelike.Core
         }
 
         public static int GetKnightStealAmount(GameState state, PlayerId player) =>
-            player == PlayerId.Human && state.Leader == LeaderId.Warlord ? 2 : 1;
+            player == PlayerId.Human && LeaderTraits.HasArchetypePassive(state, LeaderId.Warlord) ? 2 : 1;
 
         public static bool IsRobberBlocking(GameState state, HexCoord hex, PlayerId forPlayer)
         {

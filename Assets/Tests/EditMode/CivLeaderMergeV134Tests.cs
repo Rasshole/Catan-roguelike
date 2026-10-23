@@ -38,7 +38,7 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual("Warlord", CivilizationLibrary.Get(CivilizationId.NorthernRaiders).PortraitKey);
             Assert.AreEqual("Architect", CivilizationLibrary.Get(CivilizationId.Brickwrights).PortraitKey);
             Assert.AreEqual(6, CivilizationLibrary.Pool.Count(c => string.IsNullOrEmpty(c.PortraitKey)),
-                "six civs still need a dedicated portrait (emblem placeholder)");
+                "six civs use their own Art/Leaders/{CivId} portrait (v135)");
             foreach (var civ in CivilizationLibrary.Pool.Where(c => !string.IsNullOrEmpty(c.PortraitKey)))
                 Assert.AreEqual(civ.Leader.ToString(), civ.PortraitKey, "portrait matches the leader archetype");
         }

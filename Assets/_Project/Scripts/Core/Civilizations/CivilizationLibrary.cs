@@ -27,12 +27,15 @@ namespace CatanRoguelike.Core.Civilizations
         public string LeaderName { get; }
         /// <summary>
         /// Resources/Art/Leaders/{PortraitKey} fallback portrait (an existing leader painting that fits the theme).
-        /// Art/Leaders/{Id} is tried first; empty = use the emblem until a dedicated portrait exists.
+        /// Art/Leaders/{Id} is tried first (v135: all six non-archetype civs have one); empty = emblem fallback.
         /// </summary>
         public string PortraitKey { get; }
 
         public bool HasDrawback => !string.IsNullOrEmpty(Drawback);
-        public string LeaderAbility => LeaderLibrary.Get(Leader).PassiveDescription;
+        /// <summary>v135: this civ's own leader passive (unique per civ, see <see cref="LeaderTraits"/>).</summary>
+        public string LeaderAbility => LeaderTraits.Get(Id)?.Description ?? LeaderLibrary.Get(Leader).PassiveDescription;
+        /// <summary>v135: title of the leader passive (e.g. "The Tidecaller").</summary>
+        public string LeaderTitle => LeaderTraits.Get(Id)?.Title ?? LeaderLibrary.Get(Leader).Name;
 
         public CivilizationDefinition(CivilizationId id, string name, string tagline, string passive, string drawback,
             string emblemKey, LeaderId leader = LeaderId.Merchant, string leaderName = "", string portraitKey = "")

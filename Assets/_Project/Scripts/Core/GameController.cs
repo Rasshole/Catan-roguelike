@@ -203,7 +203,7 @@ namespace CatanRoguelike.Core
 
             bool freeRoad = !setup && player == PlayerId.Human && (
                 State.PendingCard == CardId.RoadBuilder && State.FreeRoadCharges > 0
-                || State.Leader == LeaderId.Pioneer && State.PioneerFreeRoadAvailable);
+                || LeaderTraits.HasArchetypePassive(State, LeaderId.Pioneer) && State.PioneerFreeRoadAvailable);
 
             ResourceBundle paidCost = ResourceBundle.Zero;
             if (!setup && !freeRoad)
@@ -514,7 +514,7 @@ namespace CatanRoguelike.Core
 
         public void BeginNight()
         {
-            State.PioneerFreeRoadAvailable = State.Leader == LeaderId.Pioneer;
+            State.PioneerFreeRoadAvailable = LeaderTraits.HasArchetypePassive(State, LeaderId.Pioneer);
             State.Phase = GamePhase.NightRoll;
 
             int act = ActProgression.GetAct(State.Board.DayNumber);
@@ -594,12 +594,19 @@ namespace CatanRoguelike.Core
             if (State.Phase != GamePhase.DayProduction)
                 return;
 
+            string morning = LeaderTraits.OnMorning(State);
+            if (!string.IsNullOrEmpty(morning))
+                GameLog.Append(State, morning);
+
             if (SevenRollRules.RolledSeven(State.TodayDiceRolls))
             {
                 GameLog.Append(State, "Rolled 7 — no production.");
                 string civSeven = CivilizationRules.OnSevenRolled(State, _random);
                 if (!string.IsNullOrEmpty(civSeven))
                     GameLog.Append(State, civSeven);
+                string leaderSeven = LeaderTraits.OnSevenRolled(State);
+                if (!string.IsNullOrEmpty(leaderSeven))
+                    GameLog.Append(State, leaderSeven);
                 State.PendingSevenDiscard = SevenRollRules.GetDiscardCount(State.PlayerInventory.Total);
                 if (State.PendingSevenDiscard > 0)
                 {
@@ -785,6 +792,8 @@ namespace CatanRoguelike.Core
 
             playerProd.Add(ProductionCalculator.ApplyEventModifiers(State,
                 CivilizationRules.DiceBonus(State, PlayerId.Human, State.TodayDiceRolls)));
+            playerProd.Add(ProductionCalculator.ApplyEventModifiers(State,
+                LeaderTraits.DiceBonus(State, PlayerId.Human, State.TodayDiceRolls)));
 
             var pInv = State.PlayerInventory;
             pInv.Add(playerProd);
@@ -913,7 +922,7 @@ namespace CatanRoguelike.Core
 
             // Master Builder: 25% off (0.75). Architect passive adds 10 pts → 35% off (0.65).
             float discount = State.PendingCard == CardId.MasterBuilder ? 0.75f : 1f;
-            if (State.Leader == LeaderId.Architect && State.PendingCard == CardId.MasterBuilder)
+            if (LeaderTraits.HasArchetypePassive(State, LeaderId.Architect) && State.PendingCard == CardId.MasterBuilder)
                 discount = 0.65f;
 
             if (discount >= 1f) return baseCost;

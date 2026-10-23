@@ -123,7 +123,6 @@ namespace CatanRoguelike.Game
         private void BuildCivilizationCard(RectTransform parent, CivilizationId id, Vector2 pos, Vector2 size)
         {
             var def = CivilizationLibrary.Get(id);
-            var leader = LeaderLibrary.Get(def.Leader);
             var card = CreateCardFrame(parent, "Civ_" + id, wide: false);
             SetRect(card, new Vector2(0.5f, 0.5f), pos, size);
             var button = card.gameObject.AddComponent<Button>();
@@ -169,7 +168,7 @@ namespace CatanRoguelike.Game
             SetRect(passive.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -408f), new Vector2(size.x - 80f, 82f));
 
             var abilityLabel = RunHudUiFactory.CreateText(card, "LeaderLabel",
-                "LEADER  ·  " + leader.Name.ToUpperInvariant(), 13, TextAnchor.MiddleCenter,
+                "LEADER  ·  " + def.LeaderTitle.ToUpperInvariant(), 13, TextAnchor.MiddleCenter,
                 new Color(0.55f, 0.38f, 0.12f, 1f), FontStyle.Bold);
             SetRect(abilityLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -462f), new Vector2(size.x - 80f, 20f));
 
