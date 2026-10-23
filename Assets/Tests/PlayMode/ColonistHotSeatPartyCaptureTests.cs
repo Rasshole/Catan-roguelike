@@ -1,0 +1,366 @@
+using System.Collections;
+using System.IO;
+using System.Linq;
+using CatanRoguelike.Core;
+using CatanRoguelike.Core.Civilizations;
+using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Hex;
+using CatanRoguelike.Core.Match;
+using CatanRoguelike.Game;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
+using UnityEngine.UI;
+
+namespace CatanRoguelike.Tests.PlayMode
+{
+    /// <summary>
+    /// v136 step 4: pass-and-play with civilizations (secret pick before placement), secret quests + traits
+    /// (after snake placement, last placer first), the match event deck, the robber victim picker and the
+    /// game-over quest reveal. Set COLONIST_HOTSEAT_SHOT_DIR to write review captures.
+    /// </summary>
+    public class ColonistHotSeatPartyCaptureTests
+    {
+        private const string ColonistScenePath = "Assets/_Project/Scenes/ColonistStylePrototype.unity";
+        private const string ColonistSceneName = "ColonistStylePrototype";
+
+        private static IEnumerator LoadScene()
+        {
+            if (!File.Exists(ColonistScenePath))
+                Assert.Inconclusive("Colonist prototype scene missing.");
+            Screen.SetResolution(GameSceneCapture.CaptureWidth, GameSceneCapture.CaptureHeight, false);
+            yield return null;
+            var loadOp = SceneManager.LoadSceneAsync(ColonistSceneName, LoadSceneMode.Single);
+            yield return loadOp;
+            for (int i = 0; i < 4; i++)
+                yield return null;
+        }
+
+        private static IEnumerator ReadyHud(GameManager gameManager, System.Action<RunHudController> done)
+        {
+            RunHudController hud = null;
+            for (int i = 0; i < 120; i++)
+            {
+                gameManager.EnsureRunHudReady();
+                hud = gameManager.GetComponent<RunHudController>();
+                if (hud != null && hud.IsHudCaptureReady())
+                    break;
+                yield return null;
+            }
+
+            Assert.IsNotNull(hud);
+            hud.Refresh(gameManager.Controller.State);
+            yield return Settle(hud);
+            done(hud);
+        }
+
+        private static IEnumerator Settle(RunHudController hud)
+        {
+            hud.RefreshHotSeatNow();
+            Canvas.ForceUpdateCanvases();
+            if (hud.HudCanvas != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(hud.HudCanvas.GetComponent<RectTransform>());
+            for (int i = 0; i < 4; i++)
+                yield return null;
+        }
+
+        private static void MaybeWrite(RunHudController hud, string file)
+        {
+            string dir = System.Environment.GetEnvironmentVariable("COLONIST_HOTSEAT_SHOT_DIR");
+            if (string.IsNullOrEmpty(dir))
+                return;
+            Directory.CreateDirectory(dir);
+            var tex = GameSceneCapture.CaptureMainCameraWithHudComposite(hud);
+            Assert.IsNotNull(tex);
+            string path = Path.Combine(dir, file);
+            File.WriteAllBytes(path, tex.EncodeToPNG());
+            Debug.Log($"v136 hot-seat capture written: {path}");
+        }
+
+        private static Button FindButton(Transform root, string name)
+        {
+            var b = root.GetComponentsInChildren<Button>(true).FirstOrDefault(x => x.name == name);
+            Assert.IsNotNull(b, "button " + name);
+            return b;
+        }
+
+        private static MatchConfig PartyConfig(int seed, params (SeatKind kind, string name)[] seats)
+        {
+            var config = new MatchConfig { Seed = seed, MapSize = MatchConfig.RecommendedMap(seats.Length), PartyRules = true };
+            foreach (var (kind, name) in seats)
+                config.Seats.Add(new SeatConfig(kind, name));
+            return config;
+        }
+
+        /// <summary>Drives human seats with the suggestion policy until <paramref name="stop"/> holds on a human's visible turn.</summary>
+        private static bool Drive(HotSeatSession s, System.Func<bool> stop, int guardMax = 20000)
+        {
+            int guard = 0;
+            while (guard++ < guardMax && !s.IsOver)
+            {
+                s.Tick(0f);
+                if (s.IsOver)
+                    return false;
+                if (s.PassScreenPending)
+                    s.ConfirmPass();
+                if (s.Acting.IsAi)
+                    continue;
+                if (stop())
+                    return true;
+                switch (s.State.Phase)
+                {
+                    case MatchPhase.Roll:
+                        s.Roll();
+                        break;
+                    case MatchPhase.Main:
+                        s.AutoBuild();
+                        s.EndTurn();
+                        break;
+                    default:
+                        s.ApplySuggested();
+                        break;
+                }
+            }
+
+            return false;
+        }
+
+        [Timeout(300000)]
+        [UnityTest]
+        public IEnumerator FiveSeatParty_CivPick_QuestPick_Event_GameOverReveal()
+        {
+            yield return LoadScene();
+            var gameManager = Object.FindFirstObjectByType<GameManager>();
+            RunHudController hud = null;
+            yield return ReadyHud(gameManager, h => hud = h);
+
+            // The lobby turns party rules on by default.
+            hud.OpenHotSeatLobbyForTests();
+            Assert.IsTrue(hud.LobbyPartyRules);
+            Assert.IsTrue(hud.BuildLobbyConfig(1).PartyRules);
+
+            var config = PartyConfig(1361, (SeatKind.Human, "Rasmus"), (SeatKind.Ai, "AI 2"), (SeatKind.Human, "Freja"),
+                (SeatKind.Ai, "AI 4"), (SeatKind.Ai, "AI 5"));
+            hud.HotSeatClockFrozenForTests = true;
+            hud.StartHotSeat(config);
+            var s = hud.HotSeatSessionForTests;
+            var state = s.State;
+            Assert.AreEqual(MatchPhase.CivPick, state.Phase);
+            Assert.AreEqual(0, state.ActingSeat);
+            Assert.IsTrue(s.PassScreenPending, "the civ offer is behind Rasmus's pass screen");
+            yield return Settle(hud);
+            Assert.IsNull(hud.HotSeatRootForTests.Find("CivPick"), "offer hidden on the pass screen");
+
+            // Rasmus: 3 civs with leader portraits.
+            FindButton(hud.HotSeatRootForTests, "ConfirmPass").onClick.Invoke();
+            yield return Settle(hud);
+            var pick = hud.HotSeatRootForTests.Find("CivPick");
+            Assert.IsNotNull(pick);
+            for (int i = 0; i < 3; i++)
+            {
+                var portrait = pick.Find($"Civ_{i}/Portrait").GetComponent<Image>();
+                Assert.IsNotNull(portrait.sprite, "leader portrait " + i);
+            }
+
+            var rasmusOffer = state.Seats[0].CivOffer.ToList();
+            MaybeWrite(hud, "civ-pick-rasmus.png");
+            FindButton(pick, "PickCiv_0").onClick.Invoke();
+            Assert.AreEqual(rasmusOffer[0], state.Seats[0].Civilization);
+            yield return Settle(hud);
+
+            // AI 2 picked at once; Freja is next behind her own pass screen.
+            Assert.AreEqual(2, state.ActingSeat);
+            Assert.IsTrue(s.PassScreenPending);
+            Assert.IsNotNull(hud.HotSeatRootForTests.Find("PassScreen"));
+            FindButton(hud.HotSeatRootForTests, "ConfirmPass").onClick.Invoke();
+            yield return Settle(hud);
+            var frejaOffer = state.Seats[2].CivOffer.ToList();
+            Assert.IsFalse(frejaOffer.Intersect(rasmusOffer.Take(1)).Any(), "Rasmus's civ is gone from the deck");
+            Assert.IsNull(hud.HotSeatRootForTests.Find("SeatStrip/Seat_0/Civ"), "picks stay hidden until all chose");
+            MaybeWrite(hud, "civ-pick-freja.png");
+            FindButton(hud.HotSeatRootForTests, "PickCiv_1").onClick.Invoke();
+            yield return Settle(hud);
+            Assert.AreEqual(5, state.Seats.Count(x => x.Civilization != CivilizationId.None));
+            Assert.AreEqual(5, state.Seats.Select(x => x.Civilization).Distinct().Count(), "unique per match");
+
+            // Snake placement, then the quest pick: AI 5 and AI 4 first, then Freja.
+            Assert.IsTrue(Drive(s, () => state.Phase == MatchPhase.QuestPick));
+            Assert.AreEqual(2, state.ActingSeat, "last placer first: seats 4 and 3 (AI) already picked");
+            Assert.AreNotEqual(MatchQuestId.None, state.Seats[4].Quest);
+            Assert.AreNotEqual(MatchQuestId.None, state.Seats[3].Quest);
+            yield return Settle(hud);
+            var root = hud.HotSeatRootForTests;
+            Assert.IsNotNull(root.Find("SeatStrip/Seat_0/Civ"), "civs public after the civ pick");
+            Assert.IsNotNull(root.Find("QuestPick"));
+            var offer = state.Seats[2].QuestOffer.ToList();
+            Assert.AreEqual(3, offer.Count);
+            var points = offer.Select(q => MatchPartyLibrary.Quest(q).Points).ToList();
+            Assert.IsTrue(points.Contains(1) && points.Contains(2), "mix of easier 1 VP and harder 2 VP");
+            Assert.IsFalse(FindButton(root, "QuestConfirm").interactable);
+            FindButton(root, "Quest_2").onClick.Invoke();
+            FindButton(root, "Trait_0").onClick.Invoke();
+            yield return Settle(hud);
+            root = hud.HotSeatRootForTests;
+            Assert.IsTrue(FindButton(root, "QuestConfirm").interactable);
+            MaybeWrite(hud, "quest-pick.png");
+            FindButton(root, "QuestConfirm").onClick.Invoke();
+            Assert.AreEqual(offer[2], state.Seats[2].Quest);
+            yield return Settle(hud);
+
+            // Rasmus picks last.
+            Assert.IsTrue(Drive(s, () => state.Phase == MatchPhase.QuestPick && state.ActingSeat == 0, 50));
+            yield return Settle(hud);
+            FindButton(hud.HotSeatRootForTests, "Quest_0").onClick.Invoke();
+            FindButton(hud.HotSeatRootForTests, "Trait_1").onClick.Invoke();
+            yield return Settle(hud);
+            FindButton(hud.HotSeatRootForTests, "QuestConfirm").onClick.Invoke();
+            Assert.AreEqual(MatchPhase.Roll, state.Phase);
+            Assert.IsTrue(state.Seats.All(x => x.Quest != MatchQuestId.None && x.Trait != MatchTraitId.None));
+
+            // Pieces keep the single-player scale: settlement 0.18 of the hex width, city 1.5x.
+            var view = Object.FindFirstObjectByType<BoardView>();
+            float hexW = PlayerPieceVisuals.FlatHexWidth(view.HexScale) * view.transform.lossyScale.x;
+            var settlement = view.GetComponentsInChildren<Transform>().First(t => t.name == PlayerPieceVisuals.SettlementName);
+            var sb = settlement.GetComponentsInChildren<MeshFilter>()
+                .Select(f => f.sharedMesh.bounds.size.x * f.transform.lossyScale.x).Max();
+            Debug.Log($"v136 piece scale: settlement mesh width {sb:F3} / hex width {hexW:F3} = {sb / hexW:F3}");
+            Assert.AreEqual(PlayerPieceVisuals.SettlementFootprintOfHex, sb / hexW, 0.01f);
+
+            // An event in the 5-player match, on a human turn.
+            Assert.IsTrue(Drive(s, () => state.ActiveEvent != Core.Events.EventId.None && state.Phase == MatchPhase.Main
+                                         && state.ActiveTrade == null));
+            yield return Settle(hud);
+            root = hud.HotSeatRootForTests;
+            Assert.IsNotNull(root.Find("EventCard"), "event card shown");
+            Assert.IsNotNull(root.Find("PartyInfo"), "private civ/quest panel");
+            for (int i = 0; i < 5; i++)
+                Assert.AreEqual(state.Seats[i].PublicVictoryPoints.ToString(),
+                    root.Find($"SeatStrip/Seat_{i}/VP").GetComponent<Text>().text, "strip never shows quest VP");
+            Debug.Log($"v136 event capture: {state.ActiveEvent} round {state.Round + 1}, seat {state.ActingSeat}");
+            MaybeWrite(hud, "event-5p.png");
+
+            // Play to the end: the game-over card reveals every quest.
+            Drive(s, () => false, 60000);
+            Assert.IsTrue(s.IsOver, "match finished");
+            yield return Settle(hud);
+            root = hud.HotSeatRootForTests;
+            Assert.IsNotNull(root.Find("GameOver/GameOverCard/Reveal"));
+            for (int i = 0; i < 5; i++)
+            {
+                var line = root.Find($"GameOver/GameOverCard/Quest_{i}").GetComponent<Text>().text;
+                StringAssert.StartsWith("Quest: ", line);
+            }
+
+            Debug.Log("v136 reveal: " + string.Join(" | ", state.Seats.Select(x =>
+                $"{x.Name} {x.Civilization} {x.Quest} done={x.QuestDone} vp={x.VictoryPoints} public={x.PublicVictoryPoints}")));
+            MaybeWrite(hud, "gameover-reveal.png");
+            hud.ExitHotSeat();
+            yield return Settle(hud);
+        }
+
+        [Timeout(240000)]
+        [UnityTest]
+        public IEnumerator Robber_TwoOpponentsOnTheTile_OpensVictimPicker()
+        {
+            yield return LoadScene();
+            var gameManager = Object.FindFirstObjectByType<GameManager>();
+            RunHudController hud = null;
+            yield return ReadyHud(gameManager, h => hud = h);
+
+            var config = PartyConfig(1362, (SeatKind.Human, "Rasmus"), (SeatKind.Human, "Freja"), (SeatKind.Ai, "AI 3"),
+                (SeatKind.Ai, "AI 4"));
+            hud.HotSeatClockFrozenForTests = true;
+            hud.StartHotSeat(config);
+            var s = hud.HotSeatSessionForTests;
+            var state = s.State;
+
+            HexCoord target = default;
+            bool found = false;
+            System.Func<bool> robberWithTwo = () =>
+            {
+                if (state.Phase != MatchPhase.MoveRobber)
+                    return false;
+                int seat = state.ActingSeat;
+                foreach (var hex in state.Board.Tiles.Keys)
+                {
+                    if (state.Board.RobberTile == hex)
+                        continue;
+                    if (s.Match.RobberVictims(seat, hex).Count() >= 2)
+                    {
+                        target = hex;
+                        found = true;
+                        return true;
+                    }
+                }
+
+                return false;
+            };
+            // Keep opponents holding cards so they can be robbed.
+            int guard = 0;
+            while (!found && guard++ < 200 && !s.IsOver)
+            {
+                if (Drive(s, robberWithTwo, 400))
+                    break;
+                if (!state.IsPicking && !s.Match.IsSetup)
+                    foreach (var seat in state.Seats.Where(x => x.CardCount == 0))
+                        seat.Hand = new ResourceBundle { Wood = 1, Sheep = 1 };
+            }
+
+            Assert.IsTrue(found, "a human robber move with two opponents on one tile");
+            int robber = state.ActingSeat;
+            var victims = s.Match.RobberVictims(robber, target).ToList();
+            yield return Settle(hud);
+            var hint = hud.HotSeatRootForTests.Find("BoardHint")?.GetComponent<Text>();
+            Assert.IsNotNull(hint);
+            StringAssert.Contains("pick whom to rob", hint.text);
+
+            hud.ClickHotSeatRobberHexForTests(target);
+            Assert.AreEqual(MatchPhase.MoveRobber, state.Phase, "nothing applied yet");
+            Assert.IsTrue(hud.HotSeatVictimPickerOpenForTests);
+            yield return Settle(hud);
+            var picker = hud.HotSeatRootForTests.Find("VictimPicker");
+            Assert.IsNotNull(picker);
+            foreach (int v in victims)
+                Assert.IsNotNull(picker.Find("Rob_" + v), "button for seat " + v);
+            MaybeWrite(hud, "victim-picker.png");
+
+            int chosen = victims[victims.Count - 1];
+            int before = state.Seats[chosen].CardCount;
+            FindButton(picker, "Rob_" + chosen).onClick.Invoke();
+            Assert.AreEqual(target, state.Board.RobberTile);
+            Assert.AreEqual(before - 1, state.Seats[chosen].CardCount, "robbed the picked seat");
+            Assert.IsFalse(hud.HotSeatVictimPickerOpenForTests);
+            yield return Settle(hud);
+
+            // The robber pawn stays clear of the tile's number token.
+            var view = Object.FindFirstObjectByType<BoardView>();
+            var pawn = view.GetComponentsInChildren<Transform>().FirstOrDefault(t => t.name == "RobberPawn" && t.gameObject.activeInHierarchy);
+            Assert.IsNotNull(pawn);
+            var chip = pawn.parent.GetComponentsInChildren<Transform>().FirstOrDefault(t => t.name == "NumberTokenChip");
+            if (chip != null)
+            {
+                var pb = Bounds(pawn);
+                var cb = Bounds(chip);
+                float dist = Vector2.Distance(new Vector2(pb.center.x, pb.center.z), new Vector2(cb.center.x, cb.center.z));
+                float rp = Mathf.Max(pb.extents.x, pb.extents.z);
+                float rc = Mathf.Max(cb.extents.x, cb.extents.z);
+                Debug.Log($"v136 robber clearance: dist {dist:F3} pawn r {rp:F3} chip r {rc:F3}");
+                Assert.GreaterOrEqual(dist, rp + rc - 0.02f, "robber does not cover the number token");
+            }
+
+            MaybeWrite(hud, "robber-moved.png");
+            hud.ExitHotSeat();
+            yield return Settle(hud);
+        }
+
+        private static Bounds Bounds(Transform t)
+        {
+            var rs = t.GetComponentsInChildren<Renderer>();
+            var b = rs[0].bounds;
+            foreach (var r in rs.Skip(1))
+                b.Encapsulate(r.bounds);
+            return b;
+        }
+    }
+}

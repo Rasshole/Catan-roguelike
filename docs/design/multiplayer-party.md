@@ -289,6 +289,21 @@ how the group can playtest the rules before any server exists.
 - Quest engine: data-driven `QuestDefinition` (condition, **1 or 2 VP**, board-feasibility filter) with a seeded unique
   pool. Every offer mixes 1-VP and 2-VP quests. Traits work the same way.
 - **Exit:** offers change with board position (tested), and quests reveal and score correctly.
+- **DONE in v136 (pass & play, "Party rules" toggle in the lobby, on by default):**
+  - `MatchPhase.CivPick` before placement: each seat sees 3 civilizations (leader portrait, passive, drawback) behind
+    its own pass screen; the offers come from one seeded deck, so no civ repeats in a match. Civs become public on the
+    seat strip once everyone has picked.
+  - Snake placement, then `MatchPhase.QuestPick` in **reverse seat order** (the last placer picks first): 3 quests
+    (always both 1-VP "easier" and 2-VP "harder"), filtered by the seat's starting spots, unique per match,
+    plus 2 small traits. Private on the pass screen; the seat's own panel shows civ, trait and quest progress.
+  - Quest VP is never on the seat strip (`PublicVictoryPoints`); the win check counts it, and the game-over card
+    reveals every quest (done ✓ / missed ✗) and trait.
+  - The match event deck draws on the match cadence (from round 2); the active event shows on a card top-left.
+  - Robber **victim picker**: when the chosen tile touches two or more robbable opponents, a picker docked over the
+    left column asks whom to rob (AI seats rob the leader by public points, so secret quest VP never steers them).
+  - Hot-seat table framing: dedicated play-area insets (board clear of the timer ring), robber capped at 1.35× and
+    pushed off the number token. Pieces already use the single-player rule (settlement 0.18 of the hex width, city
+    1.5×); a PlayMode test asserts it.
 
 ### Phase 4: Shenanigans on one device
 - Primitives: `SecretBallot`, `SealedBidAuction`, `Bounty` (robber-claim rule), `SecretCard` (sabotage).

@@ -14,8 +14,37 @@ namespace CatanRoguelike.Game
             public float PlayHeight;
         }
 
+        /// <summary>Fixed chrome insets in reference pixels (v136: the pass-and-play table HUD).</summary>
+        public struct Insets
+        {
+            public float Left;
+            public float Right;
+            public float Top;
+            public float Bottom;
+        }
+
+        /// <summary>When set, replaces the run HUD insets (set by the pass-and-play table, cleared on exit).</summary>
+        public static Insets? Override { get; set; }
+
         public static Rect Compute(int screenWidth, int screenHeight)
         {
+            if (Override.HasValue)
+            {
+                var o = Override.Value;
+                float l = ColonistUiScale.ScaleReferencePixels(o.Left, screenWidth, screenHeight);
+                float r = ColonistUiScale.ScaleReferencePixels(o.Right, screenWidth, screenHeight);
+                float t = ColonistUiScale.ScaleReferencePixels(o.Top, screenWidth, screenHeight);
+                float b = ColonistUiScale.ScaleReferencePixels(o.Bottom, screenWidth, screenHeight);
+                return new Rect
+                {
+                    Left = l,
+                    Bottom = b,
+                    Top = t,
+                    PlayWidth = Mathf.Max(64f, screenWidth - l - r),
+                    PlayHeight = Mathf.Max(64f, screenHeight - b - t)
+                };
+            }
+
             float left = ColonistUiScale.ScaleReferencePixels(
                 RunHudLayout.GetContentLeftInset(), screenWidth, screenHeight);
             float right = ColonistUiScale.ScaleReferencePixels(

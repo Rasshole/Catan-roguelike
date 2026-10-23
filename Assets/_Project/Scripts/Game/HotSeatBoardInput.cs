@@ -27,6 +27,12 @@ namespace CatanRoguelike.Game
 
         public int MarkerCountForTests => _markers.Count;
 
+        /// <summary>v136: the HUD may take a clicked command (e.g. a robber move that needs a victim choice).</summary>
+        public System.Func<MatchCommand, bool> Intercept { get; set; }
+
+        /// <summary>v136: true while a HUD modal (victim picker, secret picks) owns the input.</summary>
+        public System.Func<bool> Blocked { get; set; }
+
         public void Bind(HotSeatSession session, BoardView view)
         {
             _session = session;
@@ -48,6 +54,8 @@ namespace CatanRoguelike.Game
         public void Unbind()
         {
             _session = null;
+            Intercept = null;
+            Blocked = null;
             Clear();
         }
 
@@ -62,7 +70,8 @@ namespace CatanRoguelike.Game
         public Transform HighlightsRootForTests => _root;
 
         private bool HumanCanClick =>
-            _session != null && _view != null && !_session.IsOver && !_session.PassScreenPending && !_session.Acting.IsAi;
+            _session != null && _view != null && !_session.IsOver && !_session.PassScreenPending && !_session.Acting.IsAi
+            && (Blocked == null || !Blocked());
 
         /// <summary>Rebuild the static highlights when the situation changes (also used by tests/captures).</summary>
         public void RefreshTargets()
@@ -125,7 +134,7 @@ namespace CatanRoguelike.Game
             if (command == null)
                 return;
             _hover = HoverMarker(command);
-            if (Input.GetMouseButtonDown(0) && !IsPointerOverUI())
+            if (Input.GetMouseButtonDown(0) && !IsPointerOverUI() && (Intercept == null || !Intercept(command)))
                 _session.Apply(command);
         }
 

@@ -69,11 +69,16 @@ namespace CatanRoguelike.Game
         }
 
         private string HotSeatLobbyKey() =>
-            _hotSeatLobbyOpen ? "hs:" + string.Join(",", _lobbySeats.Select(s => s?.ToString() ?? "open")) : "";
+            _hotSeatLobbyOpen
+                ? "hs:" + string.Join(",", _lobbySeats.Select(s => s?.ToString() ?? "open")) + (_lobbyPartyRules ? "|party" : "")
+                : "";
 
         public MatchConfig BuildLobbyConfig(int seed)
         {
-            var config = new MatchConfig { Seed = seed, MapSize = MatchConfig.RecommendedMap(_lobbySeats.Count) };
+            var config = new MatchConfig
+            {
+                Seed = seed, MapSize = MatchConfig.RecommendedMap(_lobbySeats.Count), PartyRules = _lobbyPartyRules
+            };
             for (int i = 0; i < _lobbySeats.Count; i++)
             {
                 var kind = _lobbySeats[i];
@@ -103,7 +108,7 @@ namespace CatanRoguelike.Game
                 cardImg.preserveAspect = false;
             }
 
-            float h = 330f + _lobbySeats.Count * 78f;
+            float h = 394f + _lobbySeats.Count * 78f;
             SetRect(card, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(820f, h));
 
             var kicker = RunHudUiFactory.CreateText(card, "Kicker", "PASS & PLAY  ·  ONE DEVICE", 16,
@@ -168,6 +173,14 @@ namespace CatanRoguelike.Game
                 ColonistUiKit.InkMuted, FontStyle.Italic);
             SetRect(info.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 118f), new Vector2(680f, 28f));
 
+            AddLobbyButton(card, "PartyRules",
+                _lobbyPartyRules ? "Civs · secret quests · events: ON" : "Classic rules (no civs, quests, events)",
+                new Vector2(0f, 176f), new Vector2(470f, 52f), true, _lobbyPartyRules, () =>
+                {
+                    _lobbyPartyRules = !_lobbyPartyRules;
+                    RebuildPreGame();
+                }, anchorBottom: true);
+
             AddLobbyButton(card, "FillAi", "Fill open seats with AI", new Vector2(-185f, 62f), new Vector2(290f, 56f),
                 open > 0, false, FillLobbyWithAi, anchorBottom: true);
             AddLobbyButton(card, "StartMatch", open > 0 ? "Fill open seats first" : "Start match",
@@ -215,10 +228,16 @@ namespace CatanRoguelike.Game
             _hotSeatDisplay.State.ResetForNewMap(_hotSeat.State.Board, config.MapSize);
             _hotSeatDisplay.State.Phase = GamePhase.DayPlayerActions;
             var boardView = Object.FindFirstObjectByType<BoardView>();
+            // v136: the table chrome frames the board (timer bottom-right), and the robber stays token-sized.
+            ColonistPlayAreaLayout.Override = HotSeatPlayArea;
+            ColonistBoardVisualScale.RobberScaleCap = HotSeatRobberScaleCap;
+            ColonistBoardVisualScale.RobberOffsetScale = HotSeatRobberOffsetScale;
             if (boardView != null)
                 boardView.Rebuild(_hotSeatDisplay);
             if (_boardInput != null)
                 _boardInput.enabled = false;
+            _hsVictimCommand = null;
+            _hsPickSeat = -1;
             _hsTradeOpen = false;
             _hsPicker = null;
             _hsCounterSeat = -1;
@@ -228,6 +247,8 @@ namespace CatanRoguelike.Game
             if (_hsBoardInput == null)
                 _hsBoardInput = gameObject.AddComponent<HotSeatBoardInput>();
             _hsBoardInput.Bind(_hotSeat, boardView);
+            _hsBoardInput.Intercept = InterceptHotSeatBoardCommand;
+            _hsBoardInput.Blocked = HotSeatBoardBlocked;
 
             if (_preGameRoot != null)
                 _preGameRoot.gameObject.SetActive(false);
@@ -244,6 +265,10 @@ namespace CatanRoguelike.Game
             if (_hotSeat == null)
                 return;
             _hotSeat = null;
+            _hsVictimCommand = null;
+            ColonistPlayAreaLayout.Override = null;
+            ColonistBoardVisualScale.RobberScaleCap = float.MaxValue;
+            ColonistBoardVisualScale.RobberOffsetScale = 1f;
             if (_hsBoardInput != null)
                 _hsBoardInput.Unbind();
             if (_hotSeatRoot != null)
@@ -334,12 +359,16 @@ namespace CatanRoguelike.Game
             BuildTimerAndCharge();
             BuildHotSeatHand();
             BuildHotSeatDevCards();
+            BuildPartyInfo();
+            BuildEventCard(state);
             BuildHotSeatActions();
             if (!s.IsOver && !s.PassScreenPending)
             {
                 BuildTradeBoard();
                 BuildDiscardPicker();
                 BuildDevCardPicker();
+                BuildVictimPicker();
+                BuildPartyPickers();
             }
 
             if (s.IsOver)
@@ -359,6 +388,8 @@ namespace CatanRoguelike.Game
             SetRect(banner.rectTransform, new Vector2(0.5f, 1f), new Vector2(-190f, -52f), new Vector2(1000f, 76f));
             string phase = state.Phase switch
             {
+                MatchPhase.CivPick => "choose a civilization (secret)",
+                MatchPhase.QuestPick => "choose a secret quest + trait",
                 MatchPhase.SetupSettlement => "place a settlement",
                 MatchPhase.SetupRoad => "place a road",
                 MatchPhase.Roll => "roll the dice",
@@ -369,7 +400,7 @@ namespace CatanRoguelike.Game
                 _ => "game over"
             };
             bool setup = state.Phase == MatchPhase.SetupSettlement || state.Phase == MatchPhase.SetupRoad;
-            string round = setup ? "SETUP" : $"ROUND {state.Round + 1}";
+            string round = state.IsPicking ? "PICKS" : setup ? "SETUP" : $"ROUND {state.Round + 1}";
             var ink = ColonistUiKit.TextOn(UiKitPiece.Badge);
             var top = RunHudUiFactory.CreateText(banner.rectTransform, "Title",
                 $"PASS & PLAY  ·  {round}  ·  {state.Current.Name}: {phase}", 22, TextAnchor.MiddleCenter, ink,
@@ -419,20 +450,35 @@ namespace CatanRoguelike.Game
                     seat.IsAi ? 20 : 28, TextAnchor.MiddleCenter, SeatInk(i), FontStyle.Bold);
                 Stretch(num.rectTransform);
 
+                // v136: civilizations are public once every seat has picked (quests never show here).
+                float shift = 0f;
+                if (state.Config.PartyRules && state.Phase != MatchPhase.CivPick
+                    && seat.Civilization != Core.Civilizations.CivilizationId.None)
+                {
+                    var face = CreateImage(row.rectTransform, "Civ", ColonistRoguelikeArt.GetCivilizationPortrait(seat.Civilization));
+                    SetRect(face.rectTransform, new Vector2(0f, 0.5f), new Vector2(110f, 4f), new Vector2(54f, 54f));
+                    shift = 46f;
+                }
+
                 var name = RunHudUiFactory.CreateText(row.rectTransform, "Name", seat.Name, 22, TextAnchor.MiddleLeft,
                     ink, FontStyle.Bold);
-                SetRect(name.rectTransform, new Vector2(0f, 0.5f), new Vector2(170f, 18f), new Vector2(150f, 30f));
+                SetRect(name.rectTransform, new Vector2(0f, 0.5f), new Vector2(170f + shift, 18f), new Vector2(150f, 30f));
                 string detail = $"{seat.CardCount} cards · {seat.DevCardCount} dev" +
                                 (seat.KnightsPlayed > 0 ? $" · {seat.KnightsPlayed} kn" : "");
                 var det = RunHudUiFactory.CreateText(row.rectTransform, "Detail", detail, 16, TextAnchor.MiddleLeft,
                     ColonistUiKit.InkMuted, FontStyle.Normal);
-                SetRect(det.rectTransform, new Vector2(0f, 0.5f), new Vector2(180f, -8f), new Vector2(170f, 24f));
+                // With a civ portrait the line must stop before the VP number: shrink to fit instead of overlapping.
+                float detW = shift > 0f ? 120f : 170f;
+                SetRect(det.rectTransform, new Vector2(0f, 0.5f), new Vector2(95f + shift + detW / 2f, -8f), new Vector2(detW, 24f));
+                det.resizeTextForBestFit = true;
+                det.resizeTextMinSize = 11;
+                det.resizeTextMaxSize = 16;
 
                 // Extra-time charges as small gold pips.
                 for (int c = 0; c < Mathf.Min(seat.ExtraTimeCharges, 6); c++)
                 {
                     var pip = CreateDisc(row.rectTransform, "Charge_" + c, new Color(0.93f, 0.72f, 0.22f, 1f), 14f);
-                    SetRect(pip.rectTransform, new Vector2(0f, 0.5f), new Vector2(102f + c * 18f, -32f), new Vector2(14f, 14f));
+                    SetRect(pip.rectTransform, new Vector2(0f, 0.5f), new Vector2(102f + shift + c * 18f, -32f), new Vector2(14f, 14f));
                 }
 
                 // Victory-point cards stay hidden: everyone sees public points only.
@@ -451,7 +497,7 @@ namespace CatanRoguelike.Game
             var s = _hotSeat;
             var holder = new GameObject("Timer").AddComponent<RectTransform>();
             holder.SetParent(_hotSeatRoot, false);
-            SetRect(holder, new Vector2(0.5f, 0f), new Vector2(-190f, 196f), new Vector2(150f, 150f));
+            SetRect(holder, new Vector2(1f, 0f), new Vector2(-200f, 276f), new Vector2(150f, 150f));
             _hsTimerRoot = holder;
             var ring = CreateDisc(holder, "Ring", new Color(0.93f, 0.72f, 0.22f, 1f), 150f);
             Stretch(ring.rectTransform);
@@ -467,12 +513,12 @@ namespace CatanRoguelike.Game
             SetRect(_hsTimerText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -6f), new Vector2(130f, 60f));
 
             var seat = s.Current;
-            string chargeText = s.Match.IsSetup ? "+90 s (after setup)"
+            string chargeText = s.Match.IsPregame ? "+90 s (after setup)"
                 : seat.ExtraTimeUsedThisTurn ? "+90 s used this turn"
                 : $"+90 s  ·  {seat.ExtraTimeCharges} charge{(seat.ExtraTimeCharges == 1 ? "" : "s")}";
             var charge = RunHudUiFactory.CreateButton(_hotSeatRoot, chargeText, RunHudUiFactory.ButtonFill);
             charge.name = "ExtraTimeCharge";
-            SetRect((RectTransform)charge.transform, new Vector2(0.5f, 0f), new Vector2(60f, 220f), new Vector2(290f, 62f));
+            SetRect((RectTransform)charge.transform, new Vector2(1f, 0f), new Vector2(-200f, 136f), new Vector2(290f, 62f));
             bool usable = s.CanUseExtraTime;
             ColonistKenneyHudArt.ApplyColonistWarmButton(charge.GetComponent<Image>(), primaryGreen: usable);
             var ct = charge.GetComponentInChildren<Text>();
@@ -487,7 +533,7 @@ namespace CatanRoguelike.Game
             var hint = RunHudUiFactory.CreateText(_hotSeatRoot, "ChargeHint",
                 "1 charge at start · +1 every 5 rounds", 15, TextAnchor.MiddleCenter, ColonistUiKit.Cream,
                 FontStyle.Italic);
-            SetRect(hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(60f, 176f), new Vector2(320f, 22f));
+            SetRect(hint.rectTransform, new Vector2(1f, 0f), new Vector2(-200f, 90f), new Vector2(320f, 22f));
             AddShadow(hint.gameObject, 1.2f);
         }
 
@@ -576,7 +622,7 @@ namespace CatanRoguelike.Game
                     break;
                 case MatchPhase.MoveRobber:
                     buttons.Add(("Best tile", false, human, () => s.ApplySuggested()));
-                    hint = "Click a tile to move the robber (robs the richest neighbour)";
+                    hint = "Click a tile to move the robber; pick whom to rob if several players touch it";
                     break;
                 case MatchPhase.RoadBuilding:
                     buttons.Add(("Best road", true, human, () => s.ApplySuggested()));
@@ -656,13 +702,20 @@ namespace CatanRoguelike.Game
                 FontStyle.Bold);
             SetRect(name.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -244f), new Vector2(640f, 62f));
             bool discard = _hotSeat.State.Phase == MatchPhase.Discard && seat.Index != _hotSeat.State.CurrentSeat;
+            var phase = _hotSeat.State.Phase;
+            bool picking = _hotSeat.State.IsPicking;
             string why = discard && _hotSeat.State.PendingDiscards.TryGetValue(seat.Index, out int owed)
                 ? $"A 7 was rolled: {seat.Name} must discard {owed}. Everyone else, look away."
-                : $"Everyone else, look away. {seat.Name}'s hand stays hidden until they tap below; the turn timer starts then.";
+                : phase == MatchPhase.CivPick
+                    ? $"{seat.Name} picks a civilization in secret. Everyone else, look away; all picks are revealed together."
+                    : phase == MatchPhase.QuestPick
+                        ? $"{seat.Name} picks a secret quest and a trait. Everyone else, look away: quests stay hidden until the game ends."
+                        : $"Everyone else, look away. {seat.Name}'s hand stays hidden until they tap below; the turn timer starts then.";
             var body = RunHudUiFactory.CreateText(card, "Body", why,
                 19, TextAnchor.MiddleCenter, ColonistUiKit.InkMuted, FontStyle.Italic);
             SetRect(body.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -304f), new Vector2(600f, 56f));
-            AddLobbyButton(card, "ConfirmPass", discard ? $"I'm {seat.Name} · discard" : $"I'm {seat.Name} · start my turn",
+            AddLobbyButton(card, "ConfirmPass",
+                discard ? $"I'm {seat.Name} · discard" : picking ? $"I'm {seat.Name} · pick in secret" : $"I'm {seat.Name} · start my turn",
                 new Vector2(0f, 74f),
                 new Vector2(380f, 62f), true, true, () => _hotSeat?.ConfirmPass(), anchorBottom: true);
         }
@@ -675,14 +728,33 @@ namespace CatanRoguelike.Game
             dim.raycastTarget = true;
             Stretch(dim.rectTransform);
             var card = CreateCardFrame(dim.rectTransform, "GameOverCard", wide: true);
-            float h = 260f + state.Seats.Count * 40f;
-            SetRect(card, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(700f, h));
+            bool party = state.Config.PartyRules;
+            var sliced = party ? ColonistRoguelikeArt.GetCardFrameSliced(true) : null;
+            if (sliced != null)
+            {
+                // The reveal card is taller than the frame art: nine-slice it like the other modals.
+                var img = card.GetComponent<Image>();
+                img.sprite = sliced;
+                img.type = Image.Type.Sliced;
+                img.preserveAspect = false;
+            }
+
+            float h = party ? 330f + state.Seats.Count * 84f : 260f + state.Seats.Count * 40f;
+            SetRect(card, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(party ? 960f : 700f, h));
             int winner = state.Winner ?? 0;
             var title = RunHudUiFactory.CreateText(card, "Title", $"{state.Seats[winner].Name} wins!", 44,
                 TextAnchor.MiddleCenter, ColonistUiKit.Ink, FontStyle.Bold);
-            SetRect(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(620f, 56f));
+            SetRect(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, party ? -96f : -70f), new Vector2(620f, 56f));
+            if (party)
+            {
+                var kicker = RunHudUiFactory.CreateText(card, "Reveal", "SECRET QUESTS REVEALED", 16,
+                    TextAnchor.MiddleCenter, ColonistUiKit.InkGold, FontStyle.Bold);
+                SetRect(kicker.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -138f), new Vector2(620f, 22f));
+                BuildPartyGameOverRows(card, state);
+            }
+
             var ranked = state.Seats.OrderByDescending(x => x.VictoryPoints).ToList();
-            for (int i = 0; i < ranked.Count; i++)
+            for (int i = 0; i < ranked.Count && !party; i++)
             {
                 var line = RunHudUiFactory.CreateText(card, "Rank_" + i,
                     $"{i + 1}.  {ranked[i].Name}  —  {ranked[i].VictoryPoints} VP", 22, TextAnchor.MiddleCenter,

@@ -50,6 +50,12 @@ namespace CatanRoguelike.Game
         }
 
         public static float PortBadgeRadiusScale => CurrentMassScale;
-        public static float RobberScale => CurrentMassScale;
+        /// <summary>v136: upper bound for <see cref="RobberScale"/> (the pass-and-play table sets 1).</summary>
+        public static float RobberScaleCap { get; set; } = float.MaxValue;
+
+        /// <summary>v136: pushes the off-centre robber further from the number token (pass-and-play sets &gt; 1).</summary>
+        public static float RobberOffsetScale { get; set; } = 1f;
+
+        public static float RobberScale => Mathf.Min(CurrentMassScale, RobberScaleCap);
     }
 }

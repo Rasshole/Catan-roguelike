@@ -229,7 +229,7 @@ namespace CatanRoguelike.Core.Match
             }
 
             int victim = match.RobberVictims(seat, bestHex)
-                .OrderByDescending(s => state.Seats[s].VictoryPoints)
+                .OrderByDescending(s => state.Seats[s].PublicVictoryPoints)
                 .ThenByDescending(s => state.Seats[s].CardCount)
                 .ThenBy(s => s)
                 .DefaultIfEmpty(-1).First();
