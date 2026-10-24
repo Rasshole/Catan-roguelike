@@ -22,6 +22,11 @@ namespace CatanRoguelike.Core.Events
         Blight,
         Squall,
         Bountiful,
-        RestlessRobber
+        RestlessRobber,
+
+        // v141 pass-and-play shenanigans (match events only)
+        Decree,
+        NightMarket,
+        Chaos
     }
 }

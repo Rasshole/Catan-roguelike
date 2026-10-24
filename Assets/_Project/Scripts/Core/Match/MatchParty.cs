@@ -182,6 +182,10 @@ namespace CatanRoguelike.Core.Match
             new MatchEventDefinition(EventId.ResourceLevy, "Resource Levy", "Everyone holding 8+ cards pays 1 of their most plentiful resource.", EventCategory.Hardship, true),
             new MatchEventDefinition(EventId.RoyalPatronage, "Royal Patronage", "Whoever shows the fewest points takes 1 of the resource they hold least of.", EventCategory.Gift, true),
             new MatchEventDefinition(EventId.HarvestFestival, "Harvest Festival", "Everyone takes 1 Grain.", EventCategory.Gift, true),
+            // v141 shenanigans
+            new MatchEventDefinition(EventId.Decree, "Decree", "A decree goes to a secret ballot. Ties go to the player with the fewest points.", EventCategory.Trade, true),
+            new MatchEventDefinition(EventId.NightMarket, "Night Market", "A rare item goes to sealed bids. The winner pays the second-highest bid to the bank.", EventCategory.Bounty, true),
+            new MatchEventDefinition(EventId.Chaos, "Chaos", "The robber jumps to a random tile and everyone passes 1 random card to the left.", EventCategory.Robber, true),
         };
 
         public static MatchQuestDefinition Quest(MatchQuestId id) => Quests.FirstOrDefault(q => q.Id == id);

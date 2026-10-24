@@ -26,7 +26,12 @@ namespace CatanRoguelike.Core.Match
         /// <summary>Before placement: each seat in turn picks 1 of 3 civilizations (privately).</summary>
         CivPick = 8,
         /// <summary>After placement: each seat (last placer first) picks a secret quest (1 of 3) and a trait (1 of 2).</summary>
-        QuestPick = 9
+        QuestPick = 9,
+        // ---- v141 shenanigans ----
+        /// <summary>Secret ballot on a decree: each seat in <see cref="MatchState.PickOrder"/> votes in private.</summary>
+        Vote = 10,
+        /// <summary>Night Market: each seat in <see cref="MatchState.PickOrder"/> places a sealed bid in private.</summary>
+        Auction = 11
     }
 
     /// <summary>v135: classic development cards.</summary>
@@ -74,7 +79,7 @@ namespace CatanRoguelike.Core.Match
 
     /// <summary>Per-seat state of an N-player match.</summary>
     [Serializable]
-    public sealed class MatchSeatState
+    public sealed partial class MatchSeatState
     {
         public int Index { get; set; }
         public SeatKind Kind { get; set; }
@@ -129,7 +134,7 @@ namespace CatanRoguelike.Core.Match
     }
 
     /// <summary>v134 Phase 1: full state of an N-player match. Mutated only by <see cref="MatchController"/>.</summary>
-    public sealed class MatchState
+    public sealed partial class MatchState
     {
         public MatchConfig Config { get; }
         public BoardState Board { get; }
@@ -191,7 +196,12 @@ namespace CatanRoguelike.Core.Match
         /// </summary>
         public int ActingSeat => Phase == MatchPhase.Discard && PendingDiscards.Count > 0
             ? PendingDiscards.Keys.First()
-            : CurrentSeat;
+            : (Phase == MatchPhase.Vote || Phase == MatchPhase.Auction) && PickStep < PickOrder.Count
+                ? PickOrder[PickStep]
+                : CurrentSeat;
+
+        /// <summary>v141: a secret ballot or sealed-bid auction is running (one private input per seat).</summary>
+        public bool IsBallot => Phase == MatchPhase.Vote || Phase == MatchPhase.Auction;
 
         public MatchSeatState Acting => Seats[ActingSeat];
 
@@ -266,6 +276,7 @@ namespace CatanRoguelike.Core.Match
                               + $"{s.PlayerTrades},{s.BankTradesThisTurn},{s.ProspectorRound},"
                               + $"{string.Join(".", s.CivOffer.Select(c => (int)c))}/{string.Join(".", s.QuestOffer.Select(c => (int)c))}/"
                               + $"{string.Join(".", s.TraitOffer.Select(c => (int)c))};");
+                AppendShenanigans(sb);
             }
 
             static string Bundle(ResourceBundle b) => $"{b.Wood}.{b.Brick}.{b.Wheat}.{b.Sheep}.{b.Stone}";

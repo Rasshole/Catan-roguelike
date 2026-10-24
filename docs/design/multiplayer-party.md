@@ -356,6 +356,33 @@ how the group can playtest the rules before any server exists.
 - Content: secret-ballot decrees, bounties, rare auctions (rare card / reroll one of your own tokens), the 3 sabotage cards, and the Chaos event.
 - Hidden inputs on hot-seat use the hand-off screen, one voter or bidder at a time.
 - **Exit:** a playtest evening on one PC with the Catan group. Tune weights, prices and quest VP.
+- **v141 (Phase 4 on one device, party rules only):**
+  - Commands (all plain serializable `MatchCommand`s, JSON round-trip and replay hash): `CastVote`, `PlaceBid`,
+    `PostBounty`, `BuySabotage`, `PlaySabotage`, `GuessSaboteur`, `RerollToken`. State lives in `MatchState`
+    (`Votes`, `Bids`, `Bounties`, `PendingSabotage`, `SabotageDeck`, `WashedRoads`, last ballot / auction / sabotage
+    reveals) and is driven by the seeded match RNG only.
+  - **Secret ballot (Decree event):** a `Vote` phase walks every seat in pick order; each human votes behind its own
+    pass screen and the UI only shows "✓ sealed". Majority decides, a tie goes to the player with the fewest points.
+    Decrees: Harbour Tariff (all harbours 3:1 today), Desert Watch (robber can't enter a desert today), Wealth Tax
+    (the richest player above 7 cards discards to 7). The reveal shows only the Aye–Nay count, never who voted what.
+  - **Bounty board:** in Main, post 1–3 cards from your hand (escrowed) on another player, one bounty at a time.
+    The first player who moves the robber onto the holder's tile and steals (only possible if the holder has cards)
+    collects it. Unclaimed bounties go back to the poster at the end of the act (every 5 rounds).
+  - **Night Market (sealed-bid auction):** rare items only: a sabotage card, a Victory Point card, or a reroll of the
+    number token on one of your own tiles. Each seat seals a bid of cards (or passes) on its own pass screen; the
+    highest bid wins and pays the second-highest (at least 1 card), ties go to the player with the fewest points,
+    losers pay nothing. The result screen shows the winner and price only.
+  - **Sabotage cards** (bought for 1 Grain + 1 Ore, max 2 held, deck of 4 × 3 kinds, also won at the Night Market):
+    Blight (one hex yields nothing for the target on their next roll), Spoiled Grain (target discards 1 Grain at
+    their next dawn), both played face-down; Washed-out Road (signed, one of the target's roads doesn't count until
+    nightfall). A player with a face-down card on them may pay 1 card before rolling to name the saboteur: right
+    cancels it and unmasks them. When it bites, the reveal names the author.
+  - **Chaos** is a normal event: the robber jumps to a random tile and everyone passes 1 random card to the left.
+  - AI: votes by self-interest, bids by item value and spare cards, posts bounties on the leader, buys/plays
+    sabotage against the leader and guesses the most likely saboteur (`MatchAi.Shenanigans`).
+  - UI (painted parchment, leader portraits): ballot card and reveal, sealed-bid card and result, a "Schemes" panel
+    (Bounty / Sabotage / Reroll tabs) in the trade card's place, the saboteur-guess card at the start of a turn, the
+    sabotage reveal, and "$N" bounty / "?" face-down marks on the player strip.
 
 ### Phase 5: Network-ready core
 - PCG32 RNG streams per subsystem, `GameState.ComputeHash()`, and a recorded log that replays to the same hash.

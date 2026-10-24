@@ -87,7 +87,8 @@ namespace CatanRoguelike.Game
         }
 
         private bool HotSeatBoardBlocked() =>
-            _hotSeat != null && (_hsVictimCommand != null || _hotSeat.State.IsPicking);
+            _hotSeat != null && (_hsVictimCommand != null || _hotSeat.State.IsPicking || _hotSeat.State.IsBallot
+                                  || _hsRevealShowing);
 
         // ---------- civilization pick ----------
 
@@ -328,6 +329,14 @@ namespace CatanRoguelike.Game
             if (state.ActiveEvent == Core.Events.EventId.Storm && state.EventTile.HasValue
                 && state.Board.TryGetTile(state.EventTile.Value, out var tile))
                 desc = $"The storm sits on the {ResourceLabel(tile.Resource)} {tile.NumberToken}: it produces nothing this round.";
+            var ballot = state.LastBallot;
+            if (state.ActiveEvent == Core.Events.EventId.Decree && ballot != null && ballot.Round == state.Round)
+                desc = $"{MatchController.DecreeName(ballot.Decree)} {(ballot.Passed ? "passed" : "failed")} {ballot.Yes}–{ballot.No}."
+                       + (ballot.Passed && ballot.Decree != MatchDecreeId.RichestDiscardsToSeven ? " " + MatchController.DecreeText(ballot.Decree) : "");
+            var market = state.LastAuction;
+            if (state.ActiveEvent == Core.Events.EventId.NightMarket && market != null && market.Round == state.Round)
+                desc = market.Winner < 0 ? "No bids: the item went back."
+                    : $"{state.Seats[market.Winner].Name} won {MatchController.AuctionItemName(market.Item)} for {market.Price}.";
             HsText(rt, "Desc", desc, 17, new Vector2(0.5f, 0f), new Vector2(0f, 64f), new Vector2(330f, 92f), ink);
         }
 

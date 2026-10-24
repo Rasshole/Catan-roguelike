@@ -588,7 +588,7 @@ namespace CatanRoguelike.Tests.PlayMode
             RunHudController hud = null;
             yield return ReadyHud(gameManager, h => hud = h);
 
-            var config = PartyConfig(1405, (SeatKind.Human, "Rasmus"), (SeatKind.Ai, "AI 2"), (SeatKind.Human, "Freja"),
+            var config = PartyConfig(1406, (SeatKind.Human, "Rasmus"), (SeatKind.Ai, "AI 2"), (SeatKind.Human, "Freja"),
                 (SeatKind.Ai, "AI 4"), (SeatKind.Ai, "AI 5"));
             hud.HotSeatClockFrozenForTests = true;
             hud.StartHotSeat(config);

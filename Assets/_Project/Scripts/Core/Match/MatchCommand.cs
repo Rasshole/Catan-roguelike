@@ -41,7 +41,22 @@ namespace CatanRoguelike.Core.Match
         /// <summary>Pick = the CivilizationId (one of the seat's offer).</summary>
         PickCivilization = 20,
         /// <summary>Pick = the MatchQuestId, Pick2 = the MatchTraitId (from the seat's offers).</summary>
-        PickQuest = 21
+        PickQuest = 21,
+        // ---- v141 shenanigans ----
+        /// <summary>Vote phase: Pick = 1 aye, 0 nay (sealed until everyone has voted).</summary>
+        CastVote = 22,
+        /// <summary>Auction phase: Offer = the sealed bid (cards; empty = pass).</summary>
+        PlaceBid = 23,
+        /// <summary>Main: Victim = the seat the bounty is on, Offer = the reward (1–3 cards, paid into escrow).</summary>
+        PostBounty = 24,
+        /// <summary>Main: buy one face-down sabotage card.</summary>
+        BuySabotage = 25,
+        /// <summary>Main: Pick = MatchSabotageKind, Victim = target; Blight: Q/R = hex; Washed-out Road: the edge fields.</summary>
+        PlaySabotage = 26,
+        /// <summary>Roll (before rolling): the target of a face-down card names its author. Victim = guessed author, Offer = 1 card paid.</summary>
+        GuessSaboteur = 27,
+        /// <summary>Main: spend a reroll won at the Night Market on the tile at Q/R.</summary>
+        RerollToken = 28
     }
 
     /// <summary>
@@ -156,6 +171,33 @@ namespace CatanRoguelike.Core.Match
         public static MatchCommand Confirm(int seat, int partner, ResourceBundle choice = default) =>
             new() { Type = MatchCommandType.ConfirmTrade, Seat = seat, Victim = partner, Choice = choice };
 
+        // ---- v141 ----
+        public static MatchCommand Vote(int seat, bool aye) =>
+            new() { Type = MatchCommandType.CastVote, Seat = seat, Pick = aye ? 1 : 0 };
+
+        public static MatchCommand Bid(int seat, ResourceBundle cards) =>
+            new() { Type = MatchCommandType.PlaceBid, Seat = seat, Offer = cards };
+
+        public static MatchCommand Bounty(int seat, int target, ResourceBundle reward) =>
+            new() { Type = MatchCommandType.PostBounty, Seat = seat, Victim = target, Offer = reward };
+
+        public static MatchCommand Sabotage(int seat, MatchSabotageKind kind, int target, HexCoord hex = default) =>
+            new() { Type = MatchCommandType.PlaySabotage, Seat = seat, Pick = (int)kind, Victim = target, Q = hex.Q, R = hex.R };
+
+        public static MatchCommand SabotageRoad(int seat, int target, Edge edge) =>
+            new()
+            {
+                Type = MatchCommandType.PlaySabotage, Seat = seat, Pick = (int)MatchSabotageKind.WashedOutRoad, Victim = target,
+                Q = edge.A.Hex.Q, R = edge.A.Hex.R, Corner = edge.A.CornerIndex,
+                Q2 = edge.B.Hex.Q, R2 = edge.B.Hex.R, Corner2 = edge.B.CornerIndex
+            };
+
+        public static MatchCommand Guess(int seat, int author, ResourceBundle paid) =>
+            new() { Type = MatchCommandType.GuessSaboteur, Seat = seat, Victim = author, Offer = paid };
+
+        public static MatchCommand Reroll(int seat, HexCoord hex) =>
+            new() { Type = MatchCommandType.RerollToken, Seat = seat, Q = hex.Q, R = hex.R };
+
         public string ToJson() => JsonConvert.SerializeObject(this);
 
         public static MatchCommand FromJson(string json) => JsonConvert.DeserializeObject<MatchCommand>(json);
@@ -195,6 +237,12 @@ namespace CatanRoguelike.Core.Match
             MatchCommandType.PlayMonopoly => $"{Type}(seat {Seat}, {Receive})",
             MatchCommandType.PickCivilization => $"{Type}(seat {Seat}, {(CivilizationId)Pick})",
             MatchCommandType.PickQuest => $"{Type}(seat {Seat}, {(MatchQuestId)Pick}+{(MatchTraitId)Pick2})",
+            MatchCommandType.CastVote => $"{Type}(seat {Seat}, sealed)",
+            MatchCommandType.PlaceBid => $"{Type}(seat {Seat}, sealed)",
+            MatchCommandType.PostBounty => $"{Type}(seat {Seat} on {Victim}, {Offer.Total} cards)",
+            MatchCommandType.PlaySabotage => $"{Type}(seat {Seat}, face-down)",
+            MatchCommandType.GuessSaboteur => $"{Type}(seat {Seat} names {Victim})",
+            MatchCommandType.RerollToken => $"{Type}(seat {Seat}, {Hex})",
             _ => $"{Type}(seat {Seat})"
         };
     }

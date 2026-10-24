@@ -345,7 +345,8 @@ namespace CatanRoguelike.Game
                 if (s == null || s.IsOver || s.PassScreenPending)
                     return false;
                 return s.State.ActiveTrade != null
-                       || (_hsTradeOpen && s.State.Phase == MatchPhase.Main && !s.Acting.IsAi);
+                       || (_hsTradeOpen && s.State.Phase == MatchPhase.Main && !s.Acting.IsAi)
+                       || HsSchemeOnTable; // v141: the scheme panel takes the same space
             }
         }
 

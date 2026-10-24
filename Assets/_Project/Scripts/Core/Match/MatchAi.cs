@@ -15,7 +15,7 @@ namespace CatanRoguelike.Core.Match
     /// <see cref="MatchCommand"/>, which goes through <see cref="MatchController.Apply"/> like a human's.
     /// Also used as the timeout policy (a human's timer runs out) and as a scripted stand-in human in tests.
     /// </summary>
-    public static class MatchAi
+    public static partial class MatchAi
     {
         public static MatchCommand ChooseCommand(MatchController match)
         {
@@ -30,7 +30,12 @@ namespace CatanRoguelike.Core.Match
                     return MatchCommand.AtEdge(MatchCommandType.PlaceSetupRoad, seat,
                         Best(match.ValidSetupRoads(), e => RoadScore(match, e, seat)));
                 case MatchPhase.Roll:
-                    return KnightIfBlocked(match, seat) ?? MatchCommand.Simple(MatchCommandType.RollDice, seat);
+                    return ChooseGuess(match, seat) ?? KnightIfBlocked(match, seat)
+                        ?? MatchCommand.Simple(MatchCommandType.RollDice, seat);
+                case MatchPhase.Vote:
+                    return ChooseVote(match, seat);
+                case MatchPhase.Auction:
+                    return ChooseBid(match, seat);
                 case MatchPhase.Discard:
                     return MatchCommand.DiscardCards(seat,
                         MatchController.SuggestDiscard(state.Seats[seat].Hand, state.PendingDiscards[seat]));
@@ -176,6 +181,11 @@ namespace CatanRoguelike.Core.Match
                                           && (upgradable.Count == 0 || hand.Stone > 3 || hand.Wheat > 2))
                 return MatchCommand.Simple(MatchCommandType.BuyDevCard, seat);
 
+            // v141 shenanigans (party rules): rerolls, bounties, sabotage.
+            var mischief = ChooseShenanigan(match, seat);
+            if (mischief != null)
+                return mischief;
+
             // Bank trade 4:1 toward the current goal (capped per turn so a flipping goal can never loop).
             if (TradesThisTurn(match, seat) >= MaxBankTradesPerTurn)
                 return null;
@@ -233,6 +243,8 @@ namespace CatanRoguelike.Core.Match
             {
                 if (state.Board.RobberTile == tile.Coord)
                     continue;
+                if (tile.IsDesert && state.ActiveDecree == MatchDecreeId.NoDesertRobber)
+                    continue;
                 int pips = tile.IsDesert ? 0 : NumberTokenLibrary.GetPipWeight(tile.NumberToken ?? 0);
                 int score = 0;
                 for (int c = 0; c < 6; c++)
@@ -243,6 +255,9 @@ namespace CatanRoguelike.Core.Match
                     int owner = MatchSeats.ToSeat(b.owner);
                     int weight = (b.type == BuildingType.City ? 2 : 1) * (pips + 1);
                     score += owner == seat ? -3 * weight : weight * (1 + state.Seats[owner].VictoryPoints);
+                    // v141: a bounty on a robbable owner is worth chasing.
+                    if (owner != seat && state.Seats[owner].CardCount > 0)
+                        score += 6 * match.BountiesOn(owner).Where(b => b.Poster != seat).Sum(b => b.Reward.Total);
                 }
 
                 if (score > bestScore)
@@ -253,7 +268,8 @@ namespace CatanRoguelike.Core.Match
             }
 
             int victim = match.RobberVictims(seat, bestHex)
-                .OrderByDescending(s => state.Seats[s].PublicVictoryPoints)
+                .OrderByDescending(s => match.BountiesOn(s).Any(b => b.Poster != seat))
+                .ThenByDescending(s => state.Seats[s].PublicVictoryPoints)
                 .ThenByDescending(s => state.Seats[s].CardCount)
                 .ThenBy(s => s)
                 .DefaultIfEmpty(-1).First();
@@ -370,7 +386,7 @@ namespace CatanRoguelike.Core.Match
             int seat = match.State.ActingSeat;
             if (match.State.ActiveTrade != null)
                 match.Apply(MatchCommand.Simple(MatchCommandType.CancelTrade, match.State.ActiveTrade.From));
-            if (match.State.Phase == MatchPhase.Discard)
+            if (match.State.Phase == MatchPhase.Discard || match.State.IsBallot)
             {
                 // Only the timed-out discarder is resolved; the next one gets their own clock.
                 match.Apply(MatchAi.ChooseCommand(match));

@@ -160,6 +160,13 @@ namespace CatanRoguelike.Core.Match
                 MatchCommandType.CancelTrade => CancelTrade(command),
                 MatchCommandType.PickCivilization => PickCivilization(command),
                 MatchCommandType.PickQuest => PickQuest(command),
+                MatchCommandType.CastVote => CastVote(command),
+                MatchCommandType.PlaceBid => PlaceBid(command),
+                MatchCommandType.PostBounty => PostBounty(command),
+                MatchCommandType.BuySabotage => BuySabotage(command),
+                MatchCommandType.PlaySabotage => PlaySabotage(command),
+                MatchCommandType.GuessSaboteur => GuessSaboteur(command),
+                MatchCommandType.RerollToken => RerollToken(command),
                 _ => MatchCommandResult.Rejected("Unknown command.")
             };
 
@@ -276,12 +283,15 @@ namespace CatanRoguelike.Core.Match
             if (s.Civilization == CivilizationId.MerchantRepublic) best = 3;
             if (State.ActiveEvent == EventId.MarketDay) best = Math.Min(best, 3);
             int generic = s.Civilization == CivilizationId.SeaFolk ? 2 : 3;
+            // v141 decree: every harbour trades at 3:1 today.
+            bool flatPorts = State.ActiveDecree == MatchDecreeId.PortsThreeToOne;
+            if (flatPorts) generic = 3;
             foreach (var port in State.Ports)
             {
                 if (!PortAccess.PlayerControlsVertex(State.Board, owner, port.Vertex))
                     continue;
                 if (port.SpecificResource == give)
-                    best = Math.Min(best, 2);
+                    best = Math.Min(best, flatPorts ? 3 : 2);
                 if (port.IsGeneric)
                     best = Math.Min(best, generic);
             }
@@ -400,6 +410,8 @@ namespace CatanRoguelike.Core.Match
         {
             if (State.Phase != MatchPhase.Roll)
                 return MatchCommandResult.Rejected("Already rolled.");
+            if (PartyRules)
+                OnDawnSabotage();
             int roll = State.Rng.RollDie() + State.Rng.RollDie();
             State.LastRoll = roll;
             AppendLog($"{State.Current.Name} rolled {roll}.");
@@ -428,6 +440,9 @@ namespace CatanRoguelike.Core.Match
                 State.Phase = MatchPhase.Main;
             }
 
+            if (PartyRules)
+                AfterRollSabotage();
+
             return MatchCommandResult.Accepted;
         }
 
@@ -453,6 +468,9 @@ namespace CatanRoguelike.Core.Match
                     int seat = MatchSeats.ToSeat(b.owner);
                     var civ = State.Seats[seat].Civilization;
                     if (tile.HasRobber && civ != CivilizationId.SunKingdom)
+                        continue;
+                    // v141 Blight: this hex produces nothing for the target on this roll.
+                    if (State.ActiveBlight != null && State.ActiveBlight.Target == seat && State.ActiveBlight.Hex == tile.Coord)
                         continue;
                     int amount = MatchCivRules.HitAmount(civ, tile.Resource, b.type == BuildingType.City ? 2 : 1) * factor;
                     gains[seat].Add(tile.Resource, amount);
@@ -515,6 +533,8 @@ namespace CatanRoguelike.Core.Match
                 return MatchCommandResult.Rejected("Robber must go on a land hex.");
             if (State.Board.RobberTile == hex)
                 return MatchCommandResult.Rejected("Robber must move to a different hex.");
+            if (State.ActiveDecree == MatchDecreeId.NoDesertRobber && State.Board.TryGetTile(hex, out var dt) && dt.IsDesert)
+                return MatchCommandResult.Rejected("Today's decree: the robber can't enter a desert.");
             var victims = RobberVictims(c.Seat, hex).ToList();
             if (c.Victim >= 0 && !victims.Contains(c.Victim))
                 return MatchCommandResult.Rejected("That player can't be robbed there.");
@@ -543,6 +563,8 @@ namespace CatanRoguelike.Core.Match
                 }
 
                 AppendLog($"{State.Current.Name} robbed {victim.Name}.");
+                if (PartyRules)
+                    ClaimBounties(c.Seat, c.Victim);
             }
 
             State.Phase = State.ResumePhase;
@@ -931,6 +953,8 @@ namespace CatanRoguelike.Core.Match
             State.ActiveTrade = null;
             State.CurrentSeat = (State.CurrentSeat + 1) % State.Seats.Count;
             State.TurnNumber++;
+            // v141: the night (event draw) may open a ballot or auction, which then hands over to the roll.
+            State.Phase = MatchPhase.Roll;
             if (State.CurrentSeat == 0)
             {
                 State.Round++;
@@ -942,10 +966,12 @@ namespace CatanRoguelike.Core.Match
                 }
 
                 if (PartyRules)
+                {
+                    BeginNight();
                     DrawEvent();
+                }
             }
 
-            State.Phase = MatchPhase.Roll;
             return MatchCommandResult.Accepted;
         }
 

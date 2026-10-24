@@ -301,9 +301,17 @@ namespace CatanRoguelike.Core.Match
                     foreach (var seat in State.Seats)
                         Give(seat, ResourceType.Wheat, 1);
                     break;
+                case EventId.Chaos:
+                    DoChaos();
+                    break;
             }
 
             AppendLog($"Event – {def?.Name}: {def?.Description}");
+            // v141: a Decree opens a secret ballot, the Night Market a sealed-bid auction (both before the first roll).
+            if (id == EventId.Decree)
+                BeginVote();
+            else if (id == EventId.NightMarket)
+                BeginAuction();
         }
 
         private int BuildingsOn(HexCoord hex)

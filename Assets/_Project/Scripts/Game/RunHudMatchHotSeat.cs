@@ -241,6 +241,7 @@ namespace CatanRoguelike.Game
             _hsVictimCommand = null;
             _hsPickSeat = -1;
             _hsTradeOpen = false;
+            ResetShenanigansUi();
             _hsPicker = null;
             _hsCounterSeat = -1;
             _hsDiscardSeat = -1;
@@ -374,6 +375,7 @@ namespace CatanRoguelike.Game
                 BuildDevCardPicker();
                 BuildVictimPicker();
                 BuildPartyPickers();
+                BuildShenanigans();
             }
 
             if (s.IsOver)
@@ -402,6 +404,8 @@ namespace CatanRoguelike.Game
                 MatchPhase.MoveRobber => "move the robber (click a tile)",
                 MatchPhase.Discard => $"{state.Acting.Name} discards half (rolled 7)",
                 MatchPhase.RoadBuilding => $"place {state.FreeRoadsLeft} free road{(state.FreeRoadsLeft == 1 ? "" : "s")}",
+                MatchPhase.Vote => $"secret ballot · {state.Acting.Name} votes",
+                MatchPhase.Auction => $"Night Market · {state.Acting.Name} bids in secret",
                 MatchPhase.Main => state.LastRoll > 0 ? $"rolled {state.LastRoll} · build or end turn" : "build or end turn",
                 _ => "game over"
             };
@@ -527,6 +531,7 @@ namespace CatanRoguelike.Game
                 var vp = RunHudUiFactory.CreateText(row.rectTransform, "VP", seat.PublicVictoryPoints.ToString(), 36,
                     TextAnchor.MiddleCenter, ink, FontStyle.Bold);
                 SetRect(vp.rectTransform, new Vector2(1f, 0.5f), new Vector2(-40f, 8f), new Vector2(64f, 44f));
+                BuildSeatShenaniganMarks(row.rectTransform, state, i); // v141: bounty + face-down card marks
                 var vpl = RunHudUiFactory.CreateText(row.rectTransform, "VPLabel",
                     "VP" + (state.LongestRoadSeat == i ? " · road" : "") + (state.LargestArmySeat == i ? " · army" : ""), 13, TextAnchor.MiddleCenter, ColonistUiKit.InkMuted,
                     FontStyle.Bold);
@@ -675,9 +680,14 @@ namespace CatanRoguelike.Game
                     {
                         _hsTradeOpen = !_hsTradeOpen;
                         _hsPicker = null;
+                        if (_hsTradeOpen)
+                            OpenScheme(HotSeatScheme.None);
                     }));
                     buttons.Add(("Buy card", false, human && s.Match.CanBuyDevCard(state.CurrentSeat) && free,
                         () => s.Apply(MatchCommand.Simple(MatchCommandType.BuyDevCard, state.CurrentSeat))));
+                    if (state.Config.PartyRules)
+                        buttons.Add((_hsScheme != HotSeatScheme.None && free ? "Close schemes" : "Schemes", false, human && free,
+                            () => OpenScheme(_hsScheme == HotSeatScheme.None ? HotSeatScheme.Bounty : HotSeatScheme.None)));
                     buttons.Add(("Auto-build", false, human && free, () => s.AutoBuild()));
                     buttons.Add(("End turn", true, human && free, () => s.EndTurn()));
                     if (human && free)
@@ -694,7 +704,7 @@ namespace CatanRoguelike.Game
             }
 
             const float h = 60f, gap = 14f;
-            float w = buttons.Count > 2 ? 190f : 250f;
+            float w = buttons.Count > 4 ? 162f : buttons.Count > 2 ? 190f : 250f;
             float total = buttons.Count * w + (buttons.Count - 1) * gap;
             // Left edge clear of the hand panel (screen x 40..620 of 1920), centre-relative.
             float x = Mathf.Max(70f - total / 2f, 640f - 960f) + w / 2f;
@@ -750,6 +760,10 @@ namespace CatanRoguelike.Game
                 ? $"A 7 was rolled: {seat.Name} must discard {owed}. Everyone else, look away."
                 : phase == MatchPhase.CivPick
                     ? $"{seat.Name} picks a civilization in secret. Everyone else, look away; all picks are revealed together."
+                    : phase == MatchPhase.Vote
+                        ? $"{seat.Name} votes on the decree in secret. Everyone else, look away: only the totals are revealed."
+                    : phase == MatchPhase.Auction
+                        ? $"{seat.Name} seals a bid at the Night Market. Everyone else, look away: bids stay sealed."
                     : phase == MatchPhase.QuestPick
                         ? $"{seat.Name} picks a secret quest and a trait. Everyone else, look away: quests stay hidden until the game ends."
                         : $"Everyone else, look away. {seat.Name}'s hand stays hidden until they tap below; the turn timer starts then.";
@@ -757,7 +771,8 @@ namespace CatanRoguelike.Game
                 19, TextAnchor.MiddleCenter, ColonistUiKit.InkMuted, FontStyle.Italic);
             SetRect(body.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -304f), new Vector2(600f, 56f));
             AddLobbyButton(card, "ConfirmPass",
-                discard ? $"I'm {seat.Name} · discard" : picking ? $"I'm {seat.Name} · pick in secret" : $"I'm {seat.Name} · start my turn",
+                discard ? $"I'm {seat.Name} · discard" : phase == MatchPhase.Vote ? $"I'm {seat.Name} · vote in secret"
+                    : phase == MatchPhase.Auction ? $"I'm {seat.Name} · seal my bid" : picking ? $"I'm {seat.Name} · pick in secret" : $"I'm {seat.Name} · start my turn",
                 new Vector2(0f, 74f),
                 new Vector2(380f, 62f), true, true, () => _hotSeat?.ConfirmPass(), anchorBottom: true);
         }
