@@ -294,12 +294,23 @@ namespace CatanRoguelike.Game
                 });
         }
 
-        // ---------- trade board ----------
+        // ---------- trade board (v138: icons + numbers, red give / green get arrows) ----------
+
+        private int _hsTradeViewer = -1;
+
+        /// <summary>Tests/captures: look at the open offer as this seat (the responder holding the device).</summary>
+        public void SetHotSeatTradeViewerForTests(int seat)
+        {
+            _hsTradeViewer = seat;
+            HsMark();
+        }
 
         private string Terms(ResourceBundle b) =>
             b.Total == 0
                 ? "nothing"
                 : string.Join(" + ", MatchController.AllResources.Where(r => b[r] > 0).Select(r => $"{b[r]} {ResourceLabel(r)}"));
+
+        private static float HsTradeOffsetY(float h) => Mathf.Min(110f, 436f - h / 2f);
 
         private void BuildTradeBoard()
         {
@@ -309,7 +320,11 @@ namespace CatanRoguelike.Game
             if (trade == null && (!_hsTradeOpen || state.Phase != MatchPhase.Main || s.Acting.IsAi || s.PassScreenPending))
             {
                 if (trade == null)
+                {
                     _hsCounterSeat = -1;
+                    _hsTradeViewer = -1;
+                }
+
                 return;
             }
 
@@ -317,179 +332,276 @@ namespace CatanRoguelike.Game
                 return;
 
             int seat = state.ActingSeat;
-            float rows = trade == null ? 0 : state.Seats.Count - 1;
-            var card = HsModal("TradeBoard", new Vector2(980f, trade == null ? 520f : 300f + rows * 74f
-                + (_hsCounterSeat >= 0 ? 200f : 0f)), HsModalOffset + new Vector2(0f, trade == null ? 0f : 40f));
-            HsText(card, "Kicker", "TRADE BOARD", 16, new Vector2(0.5f, 1f), new Vector2(0f, -46f), new Vector2(700f, 22f),
-                ColonistUiKit.InkGold, FontStyle.Bold);
-            HsButton(card, "TradeClose", "✕", new Vector2(1f, 1f), new Vector2(-62f, -54f), new Vector2(56f, 50f),
-                trade == null, false, () => _hsTradeOpen = false, 22);
-
             if (trade == null)
             {
-                BuildTradeComposer(card, seat);
+                var composer = HsModal("TradeBoard", new Vector2(780f, 560f), new Vector2(-190f, HsTradeOffsetY(560f)));
+                HsText(composer, "Kicker", "TRADE", 16, new Vector2(0.5f, 1f), new Vector2(0f, -48f),
+                    new Vector2(500f, 22f), TradeKickerInk, FontStyle.Bold);
+                TradeButton(composer, "TradeClose", "", TradeGlyphSprites.Cross, new Vector2(1f, 1f),
+                    TradeClosePos, TradeCloseSize, true, false, () =>
+                    {
+                        _hsTradeOpen = false;
+                        HsMark();
+                    });
+                BuildTradeComposer(composer, seat);
                 return;
             }
 
-            var from = state.Seats[trade.From];
-            HsText(card, "Offer", $"{from.Name} gives {Terms(trade.Give)}  ·  wants {Terms(trade.Get)}", 23,
-                new Vector2(0.5f, 1f), new Vector2(0f, -86f), new Vector2(900f, 34f), ColonistUiKit.Ink, FontStyle.Bold);
-            HsText(card, "Hint", "Everyone at the table answers here; the offerer confirms one partner.", 16,
-                new Vector2(0.5f, 1f), new Vector2(0f, -118f), new Vector2(900f, 24f), ColonistUiKit.InkMuted,
-                FontStyle.Italic);
-            int row = 0;
-            for (int i = 0; i < state.Seats.Count; i++)
-            {
-                if (i == trade.From)
-                    continue;
-                int responder = i;
-                var other = state.Seats[i];
-                var response = trade.Responses[i];
-                float y = -170f - row++ * 74f;
-                var disc = CreateDisc(card, "TradeDisc_" + i, PlayerPieceVisuals.ColorForSeat(i), 46f);
-                SetRect(disc.rectTransform, new Vector2(0f, 1f), new Vector2(70f, y), new Vector2(46f, 46f));
-                HsText(card, "TradeName_" + i, other.Name + (other.IsAi ? " (AI)" : ""), 20, new Vector2(0f, 1f),
-                    new Vector2(200f, y), new Vector2(200f, 30f), ColonistUiKit.Ink, FontStyle.Bold, TextAnchor.MiddleLeft);
-                string status = response.Kind switch
-                {
-                    TradeResponseKind.Accepted => "accepts",
-                    TradeResponseKind.Declined => "declines",
-                    TradeResponseKind.Countered =>
-                        $"counters: you give {Terms(response.CounterGive)}, get {Terms(response.CounterGet)}",
-                    _ => "thinking…"
-                };
-                var statusColor = response.Kind switch
-                {
-                    TradeResponseKind.Accepted => new Color(0.16f, 0.45f, 0.18f, 1f),
-                    TradeResponseKind.Declined => TimerPulseRed,
-                    _ => ColonistUiKit.InkMuted
-                };
-                HsText(card, "TradeStatus_" + i, status, 17, new Vector2(0f, 1f), new Vector2(470f, y),
-                    new Vector2(360f, 44f), statusColor, FontStyle.Italic, TextAnchor.MiddleLeft);
-
-                bool canAnswer = !other.IsAi && response.Kind == TradeResponseKind.Pending;
-                if (canAnswer)
-                {
-                    HsButton(card, "Accept_" + i, "Accept", new Vector2(1f, 1f), new Vector2(-330f, y),
-                        new Vector2(110f, 46f), other.Hand.CanAfford(trade.Get), true,
-                        () => _hotSeat.Apply(MatchCommand.Respond(responder, TradeResponseKind.Accepted)), 16);
-                    HsButton(card, "Decline_" + i, "Decline", new Vector2(1f, 1f), new Vector2(-210f, y),
-                        new Vector2(110f, 46f), true, false,
-                        () => _hotSeat.Apply(MatchCommand.Respond(responder, TradeResponseKind.Declined)), 16);
-                    HsButton(card, "Counter_" + i, "Counter", new Vector2(1f, 1f), new Vector2(-90f, y),
-                        new Vector2(110f, 46f), true, false, () =>
-                        {
-                            _hsCounterSeat = responder;
-                            _hsGive = trade.Give;
-                            _hsGet = trade.Get;
-                        }, 16);
-                }
-                else if (response.Kind == TradeResponseKind.Accepted || response.Kind == TradeResponseKind.Countered)
-                {
-                    HsButton(card, "Confirm_" + i, "Trade", new Vector2(1f, 1f), new Vector2(-120f, y),
-                        new Vector2(170f, 46f), !state.Seats[trade.From].IsAi, true,
-                        () => _hotSeat.Apply(MatchCommand.Confirm(trade.From, responder)), 17);
-                }
-            }
-
-            if (_hsCounterSeat >= 0 && _hsCounterSeat != trade.From)
-            {
-                float y0 = -170f - row * 74f - 10f;
-                HsText(card, "CounterTitle", $"{state.Seats[_hsCounterSeat].Name}'s counter (as {from.Name} would trade)",
-                    17, new Vector2(0.5f, 1f), new Vector2(0f, y0), new Vector2(800f, 24f), ColonistUiKit.InkGold,
-                    FontStyle.Bold);
-                BuildStepperRow(card, "CGive", $"{from.Name} gives", y0 - 50f, () => _hsGive, b => _hsGive = b, 9);
-                BuildStepperRow(card, "CGet", $"{from.Name} gets", y0 - 110f, () => _hsGet, b => _hsGet = b,
-                    state.Seats[_hsCounterSeat].Hand);
-                int counterSeat = _hsCounterSeat;
-                HsButton(card, "SendCounter", "Send counter", new Vector2(1f, 1f), new Vector2(-120f, y0 - 160f),
-                    new Vector2(200f, 46f), _hsGive.Total > 0 && _hsGet.Total > 0, true, () =>
-                    {
-                        _hotSeat.Apply(MatchCommand.Respond(counterSeat, TradeResponseKind.Countered, _hsGive, _hsGet));
-                        _hsCounterSeat = -1;
-                    }, 17);
-            }
-
-            HsButton(card, "CancelOffer", "Withdraw offer", new Vector2(0.5f, 0f), new Vector2(0f, 52f),
-                new Vector2(240f, 50f), !from.IsAi, false, () =>
-                {
-                    _hsCounterSeat = -1;
-                    _hotSeat.Apply(MatchCommand.Simple(MatchCommandType.CancelTrade, trade.From));
-                });
+            BuildTradeOffer(trade, seat);
         }
 
         private void BuildTradeComposer(RectTransform card, int seat)
         {
             var s = _hotSeat;
             var me = s.State.Seats[seat];
-            HsText(card, "Title", "Offer the table a trade, or trade with the bank", 24, new Vector2(0.5f, 1f),
-                new Vector2(0f, -82f), new Vector2(800f, 34f), ColonistUiKit.Ink, FontStyle.Bold);
-            var rates = MatchController.AllResources.Select(r => (r, s.Match.BankRatio(seat, r))).ToList();
-            string harbours = rates.All(x => x.Item2 == 4)
-                ? "Bank 4:1 · build on a harbour for 3:1 or 2:1"
-                : "Bank: " + string.Join("  ", rates.Select(x => $"{ResourceLabel(x.r)} {x.Item2}:1"));
-            HsText(card, "Rates", harbours, 16, new Vector2(0.5f, 1f), new Vector2(0f, -114f), new Vector2(880f, 22f),
-                ColonistUiKit.InkMuted, FontStyle.Italic);
-            BuildStepperRow(card, "Give", "You give", -180f, () => _hsGive, b => _hsGive = b, me.Hand);
-            BuildStepperRow(card, "Get", "You get", -290f, () => _hsGet, b => _hsGet = b, 9);
+            BuildTradeRateBadges(card, -96f, r => s.Match.BankRatio(seat, r));
+            const float x0 = 142f;
+            BuildTradeEditRow(card, "Give", true, -196f, x0, () => _hsGive, b => _hsGive = b, me.Hand, HsMark);
+            BuildTradeEditRow(card, "Get", false, -340f, x0, () => _hsGet, b => _hsGet = b, Cap(9), HsMark);
 
-            // Bank: exactly ratio × one resource for one of another.
-            var giveKinds = MatchController.AllResources.Where(r => _hsGive[r] > 0).ToList();
-            var getKinds = MatchController.AllResources.Where(r => _hsGet[r] > 0).ToList();
-            bool bankOk = giveKinds.Count == 1 && getKinds.Count == 1 && giveKinds[0] != getKinds[0] && _hsGet.Total == 1
-                          && _hsGive.Total == s.Match.BankRatio(seat, giveKinds[0]);
-            string bankLabel = giveKinds.Count == 1 ? $"Bank {s.Match.BankRatio(seat, giveKinds[0])}:1" : "Bank trade";
-            HsButton(card, "BankTrade", bankLabel, new Vector2(0.5f, 0f), new Vector2(-150f, 56f), new Vector2(220f, 54f),
-                bankOk, false, () =>
+            bool bankOk = TryReadBankTrade(_hsGive, _hsGet, r => s.Match.BankRatio(seat, r), out var giveType,
+                              out var getType, out int amount) && amount == 1 && me.Hand.CanAfford(_hsGive);
+            int shownRate = TradeResources.Any(r => _hsGive[r] > 0)
+                ? s.Match.BankRatio(seat, TradeResources.First(r => _hsGive[r] > 0))
+                : TradeResources.Min(r => s.Match.BankRatio(seat, r));
+            TradeButton(card, "BankTrade", $"Bank {shownRate}:1", null, new Vector2(0.5f, 0f), new Vector2(-196f, 62f),
+                new Vector2(180f, 54f), bankOk, false, () =>
                 {
-                    var r = s.Apply(MatchCommand.Trade(seat, giveKinds[0], getKinds[0]));
+                    var r = s.Apply(MatchCommand.Trade(seat, giveType, getType));
                     if (r.Ok)
                     {
                         _hsGive = ResourceBundle.Zero;
                         _hsGet = ResourceBundle.Zero;
                     }
-                });
+
+                    HsMark();
+                }, 19);
             bool offerOk = _hsGive.Total > 0 && _hsGet.Total > 0 && me.Hand.CanAfford(_hsGive)
                            && !MatchController.AllResources.Any(r => _hsGive[r] > 0 && _hsGet[r] > 0);
-            HsButton(card, "ProposeTrade", "Offer to players", new Vector2(0.5f, 0f), new Vector2(110f, 56f),
-                new Vector2(260f, 54f), offerOk, true, () => s.Apply(MatchCommand.Propose(seat, _hsGive, _hsGet)));
+            TradeButton(card, "ProposeTrade", "Offer", TradeGlyphSprites.Counter, new Vector2(0.5f, 0f),
+                new Vector2(20f, 62f), new Vector2(200f, 54f), offerOk, true, () =>
+                {
+                    s.Apply(MatchCommand.Propose(seat, _hsGive, _hsGet));
+                    HsMark();
+                }, 19);
+            TradeButton(card, "TradeClear", "", TradeGlyphSprites.Cross, new Vector2(0.5f, 0f), new Vector2(178f, 62f),
+                new Vector2(64f, 54f), _hsGive.Total + _hsGet.Total > 0, false, () =>
+                {
+                    _hsGive = ResourceBundle.Zero;
+                    _hsGet = ResourceBundle.Zero;
+                    HsMark();
+                });
         }
 
-        private void BuildStepperRow(RectTransform card, string key, string label, float y,
-            System.Func<ResourceBundle> get, System.Action<ResourceBundle> set, ResourceBundle limit)
+        private static ResourceBundle Cap(int n) => new() { Wood = n, Brick = n, Wheat = n, Sheep = n, Stone = n };
+
+        /// <summary>
+        /// The open offer. Terms are drawn from the VIEWER's side: the offerer by default, or the responder holding the
+        /// device (click a responder's disc). What the viewer gives is red, what the viewer gets is green.
+        /// </summary>
+        private void BuildTradeOffer(MatchTradeOffer trade, int seat)
         {
-            HsText(card, key + "Label", label, 17, new Vector2(0f, 1f), new Vector2(168f, y - 18f), new Vector2(136f, 30f),
-                ColonistUiKit.Ink, FontStyle.Bold, TextAnchor.MiddleRight);
-            var resources = MatchController.AllResources;
-            for (int i = 0; i < resources.Length; i++)
+            var state = _hotSeat.State;
+            var from = state.Seats[trade.From];
+            if (_hsTradeViewer < 0 || _hsTradeViewer >= state.Seats.Count || state.Seats[_hsTradeViewer].IsAi)
+                _hsTradeViewer = trade.From;
+            int viewer = _hsTradeViewer;
+            bool offererView = viewer == trade.From;
+            var viewerResp = offererView ? null : trade.Responses[viewer];
+            bool viewerCanAnswer = viewerResp != null && viewerResp.Kind == TradeResponseKind.Pending;
+            bool counterOpen = _hsCounterSeat >= 0 && _hsCounterSeat != trade.From;
+
+            int rows = state.Seats.Count - 1;
+            const float rowH = 70f;
+            float headH = 196f;
+            float counterH = counterOpen ? 330f : 0f;
+            float h = headH + rows * rowH + counterH + (offererView ? 120f : 70f);
+            var card = HsModal("TradeBoard", new Vector2(780f, h), new Vector2(-190f, HsTradeOffsetY(h)));
+            HsText(card, "Kicker", offererView ? "YOUR OFFER" : $"INCOMING OFFER  ·  {state.Seats[viewer].Name.ToUpperInvariant()} LOOKS",
+                16, new Vector2(0.5f, 1f), new Vector2(0f, -48f), new Vector2(560f, 22f), TradeKickerInk,
+                FontStyle.Bold);
+
+            // Header: who offers + the terms from the viewer's side.
+            var disc = CreateDisc(card, "FromDisc", PlayerPieceVisuals.ColorForSeat(trade.From), 50f);
+            SetRect(disc.rectTransform, new Vector2(0f, 1f), new Vector2(110f, -104f), new Vector2(50f, 50f));
+            HsText(card, "FromName", offererView ? from.Name : $"{from.Name} → {state.Seats[viewer].Name}", 22,
+                new Vector2(0f, 1f), new Vector2(256f, -104f), new Vector2(230f, 30f), ColonistUiKit.Ink, FontStyle.Bold,
+                TextAnchor.MiddleLeft);
+            var youGive = offererView ? trade.Give : trade.Get;
+            var youGet = offererView ? trade.Get : trade.Give;
+            BuildTradeTerms(card, "HeadGive", true, youGive, new Vector2(0f, 1f), 92f, -158f, 46f);
+            float gw = TradeTermsWidth(youGive, 46f);
+            BuildTradeTerms(card, "HeadGet", false, youGet, new Vector2(0f, 1f), 92f + gw + 34f, -158f, 46f);
+            if (!offererView && viewerCanAnswer)
             {
-                var r = resources[i];
-                float x = 300f + i * 132f;
-                var icon = CreateImage(card, key + "Icon_" + r, ColonistHudResourceSprites.Get(r));
-                SetRect(icon.rectTransform, new Vector2(0f, 1f), new Vector2(x, y + 2f), new Vector2(44f, 44f));
-                int n = get()[r];
-                HsText(card, key + "N_" + r, n.ToString(), 22, new Vector2(0f, 1f), new Vector2(x, y - 36f),
-                    new Vector2(40f, 28f), n > 0 ? ColonistUiKit.Ink : ColonistUiKit.InkMuted, FontStyle.Bold);
-                HsButton(card, key + "Less_" + r, "−", new Vector2(0f, 1f), new Vector2(x - 44f, y - 36f),
-                    new Vector2(36f, 34f), n > 0, false, () =>
+                int v = viewer;
+                TradeButton(card, "Accept_" + v, "", TradeGlyphSprites.CheckCream, new Vector2(1f, 1f),
+                    new Vector2(-232f, -130f), new Vector2(64f, 56f), state.Seats[v].Hand.CanAfford(trade.Get), true,
+                    () => Answer(v, TradeResponseKind.Accepted));
+                TradeButton(card, "Decline_" + v, "", TradeGlyphSprites.Cross, new Vector2(1f, 1f),
+                    new Vector2(-160f, -130f), new Vector2(64f, 56f), true, false,
+                    () => Answer(v, TradeResponseKind.Declined));
+                TradeButton(card, "Counter_" + v, "", TradeGlyphSprites.Counter, new Vector2(1f, 1f),
+                    new Vector2(-88f, -130f), new Vector2(64f, 56f), true, false, () => OpenCounter(v, trade));
+            }
+
+            var rule = CreateImage(card, "HeadRule", null);
+            rule.color = ColonistUiKit.Rule;
+            SetRect(rule.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -196f), new Vector2(640f, 2f));
+
+            int row = 0;
+            for (int i = 0; i < state.Seats.Count; i++)
+            {
+                if (i == trade.From)
+                    continue;
+                BuildTradeResponseRow(card, trade, i, viewer, -196f - rowH / 2f - row++ * rowH);
+            }
+
+            if (counterOpen)
+                BuildCounterEditor(card, trade, -196f - rows * rowH - 16f);
+
+            if (offererView)
+                TradeButton(card, "CancelOffer", "Withdraw", TradeGlyphSprites.Cross, new Vector2(0.5f, 0f),
+                new Vector2(0f, 62f), new Vector2(210f, 52f), !from.IsAi && offererView, false, () =>
+                {
+                    _hsCounterSeat = -1;
+                    _hsTradeViewer = -1;
+                    _hotSeat.Apply(MatchCommand.Simple(MatchCommandType.CancelTrade, trade.From));
+                    HsMark();
+                }, 18);
+        }
+
+        private void Answer(int seat, TradeResponseKind kind)
+        {
+            _hotSeat.Apply(MatchCommand.Respond(seat, kind));
+            HsMark();
+        }
+
+        private void OpenCounter(int seat, MatchTradeOffer trade)
+        {
+            _hsCounterSeat = seat;
+            _hsTradeViewer = seat;
+            _hsGive = trade.Give;
+            _hsGet = trade.Get;
+            HsMark();
+        }
+
+        private void BuildTradeResponseRow(RectTransform card, MatchTradeOffer trade, int i, int viewer, float y)
+        {
+            var state = _hotSeat.State;
+            var other = state.Seats[i];
+            var response = trade.Responses[i];
+            bool isViewer = i == viewer;
+            if (isViewer)
+            {
+                var hl = CreateImage(card, "TradeRowHl_" + i, null);
+                hl.color = new Color(1f, 0.82f, 0.36f, 0.35f);
+                SetRect(hl.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, y), new Vector2(630f, 62f));
+            }
+
+            // The disc is the "hand me the device" switch for human responders.
+            var discBtn = TradeButton(card, "TradeDisc_" + i, "", null, new Vector2(0f, 1f), new Vector2(110f, y),
+                new Vector2(50f, 50f), !other.IsAi, false, () =>
+                {
+                    _hsTradeViewer = _hsTradeViewer == i ? trade.From : i;
+                    _hsCounterSeat = -1;
+                    HsMark();
+                });
+            var discColors = discBtn.colors;
+            discColors.disabledColor = Color.white;
+            discBtn.colors = discColors;
+            var discImg = discBtn.GetComponent<Image>();
+            discImg.sprite = DiscSprite();
+            discImg.type = Image.Type.Simple;
+            discImg.color = PlayerPieceVisuals.ColorForSeat(i);
+            var tag = discBtn.GetComponentInChildren<Text>();
+            tag.text = other.IsAi ? "AI" : (i + 1).ToString();
+            tag.color = SeatInk(i);
+            tag.fontSize = other.IsAi ? 15 : 20;
+            HsText(card, "TradeName_" + i, other.Name, 20, new Vector2(0f, 1f), new Vector2(222f, y),
+                new Vector2(150f, 30f), ColonistUiKit.Ink, FontStyle.Bold, TextAnchor.MiddleLeft);
+
+            float statusX = 330f;
+            switch (response.Kind)
+            {
+                case TradeResponseKind.Accepted:
+                    TradeStatusMark(card, "TradeStatus_" + i, TradeGlyphSprites.Check, new Vector2(0f, 1f),
+                        new Vector2(statusX, y), 44f);
+                    break;
+                case TradeResponseKind.Declined:
+                    TradeStatusMark(card, "TradeStatus_" + i, TradeGlyphSprites.Cross, new Vector2(0f, 1f),
+                        new Vector2(statusX, y), 44f);
+                    break;
+                case TradeResponseKind.Countered:
+                {
+                    TradeStatusMark(card, "TradeStatus_" + i, TradeGlyphSprites.Counter, new Vector2(0f, 1f),
+                        new Vector2(statusX, y), 44f);
+                    // Counter terms from the viewer's side (stored from the offerer's side).
+                    bool responderView = viewer == i;
+                    var give = responderView ? response.CounterGet : response.CounterGive;
+                    var get = responderView ? response.CounterGive : response.CounterGet;
+                    float x = statusX + 32f;
+                    x += BuildTradeTerms(card, "CounterGive_" + i, true, give, new Vector2(0f, 1f), x, y, 38f) + 10f;
+                    BuildTradeTerms(card, "CounterGet_" + i, false, get, new Vector2(0f, 1f), x, y, 38f);
+                    break;
+                }
+                default:
+                {
+                    var dots = RunHudUiFactory.CreateText(card, "TradeStatus_" + i, "…", 30, TextAnchor.MiddleCenter,
+                        ColonistUiKit.InkMuted, FontStyle.Bold);
+                    SetRect(dots.rectTransform, new Vector2(0f, 1f), new Vector2(statusX, y + 6f), new Vector2(44f, 44f));
+                    break;
+                }
+            }
+
+            bool canAnswer = !other.IsAi && response.Kind == TradeResponseKind.Pending;
+            bool offererView = viewer == trade.From;
+            if (canAnswer && offererView)
+            {
+                int responder = i;
+                TradeButton(card, "Accept_" + i, "", TradeGlyphSprites.CheckCream, new Vector2(1f, 1f),
+                    new Vector2(-232f, y), new Vector2(60f, 50f), other.Hand.CanAfford(trade.Get), true,
+                    () => Answer(responder, TradeResponseKind.Accepted));
+                TradeButton(card, "Decline_" + i, "", TradeGlyphSprites.Cross, new Vector2(1f, 1f),
+                    new Vector2(-164f, y), new Vector2(60f, 50f), true, false,
+                    () => Answer(responder, TradeResponseKind.Declined));
+                TradeButton(card, "Counter_" + i, "", TradeGlyphSprites.Counter, new Vector2(1f, 1f),
+                    new Vector2(-96f, y), new Vector2(60f, 50f), true, false, () => OpenCounter(responder, trade));
+            }
+            else if (offererView && (response.Kind == TradeResponseKind.Accepted || response.Kind == TradeResponseKind.Countered))
+            {
+                int partner = i;
+                TradeButton(card, "Confirm_" + i, "Trade", TradeGlyphSprites.CheckCream, new Vector2(1f, 1f),
+                    new Vector2(-130f, y), new Vector2(150f, 50f), !state.Seats[trade.From].IsAi && offererView, true,
+                    () =>
                     {
-                        var b = get();
-                        b.Add(r, -1);
-                        set(b);
-                    }, 20);
-                HsButton(card, key + "More_" + r, "+", new Vector2(0f, 1f), new Vector2(x + 44f, y - 36f),
-                    new Vector2(36f, 34f), n < limit[r], false, () =>
-                    {
-                        var b = get();
-                        b.Add(r, 1);
-                        set(b);
-                    }, 20);
+                        _hsTradeViewer = -1;
+                        _hotSeat.Apply(MatchCommand.Confirm(trade.From, partner));
+                        HsMark();
+                    }, 18);
             }
         }
 
-        private void BuildStepperRow(RectTransform card, string key, string label, float y,
-            System.Func<ResourceBundle> get, System.Action<ResourceBundle> set, int cap) =>
-            BuildStepperRow(card, key, label, y, get, set,
-                new ResourceBundle { Wood = cap, Brick = cap, Wheat = cap, Sheep = cap, Stone = cap });
+        /// <summary>Counter-offer editor, from the responder's side (stored back from the offerer's side).</summary>
+        private void BuildCounterEditor(RectTransform card, MatchTradeOffer trade, float top)
+        {
+            var state = _hotSeat.State;
+            int counterSeat = _hsCounterSeat;
+            HsText(card, "CounterTitle", $"{state.Seats[counterSeat].Name}: your counter", 18, new Vector2(0.5f, 1f),
+                new Vector2(0f, top - 14f), new Vector2(600f, 24f), ColonistUiKit.InkGold, FontStyle.Bold);
+            const float x0 = 142f;
+            // The responder gives what the offerer gets, and gets what the offerer gives.
+            BuildTradeEditRow(card, "CYouGive", true, top - 96f, x0, () => _hsGet, b => _hsGet = b,
+                state.Seats[counterSeat].Hand, HsMark);
+            BuildTradeEditRow(card, "CYouGet", false, top - 236f, x0, () => _hsGive, b => _hsGive = b, Cap(9), HsMark);
+            TradeButton(card, "SendCounter", "Send", TradeGlyphSprites.Counter, new Vector2(1f, 1f),
+                new Vector2(-150f, top - 300f), new Vector2(170f, 50f), _hsGive.Total > 0 && _hsGet.Total > 0, true, () =>
+                {
+                    _hotSeat.Apply(MatchCommand.Respond(counterSeat, TradeResponseKind.Countered, _hsGive, _hsGet));
+                    _hsCounterSeat = -1;
+                    _hsTradeViewer = trade.From;
+                    HsMark();
+                }, 18);
+        }
     }
 }

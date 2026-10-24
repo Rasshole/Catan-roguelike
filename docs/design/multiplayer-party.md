@@ -311,6 +311,17 @@ how the group can playtest the rules before any server exists.
     for single-player too (map pick and act expansion), while the designed single-player 7/13/19-hex maps are unchanged.
   - The seat strip shows each seat's own leader in a seat-coloured ring with the civ name (seat number / AI tag on a
     badge); before the civs are revealed every seat shows a neutral silhouette.
+- **v138 (civ popup + icon trading):**
+  - No always-visible civ/quest panel. Clicking a leader portrait in the seat strip (or your civ emblem on the
+    single-player rail) opens a painted parchment popup beside the list: civ, leader, passive and drawback. The
+    trait and the secret quest (with its VP and progress) only show on your own seat's popup (the seat holding the
+    device); other seats' popups say they stay hidden until the game ends. It closes on a second click on the same
+    portrait, a click outside, the ✕, or when the device is passed.
+  - Trading uses icons and numbers instead of text (colonist.io-style, in our painted look): a red arrow on the
+    "you give" row and a green arrow on the "you get" row, click an icon to add and right-click (or −) to remove,
+    rate badges per resource (4:1 / 3:1 / 2:1, harbours in gold), compact per-player answers with ✓ / ✗ / ⇄ and
+    icon counters. Incoming offers are always drawn from the viewer's side (what you give is red). On a shared
+    device the offerer keeps the board; clicking a responder's disc hands the view to that seat to answer.
 
 ### Phase 4: Shenanigans on one device
 - Primitives: `SecretBallot`, `SealedBidAuction`, `Bounty` (robber-claim rule), `SecretCard` (sabotage).

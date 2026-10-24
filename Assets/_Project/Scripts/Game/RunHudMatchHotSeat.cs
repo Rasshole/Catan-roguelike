@@ -359,7 +359,6 @@ namespace CatanRoguelike.Game
             BuildTimerAndCharge();
             BuildHotSeatHand();
             BuildHotSeatDevCards();
-            BuildPartyInfo();
             BuildEventCard(state);
             BuildHotSeatActions();
             if (!s.IsOver && !s.PassScreenPending)
@@ -375,6 +374,7 @@ namespace CatanRoguelike.Game
                 BuildGameOver(state);
             else if (s.PassScreenPending)
                 BuildPassScreen(state.Acting);
+            BuildHotSeatInfoPopup(state);
 
             SetLayerRecursively(_hotSeatRoot.gameObject, HudCaptureUiLayer);
             HideRunHudForHotSeat();
@@ -457,6 +457,14 @@ namespace CatanRoguelike.Game
                         revealed ? ColonistRoguelikeArt.GetCivilizationPortrait(seat.Civilization) : NeutralLeaderSprite());
                     face.preserveAspect = true;
                     SetRect(face.rectTransform, new Vector2(0f, 0.5f), new Vector2(46f, 0f), new Vector2(68f, 68f));
+                    if (revealed)
+                        MakeSeatPortraitClickable(face, i); // v138: opens the civ info popup beside the strip
+                    if (revealed && _hsInfoSeat == i)
+                    {
+                        var sel = CreateDisc(row.rectTransform, "Selected", new Color(1f, 0.93f, 0.6f, 1f), 88f);
+                        SetRect(sel.rectTransform, new Vector2(0f, 0.5f), new Vector2(46f, 0f), new Vector2(88f, 88f));
+                        sel.transform.SetSiblingIndex(ring.transform.GetSiblingIndex());
+                    }
                     var badge = CreateDisc(row.rectTransform, "Badge", PlayerPieceVisuals.ColorForSeat(i), 30f);
                     SetRect(badge.rectTransform, new Vector2(0f, 0.5f), new Vector2(76f, -28f), new Vector2(30f, 30f));
                     var tag = RunHudUiFactory.CreateText(badge.rectTransform, "N", seat.IsAi ? "AI" : (i + 1).ToString(),

@@ -344,8 +344,18 @@ namespace CatanRoguelike.Game
                     _colonistHumanNameText.horizontalOverflow = HorizontalWrapMode.Overflow;
                     _civEmblemInPanel = go.AddComponent<Image>();
                     _civEmblemInPanel.preserveAspect = true;
-                    _civEmblemInPanel.raycastTarget = false;
+                    // v138: the emblem is the way into the civ info popup (no always-on civ panel).
+                    _civEmblemInPanel.raycastTarget = true;
+                    _spCivEmblemButton = go.AddComponent<Button>();
+                    _spCivEmblemButton.targetGraphic = _civEmblemInPanel;
+                    _spCivEmblemButton.onClick.AddListener(ToggleSinglePlayerCivInfo);
                 }
+            }
+
+            if (!hasCiv && _spCivInfoOpen)
+            {
+                _spCivInfoOpen = false;
+                RefreshSinglePlayerCivInfo(state);
             }
 
             if (_civEmblemInPanel != null)

@@ -267,7 +267,50 @@ namespace CatanRoguelike.Tests.PlayMode
             yield return Settle(hud);
             root = hud.HotSeatRootForTests;
             Assert.IsNotNull(root.Find("EventCard"), "event card shown");
-            Assert.IsNotNull(root.Find("PartyInfo"), "private civ/quest panel");
+            // v138: no always-visible civ/quest panel — the portraits in the strip open a popup instead.
+            Assert.IsNull(root.Find("PartyInfo"), "no always-on civ panel");
+            Assert.IsNull(hud.HotSeatInfoPopupForTests, "popup closed by default");
+            MaybeWrite(hud, "hud-no-left-panel.png");
+            int me = hud.HotSeatViewerSeat;
+            Assert.GreaterOrEqual(me, 0, "a human seat holds the device");
+            int other = Enumerable.Range(0, 5).First(i => i != me);
+            hud.ClickHotSeatPortraitForTests(me);
+            yield return Settle(hud);
+            var popup = hud.HotSeatInfoPopupForTests;
+            Assert.IsNotNull(popup, "own portrait opens the popup");
+            var myQuest = MatchPartyLibrary.Quest(state.Seats[me].Quest).Name;
+            Assert.IsTrue(popup.GetComponentsInChildren<Text>(true).Any(t => t.text.Contains(myQuest)), "own quest shown");
+            Assert.IsTrue(popup.GetComponentsInChildren<Text>(true).Any(t => t.text.Contains("SECRET QUEST")));
+            MaybeWrite(hud, "popup-own.png");
+            hud.ClickHotSeatPortraitForTests(me);
+            yield return Settle(hud);
+            Assert.IsNull(hud.HotSeatInfoPopupForTests, "second click on the same portrait closes");
+
+            hud.ClickHotSeatPortraitForTests(other);
+            yield return Settle(hud);
+            popup = hud.HotSeatInfoPopupForTests;
+            Assert.IsNotNull(popup, "another seat's portrait opens its popup");
+            Assert.AreEqual(other, hud.HotSeatInfoSeatForTests);
+            var otherQuest = MatchPartyLibrary.Quest(state.Seats[other].Quest).Name;
+            var otherTrait = MatchPartyLibrary.Trait(state.Seats[other].Trait).Name;
+            foreach (var t in popup.GetComponentsInChildren<Text>(true))
+            {
+                StringAssert.DoesNotContain("SECRET QUEST", t.text, "no quest section for other seats");
+                StringAssert.DoesNotContain(otherQuest, t.text, "another seat's quest never leaks");
+                StringAssert.DoesNotContain(otherTrait, t.text, "another seat's trait never leaks");
+            }
+
+            Assert.IsTrue(popup.GetComponentsInChildren<Text>(true).Any(t => t.text.Contains("hidden until the game ends")));
+            MaybeWrite(hud, "popup-other.png");
+            hud.ClickOutsideHotSeatInfoForTests();
+            yield return Settle(hud);
+            Assert.IsNull(hud.HotSeatInfoPopupForTests, "outside click closes");
+            hud.ClickHotSeatPortraitForTests(other);
+            yield return Settle(hud);
+            FindButton(hud.HotSeatRootForTests, "CivInfoClose").onClick.Invoke();
+            yield return Settle(hud);
+            Assert.IsNull(hud.HotSeatInfoPopupForTests, "✕ closes");
+            root = hud.HotSeatRootForTests;
             for (int i = 0; i < 5; i++)
                 Assert.AreEqual(state.Seats[i].PublicVictoryPoints.ToString(),
                     root.Find($"SeatStrip/Seat_{i}/VP").GetComponent<Text>().text, "strip never shows quest VP");

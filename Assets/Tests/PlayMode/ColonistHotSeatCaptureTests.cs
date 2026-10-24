@@ -353,10 +353,22 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.AreEqual(TradeResponseKind.Declined, state.ActiveTrade.Responses[3].Kind, "AI 4 has none");
             hud.RefreshHotSeatNow();
             yield return Settle(hud);
+            // v138: Freja looks at the incoming offer from her side (her give = Rasmus's get, in red).
+            hud.SetHotSeatTradeViewerForTests(1);
+            hud.RefreshHotSeatNow();
+            yield return Settle(hud);
+            Assert.IsNotNull(hud.HotSeatRootForTests.Find("TradeBoard"));
+            Assert.IsNotNull(FindButton(hud.HotSeatRootForTests, "Accept_1"), "responder answers with icon buttons");
+            Assert.IsFalse(hud.HotSeatRootForTests.Find("TradeBoard").GetComponentsInChildren<Text>(true)
+                .Any(t => t.text.Contains("Wood") || t.text.Contains("Ore") || t.text.Contains("Stone")), "icons, no resource words");
+            MaybeWrite(hud, "trade-incoming-freja.png");
+            hud.SetHotSeatTradeViewerForTests(0);
+            hud.RefreshHotSeatNow();
+            yield return Settle(hud);
             FindButton(hud.HotSeatRootForTests, "Counter_1").onClick.Invoke();
             hud.RefreshHotSeatNow();
             yield return Settle(hud);
-            FindButton(hud.HotSeatRootForTests, "CGiveMore_Wood").onClick.Invoke();
+            FindButton(hud.HotSeatRootForTests, "CYouGetMore_Wood").onClick.Invoke();
             hud.RefreshHotSeatNow();
             yield return Settle(hud);
             FindButton(hud.HotSeatRootForTests, "SendCounter").onClick.Invoke();

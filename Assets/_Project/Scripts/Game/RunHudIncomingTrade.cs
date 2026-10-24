@@ -18,6 +18,12 @@ namespace CatanRoguelike.Game
 
         private void BuildIncomingTradePanel(Transform canvasRoot)
         {
+            if (ColonistPresentation.IsActive)
+            {
+                BuildPaintedIncomingTradePanel(canvasRoot);
+                return;
+            }
+
             _incomingTradePanel = RunHudUiFactory.CreatePanel(
                 canvasRoot,
                 "IncomingAiTrade",
@@ -84,6 +90,12 @@ namespace CatanRoguelike.Game
                 return;
 
             var offer = state.IncomingAiTrade.Value;
+            if (ColonistPresentation.IsActive)
+            {
+                RefreshPaintedIncomingTrade(state, offer);
+                return;
+            }
+
             _incomingTradeText.text = FormatIncomingOffer(offer);
 
             bool canAfford = state.PlayerInventory.CanAfford(offer.Receive);

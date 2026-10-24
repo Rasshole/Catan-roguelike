@@ -37,6 +37,13 @@ namespace CatanRoguelike.Game
         {
             if (_tradeDialogRoot != null || _canvas == null)
                 return;
+            if (ColonistPresentation.IsActive)
+            {
+                BuildPaintedTradeDialogShell();
+                SetTradeDialogVisible(false);
+                return;
+            }
+
 
             _tradeDialogRoot = RunHudUiFactory.CreatePanel(
                 _canvas.transform,
@@ -247,6 +254,8 @@ namespace CatanRoguelike.Game
             SetTradeDialogVisible(true);
         }
 
+        public void CloseTradeDialogForTests() => SetTradeDialogVisible(false);
+
         public bool IsTradeDialogVisibleForTests => _tradeDialogRoot != null && _tradeDialogRoot.gameObject.activeInHierarchy;
 
         private void SetTradeDialogVisible(bool visible)
@@ -273,6 +282,12 @@ namespace CatanRoguelike.Game
             {
                 var offer = _controller.State.PendingPlayerTrade.Value;
                 sb.AppendLine($"Your offer: {FormatTradeBundle(offer.Give)} → {FormatTradeBundle(offer.Receive)}");
+            }
+
+            if (ColonistPresentation.IsActive && _tradeSummary == null)
+            {
+                RebuildPaintedTradeDialog(_controller.State);
+                return;
             }
 
             string body = sb.ToString().TrimEnd();

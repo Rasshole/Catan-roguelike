@@ -10,7 +10,7 @@ namespace CatanRoguelike.Game
     /// <summary>
     /// v136 pass-and-play party rules on the table HUD: the secret civilization pick (3 leaders) before
     /// placement, the secret quest + trait pick after snake placement (last placer first), the round's event
-    /// card, each player's private civ/quest panel, the robber victim picker and the game-over quest reveal.
+    /// card (v138: civ info moved to the strip popup), the robber victim picker and the game-over quest reveal.
     /// </summary>
     public sealed partial class RunHudController
     {
@@ -324,46 +324,6 @@ namespace CatanRoguelike.Game
                 && state.Board.TryGetTile(state.EventTile.Value, out var tile))
                 desc = $"The storm sits on the {ResourceLabel(tile.Resource)} {tile.NumberToken}: it produces nothing this round.";
             HsText(rt, "Desc", desc, 17, new Vector2(0.5f, 0f), new Vector2(0f, 64f), new Vector2(330f, 92f), ink);
-        }
-
-        private void BuildPartyInfo()
-        {
-            var s = _hotSeat;
-            var state = s.State;
-            if (!state.Config.PartyRules || state.Phase == MatchPhase.CivPick)
-                return;
-            int seat = state.ActingSeat;
-            if (!s.IsHandVisible(seat))
-                return;
-            var me = state.Seats[seat];
-            if (!CivilizationLibrary.TryGet(me.Civilization, out var def))
-                return;
-            var panel = CreateImage(_hotSeatRoot, "PartyInfo", null);
-            panel.preserveAspect = false;
-            ColonistUiKit.Apply(panel, UiKitPiece.FrameMedium);
-            SetRect(panel.rectTransform, new Vector2(0f, 0f), new Vector2(330f, 446f), new Vector2(580f, 184f));
-            var rt = panel.rectTransform;
-            var ink = ColonistUiKit.TextOn(UiKitPiece.FrameMedium);
-            var portrait = CreateImage(rt, "Portrait", ColonistRoguelikeArt.GetCivilizationPortrait(me.Civilization));
-            SetRect(portrait.rectTransform, new Vector2(0f, 0.5f), new Vector2(76f, 0f), new Vector2(96f, 96f));
-            var trait = MatchPartyLibrary.Trait(me.Trait);
-            HsText(rt, "Civ", def.Name + (trait != null ? $"  ·  {trait.Name}" : ""), 19, new Vector2(0f, 1f),
-                new Vector2(340f, -30f), new Vector2(420f, 26f), ink, FontStyle.Bold, TextAnchor.MiddleLeft);
-            var passive = HsText(rt, "Passive", "✦ " + MatchCivRules.Passive(me.Civilization)
-                    + (trait != null ? "\n✦ " + trait.Description : ""),
-                14, new Vector2(0f, 1f), new Vector2(340f, -92f), new Vector2(420f, 72f), ColonistUiKit.InkMuted,
-                FontStyle.Normal, TextAnchor.UpperLeft);
-            passive.horizontalOverflow = HorizontalWrapMode.Wrap;
-            passive.resizeTextForBestFit = true;
-            passive.resizeTextMinSize = 11;
-            passive.resizeTextMaxSize = 14;
-            var quest = MatchPartyLibrary.Quest(me.Quest);
-            string questLine = quest == null
-                ? "Secret quest: picked after placement"
-                : $"Secret quest: {quest.Name} ({quest.Points} VP)  ·  " +
-                  (me.QuestDone ? "done ✓" : $"{quest.CurrentProgress(s.Match, seat)}/{quest.Target}");
-            HsText(rt, "Quest", questLine, 17, new Vector2(0f, 0f), new Vector2(340f, 30f), new Vector2(420f, 24f),
-                me.QuestDone ? new Color(0.2f, 0.45f, 0.16f, 1f) : ink, FontStyle.Bold, TextAnchor.MiddleLeft);
         }
 
         // ---------- robber victim picker ----------

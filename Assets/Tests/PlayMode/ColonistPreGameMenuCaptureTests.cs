@@ -1,8 +1,12 @@
 using System.Collections;
 using System.IO;
 using System.Linq;
+using CatanRoguelike.Core;
+using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Leaders;
+using CatanRoguelike.Core.Trade;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Game;
 using NUnit.Framework;
@@ -219,6 +223,100 @@ namespace CatanRoguelike.Tests.PlayMode
             yield return null;
             Assert.IsTrue(hud.IsTradeDialogVisibleForTests, "trade dialog visible");
             MaybeWrite(hud, "trade");
+
+            // v138: icon + number trade card. Bank/port: 4 wheat -> 1 stone (or the harbour rate).
+            var state = controller.State;
+            // Harbours for the capture: a generic 3:1 and, when the map has one, the wheat 2:1.
+            foreach (var port in state.Ports.Where(p => p.IsGeneric).Take(1)
+                         .Concat(state.Ports.Where(p => p.SpecificResource == ResourceType.Wheat).Take(1)))
+                state.Board.VertexBuildings[port.Vertex] = (BuildingType.Settlement, PlayerId.Human);
+            state.PlayerInventory = new ResourceBundle { Wood = 2, Brick = 1, Wheat = 6, Sheep = 3, Stone = 0 };
+            int rate = BankTradeCalculator.GetGiveRateForResource(state, PlayerId.Human, ResourceType.Wheat);
+            hud.SetTradeTermsForTests(ResourceBundle.Zero, ResourceBundle.Zero);
+            var dialog = hud.TradeDialogRootForTests;
+            // Click the wheat slot `rate` times (adds), right-click once and add again (removes/adds).
+            var wheat = dialog.GetComponentsInChildren<Button>(true).First(b => b.name == "GiveMore_Wheat");
+            for (int i = 0; i < rate; i++)
+            {
+                wheat = dialog.GetComponentsInChildren<Button>(true).First(b => b.name == "GiveMore_Wheat");
+                wheat.onClick.Invoke();
+            }
+
+            dialog.GetComponentsInChildren<HudRightClickRelay>(true).First(b => b.name == "GiveMore_Wheat").RightClickForTests();
+            dialog.GetComponentsInChildren<Button>(true).First(b => b.name == "GiveMore_Wheat").onClick.Invoke();
+            dialog.GetComponentsInChildren<Button>(true).First(b => b.name == "GetMore_Stone").onClick.Invoke();
+            yield return null;
+            var bank = dialog.GetComponentsInChildren<Button>(true).First(b => b.name == "BankTrade");
+            Assert.IsTrue(bank.interactable, "bank trade enabled at " + rate + ":1");
+            Assert.IsTrue(dialog.GetComponentsInChildren<Image>(true).Any(i => i.name == "Rate_Wheat"), "rate badges");
+            Assert.IsFalse(dialog.GetComponentsInChildren<Text>(true).Any(t => t.text.Contains("Wheat") || t.text.Contains("Stone")),
+                "no resource words on the trade card");
+            Canvas.ForceUpdateCanvases();
+            yield return null;
+            MaybeWrite(hud, "trade-bank");
+            bank.onClick.Invoke();
+            yield return null;
+            Assert.AreEqual(1, controller.State.PlayerInventory.Stone, "bank trade executed");
+            Assert.AreEqual(6 - rate, controller.State.PlayerInventory.Wheat);
+
+            // Offer the opponent 2 sheep for 1 brick, then show its answer.
+            hud.SetTradeTermsForTests(new ResourceBundle { Sheep = 2 }, new ResourceBundle { Brick = 1 });
+            yield return null;
+            dialog.GetComponentsInChildren<Button>(true).First(b => b.name == "OfferAi").onClick.Invoke();
+            yield return null;
+            yield return null;
+            Assert.IsTrue(controller.State.PendingPlayerTrade.HasValue, "offer sent");
+            Assert.IsTrue(dialog.GetComponentsInChildren<Image>(true).Any(i => i.name == "OpponentDisc"), "opponent answer row");
+            Canvas.ForceUpdateCanvases();
+            yield return null;
+            MaybeWrite(hud, "trade-offer");
+            hud.CloseTradeDialogForTests();
+            controller.State.PendingPlayerTrade = null;
+            controller.State.PendingAiTradeResponses = System.Array.Empty<AiTradeResponse>();
+
+            // Incoming AI offer seen from your side: red = you give, green = you get.
+            controller.State.IncomingAiTrade = new AiIncomingTradeOffer(
+                new ResourceBundle { Stone = 1 }, new ResourceBundle { Wood = 1, Sheep = 1 });
+            yield return Settle(gameManager, h => hud = h);
+            var incoming = hud.IncomingTradePanelForTests;
+            Assert.IsTrue(incoming.gameObject.activeInHierarchy, "incoming offer visible");
+            Assert.IsTrue(incoming.GetComponentsInChildren<Image>(true).Any(i => i.name.StartsWith("YouGiveIcon")), "red row");
+            Assert.IsTrue(incoming.GetComponentsInChildren<Image>(true).Any(i => i.name.StartsWith("YouGetIcon")), "green row");
+            MaybeWrite(hud, "trade-incoming");
+            incoming.GetComponentsInChildren<Button>(true).First(b => b.name == "IncomingAccept").onClick.Invoke();
+            yield return null;
+            Assert.IsFalse(controller.State.IncomingAiTrade.HasValue, "incoming accepted");
+        }
+
+        [Timeout(120000)]
+        [UnityTest]
+        public IEnumerator CivEmblem_OpensInfoPopup()
+        {
+            yield return LoadScene();
+            var gameManager = Object.FindFirstObjectByType<GameManager>();
+            var controller = gameManager.Controller;
+            GameScenePlayHarness.CompleteRunSelect(controller, gameManager.Meta, fishermenOfCatan: true);
+            GameScenePlayHarness.CompleteSetup(controller);
+            GameScenePlayHarness.AdvanceToDayPlayerActions(controller);
+            controller.State.Civilization = CivilizationId.ForestFolk;
+            ColonistCapturePieceSeeding.ForceDemoBoardPiecesForCapture(controller.State);
+            Object.FindFirstObjectByType<BoardView>()?.Refresh(controller.State);
+
+            RunHudController hud = null;
+            yield return Settle(gameManager, h => hud = h);
+            Assert.IsFalse(hud.IsCivInfoPopupVisibleForTests, "no always-on civ panel");
+            MaybeWrite(hud, "sp-hud");
+            hud.ClickOwnCivEmblemForTests();
+            yield return null;
+            Assert.IsTrue(hud.IsCivInfoPopupVisibleForTests, "emblem opens the civ popup");
+            var name = CivilizationLibrary.Get(CivilizationId.ForestFolk).Name;
+            Assert.IsTrue(hud.CivInfoPopupForTests.GetComponentsInChildren<Text>(true).Any(t => t.text.Contains(name)));
+            Canvas.ForceUpdateCanvases();
+            yield return null;
+            MaybeWrite(hud, "sp-civ-popup");
+            hud.ClickOwnCivEmblemForTests();
+            yield return null;
+            Assert.IsFalse(hud.IsCivInfoPopupVisibleForTests, "second click closes");
         }
     }
 }
