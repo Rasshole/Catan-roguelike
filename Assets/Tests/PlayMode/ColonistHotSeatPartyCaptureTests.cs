@@ -437,6 +437,125 @@ namespace CatanRoguelike.Tests.PlayMode
             yield return Settle(hud);
         }
 
+        [Timeout(240000)]
+        [UnityTest]
+        public IEnumerator Trade_LeaderPortraits_SwappedRows_AndWildcardPicker()
+        {
+            yield return LoadScene();
+            var gameManager = Object.FindFirstObjectByType<GameManager>();
+            RunHudController hud = null;
+            yield return ReadyHud(gameManager, h => hud = h);
+
+            var config = PartyConfig(1362, (SeatKind.Human, "Rasmus"), (SeatKind.Human, "Freja"), (SeatKind.Ai, "AI 3"),
+                (SeatKind.Ai, "AI 4"));
+            hud.HotSeatClockFrozenForTests = true;
+            hud.StartHotSeat(config);
+            var s = hud.HotSeatSessionForTests;
+            var state = s.State;
+            Assert.IsTrue(Drive(s, () => state.CurrentSeat == 0 && state.Phase == MatchPhase.Main && state.ActiveTrade == null),
+                "Rasmus's main phase");
+            state.Seats[0].Hand = new ResourceBundle { Wood = 1, Brick = 2, Wheat = 2, Sheep = 1 };
+            state.Seats[1].Hand = new ResourceBundle { Wheat = 1, Stone = 2 };
+            state.Seats[2].Hand = new ResourceBundle { Sheep = 2, Stone = 1 };
+            state.Seats[3].Hand = new ResourceBundle { Wood = 1 };
+
+            // Compose: leaders on the card, "you get" on top, "you give" below.
+            hud.SetHotSeatTradeForTests(true, new ResourceBundle { Wood = 1 }, new ResourceBundle { Stone = 1 });
+            yield return Settle(hud);
+            var board = hud.HotSeatRootForTests.Find("TradeBoard");
+            Assert.IsNotNull(board);
+            Assert.Greater(board.Find("GetMore_Stone").position.y, board.Find("GiveMore_Wood").position.y, "get row on top");
+            var me = board.Find("ComposeFrom/Face")?.GetComponent<Image>();
+            Assert.IsNotNull(me, "own leader portrait");
+            Assert.AreSame(hud.HotSeatStripPortraitForTests(0), me.sprite, "same leader as the seat strip");
+            for (int j = 1; j < 4; j++)
+                Assert.AreSame(hud.HotSeatStripPortraitForTests(j), board.Find($"ComposeTo_{j}/Face")?.GetComponent<Image>()?.sprite,
+                    "leader of seat " + j);
+            MaybeWrite(hud, "trade-compose-portraits.png");
+
+            // Wildcard in the give row: "I want stone, you pick 1 of anything else I hold".
+            hud.SetHotSeatTradeForTests(true, ResourceBundle.Zero, new ResourceBundle { Stone = 1 });
+            yield return Settle(hud);
+            FindButton(hud.HotSeatRootForTests, "GiveMore_Any").onClick.Invoke();
+            yield return Settle(hud);
+            Assert.IsFalse(FindButton(hud.HotSeatRootForTests, "GetMore_Any").interactable, "wildcards on one side only");
+            Assert.IsTrue(FindButton(hud.HotSeatRootForTests, "ProposeTrade").interactable);
+            MaybeWrite(hud, "trade-compose-wildcard.png");
+            FindButton(hud.HotSeatRootForTests, "ProposeTrade").onClick.Invoke();
+            Assert.IsNotNull(state.ActiveTrade);
+            Assert.AreEqual(1, state.ActiveTrade.GiveAny);
+            Assert.AreEqual(TradeResponseKind.Accepted, state.ActiveTrade.Responses[2].Kind, "AI 3 takes the wildcard");
+            Assert.AreEqual(1, state.ActiveTrade.Responses[2].AnyChoice.Total);
+            Assert.AreEqual(TradeResponseKind.Declined, state.ActiveTrade.Responses[3].Kind, "AI 4 has no stone");
+
+            // Freja looks at the incoming offer: leaders for the offerer and every answer row.
+            hud.SetHotSeatTradeViewerForTests(1);
+            yield return Settle(hud);
+            board = hud.HotSeatRootForTests.Find("TradeBoard");
+            Assert.AreSame(hud.HotSeatStripPortraitForTests(0), board.Find("FromDisc/Face")?.GetComponent<Image>()?.sprite);
+            for (int j = 1; j < 4; j++)
+                Assert.AreSame(hud.HotSeatStripPortraitForTests(j), board.Find($"TradeDisc_{j}/Face")?.GetComponent<Image>()?.sprite);
+            Assert.Greater(board.Find("HeadGetArrow").position.y, board.Find("HeadGiveArrow").position.y,
+                "Freja's view: what she gets on top");
+            Assert.IsNotNull(board.Find("HeadGetIcon_Any"), "she gets the wildcard");
+            MaybeWrite(hud, "trade-incoming-portraits.png");
+
+            FindButton(hud.HotSeatRootForTests, "Accept_1").onClick.Invoke();
+            Assert.AreEqual(TradeResponseKind.Pending, state.ActiveTrade.Responses[1].Kind, "she picks first");
+            Assert.IsTrue(hud.HotSeatWildPickerOpenForTests);
+            yield return Settle(hud);
+            var picker = hud.HotSeatRootForTests.Find("TradeBoard/WildPicker");
+            Assert.IsNotNull(picker);
+            Assert.IsFalse(FindButton(picker, "WildPickMore_Stone").interactable, "never what Rasmus asks for");
+            Assert.IsFalse(FindButton(picker, "WildPickConfirm").interactable);
+            FindButton(picker, "WildPickMore_Brick").onClick.Invoke();
+            yield return Settle(hud);
+            picker = hud.HotSeatRootForTests.Find("TradeBoard/WildPicker");
+            Assert.IsTrue(FindButton(picker, "WildPickConfirm").interactable);
+            Assert.IsFalse(FindButton(picker, "WildPickMore_Wheat").interactable, "exactly one card");
+            MaybeWrite(hud, "trade-wildcard-picker.png");
+            FindButton(picker, "WildPickConfirm").onClick.Invoke();
+            Assert.AreEqual(TradeResponseKind.Accepted, state.ActiveTrade.Responses[1].Kind);
+            Assert.AreEqual(1, state.ActiveTrade.Responses[1].AnyChoice.Brick);
+            Assert.IsFalse(hud.HotSeatWildPickerOpenForTests);
+
+            hud.SetHotSeatTradeViewerForTests(0);
+            yield return Settle(hud);
+            MaybeWrite(hud, "trade-wildcard-answers.png");
+            FindButton(hud.HotSeatRootForTests, "Confirm_1").onClick.Invoke();
+            Assert.IsNull(state.ActiveTrade, "traded");
+            Assert.AreEqual(1, state.Seats[0].Hand.Stone);
+            Assert.AreEqual(1, state.Seats[0].Hand.Brick);
+            Assert.AreEqual(1, state.Seats[1].Hand.Brick);
+            Assert.AreEqual(1, state.Seats[1].Hand.Stone);
+            yield return Settle(hud);
+
+            // Wildcard in the get row: Rasmus picks from what the partner can spare when confirming.
+            hud.SetHotSeatTradeForTests(true, new ResourceBundle { Wheat = 1 }, ResourceBundle.Zero);
+            hud.SetHotSeatTradeWildcardsForTests(0, 1);
+            yield return Settle(hud);
+            FindButton(hud.HotSeatRootForTests, "ProposeTrade").onClick.Invoke();
+            Assert.AreEqual(1, state.ActiveTrade.GetAny);
+            Assert.AreEqual(TradeResponseKind.Accepted, state.ActiveTrade.Responses[2].Kind);
+            yield return Settle(hud);
+            FindButton(hud.HotSeatRootForTests, "Confirm_2").onClick.Invoke();
+            Assert.IsNotNull(state.ActiveTrade, "the pick comes before the swap");
+            Assert.IsTrue(hud.HotSeatWildPickerOpenForTests);
+            yield return Settle(hud);
+            picker = hud.HotSeatRootForTests.Find("TradeBoard/WildPicker");
+            Assert.IsFalse(FindButton(picker, "WildPickMore_Wood").interactable, "AI 3 has no wood");
+            FindButton(picker, "WildPickMore_Sheep").onClick.Invoke();
+            yield return Settle(hud);
+            FindButton(hud.HotSeatRootForTests.Find("TradeBoard/WildPicker"), "WildPickConfirm").onClick.Invoke();
+            Assert.IsNull(state.ActiveTrade);
+            Assert.AreEqual(2, state.Seats[0].Hand.Sheep);
+            Assert.AreEqual(1, state.Seats[0].Hand.Wheat);
+            Assert.AreEqual(1, state.Seats[2].Hand.Wheat);
+            yield return Settle(hud);
+            hud.ExitHotSeat();
+            yield return Settle(hud);
+        }
+
         private static Bounds Bounds(Transform t)
         {
             var rs = t.GetComponentsInChildren<Renderer>();

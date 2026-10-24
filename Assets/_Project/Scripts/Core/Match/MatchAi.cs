@@ -6,6 +6,8 @@ using CatanRoguelike.Core.Yield;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 
+using CatanRoguelike.Core.Trade;
+
 namespace CatanRoguelike.Core.Match
 {
     /// <summary>
@@ -53,13 +55,35 @@ namespace CatanRoguelike.Core.Match
             }
         }
 
-        /// <summary>v135: AI answer to an open offer: accept when it can pay and doesn't lose cards, else decline.</summary>
+        /// <summary>
+        /// v135: AI answer to an open offer: accept when it can pay and doesn't lose cards, else decline.
+        /// v139 wildcards: for "N of any resource" it picks what it holds fewest of (from what the offerer can
+        /// spare); for "give me N of anything" it accepts only when it has N other cards to spare.
+        /// </summary>
         public static MatchCommand ChooseTradeResponse(MatchController match, int seat)
         {
             var trade = match.State.ActiveTrade;
+            if (trade == null)
+                return MatchCommand.Respond(seat, TradeResponseKind.Declined);
             var hand = match.State.Seats[seat].Hand;
-            bool accept = trade != null && hand.CanAfford(trade.Get) && trade.Give.Total >= trade.Get.Total;
-            return MatchCommand.Respond(seat, accept ? TradeResponseKind.Accepted : TradeResponseKind.Declined);
+            var choice = ResourceBundle.Zero;
+            if (trade.GiveAny > 0)
+                choice = TradeWildcards.PickForNeed(match.AcceptWildPool(trade), trade.GiveAny, hand);
+            bool fair = trade.Give.Total + trade.GiveAny >= trade.Get.Total + trade.GetAny;
+            bool accept = fair && match.CanAcceptTrade(seat, trade, choice);
+            return accept
+                ? MatchCommand.AcceptWithChoice(seat, choice)
+                : MatchCommand.Respond(seat, TradeResponseKind.Declined);
+        }
+
+        /// <summary>v139: default pick for the offerer's get wildcards when confirming with <paramref name="partner"/>.</summary>
+        public static ResourceBundle ChooseConfirmWildcards(MatchController match, int partner)
+        {
+            var trade = match.State.ActiveTrade;
+            if (trade == null || trade.GetAny == 0)
+                return ResourceBundle.Zero;
+            var pool = MatchController.PartnerWildPool(match.State.Seats[partner].Hand, trade, trade.Responses[partner].AnyChoice);
+            return TradeWildcards.PickForNeed(pool, trade.GetAny, match.State.Seats[trade.From].Hand);
         }
 
         /// <summary>Play a knight when the robber sits on one of our producing tiles (or it clinches Largest Army).</summary>

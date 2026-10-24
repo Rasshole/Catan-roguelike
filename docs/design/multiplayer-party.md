@@ -322,6 +322,22 @@ how the group can playtest the rules before any server exists.
     rate badges per resource (4:1 / 3:1 / 2:1, harbours in gold), compact per-player answers with ✓ / ✗ / ⇄ and
     icon counters. Incoming offers are always drawn from the viewer's side (what you give is red). On a shared
     device the offerer keeps the board; clicking a responder's disc hands the view to that seat to answer.
+- **v139 (leaders on the trade card + wildcard trades):**
+  - Every trade surface (hot-seat composer, offer header, answer rows, the clickable hand-off discs, the
+    single-player answer row and incoming offer) shows the seat's leader portrait in a seat-coloured ring, like
+    the seat strip. Without party rules (no civ yet) it falls back to the coloured disc with the seat number /
+    "AI". The single-player AI has no civ and shows the neutral leader silhouette with an "AI" badge.
+  - Rows are swapped everywhere: "you get" (green ↓) on top, "you give" (red ↑) below — also for incoming offers
+    and counters, always from the viewer's side. The hot-seat card sits left of the board so it no longer covers it.
+  - A painted wildcard card (all 5 resources fanned on one parchment card) can be added to one side of an offer.
+    Give row: "N of any resource you choose" — the accepter picks when accepting. Get row: "N of anything" — the
+    offerer picks from what the accepter can spare when confirming. The pick uses an icon picker and is limited to
+    what the giver holds, never counting resources already named in the same trade. An offer may carry wildcards
+    only if the offerer holds N spare cards outside the requested resources; counters carry none.
+  - Rules: `MatchCommand.Propose(seat, give, get, giveAny, getAny)`, `AcceptWithChoice(seat, choice)` and
+    `Confirm(seat, partner, choice)` are plain serializable commands (JSON round-trip, replay hash includes the
+    wildcards and picks), validated in `MatchController` via `TradeWildcards`. The AI accepts a wildcard offer when
+    the card count is fair and takes the resource it holds fewest of; single-player uses the same helpers.
 
 ### Phase 4: Shenanigans on one device
 - Primitives: `SecretBallot`, `SealedBidAuction`, `Bounty` (robber-claim rule), `SecretCard` (sabotage).

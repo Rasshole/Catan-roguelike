@@ -726,7 +726,7 @@ namespace CatanRoguelike.Core
         {
             if (State.Phase != GamePhase.DayPlayerActions)
                 return false;
-            if (!State.PlayerInventory.CanAfford(offer.Give))
+            if (!PlayerTradeResolver.IsValidOffer(State, offer))
                 return false;
 
             State.PendingPlayerTrade = offer;
@@ -736,12 +736,17 @@ namespace CatanRoguelike.Core
             return true;
         }
 
-        public bool AcceptPlayerTradeWith(PlayerId acceptor)
+        /// <param name="receiveChoice">v139: what you take for the "anything" wildcards you asked for.</param>
+        public bool AcceptPlayerTradeWith(PlayerId acceptor, ResourceBundle receiveChoice = default)
         {
             if (!State.PendingPlayerTrade.HasValue)
                 return false;
             var offer = State.PendingPlayerTrade.Value;
-            if (!PlayerTradeResolver.TryExecute(State, acceptor, offer))
+            var aiChoice = ResourceBundle.Zero;
+            foreach (var r in State.PendingAiTradeResponses)
+                if (r.Ai == acceptor && r.Accept)
+                    aiChoice = r.Choice;
+            if (!PlayerTradeResolver.TryExecute(State, acceptor, offer, aiChoice, receiveChoice))
                 return false;
 
             State.PendingPlayerTrade = null;

@@ -14,7 +14,6 @@ namespace CatanRoguelike.Game
     /// </summary>
     public sealed partial class RunHudController
     {
-        /// <summary>The five tradeable resources in board order (the trade rows always show all five).</summary>
         /// <summary>Kicker on the ornate frame's wood band (cream-gold reads on the dark wood).</summary>
         private static readonly Color TradeKickerInk = new(0.98f, 0.86f, 0.56f, 1f);
 
@@ -22,6 +21,7 @@ namespace CatanRoguelike.Game
         private static readonly Vector2 TradeClosePos = new(-150f, -54f);
         private static readonly Vector2 TradeCloseSize = new(46f, 40f);
 
+        /// <summary>The five tradeable resources in board order (the trade rows always show all five).</summary>
         public static readonly ResourceType[] TradeResources =
         {
             ResourceType.Wood, ResourceType.Brick, ResourceType.Wheat, ResourceType.Sheep, ResourceType.Stone
@@ -30,8 +30,31 @@ namespace CatanRoguelike.Game
         private static readonly Color TradeGiveTint = new(1f, 0.86f, 0.80f, 1f);
         private static readonly Color TradeGetTint = new(0.86f, 0.96f, 0.80f, 1f);
 
-        public const float TradeSlot = 84f;
-        public const float TradeSlotPitch = 98f;
+        // v139: six slots per row (five resources + the wildcard card), so a little tighter than v138.
+        public const float TradeSlot = 76f;
+        public const float TradeSlotPitch = 86f;
+        private const float TradeWildGap = 14f;
+        private const float TradeRowArrow = 54f;
+        private static readonly Color TradeWildTint = new(1f, 0.90f, 0.62f, 1f);
+
+        /// <summary>Name suffix of the wildcard slot / icon (<c>GiveMore_Any</c>, <c>HeadGetIcon_Any</c>, …).</summary>
+        public const string TradeAnyKey = "Any";
+
+        /// <summary>v139: arrow x so a six-slot row sits centred in a card <paramref name="width"/> wide.</summary>
+        private static float TradeRowX0(float width, bool wild = true)
+        {
+            float row = TradeRowArrow / 2f + 46f + TradeSlot / 2f + (wild ? 5 : 4) * TradeSlotPitch + (wild ? TradeWildGap : 0f)
+                        + TradeSlot / 2f;
+            return (width - row) / 2f + TradeRowArrow / 2f;
+        }
+
+        /// <summary>v139: the wildcard slot of an edit row ("N of any resource").</summary>
+        private sealed class TradeWildSlot
+        {
+            public System.Func<int> Get;
+            public System.Action<int> Set;
+            public int Limit;
+        }
 
         private static Image TradeGlyph(RectTransform parent, string name, Sprite sprite, Vector2 anchor, Vector2 pos,
             float size)
@@ -85,19 +108,20 @@ namespace CatanRoguelike.Game
         /// Returns the width used. <paramref name="x"/> is the left edge relative to <paramref name="anchor"/>.
         /// </summary>
         private static float BuildTradeTerms(RectTransform parent, string key, bool give, ResourceBundle b,
-            Vector2 anchor, float x, float y, float icon = 40f)
+            Vector2 anchor, float x, float y, float icon = 40f, int any = 0)
         {
             float cursor = x;
             TradeGlyph(parent, key + "Arrow", give ? TradeGlyphSprites.GiveArrow : TradeGlyphSprites.GetArrow, anchor,
                 new Vector2(cursor + icon * 0.4f, y), icon * 0.8f);
             cursor += icon * 0.8f + 6f;
-            bool any = false;
+            int anyCount = any;
+            bool anyShown = false;
             foreach (var r in TradeResources)
             {
                 int n = b[r];
                 if (n <= 0)
                     continue;
-                any = true;
+                anyShown = true;
                 var img = CreateImage(parent, key + "Icon_" + r, ColonistHudResourceSprites.Get(r));
                 SetRect(img.rectTransform, anchor, new Vector2(cursor + icon / 2f, y), new Vector2(icon, icon));
                 var count = RunHudUiFactory.CreateText(parent, key + "N_" + r, n.ToString(), Mathf.RoundToInt(icon * 0.5f),
@@ -106,7 +130,20 @@ namespace CatanRoguelike.Game
                 cursor += icon + 28f;
             }
 
-            if (!any)
+            if (anyCount > 0)
+            {
+                anyShown = true;
+                var img = CreateImage(parent, key + "Icon_" + TradeAnyKey, TradeGlyphSprites.AnyResource);
+                img.preserveAspect = true;
+                SetRect(img.rectTransform, anchor, new Vector2(cursor + icon / 2f, y), new Vector2(icon, icon));
+                var count = RunHudUiFactory.CreateText(parent, key + "N_" + TradeAnyKey, anyCount.ToString(),
+                    Mathf.RoundToInt(icon * 0.5f), TextAnchor.MiddleLeft, give ? ColonistUiKit.InkBad : ColonistUiKit.InkGood,
+                    FontStyle.Bold);
+                SetRect(count.rectTransform, anchor, new Vector2(cursor + icon + 12f, y), new Vector2(24f, icon));
+                cursor += icon + 28f;
+            }
+
+            if (!anyShown)
             {
                 var none = RunHudUiFactory.CreateText(parent, key + "None", "—", Mathf.RoundToInt(icon * 0.55f),
                     TextAnchor.MiddleCenter, ColonistUiKit.InkMuted, FontStyle.Bold);
@@ -118,9 +155,9 @@ namespace CatanRoguelike.Game
         }
 
         /// <summary>Width <see cref="BuildTradeTerms"/> would use (for centring / right-aligning).</summary>
-        private static float TradeTermsWidth(ResourceBundle b, float icon = 40f)
+        private static float TradeTermsWidth(ResourceBundle b, float icon = 40f, int any = 0)
         {
-            int kinds = 0;
+            int kinds = any > 0 ? 1 : 0;
             foreach (var r in TradeResources)
                 if (b[r] > 0)
                     kinds++;
@@ -128,27 +165,26 @@ namespace CatanRoguelike.Game
         }
 
         /// <summary>
-        /// One editable row: arrow + five icon slots. Left-click adds (up to <paramref name="limit"/>), right-click or
-        /// the − below removes. Buttons are named <c>{key}More_{r}</c> / <c>{key}Less_{r}</c>.
+        /// One editable row: arrow + five icon slots (+ the v139 wildcard card when <paramref name="wild"/> is set).
+        /// Left-click adds (up to <paramref name="limit"/>), right-click or the − below removes. Buttons are named
+        /// <c>{key}More_{r}</c> / <c>{key}Less_{r}</c> (<c>{key}More_Any</c> for the wildcard).
         /// </summary>
         private static void BuildTradeEditRow(RectTransform card, string key, bool give, float y, float x0,
             System.Func<ResourceBundle> get, System.Action<ResourceBundle> set, ResourceBundle limit,
-            System.Action changed)
+            System.Action changed, TradeWildSlot wild = null)
         {
             var anchor = new Vector2(0f, 1f);
             TradeGlyph(card, key + "Arrow", give ? TradeGlyphSprites.GiveArrow : TradeGlyphSprites.GetArrow, anchor,
-                new Vector2(x0, y), 58f);
+                new Vector2(x0, y), TradeRowArrow);
             for (int i = 0; i < TradeResources.Length; i++)
             {
                 var r = TradeResources[i];
-                float x = x0 + 50f + TradeSlot / 2f + i * TradeSlotPitch;
-                int n = get()[r];
-                bool canAdd = n < limit[r];
+                float x = x0 + 46f + TradeSlot / 2f + i * TradeSlotPitch;
 
                 void Add(int delta)
                 {
                     var b = get();
-                    int next = Mathf.Clamp(b[r] + delta, 0, limit[r]);
+                    int next = Mathf.Clamp(b[r] + delta, 0, Mathf.Max(b[r], limit[r]));
                     if (next == b[r])
                         return;
                     b.Set(r, next);
@@ -156,39 +192,176 @@ namespace CatanRoguelike.Game
                     changed?.Invoke();
                 }
 
-                var slot = CreateImage(card, key + "More_" + r, null);
-                slot.preserveAspect = false;
-                ColonistUiKit.Apply(slot, UiKitPiece.FrameThin, 1f, n > 0 ? (give ? TradeGiveTint : TradeGetTint) : Color.white);
-                slot.raycastTarget = true;
-                SetRect(slot.rectTransform, anchor, new Vector2(x, y), new Vector2(TradeSlot, TradeSlot));
-                var button = slot.gameObject.AddComponent<Button>();
-                button.targetGraphic = slot;
-                button.interactable = canAdd;
-                var colors = button.colors;
-                colors.highlightedColor = new Color(1f, 0.97f, 0.88f, 1f);
-                colors.disabledColor = Color.white;
-                button.colors = colors;
-                button.onClick.AddListener(() => Add(1));
-                slot.gameObject.AddComponent<HudRightClickRelay>().OnRightClick = () => Add(-1);
+                BuildTradeSlot(card, key, r.ToString(), give, x, y, get()[r], limit[r],
+                    ColonistHudResourceSprites.Get(r), false, Add);
+            }
 
-                var icon = CreateImage(slot.rectTransform, "Icon", ColonistHudResourceSprites.Get(r));
-                SetRect(icon.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(60f, 60f));
-                if (limit[r] <= 0 && n == 0)
-                    icon.color = new Color(1f, 1f, 1f, 0.32f);
+            if (wild == null)
+                return;
+            float wx = x0 + 46f + TradeSlot / 2f + TradeResources.Length * TradeSlotPitch + TradeWildGap;
 
-                if (n > 0)
+            void AddAny(int delta)
+            {
+                int n = wild.Get();
+                int next = Mathf.Clamp(n + delta, 0, Mathf.Max(n, wild.Limit));
+                if (next == n)
+                    return;
+                wild.Set(next);
+                changed?.Invoke();
+            }
+
+            BuildTradeSlot(card, key, TradeAnyKey, give, wx, y, wild.Get(), wild.Limit, TradeGlyphSprites.AnyResource,
+                true, AddAny);
+        }
+
+        private static void BuildTradeSlot(RectTransform card, string key, string suffix, bool give, float x, float y,
+            int n, int limit, Sprite sprite, bool wild, System.Action<int> add)
+        {
+            var anchor = new Vector2(0f, 1f);
+            var slot = CreateImage(card, key + "More_" + suffix, null);
+            slot.preserveAspect = false;
+            var tint = n > 0 ? (give ? TradeGiveTint : TradeGetTint) : wild ? TradeWildTint : Color.white;
+            ColonistUiKit.Apply(slot, UiKitPiece.FrameThin, 1f, tint);
+            slot.raycastTarget = true;
+            SetRect(slot.rectTransform, anchor, new Vector2(x, y), new Vector2(TradeSlot, TradeSlot));
+            var button = slot.gameObject.AddComponent<Button>();
+            button.targetGraphic = slot;
+            button.interactable = n < limit;
+            var colors = button.colors;
+            colors.highlightedColor = new Color(1f, 0.97f, 0.88f, 1f);
+            colors.disabledColor = Color.white;
+            button.colors = colors;
+            button.onClick.AddListener(() => add(1));
+            slot.gameObject.AddComponent<HudRightClickRelay>().OnRightClick = () => add(-1);
+
+            var icon = CreateImage(slot.rectTransform, "Icon", sprite);
+            icon.preserveAspect = true;
+            float iconSize = wild ? 62f : 54f;
+            SetRect(icon.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(iconSize, iconSize));
+            if (limit <= 0 && n == 0)
+                icon.color = new Color(1f, 1f, 1f, 0.32f);
+
+            if (n > 0)
+            {
+                var badge = CreateDisc(slot.rectTransform, "Count", give ? TradeGlyphSprites.GiveRed : TradeGlyphSprites.GetGreen, 32f);
+                SetRect(badge.rectTransform, new Vector2(1f, 1f), new Vector2(-6f, -6f), new Vector2(32f, 32f));
+                var t = RunHudUiFactory.CreateText(badge.rectTransform, "N", n.ToString(), 19, TextAnchor.MiddleCenter,
+                    ColonistUiKit.Cream, FontStyle.Bold);
+                Stretch(t.rectTransform);
+            }
+
+            var less = TradeButton(card, key + "Less_" + suffix, "−", null, anchor, new Vector2(x, y - TradeSlot / 2f - 17f),
+                new Vector2(44f, 26f), n > 0, false, () => add(-1), 20);
+            less.GetComponentInChildren<Text>().rectTransform.offsetMin = new Vector2(0f, 2f);
+        }
+
+        // ---------- v139: leader portraits + the wildcard picker ----------
+
+        /// <summary>
+        /// A player's leader portrait in a small seat-coloured ring (as on the seat strip), with the seat number /
+        /// AI tag on a small badge. Without a leader (party rules off) it is the plain coloured disc with the tag.
+        /// The ring is named <paramref name="name"/>; the portrait is its child "Face".
+        /// </summary>
+        private static Image BuildTradePortrait(RectTransform parent, string name, Color ring, Sprite portrait, string tag,
+            Color tagInk, Vector2 anchor, Vector2 pos, float size)
+        {
+            var disc = CreateDisc(parent, name, ring, size);
+            SetRect(disc.rectTransform, anchor, pos, new Vector2(size, size));
+            if (portrait == null)
+            {
+                if (!string.IsNullOrEmpty(tag))
                 {
-                    var badge = CreateDisc(slot.rectTransform, "Count", give ? TradeGlyphSprites.GiveRed : TradeGlyphSprites.GetGreen, 34f);
-                    SetRect(badge.rectTransform, new Vector2(1f, 1f), new Vector2(-6f, -6f), new Vector2(34f, 34f));
-                    var t = RunHudUiFactory.CreateText(badge.rectTransform, "N", n.ToString(), 20, TextAnchor.MiddleCenter,
-                        ColonistUiKit.Cream, FontStyle.Bold);
+                    var t = RunHudUiFactory.CreateText(disc.rectTransform, "Tag", tag,
+                        Mathf.RoundToInt(size * (tag.Length > 1 ? 0.32f : 0.42f)), TextAnchor.MiddleCenter, tagInk,
+                        FontStyle.Bold);
+                    t.raycastTarget = false;
                     Stretch(t.rectTransform);
                 }
 
-                var less = TradeButton(card, key + "Less_" + r, "−", null, anchor, new Vector2(x, y - TradeSlot / 2f - 18f),
-                    new Vector2(46f, 28f), n > 0, false, () => Add(-1), 20);
-                less.GetComponentInChildren<Text>().rectTransform.offsetMin = new Vector2(0f, 2f);
+                return disc;
             }
+
+            var face = CreateImage(disc.rectTransform, "Face", portrait);
+            face.preserveAspect = true;
+            face.raycastTarget = false;
+            SetRect(face.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(size * 0.86f, size * 0.86f));
+            if (!string.IsNullOrEmpty(tag))
+            {
+                float b = Mathf.Round(size * 0.40f);
+                var badge = CreateDisc(disc.rectTransform, "Badge", ring, b);
+                SetRect(badge.rectTransform, new Vector2(1f, 0f), new Vector2(-b * 0.22f, b * 0.22f), new Vector2(b, b));
+                badge.raycastTarget = false;
+                var t = RunHudUiFactory.CreateText(badge.rectTransform, "Tag", tag,
+                    Mathf.RoundToInt(b * (tag.Length > 1 ? 0.44f : 0.58f)), TextAnchor.MiddleCenter, tagInk, FontStyle.Bold);
+                t.raycastTarget = false;
+                Stretch(t.rectTransform);
+            }
+
+            return disc;
+        }
+
+        /// <summary>Makes a portrait ring clickable (the "hand me the device" switch on the trade board).</summary>
+        private static Button MakeTradePortraitButton(Image ring, bool enabled, System.Action click)
+        {
+            ring.raycastTarget = true;
+            var b = ring.gameObject.AddComponent<Button>();
+            b.targetGraphic = ring;
+            var colors = b.colors;
+            colors.disabledColor = Color.white;
+            colors.highlightedColor = new Color(1f, 0.95f, 0.8f, 1f);
+            b.colors = colors;
+            b.interactable = enabled;
+            if (click != null)
+                b.onClick.AddListener(() => click());
+            return b;
+        }
+
+        public const float TradePickerHeight = 186f;
+
+        /// <summary>
+        /// v139 wildcard picker: choose exactly <paramref name="n"/> cards from <paramref name="pool"/> (what the other
+        /// player can spare). Slots <c>WildPickMore_{r}</c>, buttons <c>WildPickConfirm</c> / <c>WildPickCancel</c>,
+        /// all under a "WildPicker" container placed <paramref name="top"/> from the card's top.
+        /// </summary>
+        private static RectTransform BuildTradeWildPicker(RectTransform card, string title, float top, float width, int n,
+            ResourceBundle pool, System.Func<ResourceBundle> get, System.Action<ResourceBundle> set, System.Action changed,
+            System.Action confirm, System.Action cancel)
+        {
+            var box = new GameObject("WildPicker").AddComponent<RectTransform>();
+            box.SetParent(card, false);
+            box.anchorMin = new Vector2(0f, 1f);
+            box.anchorMax = new Vector2(0f, 1f);
+            box.pivot = new Vector2(0f, 1f);
+            box.anchoredPosition = new Vector2(0f, top);
+            box.sizeDelta = new Vector2(width, TradePickerHeight);
+            var bg = CreateImage(box, "Bg", null);
+            bg.preserveAspect = false;
+            ColonistUiKit.Apply(bg, UiKitPiece.FrameThin, 0.7f, new Color(1f, 0.93f, 0.74f, 1f));
+            bg.raycastTarget = false;
+            bg.rectTransform.anchorMin = Vector2.zero;
+            bg.rectTransform.anchorMax = Vector2.one;
+            bg.rectTransform.offsetMin = new Vector2(58f, 4f);
+            bg.rectTransform.offsetMax = new Vector2(-58f, -4f);
+
+            var anchor = new Vector2(0f, 1f);
+            var any = TradeGlyph(box, "AnyIcon", TradeGlyphSprites.AnyResource, anchor, new Vector2(98f, -34f), 40f);
+            any.raycastTarget = false;
+            var picked = get();
+            var text = RunHudUiFactory.CreateText(box, "Title", $"{title}  ·  {picked.Total}/{n}", 18, TextAnchor.MiddleLeft,
+                ColonistUiKit.Ink, FontStyle.Bold);
+            SetRect(text.rectTransform, anchor, new Vector2(126f + 190f, -34f), new Vector2(380f, 28f));
+
+            var limit = ResourceBundle.Zero;
+            foreach (var r in TradeResources)
+                limit.Set(r, Mathf.Min(pool[r], picked[r] + Mathf.Max(0, n - picked.Total)));
+            BuildTradeEditRow(box, "WildPick", false, -106f, TradeRowX0(width, false), get, set, limit,
+                changed);
+            TradeButton(box, "WildPickConfirm", "", TradeGlyphSprites.CheckCream, new Vector2(1f, 1f),
+                new Vector2(-148f, -34f), new Vector2(72f, 44f), picked.Total == n && pool.CanAfford(picked), true,
+                confirm);
+            TradeButton(box, "WildPickCancel", "", TradeGlyphSprites.Cross, new Vector2(1f, 1f), new Vector2(-92f, -34f),
+                new Vector2(44f, 44f), true, false, cancel);
+            return box;
         }
 
         /// <summary>Row of rate badges: resource icon + "4:1" / "3:1" / "2:1" (harbour rates highlighted).</summary>

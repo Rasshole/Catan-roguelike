@@ -82,6 +82,16 @@ namespace CatanRoguelike.Core.Match
         /// <summary>v136: trait id picked with the quest.</summary>
         public int Pick2 { get; set; }
 
+        /// <summary>v139 ProposeTrade: wildcards the offerer gives ("N of any resource you choose").</summary>
+        public int GiveAny { get; set; }
+        /// <summary>v139 ProposeTrade: wildcards the offerer asks for ("N of anything").</summary>
+        public int GetAny { get; set; }
+        /// <summary>
+        /// v139 wildcard pick. RespondTrade(Accepted): the resources the accepter takes for the offerer's give
+        /// wildcards. ConfirmTrade: the resources the offerer takes for the get wildcards.
+        /// </summary>
+        public ResourceBundle Choice { get; set; }
+
         [JsonIgnore]
         public Vertex Vertex => new(new HexCoord(Q, R), Corner);
 
@@ -121,8 +131,17 @@ namespace CatanRoguelike.Core.Match
         public static MatchCommand DiscardCards(int seat, ResourceBundle cards) =>
             new() { Type = MatchCommandType.Discard, Seat = seat, Offer = cards };
 
-        public static MatchCommand Propose(int seat, ResourceBundle give, ResourceBundle get) =>
-            new() { Type = MatchCommandType.ProposeTrade, Seat = seat, Offer = give, Request = get };
+        public static MatchCommand Propose(int seat, ResourceBundle give, ResourceBundle get, int giveAny = 0,
+            int getAny = 0) =>
+            new()
+            {
+                Type = MatchCommandType.ProposeTrade, Seat = seat, Offer = give, Request = get, GiveAny = giveAny,
+                GetAny = getAny
+            };
+
+        /// <summary>v139: accept, picking <paramref name="choice"/> for the offerer's give wildcards.</summary>
+        public static MatchCommand AcceptWithChoice(int seat, ResourceBundle choice) =>
+            new() { Type = MatchCommandType.RespondTrade, Seat = seat, Response = TradeResponseKind.Accepted, Choice = choice };
 
         public static MatchCommand Respond(int seat, TradeResponseKind response, ResourceBundle counterGive = default,
             ResourceBundle counterGet = default) =>
@@ -134,8 +153,8 @@ namespace CatanRoguelike.Core.Match
         public static MatchCommand PickQuestTrait(int seat, MatchQuestId quest, MatchTraitId trait) =>
             new() { Type = MatchCommandType.PickQuest, Seat = seat, Pick = (int)quest, Pick2 = (int)trait };
 
-        public static MatchCommand Confirm(int seat, int partner) =>
-            new() { Type = MatchCommandType.ConfirmTrade, Seat = seat, Victim = partner };
+        public static MatchCommand Confirm(int seat, int partner, ResourceBundle choice = default) =>
+            new() { Type = MatchCommandType.ConfirmTrade, Seat = seat, Victim = partner, Choice = choice };
 
         public string ToJson() => JsonConvert.SerializeObject(this);
 
@@ -151,7 +170,8 @@ namespace CatanRoguelike.Core.Match
             && Corner == other.Corner && Q2 == other.Q2 && R2 == other.R2 && Corner2 == other.Corner2
             && Victim == other.Victim && Give == other.Give && Receive == other.Receive
             && SameBundle(Offer, other.Offer) && SameBundle(Request, other.Request) && Response == other.Response
-            && Pick == other.Pick && Pick2 == other.Pick2;
+            && Pick == other.Pick && Pick2 == other.Pick2 && GiveAny == other.GiveAny && GetAny == other.GetAny
+            && SameBundle(Choice, other.Choice);
 
         private static bool SameBundle(ResourceBundle a, ResourceBundle b) =>
             a.Wood == b.Wood && a.Brick == b.Brick && a.Wheat == b.Wheat && a.Sheep == b.Sheep && a.Stone == b.Stone;
@@ -168,7 +188,7 @@ namespace CatanRoguelike.Core.Match
             MatchCommandType.MoveRobber => $"{Type}(seat {Seat}, {Hex}, victim {Victim})",
             MatchCommandType.BankTrade => $"{Type}(seat {Seat}, {Give}->{Receive})",
             MatchCommandType.Discard => $"{Type}(seat {Seat}, {Offer.Total} cards)",
-            MatchCommandType.ProposeTrade => $"{Type}(seat {Seat}, give {Offer.Total} get {Request.Total})",
+            MatchCommandType.ProposeTrade => $"{Type}(seat {Seat}, give {Offer.Total}+{GiveAny}* get {Request.Total}+{GetAny}*)",
             MatchCommandType.RespondTrade => $"{Type}(seat {Seat}, {Response})",
             MatchCommandType.ConfirmTrade => $"{Type}(seat {Seat} with {Victim})",
             MatchCommandType.PlayYearOfPlenty => $"{Type}(seat {Seat}, {Give}+{Receive})",

@@ -25,6 +25,27 @@ namespace CatanRoguelike.Game
         /// <summary>Cream marks for green / red buttons (no outline).</summary>
         public static Sprite CheckCream => _checkInk ??= Make("TradeCheckCream", ColonistUiKit.Cream, CheckStrokes, 0.10f, false);
 
+        private static Sprite _any;
+
+        /// <summary>
+        /// v139 wildcard card: the five painted resource icons fanned on one parchment card
+        /// (Art/Icons/Painted/AnyResource, made by tools/art/make_wildcard_card.py). Falls back to the ⇄ glyph.
+        /// </summary>
+        public static Sprite AnyResource
+        {
+            get
+            {
+                if (_any != null)
+                    return _any;
+                var tex = Resources.Load<Texture2D>("Art/Icons/Painted/AnyResource");
+                if (tex == null)
+                    return Counter;
+                _any = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+                _any.name = "TradeAnyResource";
+                return _any;
+            }
+        }
+
         public static Sprite CrossCream => _crossInk ??= Make("TradeCrossCream", ColonistUiKit.Cream, CrossStrokes, 0.10f, false);
 
         private static readonly Vector2[][] ArrowUp =

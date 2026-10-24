@@ -11,6 +11,8 @@ using CatanRoguelike.Core.Victory;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 
+using CatanRoguelike.Core.Trade;
+
 namespace CatanRoguelike.Core.Match
 {
     /// <summary>
@@ -675,13 +677,24 @@ namespace CatanRoguelike.Core.Match
         {
             if (State.Phase != MatchPhase.Main)
                 return MatchCommandResult.Rejected("Roll first.");
-            if (!IsValidBundle(c.Offer) || !IsValidBundle(c.Request) || c.Offer.Total == 0 || c.Request.Total == 0)
+            if (!IsValidBundle(c.Offer) || !IsValidBundle(c.Request))
+                return MatchCommandResult.Rejected("Invalid cards.");
+            if (c.GiveAny < 0 || c.GetAny < 0 || c.GiveAny > TradeWildcards.MaxWildcards || c.GetAny > TradeWildcards.MaxWildcards)
+                return MatchCommandResult.Rejected("Invalid wildcard count.");
+            if (c.GiveAny > 0 && c.GetAny > 0)
+                return MatchCommandResult.Rejected("Wildcards go on one side of a trade only.");
+            if (c.Offer.Total + c.GiveAny == 0 || c.Request.Total + c.GetAny == 0)
                 return MatchCommandResult.Rejected("Offer at least one card and ask for at least one.");
             if (AllResources.Any(r => c.Offer[r] > 0 && c.Request[r] > 0))
                 return MatchCommandResult.Rejected("Don't offer and ask for the same resource.");
             if (!State.Current.Hand.CanAfford(c.Offer))
                 return MatchCommandResult.Rejected("You don't have the cards you offer.");
-            State.ActiveTrade = new MatchTradeOffer { From = c.Seat, Give = c.Offer, Get = c.Request };
+            if (c.GiveAny > 0 && OffererWildPool(State.Current.Hand, c.Offer, c.Request).Total < c.GiveAny)
+                return MatchCommandResult.Rejected("Not enough other cards to back the wildcard.");
+            State.ActiveTrade = new MatchTradeOffer
+            {
+                From = c.Seat, Give = c.Offer, Get = c.Request, GiveAny = c.GiveAny, GetAny = c.GetAny
+            };
             for (int i = 0; i < State.Seats.Count; i++)
                 State.ActiveTrade.Responses.Add(new MatchTradeResponse
                 {
@@ -689,6 +702,37 @@ namespace CatanRoguelike.Core.Match
                 });
             AppendLog($"{State.Current.Name} offers a trade.");
             return MatchCommandResult.Accepted;
+        }
+
+        /// <summary>
+        /// v139: what an offerer's give wildcards may become — their hand minus the cards already offered, never a
+        /// resource they ask for in the same trade.
+        /// </summary>
+        public static ResourceBundle OffererWildPool(ResourceBundle offererHand, ResourceBundle give, ResourceBundle get) =>
+            TradeWildcards.Pool(offererHand, give, get);
+
+        /// <summary>
+        /// v139: what the offerer may take for their get wildcards — the partner's hand minus the cards the partner
+        /// already gives, never a resource the offerer hands over (offered or picked by the partner).
+        /// </summary>
+        public static ResourceBundle PartnerWildPool(ResourceBundle partnerHand, MatchTradeOffer trade, ResourceBundle anyChoice) =>
+            TradeWildcards.Pool(partnerHand, trade.Get, trade.Give, anyChoice);
+
+        /// <summary>v139: the open offer's pool for the accepter's wildcard pick (from the offerer's hand).</summary>
+        public ResourceBundle AcceptWildPool(MatchTradeOffer trade) =>
+            OffererWildPool(State.Seats[trade.From].Hand, trade.Give, trade.Get);
+
+        /// <summary>v139: whether <paramref name="seat"/> could accept the open offer (cards + wildcard backing).</summary>
+        public bool CanAcceptTrade(int seat, MatchTradeOffer trade, ResourceBundle anyChoice)
+        {
+            var hand = State.Seats[seat].Hand;
+            if (!hand.CanAfford(trade.Get))
+                return false;
+            if (trade.GiveAny > 0 && !TradeWildcards.Fits(anyChoice, AcceptWildPool(trade), trade.GiveAny))
+                return false;
+            if (trade.GiveAny == 0 && anyChoice.Total != 0)
+                return false;
+            return trade.GetAny == 0 || PartnerWildPool(hand, trade, anyChoice).Total >= trade.GetAny;
         }
 
         private MatchCommandResult RespondTrade(MatchCommand c)
@@ -699,21 +743,34 @@ namespace CatanRoguelike.Core.Match
             switch (c.Response)
             {
                 case TradeResponseKind.Accepted:
+                    if (!IsValidBundle(c.Choice))
+                        return MatchCommandResult.Rejected("Invalid wildcard pick.");
                     if (!responder.Hand.CanAfford(trade.Get))
                         return MatchCommandResult.Rejected("You don't have the cards they ask for.");
+                    if (trade.GiveAny > 0 && !TradeWildcards.Fits(c.Choice, AcceptWildPool(trade), trade.GiveAny))
+                        return MatchCommandResult.Rejected($"Pick {trade.GiveAny} card(s) they can give.");
+                    if (trade.GiveAny == 0 && c.Choice.Total != 0)
+                        return MatchCommandResult.Rejected("There is no wildcard to pick for.");
+                    if (trade.GetAny > 0 && PartnerWildPool(responder.Hand, trade, c.Choice).Total < trade.GetAny)
+                        return MatchCommandResult.Rejected("You don't have enough other cards for their wildcard.");
                     response.Kind = TradeResponseKind.Accepted;
+                    response.AnyChoice = c.Choice;
                     break;
                 case TradeResponseKind.Declined:
                     response.Kind = TradeResponseKind.Declined;
+                    response.AnyChoice = ResourceBundle.Zero;
                     break;
                 case TradeResponseKind.Countered:
                     if (!IsValidBundle(c.Offer) || !IsValidBundle(c.Request) || c.Offer.Total == 0 || c.Request.Total == 0)
                         return MatchCommandResult.Rejected("A counter needs cards on both sides.");
+                    if (AllResources.Any(r => c.Offer[r] > 0 && c.Request[r] > 0))
+                        return MatchCommandResult.Rejected("Don't offer and ask for the same resource.");
                     if (!responder.Hand.CanAfford(c.Request))
                         return MatchCommandResult.Rejected("You don't have the cards you counter with.");
                     response.Kind = TradeResponseKind.Countered;
                     response.CounterGive = c.Offer;
                     response.CounterGet = c.Request;
+                    response.AnyChoice = ResourceBundle.Zero;
                     break;
                 default:
                     return MatchCommandResult.Rejected("Accept, decline or counter.");
@@ -729,23 +786,40 @@ namespace CatanRoguelike.Core.Match
                 return MatchCommandResult.Rejected("No offer of yours is open.");
             if (c.Victim < 0 || c.Victim >= State.Seats.Count || c.Victim == c.Seat)
                 return MatchCommandResult.Rejected("Pick a trade partner.");
+            if (!IsValidBundle(c.Choice))
+                return MatchCommandResult.Rejected("Invalid wildcard pick.");
             var response = trade.Responses[c.Victim];
+            var me = State.Current;
+            var partner = State.Seats[c.Victim];
             ResourceBundle give, get;
             if (response.Kind == TradeResponseKind.Accepted)
             {
+                // Re-check the wildcard backing against the hands as they are now.
+                if (trade.GiveAny > 0 && !TradeWildcards.Fits(response.AnyChoice, AcceptWildPool(trade), trade.GiveAny))
+                    return MatchCommandResult.Rejected("You no longer have the cards they picked.");
+                if (trade.GetAny > 0)
+                {
+                    if (!TradeWildcards.Fits(c.Choice, PartnerWildPool(partner.Hand, trade, response.AnyChoice), trade.GetAny))
+                        return MatchCommandResult.Rejected($"Pick {trade.GetAny} card(s) they can give.");
+                }
+                else if (c.Choice.Total != 0)
+                    return MatchCommandResult.Rejected("There is no wildcard to pick for.");
+
                 give = trade.Give;
+                give.Add(response.AnyChoice);
                 get = trade.Get;
+                get.Add(c.Choice);
             }
             else if (response.Kind == TradeResponseKind.Countered)
             {
+                if (c.Choice.Total != 0)
+                    return MatchCommandResult.Rejected("A counter has no wildcards.");
                 give = response.CounterGive;
                 get = response.CounterGet;
             }
             else
                 return MatchCommandResult.Rejected("That player hasn't accepted.");
 
-            var me = State.Current;
-            var partner = State.Seats[c.Victim];
             if (!me.Hand.CanAfford(give) || !partner.Hand.CanAfford(get))
                 return MatchCommandResult.Rejected("Someone no longer has the cards.");
             var mh = me.Hand;

@@ -243,6 +243,8 @@ namespace CatanRoguelike.Game
             _hsCounterSeat = -1;
             _hsDiscardSeat = -1;
             _hsGive = _hsGet = _hsDiscard = ResourceBundle.Zero;
+            _hsGiveAny = _hsGetAny = 0;
+            CloseWildPicker();
             _hsBoardInput = GetComponent<HotSeatBoardInput>();
             if (_hsBoardInput == null)
                 _hsBoardInput = gameObject.AddComponent<HotSeatBoardInput>();

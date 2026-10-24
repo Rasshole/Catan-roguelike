@@ -54,6 +54,8 @@ namespace CatanRoguelike.Core.Match
         public TradeResponseKind Kind { get; set; }
         public ResourceBundle CounterGive { get; set; }
         public ResourceBundle CounterGet { get; set; }
+        /// <summary>v139: on an accept, the resources the accepter takes for the offerer's give wildcards.</summary>
+        public ResourceBundle AnyChoice { get; set; }
     }
 
     /// <summary>v135: the open player-to-player offer (offer/counter-offer board). Give/Get are the offerer's view.</summary>
@@ -63,6 +65,10 @@ namespace CatanRoguelike.Core.Match
         public int From { get; set; }
         public ResourceBundle Give { get; set; }
         public ResourceBundle Get { get; set; }
+        /// <summary>v139: wildcards the offerer gives — "N of any resource you choose" (the accepter picks).</summary>
+        public int GiveAny { get; set; }
+        /// <summary>v139: wildcards the offerer asks for — "N of anything" (the offerer picks when confirming).</summary>
+        public int GetAny { get; set; }
         public List<MatchTradeResponse> Responses { get; set; } = new();
     }
 
@@ -226,8 +232,15 @@ namespace CatanRoguelike.Core.Match
             {
                 var t = ActiveTrade;
                 sb.Append($"T{t.From}:{Bundle(t.Give)}>{Bundle(t.Get)}:");
+                if (t.GiveAny > 0 || t.GetAny > 0)
+                    sb.Append($"W{t.GiveAny}/{t.GetAny}:");
                 foreach (var r in t.Responses)
-                    sb.Append($"{(int)r.Kind}{Bundle(r.CounterGive)}>{Bundle(r.CounterGet)},");
+                {
+                    sb.Append($"{(int)r.Kind}{Bundle(r.CounterGive)}>{Bundle(r.CounterGet)}");
+                    if (r.AnyChoice.Total > 0)
+                        sb.Append('w').Append(Bundle(r.AnyChoice));
+                    sb.Append(',');
+                }
                 sb.Append('|');
             }
 

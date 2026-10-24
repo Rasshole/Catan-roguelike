@@ -345,6 +345,15 @@ namespace CatanRoguelike.Tests.PlayMode
             root = hud.HotSeatRootForTests;
             Assert.IsNotNull(root.Find("TradeBoard"));
             Assert.IsTrue(FindButton(root, "ProposeTrade").interactable);
+            // v139: "you get" row on top, "you give" below; both rows end in the wildcard card.
+            var tradeBoard = root.Find("TradeBoard");
+            Assert.Greater(tradeBoard.Find("GetMore_Stone").position.y, tradeBoard.Find("GiveMore_Wood").position.y,
+                "get row above the give row");
+            Assert.IsNotNull(tradeBoard.Find("GiveMore_Any"));
+            Assert.IsNotNull(tradeBoard.Find("GetMore_Any"));
+            // Party rules off: no leaders yet, so the seats keep the coloured disc with the number / AI tag.
+            Assert.IsNull(tradeBoard.Find("ComposeTo_1/Face"));
+            Assert.IsNotNull(tradeBoard.Find("ComposeTo_1/Tag"));
             MaybeWrite(hud, "trade-compose.png");
 
             FindButton(root, "ProposeTrade").onClick.Invoke();

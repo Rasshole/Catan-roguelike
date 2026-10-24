@@ -248,6 +248,10 @@ namespace CatanRoguelike.Tests.PlayMode
             yield return null;
             var bank = dialog.GetComponentsInChildren<Button>(true).First(b => b.name == "BankTrade");
             Assert.IsTrue(bank.interactable, "bank trade enabled at " + rate + ":1");
+            Assert.Greater(dialog.GetComponentsInChildren<Button>(true).First(b => b.name == "GetMore_Stone").transform.position.y,
+                dialog.GetComponentsInChildren<Button>(true).First(b => b.name == "GiveMore_Wheat").transform.position.y,
+                "v139: the get row is above the give row");
+            Assert.IsTrue(dialog.GetComponentsInChildren<Button>(true).Any(b => b.name == "GiveMore_Any"), "wildcard slot present");
             Assert.IsTrue(dialog.GetComponentsInChildren<Image>(true).Any(i => i.name == "Rate_Wheat"), "rate badges");
             Assert.IsFalse(dialog.GetComponentsInChildren<Text>(true).Any(t => t.text.Contains("Wheat") || t.text.Contains("Stone")),
                 "no resource words on the trade card");
@@ -260,6 +264,7 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.AreEqual(6 - rate, controller.State.PlayerInventory.Wheat);
 
             // Offer the opponent 2 sheep for 1 brick, then show its answer.
+            controller.State.AiInventory = new ResourceBundle { Wood = 2, Brick = 2, Stone = 1 };
             hud.SetTradeTermsForTests(new ResourceBundle { Sheep = 2 }, new ResourceBundle { Brick = 1 });
             yield return null;
             dialog.GetComponentsInChildren<Button>(true).First(b => b.name == "OfferAi").onClick.Invoke();
@@ -269,7 +274,34 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsTrue(dialog.GetComponentsInChildren<Image>(true).Any(i => i.name == "OpponentDisc"), "opponent answer row");
             Canvas.ForceUpdateCanvases();
             yield return null;
+            var opponentFace = dialog.GetComponentsInChildren<Image>(true).First(i => i.name == "OpponentDisc")
+                .transform.Find("Face");
+            Assert.IsNotNull(opponentFace, "v139: the opponent shows as a leader portrait");
             MaybeWrite(hud, "trade-offer");
+
+            // v139 wildcard: 1 sheep for "1 of anything" — on Trade you pick from what the opponent can spare.
+            hud.SetTradeTermsForTests(new ResourceBundle { Sheep = 1 }, ResourceBundle.Zero, 0, 1);
+            yield return null;
+            dialog.GetComponentsInChildren<Button>(true).First(b => b.name == "OfferAi").onClick.Invoke();
+            yield return null;
+            Assert.AreEqual(1, controller.State.PendingPlayerTrade.Value.ReceiveAny);
+            Assert.IsTrue(controller.State.PendingAiTradeResponses[0].Accept, "the AI can spare a card");
+            dialog.GetComponentsInChildren<Button>(true).First(b => b.name == "AcceptAi").onClick.Invoke();
+            yield return null;
+            Assert.IsTrue(hud.TradeWildPickerOpenForTests);
+            Assert.IsTrue(controller.State.PendingPlayerTrade.HasValue, "nothing traded before the pick");
+            var stoneBefore = controller.State.PlayerInventory.Stone;
+            Assert.IsFalse(dialog.GetComponentsInChildren<Button>(true).First(b => b.name == "WildPickMore_Wheat").interactable,
+                "the opponent holds no wheat");
+            dialog.GetComponentsInChildren<Button>(true).First(b => b.name == "WildPickMore_Stone").onClick.Invoke();
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            yield return null;
+            MaybeWrite(hud, "trade-wild-picker-sp");
+            dialog.GetComponentsInChildren<Button>(true).First(b => b.name == "WildPickConfirm").onClick.Invoke();
+            yield return null;
+            Assert.IsFalse(controller.State.PendingPlayerTrade.HasValue, "traded");
+            Assert.AreEqual(stoneBefore + 1, controller.State.PlayerInventory.Stone);
             hud.CloseTradeDialogForTests();
             controller.State.PendingPlayerTrade = null;
             controller.State.PendingAiTradeResponses = System.Array.Empty<AiTradeResponse>();
