@@ -171,7 +171,7 @@ namespace CatanRoguelike.Game
         /// </summary>
         private static void BuildTradeEditRow(RectTransform card, string key, bool give, float y, float x0,
             System.Func<ResourceBundle> get, System.Action<ResourceBundle> set, ResourceBundle limit,
-            System.Action changed, TradeWildSlot wild = null)
+            System.Action changed, TradeWildSlot wild = null, System.Func<ResourceType, bool> locked = null)
         {
             var anchor = new Vector2(0f, 1f);
             TradeGlyph(card, key + "Arrow", give ? TradeGlyphSprites.GiveArrow : TradeGlyphSprites.GetArrow, anchor,
@@ -192,8 +192,10 @@ namespace CatanRoguelike.Game
                     changed?.Invoke();
                 }
 
-                BuildTradeSlot(card, key, r.ToString(), give, x, y, get()[r], limit[r],
-                    ColonistHudResourceSprites.Get(r), false, Add);
+                int have = get()[r];
+                BuildTradeSlot(card, key, r.ToString(), give, x, y, have, limit[r],
+                    ColonistHudResourceSprites.Get(r), false, Add,
+                    locked == null ? limit[r] <= 0 && have == 0 : locked(r) && have == 0, locked != null);
             }
 
             if (wild == null)
@@ -211,11 +213,11 @@ namespace CatanRoguelike.Game
             }
 
             BuildTradeSlot(card, key, TradeAnyKey, give, wx, y, wild.Get(), wild.Limit, TradeGlyphSprites.AnyResource,
-                true, AddAny);
+                true, AddAny, wild.Limit <= 0 && wild.Get() == 0, false);
         }
 
         private static void BuildTradeSlot(RectTransform card, string key, string suffix, bool give, float x, float y,
-            int n, int limit, Sprite sprite, bool wild, System.Action<int> add)
+            int n, int limit, Sprite sprite, bool wild, System.Action<int> add, bool dim, bool strike)
         {
             var anchor = new Vector2(0f, 1f);
             var slot = CreateImage(card, key + "More_" + suffix, null);
@@ -238,8 +240,20 @@ namespace CatanRoguelike.Game
             icon.preserveAspect = true;
             float iconSize = wild ? 62f : 54f;
             SetRect(icon.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(iconSize, iconSize));
-            if (limit <= 0 && n == 0)
-                icon.color = new Color(1f, 1f, 1f, 0.32f);
+            if (dim)
+            {
+                icon.color = strike ? new Color(0.55f, 0.55f, 0.55f, 0.38f) : new Color(1f, 1f, 1f, 0.32f);
+                if (strike)
+                {
+                    // v140: only what the other player cannot spare is struck through; allowed slots stay full colour.
+                    slot.color = new Color(0.78f, 0.74f, 0.68f, 1f);
+                    var bar = CreateImage(slot.rectTransform, "Locked", null);
+                    bar.color = new Color(0.62f, 0.16f, 0.12f, 0.9f);
+                    bar.raycastTarget = false;
+                    SetRect(bar.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(TradeSlot * 0.92f, 5f));
+                    bar.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -45f);
+                }
+            }
 
             if (n > 0)
             {
@@ -355,7 +369,7 @@ namespace CatanRoguelike.Game
             foreach (var r in TradeResources)
                 limit.Set(r, Mathf.Min(pool[r], picked[r] + Mathf.Max(0, n - picked.Total)));
             BuildTradeEditRow(box, "WildPick", false, -106f, TradeRowX0(width, false), get, set, limit,
-                changed);
+                changed, null, r => pool[r] <= 0);
             TradeButton(box, "WildPickConfirm", "", TradeGlyphSprites.CheckCream, new Vector2(1f, 1f),
                 new Vector2(-148f, -34f), new Vector2(72f, 44f), picked.Total == n && pool.CanAfford(picked), true,
                 confirm);

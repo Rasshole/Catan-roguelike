@@ -338,6 +338,18 @@ how the group can playtest the rules before any server exists.
     `Confirm(seat, partner, choice)` are plain serializable commands (JSON round-trip, replay hash includes the
     wildcards and picks), validated in `MatchController` via `TradeWildcards`. The AI accepts a wildcard offer when
     the card count is fair and takes the resource it holds fewest of; single-player uses the same helpers.
+- **v140 (pass-and-play readability polish):**
+  - Hot-seat pieces use their own scale (`HotSeatBuildingScale` 1.7×, `HotSeatRoadScale` 1.3× via
+    `PlayerPieceVisuals.BuildingScaleMultiplier` / `RoadScaleMultiplier`), and the play-area insets are trimmed so
+    the board fills more of the space between the side panels. Cities read clearly bigger than settlements on the
+    5-player board; the almost-top-down camera is unchanged. Leaving hot-seat resets the multipliers to 1.
+  - The trade card, wildcard picker and robber victim picker pin their top edge over the event card. While a trade
+    is on the table the development-card panel is hidden, so nothing overlaps its top edge.
+  - Wildcard picker: allowed resources stay in full colour even when the pick count is reached; only resources
+    the giver can't give are greyed with a red "Locked" strike.
+  - The robber victim picker shows leader portraits like the trade screens.
+  - Withdrawn and lapsed offers log "… withdrew the trade offer." / "…'s trade offer lapsed.", so the status line
+    never keeps a stale "offers a trade" line.
 
 ### Phase 4: Shenanigans on one device
 - Primitives: `SecretBallot`, `SealedBidAuction`, `Bounty` (robber-claim rule), `SecretCard` (sabotage).

@@ -47,6 +47,10 @@ namespace CatanRoguelike.Game
 
         /// <summary>Settlement wall width as a fraction of the flat-to-flat hex width (city is 1.5x).</summary>
         public const float SettlementFootprintOfHex = 0.18f;
+        /// <summary>v140: extra size for settlements/cities (pass-and-play sets &gt; 1 so pieces read on the 30-hex table).</summary>
+        public static float BuildingScaleMultiplier { get; set; } = 1f;
+        /// <summary>v140: extra road width (pass-and-play).</summary>
+        public static float RoadScaleMultiplier { get; set; } = 1f;
         /// <summary>Road plank width as a fraction of the flat-to-flat hex width.</summary>
         public const float RoadWidthOfHex = 0.085f;
         /// <summary>
@@ -137,7 +141,7 @@ namespace CatanRoguelike.Game
 
             var mesh = LoadMesh("road", out var slotNames);
             var b = mesh.bounds;
-            float targetWidth = FlatHexWidth(hexScale) * RoadWidthOfHex;
+            float targetWidth = FlatHexWidth(hexScale) * RoadWidthOfHex * RoadScaleMultiplier;
             float targetLength = Mathf.Max(length + 2f * RoadJointOverlapOfWidth * targetWidth, 0.05f);
             float sx = targetLength / Mathf.Max(b.size.x, 1e-4f);
             float sz = targetWidth / Mathf.Max(b.size.z, 1e-4f);
@@ -185,7 +189,7 @@ namespace CatanRoguelike.Game
 
             // One scale for every building (from the settlement width) keeps the city at 1.5x.
             var settlementMesh = modelName == "settlement" ? mesh : LoadMesh("settlement", out _);
-            float scale = FlatHexWidth(hexScale) * SettlementFootprintOfHex
+            float scale = FlatHexWidth(hexScale) * SettlementFootprintOfHex * BuildingScaleMultiplier
                 / Mathf.Max(settlementMesh.bounds.size.x, 1e-4f);
             body.localScale = Vector3.one * scale;
             body.localRotation = rotation;

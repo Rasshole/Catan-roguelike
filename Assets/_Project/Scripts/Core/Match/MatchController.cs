@@ -842,6 +842,7 @@ namespace CatanRoguelike.Core.Match
             if (State.ActiveTrade == null || State.ActiveTrade.From != c.Seat)
                 return MatchCommandResult.Rejected("No offer of yours is open.");
             State.ActiveTrade = null;
+            AppendLog($"{State.Seats[c.Seat].Name} withdrew the trade offer.");
             return MatchCommandResult.Accepted;
         }
 
@@ -925,6 +926,8 @@ namespace CatanRoguelike.Core.Match
             State.Current.NewDevCards.Clear();
             State.Current.PlayedDevCardThisTurn = false;
             State.Current.BankTradesThisTurn = 0;
+            if (State.ActiveTrade != null)
+                AppendLog($"{State.Seats[State.ActiveTrade.From].Name}'s trade offer lapsed.");
             State.ActiveTrade = null;
             State.CurrentSeat = (State.CurrentSeat + 1) % State.Seats.Count;
             State.TurnNumber++;

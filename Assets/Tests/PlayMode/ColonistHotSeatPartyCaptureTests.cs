@@ -252,14 +252,14 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.AreEqual(MatchPhase.Roll, state.Phase);
             Assert.IsTrue(state.Seats.All(x => x.Quest != MatchQuestId.None && x.Trait != MatchTraitId.None));
 
-            // Pieces keep the single-player scale: settlement 0.18 of the hex width, city 1.5x.
+            // v140: pass-and-play pieces are larger than single-player so they read on the 30-hex table (city 1.5x).
             var view = Object.FindFirstObjectByType<BoardView>();
             float hexW = PlayerPieceVisuals.FlatHexWidth(view.HexScale) * view.transform.lossyScale.x;
             var settlement = view.GetComponentsInChildren<Transform>().First(t => t.name == PlayerPieceVisuals.SettlementName);
             var sb = settlement.GetComponentsInChildren<MeshFilter>()
                 .Select(f => f.sharedMesh.bounds.size.x * f.transform.lossyScale.x).Max();
             Debug.Log($"v136 piece scale: settlement mesh width {sb:F3} / hex width {hexW:F3} = {sb / hexW:F3}");
-            Assert.AreEqual(PlayerPieceVisuals.SettlementFootprintOfHex, sb / hexW, 0.01f);
+            Assert.AreEqual(PlayerPieceVisuals.SettlementFootprintOfHex * RunHudController.HotSeatBuildingScale, sb / hexW, 0.015f);
 
             // An event in the 5-player match, on a human turn.
             Assert.IsTrue(Drive(s, () => state.ActiveEvent != Core.Events.EventId.None && state.Phase == MatchPhase.Main
@@ -405,7 +405,14 @@ namespace CatanRoguelike.Tests.PlayMode
             var picker = hud.HotSeatRootForTests.Find("VictimPicker");
             Assert.IsNotNull(picker);
             foreach (int v in victims)
+            {
                 Assert.IsNotNull(picker.Find("Rob_" + v), "button for seat " + v);
+                // v140: leader portraits, as on the trade screens.
+                var face = picker.Find("VictimDisc_" + v + "/Face")?.GetComponent<Image>();
+                Assert.IsNotNull(face, "leader portrait for seat " + v);
+                Assert.AreSame(hud.HotSeatStripPortraitForTests(v), face.sprite);
+            }
+
             MaybeWrite(hud, "victim-picker.png");
 
             int chosen = victims[victims.Count - 1];
@@ -552,6 +559,134 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.AreEqual(1, state.Seats[0].Hand.Wheat);
             Assert.AreEqual(1, state.Seats[2].Hand.Wheat);
             yield return Settle(hud);
+            hud.ExitHotSeat();
+            yield return Settle(hud);
+        }
+
+        private static Rect ScreenRect(Transform t)
+        {
+            var c = new Vector3[4];
+            ((RectTransform)t).GetWorldCorners(c);
+            return Rect.MinMaxRect(c[0].x, c[0].y, c[2].x, c[2].y);
+        }
+
+        private static void AssertClearOfPanels(RunHudController hud, Transform card, string what)
+        {
+            var root = hud.HotSeatRootForTests;
+            Assert.IsNull(root.Find("DevCards"), what + ": the dev-card panel steps aside while trading");
+            var hand = root.Find("Hand");
+            Assert.IsNotNull(hand);
+            Assert.Greater(ScreenRect(card).yMin, ScreenRect(hand).yMax, what + " ends above the hand panel");
+        }
+
+        [Timeout(300000)]
+        [UnityTest]
+        public IEnumerator V140_FiveSeatMidgame_PiecesReadable()
+        {
+            yield return LoadScene();
+            var gameManager = Object.FindFirstObjectByType<GameManager>();
+            RunHudController hud = null;
+            yield return ReadyHud(gameManager, h => hud = h);
+
+            var config = PartyConfig(1405, (SeatKind.Human, "Rasmus"), (SeatKind.Ai, "AI 2"), (SeatKind.Human, "Freja"),
+                (SeatKind.Ai, "AI 4"), (SeatKind.Ai, "AI 5"));
+            hud.HotSeatClockFrozenForTests = true;
+            hud.StartHotSeat(config);
+            var s = hud.HotSeatSessionForTests;
+            var state = s.State;
+            Assert.AreEqual(RunHudController.HotSeatBuildingScale, PlayerPieceVisuals.BuildingScaleMultiplier);
+            Assert.IsTrue(Drive(s, () => state.Round >= 3 && state.Phase == MatchPhase.Roll && state.CurrentSeat == 0
+                                         && Enumerable.Range(0, state.Seats.Count).Sum(i => s.Match.CountCities(i)) >= 3), "a lively mid-game");
+            yield return Settle(hud);
+
+            var view = Object.FindFirstObjectByType<BoardView>();
+            float hexW = PlayerPieceVisuals.FlatHexWidth(view.HexScale) * view.transform.lossyScale.x;
+            float Width(Transform t) => t.GetComponentsInChildren<MeshFilter>()
+                .Select(f => f.sharedMesh.bounds.size.x * f.transform.lossyScale.x).Max();
+            var all = view.GetComponentsInChildren<Transform>();
+            var settlement = all.First(t => t.name == PlayerPieceVisuals.SettlementName);
+            var city = all.First(t => t.name == PlayerPieceVisuals.CityName);
+            float sw = Width(settlement) / hexW, cw = Width(city) / hexW;
+            Debug.Log($"v140 piece scale: settlement {sw:F3}, city {cw:F3} of the hex width");
+            Assert.AreEqual(PlayerPieceVisuals.SettlementFootprintOfHex * RunHudController.HotSeatBuildingScale, sw, 0.015f);
+            Assert.Greater(cw, sw * 1.3f, "a city reads clearly bigger than a settlement");
+            MaybeWrite(hud, "v140-midgame-5p.png");
+
+            hud.ExitHotSeat();
+            yield return Settle(hud);
+            Assert.AreEqual(1f, PlayerPieceVisuals.BuildingScaleMultiplier, "single-player scale restored");
+            Assert.AreEqual(1f, PlayerPieceVisuals.RoadScaleMultiplier);
+        }
+
+        [Timeout(300000)]
+        [UnityTest]
+        public IEnumerator V140_FiveSeatTrade_ClearOfPanels_PickerLocks_StatusClears()
+        {
+            yield return LoadScene();
+            var gameManager = Object.FindFirstObjectByType<GameManager>();
+            RunHudController hud = null;
+            yield return ReadyHud(gameManager, h => hud = h);
+
+            var config = PartyConfig(1405, (SeatKind.Human, "Rasmus"), (SeatKind.Ai, "AI 2"), (SeatKind.Human, "Freja"),
+                (SeatKind.Ai, "AI 4"), (SeatKind.Ai, "AI 5"));
+            hud.HotSeatClockFrozenForTests = true;
+            hud.StartHotSeat(config);
+            var s = hud.HotSeatSessionForTests;
+            var state = s.State;
+            Assert.IsTrue(Drive(s, () => state.CurrentSeat == 0 && state.Phase == MatchPhase.Main && state.ActiveTrade == null
+                                         && state.Round >= 1));
+            state.Seats[0].Hand = new ResourceBundle { Wood = 1, Brick = 2, Wheat = 2, Sheep = 1 };
+            state.Seats[1].Hand = new ResourceBundle { Wood = 1 };
+            state.Seats[2].Hand = new ResourceBundle { Wheat = 1, Stone = 2 };
+            state.Seats[3].Hand = new ResourceBundle { Sheep = 1 };
+            state.Seats[4].Hand = new ResourceBundle { Brick = 1 };
+
+            hud.SetHotSeatTradeForTests(true, ResourceBundle.Zero, new ResourceBundle { Stone = 1 });
+            yield return Settle(hud);
+            FindButton(hud.HotSeatRootForTests, "GiveMore_Any").onClick.Invoke();
+            yield return Settle(hud);
+            AssertClearOfPanels(hud, hud.HotSeatRootForTests.Find("TradeBoard"), "the composer");
+            MaybeWrite(hud, "v140-trade-compose.png");
+            FindButton(hud.HotSeatRootForTests, "ProposeTrade").onClick.Invoke();
+            Assert.IsNotNull(state.ActiveTrade);
+            yield return Settle(hud);
+            AssertClearOfPanels(hud, hud.HotSeatRootForTests.Find("TradeBoard"), "the offer (four answer rows)");
+            StringAssert.Contains("offers a trade", hud.HotSeatRootForTests.Find("Banner/Log").GetComponent<Text>().text);
+
+            hud.SetHotSeatTradeViewerForTests(2);
+            yield return Settle(hud);
+            AssertClearOfPanels(hud, hud.HotSeatRootForTests.Find("TradeBoard"), "Freja's view");
+            FindButton(hud.HotSeatRootForTests, "Accept_2").onClick.Invoke();
+            Assert.IsTrue(hud.HotSeatWildPickerOpenForTests);
+            yield return Settle(hud);
+            var board = hud.HotSeatRootForTests.Find("TradeBoard");
+            AssertClearOfPanels(hud, board, "the wildcard picker");
+            var picker = board.Find("WildPicker");
+            Assert.IsNotNull(picker);
+            // Disallowed (Rasmus has none to spare / asks for it): struck through. Allowed: full colour.
+            foreach (var r in new[] { ResourceType.Stone })
+                Assert.IsNotNull(picker.Find("WildPickMore_" + r + "/Locked"), r + " is locked");
+            foreach (var r in new[] { ResourceType.Wood, ResourceType.Brick, ResourceType.Wheat, ResourceType.Sheep })
+            {
+                Assert.IsNull(picker.Find("WildPickMore_" + r + "/Locked"), r + " is allowed");
+                Assert.AreEqual(1f, picker.Find("WildPickMore_" + r + "/Icon").GetComponent<Image>().color.a, 0.01f,
+                    r + " in full colour");
+            }
+
+            MaybeWrite(hud, "v140-wildcard-picker.png");
+            FindButton(picker, "WildPickCancel").onClick.Invoke();
+            hud.SetHotSeatTradeViewerForTests(0);
+            yield return Settle(hud);
+            FindButton(hud.HotSeatRootForTests, "CancelOffer").onClick.Invoke();
+            Assert.IsNull(state.ActiveTrade);
+            yield return Settle(hud);
+            var status = hud.HotSeatRootForTests.Find("Banner/Log").GetComponent<Text>().text;
+            StringAssert.DoesNotContain("offers a trade", status);
+            StringAssert.Contains("withdrew", status);
+            MaybeWrite(hud, "v140-status-after-withdraw.png");
+            FindButton(hud.HotSeatRootForTests, "TradeClose").onClick.Invoke();
+            yield return Settle(hud);
+            Assert.IsNotNull(hud.HotSeatRootForTests.Find("DevCards"), "the dev-card panel is back once the trade card closes");
             hud.ExitHotSeat();
             yield return Settle(hud);
         }

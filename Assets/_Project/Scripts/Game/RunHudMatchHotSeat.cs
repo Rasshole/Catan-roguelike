@@ -232,6 +232,8 @@ namespace CatanRoguelike.Game
             ColonistPlayAreaLayout.Override = HotSeatPlayArea;
             ColonistBoardVisualScale.RobberScaleCap = HotSeatRobberScaleCap;
             ColonistBoardVisualScale.RobberOffsetScale = HotSeatRobberOffsetScale;
+            PlayerPieceVisuals.BuildingScaleMultiplier = HotSeatBuildingScale;
+            PlayerPieceVisuals.RoadScaleMultiplier = HotSeatRoadScale;
             if (boardView != null)
                 boardView.Rebuild(_hotSeatDisplay);
             if (_boardInput != null)
@@ -271,6 +273,8 @@ namespace CatanRoguelike.Game
             ColonistPlayAreaLayout.Override = null;
             ColonistBoardVisualScale.RobberScaleCap = float.MaxValue;
             ColonistBoardVisualScale.RobberOffsetScale = 1f;
+            PlayerPieceVisuals.BuildingScaleMultiplier = 1f;
+            PlayerPieceVisuals.RoadScaleMultiplier = 1f;
             if (_hsBoardInput != null)
                 _hsBoardInput.Unbind();
             if (_hotSeatRoot != null)
@@ -410,6 +414,9 @@ namespace CatanRoguelike.Game
             SetRect(top.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -24f), new Vector2(960f, 30f));
             string last = !string.IsNullOrEmpty(_hotSeat.LastMessage) ? _hotSeat.LastMessage
                 : state.Log.Count > 0 ? state.Log[state.Log.Count - 1] : "";
+            // v140: never keep a stale "offers a trade" once the offer is gone.
+            if (state.ActiveTrade == null && last.EndsWith("offers a trade."))
+                last = "";
             var sub = RunHudUiFactory.CreateText(banner.rectTransform, "Log", last, 17, TextAnchor.MiddleCenter,
                 ink, FontStyle.Italic);
             SetRect(sub.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -52f), new Vector2(960f, 24f));

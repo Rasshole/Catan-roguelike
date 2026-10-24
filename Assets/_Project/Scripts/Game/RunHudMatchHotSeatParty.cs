@@ -20,11 +20,16 @@ namespace CatanRoguelike.Game
         /// </summary>
         public static readonly ColonistPlayAreaLayout.Insets HotSeatPlayArea = new()
         {
-            Left = 640f, Right = 400f, Top = 104f, Bottom = 142f
+            Left = 640f, Right = 392f, Top = 86f, Bottom = 108f
         };
 
         /// <summary>The robber pawn keeps base-board size on the 19/30-hex tables (it covered number tokens).</summary>
         public const float HotSeatRobberScaleCap = 1.35f;
+
+        /// <summary>v140: settlements and cities on the pass-and-play table (they nearly vanished on 30 hexes).</summary>
+        public const float HotSeatBuildingScale = 1.7f;
+        /// <summary>v140: roads on the pass-and-play table.</summary>
+        public const float HotSeatRoadScale = 1.3f;
 
         /// <summary>Moves the pawn off the token far enough for the larger cap to stay clear of it.</summary>
         public const float HotSeatRobberOffsetScale = 1.2f;
@@ -342,7 +347,7 @@ namespace CatanRoguelike.Game
 
             var victims = _hotSeat.Match.RobberVictims(command.Seat, command.Hex).ToList();
             // Docked over the left column so the board (and the chosen tile) stays in view.
-            var card = HsModal("VictimPicker", new Vector2(600f, 250f + victims.Count * 78f), new Vector2(330f - 960f, 150f));
+            var card = HsModal("VictimPicker", new Vector2(600f, 250f + victims.Count * 86f), new Vector2(330f - 960f, HsTradeOffsetY(250f + victims.Count * 86f)));
             string where = state.Board.TryGetTile(command.Hex, out var tile)
                 ? $"THE ROBBER MOVES TO THE {ResourceLabel(tile.Resource).ToUpperInvariant()} {tile.NumberToken}"
                 : "THE ROBBER MOVES";
@@ -354,9 +359,9 @@ namespace CatanRoguelike.Game
             {
                 int v = victims[i];
                 var seat = state.Seats[v];
-                float y = -150f - i * 78f;
-                var disc = CreateDisc(card, "VictimDisc_" + v, PlayerPieceVisuals.ColorForSeat(v), 52f);
-                SetRect(disc.rectTransform, new Vector2(0.5f, 1f), new Vector2(-190f, y), new Vector2(52f, 52f));
+                float y = -154f - i * 86f;
+                // v140: the leader portrait in the seat ring, as on the trade screens.
+                HsTradePortrait(card, "VictimDisc_" + v, v, new Vector2(0.5f, 1f), new Vector2(-196f, y), 70f);
                 HsButton(card, "Rob_" + v, $"{seat.Name}  ·  {seat.CardCount} card{(seat.CardCount == 1 ? "" : "s")}",
                     new Vector2(0.5f, 1f), new Vector2(50f, y), new Vector2(380f, 58f), true, true, () =>
                     {

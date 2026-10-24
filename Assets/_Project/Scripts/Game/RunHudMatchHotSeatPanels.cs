@@ -121,7 +121,7 @@ namespace CatanRoguelike.Game
         {
             var s = _hotSeat;
             int seat = s.State.ActingSeat;
-            if (!s.IsHandVisible(seat) || s.Match.IsSetup)
+            if (!s.IsHandVisible(seat) || s.Match.IsSetup || HsTradeOnTable)
                 return;
             var me = s.State.Seats[seat];
             var panel = CreateImage(_hotSeatRoot, "DevCards", null);
@@ -336,7 +336,20 @@ namespace CatanRoguelike.Game
             _hsWildPick = ResourceBundle.Zero;
         }
 
-        private static float HsTradeOffsetY(float h) => Mathf.Min(110f, 436f - h / 2f);
+        /// <summary>v140: a trade card (composer or offer) is showing; it takes the dev-card panel's space.</summary>
+        private bool HsTradeOnTable
+        {
+            get
+            {
+                var s = _hotSeat;
+                if (s == null || s.IsOver || s.PassScreenPending)
+                    return false;
+                return s.State.ActiveTrade != null
+                       || (_hsTradeOpen && s.State.Phase == MatchPhase.Main && !s.Acting.IsAi);
+            }
+        }
+
+        private static float HsTradeOffsetY(float h) => 436f - h / 2f; // v140: top edge pinned (it covers the event card)
 
         private void BuildTradeBoard()
         {
@@ -481,7 +494,11 @@ namespace CatanRoguelike.Game
             bool counterOpen = _hsCounterSeat >= 0 && _hsCounterSeat != trade.From;
             bool pickerOpen = _hsWildSeat >= 0 && !counterOpen;
 
-            int rows = state.Seats.Count - 1;
+            // v140: while a counter or the wildcard picker is open only that player's row stays, so the card
+            // never runs into the hand panel (the dev-card panel steps aside while a trade is on the table).
+            int focus = counterOpen ? _hsCounterSeat : pickerOpen ? _hsWildSeat : -1;
+            bool compact = focus >= 0;
+            int rows = compact ? (focus == trade.From ? 0 : 1) : state.Seats.Count - 1;
             const float rowH = 68f;
             const float headH = 222f;
             float counterH = counterOpen ? 316f : 0f;
@@ -523,7 +540,7 @@ namespace CatanRoguelike.Game
             int row = 0;
             for (int i = 0; i < state.Seats.Count; i++)
             {
-                if (i == trade.From)
+                if (i == trade.From || (compact && i != focus))
                     continue;
                 BuildTradeResponseRow(card, trade, i, viewer, -headH - rowH / 2f - row++ * rowH);
             }
