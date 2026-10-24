@@ -34,3 +34,4 @@ Thumbs.db
 # .NET (headless Core tests / sim-runner)
 tools/**/bin/
 tools/**/obj/
+assets-eval/

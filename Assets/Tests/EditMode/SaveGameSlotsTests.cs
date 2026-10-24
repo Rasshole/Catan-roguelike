@@ -33,7 +33,7 @@ namespace CatanRoguelike.Tests
             game.OnAutosavePoint += () => fired = true;
 
             SaveGameRoundTripTestsHelper.PrepareNightAdvance(game);
-            game.SkipNightCard();
+            GameControllerTestHelpers.SkipNightAndResolveMorning(game);
 
             Assert.IsTrue(fired);
             Assert.AreEqual(GamePhase.DayPlayerActions, game.State.Phase);
@@ -78,7 +78,7 @@ namespace CatanRoguelike.Tests
         {
             var game = SaveGameRoundTripTestsHelper.CreateGamePastSetup(42);
             SaveGameRoundTripTestsHelper.PrepareNightAdvance(game);
-            game.SkipNightCard();
+            GameControllerTestHelpers.SkipNightAndResolveMorning(game);
 
             var savedAt = new DateTime(2026, 8, 27, 12, 0, 0, DateTimeKind.Utc);
             var json = SaveGame.Serialize(game, SaveWriteOptions.Autosave(savedAt));
@@ -98,7 +98,7 @@ namespace CatanRoguelike.Tests
         {
             var game = SaveGameRoundTripTestsHelper.CreateGamePastSetup(42);
             SaveGameRoundTripTestsHelper.PrepareNightAdvance(game);
-            game.SkipNightCard();
+            GameControllerTestHelpers.SkipNightAndResolveMorning(game);
 
             var json = SaveGame.Serialize(game);
             var loaded = SaveGame.LoadGame(json);

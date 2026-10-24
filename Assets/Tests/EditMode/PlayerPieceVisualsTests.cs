@@ -1,6 +1,7 @@
 using CatanRoguelike.Game;
 using NUnit.Framework;
 using UnityEngine;
+using static CatanRoguelike.Tests.PlayerPieceTestUtil;
 
 namespace CatanRoguelike.Tests
 {
@@ -8,258 +9,196 @@ namespace CatanRoguelike.Tests
     {
         private const float HexTopY = 0.15f;
         private const float MinBaseAboveHex = 0.01f;
-        private const float MinRidgeGapAboveBodyTop = 0.05f;
-        private const float MaxSettlementHeight = 0.50f;
-        private const float MinCityHeight = 0.25f;
-        private const float MaxCityHeight = 0.72f;
+        private const float MaxSettlementHeightAboveHex = 1.05f;
+        private const float MaxCityHeightAboveHex = 1.65f;
         private const float MinRoadBaseAboveHex = 0.005f;
         private const float MaxRoadHeight = 0.28f;
 
         private GameObject _testRoot;
+        private bool _colonistWasActive;
 
         [SetUp]
-        public void SetUp() => _testRoot = new GameObject("PlayerPieceVisualsTests");
+        public void SetUp()
+        {
+            _colonistWasActive = ColonistPresentation.IsActive;
+            ColonistPresentation.SetActive(true);
+            _testRoot = new GameObject("PlayerPieceVisualsTests");
+        }
 
         [TearDown]
         public void TearDown()
         {
+            ColonistPresentation.SetActive(_colonistWasActive);
             if (_testRoot != null)
                 Object.DestroyImmediate(_testRoot);
         }
 
-        [Test]
-        public void CreateSettlement_HasBodyAndRoofParts()
-        {
-            var piece = PlayerPieceVisuals.CreateSettlement(
-                _testRoot.transform,
-                Vector3.zero,
-                PlayerPieceVisuals.HumanColor,
-                HexTopY);
+        private GameObject Settlement() => PlayerPieceVisuals.CreateSettlement(
+            _testRoot.transform, Vector3.zero, PlayerPieceVisuals.HumanColor, HexTopY);
 
+        private GameObject City() => PlayerPieceVisuals.CreateCity(
+            _testRoot.transform, new Vector3(3f, 0f, 0f), PlayerPieceVisuals.HumanColor, HexTopY);
+
+        [Test]
+        public void CreateSettlement_IsOneClosedHouseMeshWithPitchedRoof()
+        {
+            var piece = Settlement();
             Assert.AreEqual(PlayerPieceVisuals.SettlementName, piece.name);
-            Assert.AreEqual(4, piece.transform.childCount);
-            Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.BodyPartName));
-            Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName));
-            Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofRightPartName));
-            Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofRidgePartName));
+            var filter = SingleMesh(piece, PlayerPieceVisuals.BodyPartName);
+            AssertClosed(filter.sharedMesh);
+
+            var renderer = filter.GetComponent<MeshRenderer>();
+            Assert.Greater(RoofTriangles(filter.sharedMesh, renderer.sharedMaterials), 1,
+                "settlement needs sloped roof faces");
+            // Pentagon prism house: roughly as tall as wide, not a flat slab or a box.
+            var size = filter.sharedMesh.bounds.size;
+            Assert.That(size.y / size.x, Is.InRange(0.8f, 1.2f));
+            Assert.AreEqual(0, piece.GetComponentsInChildren<Collider>().Length);
         }
 
         [Test]
-        public void CreateCity_HasBodyUpperStoreyAndRoofParts()
+        public void CreateCity_IsOneClosedMesh_AboutOneAndAHalfSettlementFootprint_AndTaller()
+        {
+            var settlement = SingleMesh(Settlement(), PlayerPieceVisuals.BodyPartName);
+            var city = SingleMesh(City(), PlayerPieceVisuals.BodyPartName);
+            AssertClosed(city.sharedMesh);
+
+            var s = ScaledModelSize(settlement);
+            var c = ScaledModelSize(city);
+            Assert.That(c.x / s.x, Is.InRange(1.4f, 1.6f), "city footprint should be ~1.5x settlement");
+            Assert.That(c.y / s.y, Is.InRange(1.6f, 2.1f), "city tower should stand well above a settlement");
+            Assert.Greater(RoofTriangles(city.sharedMesh, city.GetComponent<MeshRenderer>().sharedMaterials), 3,
+                "city needs roofs on both the long house and the tower");
+        }
+
+        [Test]
+        public void Pieces_RoofDarkerThanWalls_EdgesDarkest_Matte()
+        {
+            var renderer = SingleMesh(Settlement(), PlayerPieceVisuals.BodyPartName).GetComponent<MeshRenderer>();
+            var wall = Slot(renderer, PlayerPieceVisuals.WallMaterialName);
+            var roof = Slot(renderer, PlayerPieceVisuals.RoofMaterialName);
+            var edge = Slot(renderer, PlayerPieceVisuals.EdgeMaterialName);
+
+            Assert.AreEqual(PlayerPieceVisuals.WallColor(PlayerPieceVisuals.HumanColor), wall.color);
+            Assert.Less(MaxRgb(roof.color), MaxRgb(wall.color) - 0.1f);
+            Assert.Less(MaxRgb(edge.color), MaxRgb(roof.color) - 0.1f);
+            Assert.Less(roof.GetFloat("_Glossiness"), 0.2f);
+        }
+
+        [Test]
+        public void Roofs_AreTwoTone_LitPlaneNearPlayerColour_ShadedPlaneDarker()
+        {
+            foreach (var piece in new[] { Settlement(), City() })
+            {
+                var renderer = SingleMesh(piece, PlayerPieceVisuals.BodyPartName).GetComponent<MeshRenderer>();
+                var lit = Slot(renderer, PlayerPieceVisuals.RoofMaterialName).color;
+                var shade = Slot(renderer, PlayerPieceVisuals.RoofShadeMaterialName).color;
+                Assert.Greater(MaxRgb(lit), 0.8f * MaxRgb(PlayerPieceVisuals.HumanColor), piece.name + " roof reads as the player colour");
+                Assert.Less(MaxRgb(shade), MaxRgb(lit) - 0.15f, piece.name + " ridge splits into two tones");
+            }
+        }
+
+        [Test]
+        public void AiPieces_UseRedPlayerColour()
         {
             var piece = PlayerPieceVisuals.CreateCity(
-                _testRoot.transform,
-                Vector3.zero,
-                PlayerPieceVisuals.AiColor,
-                HexTopY);
-
-            Assert.AreEqual(PlayerPieceVisuals.CityName, piece.name);
-            Assert.AreEqual(5, piece.transform.childCount);
-            Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.BodyPartName));
-            Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.UpperStoreyPartName));
-            Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName));
-            Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofRightPartName));
-            Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.RoofRidgePartName));
+                _testRoot.transform, Vector3.zero, PlayerPieceVisuals.AiColor, HexTopY);
+            var renderer = piece.GetComponentInChildren<MeshRenderer>();
+            var wall = Slot(renderer, PlayerPieceVisuals.WallMaterialName).color;
+            Assert.AreEqual(PlayerPieceVisuals.WallColor(PlayerPieceVisuals.AiColor), wall);
+            Assert.Greater(wall.r, wall.b + 0.3f, "AI pieces read red");
         }
 
         [Test]
-        public void CreateRoad_HasPlankPart()
+        public void Buildings_SitAboveHexTop_WithBoundedHeight()
         {
-            var piece = PlayerPieceVisuals.CreateRoad(
-                _testRoot.transform,
-                Vector3.zero,
-                30f,
-                1.1f,
-                PlayerPieceVisuals.HumanColor,
-                HexTopY);
-
-            Assert.AreEqual(PlayerPieceVisuals.RoadName, piece.name);
-            Assert.AreEqual(1, piece.transform.childCount);
-            Assert.NotNull(piece.transform.Find(PlayerPieceVisuals.PlankPartName));
+            foreach (var piece in new[] { Settlement(), City() })
+            {
+                var y = WorldYRange(piece.GetComponentInChildren<MeshFilter>());
+                Assert.Greater(y.x, HexTopY + MinBaseAboveHex, piece.name);
+                float max = piece.name == PlayerPieceVisuals.CityName
+                    ? MaxCityHeightAboveHex
+                    : MaxSettlementHeightAboveHex;
+                Assert.Less(y.y - HexTopY, max, piece.name);
+            }
         }
 
         [Test]
-        public void CreateSettlement_RoofRidgeCoversBodyTop()
+        public void ColonistMode_BuildingsAreNearlyTopDown_WithASmallLeanTowardScreenTop()
         {
-            var piece = PlayerPieceVisuals.CreateSettlement(
-                _testRoot.transform,
-                Vector3.zero,
-                PlayerPieceVisuals.HumanColor,
-                HexTopY);
-
-            var bodyRenderer = piece.transform.Find(PlayerPieceVisuals.BodyPartName).GetComponent<Renderer>();
-            var roofLeftRenderer = piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName).GetComponent<Renderer>();
-
-            AssertRoofRidgeCoversTop(bodyRenderer, roofLeftRenderer, piece);
+            Assert.That(PlayerPieceVisuals.ColonistLeanDegrees, Is.InRange(5f, 15f),
+                "pieces are seen from above (roofs first) with only a hint of wall");
+            var body = Settlement().transform.Find(PlayerPieceVisuals.BodyPartName);
+            float tilt = Vector3.Angle(body.up, Vector3.up);
+            Assert.AreEqual(PlayerPieceVisuals.ColonistLeanDegrees, tilt, 1f);
+            var cameraUp = ColonistFlatBoardQuad.GetColonistCameraUpOnBoard();
+            Assert.Greater(
+                Vector3.Dot(body.up, cameraUp),
+                0.8f * Mathf.Sin(PlayerPieceVisuals.ColonistLeanDegrees * Mathf.Deg2Rad),
+                "the small lean goes toward screen-top");
         }
 
         [Test]
-        public void CreateCity_RoofRidgeCoversUpperStoreyTop()
+        public void Buildings_AreAboutOneSixthToOneFifthOfHexWidth_CityLarger()
         {
-            var piece = PlayerPieceVisuals.CreateCity(
-                _testRoot.transform,
-                Vector3.zero,
-                PlayerPieceVisuals.AiColor,
-                HexTopY);
-
-            var upperRenderer = piece.transform.Find(PlayerPieceVisuals.UpperStoreyPartName).GetComponent<Renderer>();
-            var roofLeftRenderer = piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName).GetComponent<Renderer>();
-
-            AssertRoofRidgeCoversTop(upperRenderer, roofLeftRenderer, piece);
+            float hex = PlayerPieceVisuals.FlatHexWidth(ColonistBoardVisualScale.ReferenceHexScale);
+            float settlement = ScaledModelSize(SingleMesh(Settlement(), PlayerPieceVisuals.BodyPartName)).x / hex;
+            float city = ScaledModelSize(SingleMesh(City(), PlayerPieceVisuals.BodyPartName)).x / hex;
+            Assert.That(settlement, Is.InRange(1f / 6.2f, 1f / 4.9f));
+            Assert.That(city, Is.InRange(settlement * 1.3f, 0.32f));
         }
 
         [Test]
-        public void CreateSettlement_RoofUsesLowGlossMaterial()
+        public void Buildings_YawIsStablePerVertex_AndVariesAcrossVertices()
         {
-            var piece = PlayerPieceVisuals.CreateSettlement(
-                _testRoot.transform,
-                Vector3.zero,
-                PlayerPieceVisuals.AiColor,
-                HexTopY);
+            var a1 = PlayerPieceVisuals.CreateSettlement(
+                _testRoot.transform, new Vector3(1.3f, 0f, 2.1f), PlayerPieceVisuals.HumanColor, HexTopY);
+            var a2 = PlayerPieceVisuals.CreateSettlement(
+                _testRoot.transform, new Vector3(1.3f, 0f, 2.1f), PlayerPieceVisuals.AiColor, HexTopY);
+            Assert.That(Quaternion.Angle(
+                a1.transform.Find(PlayerPieceVisuals.BodyPartName).rotation,
+                a2.transform.Find(PlayerPieceVisuals.BodyPartName).rotation), Is.LessThan(0.01f));
 
-            var roofRenderer = piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName).GetComponent<Renderer>();
+            var yaws = new System.Collections.Generic.HashSet<int>();
+            for (int i = 0; i < 12; i++)
+            {
+                float yaw = PlayerPieceVisuals.BuildingYawDegrees(new Vector3(i * 1.04f, 0f, i * 0.6f))
+                    + PlayerPieceVisuals.ColonistYawDegrees;
+                yaws.Add(Mathf.RoundToInt(Mathf.Repeat(yaw, 360f) / 10f));
+                // Always 18-50 deg off gable-on (mod 180) so the house keeps its 3/4 read.
+                float folded = Mathf.Repeat(yaw, 180f);
+                float offGable = Mathf.Min(folded, 180f - folded);
+                Assert.That(offGable, Is.InRange(17.9f, 50.1f));
+            }
 
-            Assert.Less(roofRenderer.sharedMaterial.GetFloat("_Glossiness"), 0.1f);
-            Assert.AreEqual(0f, roofRenderer.sharedMaterial.GetFloat("_Metallic"));
+            Assert.Greater(yaws.Count, 5, "pieces on different vertices should face different ways");
         }
 
         [Test]
-        public void CreateSettlement_RidgeTopCoversRoofPanelPeaks()
+        public void ClassicMode_BuildingsStandUpright()
         {
-            var piece = PlayerPieceVisuals.CreateSettlement(
-                _testRoot.transform,
-                Vector3.zero,
-                PlayerPieceVisuals.AiColor,
-                HexTopY);
-
-            var roofLeftRenderer = piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName).GetComponent<Renderer>();
-            var roofRightRenderer = piece.transform.Find(PlayerPieceVisuals.RoofRightPartName).GetComponent<Renderer>();
-            var ridgeRenderer = piece.transform.Find(PlayerPieceVisuals.RoofRidgePartName).GetComponent<Renderer>();
-
-            float panelPeakY = Mathf.Max(roofLeftRenderer.bounds.max.y, roofRightRenderer.bounds.max.y);
-            Assert.GreaterOrEqual(ridgeRenderer.bounds.max.y, panelPeakY);
+            ColonistPresentation.SetActive(false);
+            var body = Settlement().transform.Find(PlayerPieceVisuals.BodyPartName);
+            Assert.AreEqual(0f, Vector3.Angle(body.up, Vector3.up), 0.01f);
         }
 
         [Test]
-        public void CreateSettlement_RoofIsDarkerThanBody()
+        public void CreateRoad_IsClosedBevelledPlankOnHexRim()
         {
-            var piece = PlayerPieceVisuals.CreateSettlement(
-                _testRoot.transform,
-                Vector3.zero,
-                PlayerPieceVisuals.HumanColor,
-                HexTopY);
+            var road = PlayerPieceVisuals.CreateRoad(
+                _testRoot.transform, new Vector3(1f, HexTopY, 0f), 0f, 1.1f, PlayerPieceVisuals.HumanColor, HexTopY);
+            Assert.AreEqual(PlayerPieceVisuals.RoadName, road.name);
+            var filter = SingleMesh(road, PlayerPieceVisuals.PlankPartName);
+            AssertClosed(filter.sharedMesh);
 
-            var bodyRenderer = piece.transform.Find(PlayerPieceVisuals.BodyPartName).GetComponent<Renderer>();
-            var roofRenderer = piece.transform.Find(PlayerPieceVisuals.RoofLeftPartName).GetComponent<Renderer>();
-
-            float bodyMaxRgb = MaxRgb(bodyRenderer.sharedMaterial.color);
-            float roofMaxRgb = MaxRgb(roofRenderer.sharedMaterial.color);
-
-            Assert.Less(roofMaxRgb, bodyMaxRgb);
-        }
-
-        [Test]
-        public void CreateSettlement_SitsAboveHexTop()
-        {
-            var piece = PlayerPieceVisuals.CreateSettlement(
-                _testRoot.transform,
-                Vector3.zero,
-                PlayerPieceVisuals.HumanColor,
-                HexTopY);
-
-            float minY = GetWorldMinY(piece);
-            float maxY = GetWorldMaxY(piece);
-
-            Assert.Greater(minY, HexTopY + MinBaseAboveHex);
-            Assert.Less(maxY, HexTopY + MaxSettlementHeight);
-        }
-
-        [Test]
-        public void CreateCity_IsTallerThanSettlement()
-        {
-            var settlement = PlayerPieceVisuals.CreateSettlement(
-                _testRoot.transform,
-                Vector3.zero,
-                PlayerPieceVisuals.HumanColor,
-                HexTopY);
-            var city = PlayerPieceVisuals.CreateCity(
-                _testRoot.transform,
-                new Vector3(2f, 0f, 0f),
-                PlayerPieceVisuals.AiColor,
-                HexTopY);
-
-            float settlementMaxY = GetWorldMaxY(settlement);
-            float cityMinY = GetWorldMinY(city);
-            float cityMaxY = GetWorldMaxY(city);
-
-            Assert.Greater(cityMaxY, settlementMaxY);
-            Assert.Greater(cityMinY, HexTopY + MinBaseAboveHex);
-            Assert.Greater(cityMaxY, HexTopY + MinCityHeight);
-            Assert.Less(cityMaxY, HexTopY + MaxCityHeight);
-        }
-
-        [Test]
-        public void CreateRoad_SitsOnHexRim()
-        {
-            var piece = PlayerPieceVisuals.CreateRoad(
-                _testRoot.transform,
-                Vector3.zero,
-                0f,
-                1.1f,
-                PlayerPieceVisuals.AiColor,
-                HexTopY);
-
-            float minY = GetWorldMinY(piece);
-            float maxY = GetWorldMaxY(piece);
-
-            Assert.Greater(minY, HexTopY + MinRoadBaseAboveHex);
-            Assert.Less(maxY, HexTopY + MaxRoadHeight);
-        }
-
-        private static float GetWorldMinY(GameObject root)
-        {
-            float minY = float.MaxValue;
-            foreach (var renderer in root.GetComponentsInChildren<Renderer>())
-                minY = Mathf.Min(minY, renderer.bounds.min.y);
-
-            return minY;
-        }
-
-        private static float GetWorldMaxY(GameObject root)
-        {
-            float maxY = float.MinValue;
-            foreach (var renderer in root.GetComponentsInChildren<Renderer>())
-                maxY = Mathf.Max(maxY, renderer.bounds.max.y);
-
-            return maxY;
-        }
-
-        private static float MaxRgb(Color color) =>
-            Mathf.Max(color.r, Mathf.Max(color.g, color.b));
-
-        private static void AssertRoofRidgeCoversTop(
-            Renderer bodyRenderer,
-            Renderer roofLeftRenderer,
-            GameObject piece)
-        {
-            var ridgeTransform = piece.transform.Find(PlayerPieceVisuals.RoofRidgePartName);
-            Assert.NotNull(ridgeTransform);
-
-            var ridgeRenderer = ridgeTransform.GetComponent<Renderer>();
-            var bodyBounds = bodyRenderer.bounds;
-            var ridgeBounds = ridgeRenderer.bounds;
-
-            Assert.AreSame(roofLeftRenderer.sharedMaterial, ridgeRenderer.sharedMaterial);
-            Assert.Less(MaxRgb(ridgeRenderer.sharedMaterial.color), MaxRgb(bodyRenderer.sharedMaterial.color));
-
-            Assert.LessOrEqual(ridgeBounds.min.x, bodyBounds.min.x);
-            Assert.GreaterOrEqual(ridgeBounds.max.x, bodyBounds.max.x);
-            Assert.LessOrEqual(ridgeBounds.min.z, bodyBounds.min.z);
-            Assert.GreaterOrEqual(ridgeBounds.max.z, bodyBounds.max.z);
-            Assert.Greater(ridgeBounds.min.y, bodyBounds.max.y + MinRidgeGapAboveBodyTop);
-
-            float panelPeakY = Mathf.Max(roofLeftRenderer.bounds.max.y, piece.transform.Find(PlayerPieceVisuals.RoofRightPartName).GetComponent<Renderer>().bounds.max.y);
-            Assert.GreaterOrEqual(ridgeBounds.max.y, panelPeakY);
+            var renderer = filter.GetComponent<MeshRenderer>();
+            Slot(renderer, PlayerPieceVisuals.EdgeMaterialName);
+            var bounds = renderer.bounds;
+            Assert.Greater(bounds.min.y, HexTopY + MinRoadBaseAboveHex);
+            Assert.Less(bounds.max.y, HexTopY + MaxRoadHeight);
+            Assert.Greater(bounds.size.z, bounds.size.x * 4f, "plank runs along the edge (local Z)");
+            // Runs past both vertex centres so consecutive roads overlap at the shared vertex.
+            Assert.GreaterOrEqual(bounds.size.z, 1.1f + bounds.size.x * 0.9f);
         }
     }
 }

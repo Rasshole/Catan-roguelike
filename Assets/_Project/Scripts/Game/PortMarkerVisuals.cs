@@ -1,6 +1,9 @@
+using System.Text;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Hex;
+using CatanRoguelike.Core.Map;
 using UnityEngine;
+using UnityEngine.Rendering;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
 namespace CatanRoguelike.Game
@@ -10,78 +13,543 @@ namespace CatanRoguelike.Game
     /// </summary>
     public static class PortMarkerVisuals
     {
-        public const float BaseGapAboveHex = 0.02f;
+        public const float BaseGapAboveHex = 0.045f;
 
         private static readonly Color PierWoodColor = new(0.45f, 0.32f, 0.18f);
         private static readonly Color GenericPostColor = new(0.38f, 0.28f, 0.16f);
 
         private const float PierLength = 0.36f;
-        private const float PierWidth = 0.18f;
-        private const float PierHeight = 0.07f;
-        private const float PostHeight = 0.2f;
-        private const float PostWidth = 0.08f;
+        private const float PierWidth = 0.16f;
+        private const float SeaSlotPlankWidth = 0.19f;
+        private const float SeaSlotPlankHeight = 0.05f;
+        /// <summary>Where along the coast edge (from each corner toward the middle) a pier lands.</summary>
+        public const float PierLandingAlongEdge = 0.2f;
+        /// <summary>How far a pier runs past the coast edge onto the tile (onto its sand frame).</summary>
+        public const float PierLandOverlap = 0.07f;
+        private const float PierHeight = 0.06f;
+        private const float PostHeight = 0.11f;
+        private const float PostWidth = 0.07f;
         private const float FlagHeight = 0.1f;
         private const float FlagWidth = 0.06f;
+        public const float BadgeDiscSizeScale = 1.4f;
+        /// <summary>Painted badge face quad (wood ring + parchment) lying on the badge disc.</summary>
+        public const string BadgeFacePartName = "BadgeFace";
+        /// <summary>The painted ring's outer edge sits at ~0.93 of the image: cover the disc rim.</summary>
+        public const float BadgeFaceOverDisc = 1.08f;
+        public static float BadgeDiscWorldRadius => ColonistPortBadgeSizing.ActiveDiscWorldRadius;
+        private const float BadgeDiscHeight = 0.012f * BadgeDiscSizeScale;
+        public const float BadgeLabelWidthFractionGeneric = 0.78f;
+        public const float BadgeLabelWidthFractionSpecific = 0.56f;
+        /// <summary>World quad edge length; reads ~40% of disc diameter on screen under the colonist camera.</summary>
+        // v114: icon + gap + label must fit inside the disc (0.675 + 0.05 + ~0.28 overflowed the rim).
+        public const float BadgeRateIconDiameterFraction = 0.50f;
+        private const float BadgeStackGapFraction = 0.03f;
+        private static bool _loggedPortMarkerChildren;
+
+        public static void LogChildRenderersOnce(GameObject portRoot)
+        {
+            if (_loggedPortMarkerChildren || portRoot == null)
+                return;
+
+            _loggedPortMarkerChildren = true;
+            var sb = new StringBuilder();
+            sb.AppendLine($"PortMarkerVisuals children for '{portRoot.name}':");
+            foreach (var renderer in portRoot.GetComponentsInChildren<Renderer>(true))
+            {
+                sb.AppendLine(
+                    $"  {BuildPath(renderer.transform)} bounds={renderer.bounds.size} " +
+                    $"enabled={renderer.enabled} mat={renderer.sharedMaterial?.name}");
+            }
+
+            Debug.Log(sb.ToString());
+        }
+
+        private static string BuildPath(Transform t)
+        {
+            var parts = new System.Collections.Generic.List<string>(8);
+            while (t != null)
+            {
+                parts.Add(t.name);
+                t = t.parent;
+            }
+
+            parts.Reverse();
+            return string.Join("/", parts);
+        }
 
         public static GameObject Create(
             Transform parent,
             Vertex vertex,
             float hexScale,
             float hexTopY,
+            BoardState board,
             bool isGeneric,
             ResourceType? specificResource,
             Color resourceColor)
         {
-            var (vertexX, vertexZ) = HexMath.VertexToWorldPosition(vertex, hexScale);
-            var (hexX, hexZ) = HexMath.ToWorldPosition(vertex.Hex, hexScale);
-            var outward = new Vector3(vertexX - hexX, 0f, vertexZ - hexZ);
-            if (outward.sqrMagnitude < 1e-6f)
-                outward = new Vector3(vertexX, 0f, vertexZ);
-            outward.Normalize();
-
-            var root = new GameObject(isGeneric ? "Port_Generic" : $"Port_{specificResource}");
-            root.transform.SetParent(parent, false);
-            root.transform.position = new Vector3(vertexX, hexTopY + BaseGapAboveHex, vertexZ);
-            root.transform.rotation = Quaternion.LookRotation(outward, Vector3.up);
-
-            CreatePart("PierPlank", root.transform,
-                new Vector3(0f, PierHeight * 0.5f, PierLength * 0.5f),
-                new Vector3(PierWidth, PierHeight, PierLength),
-                PierWoodColor);
-
-            CreatePart("PierPost", root.transform,
-                new Vector3(0f, PostHeight * 0.5f, PierLength + PostWidth * 0.5f),
-                new Vector3(PostWidth, PostHeight, PostWidth),
-                isGeneric ? GenericPostColor : resourceColor);
-
-            if (!isGeneric)
+            if (ColonistPresentation.IsActive
+                && board != null
+                && board.TryGetSeaSlotForPort(vertex, out HexCoord seaCoord))
             {
-                CreatePart("ResourceFlag", root.transform,
-                    new Vector3(0f, PostHeight + FlagHeight * 0.5f, PierLength + PostWidth * 0.5f),
-                    new Vector3(FlagWidth, FlagHeight, FlagWidth * 0.5f),
+                return CreateSeaSlotPort(
+                    parent,
+                    board,
+                    vertex,
+                    seaCoord,
+                    hexScale,
+                    hexTopY,
+                    isGeneric,
+                    specificResource,
                     resourceColor);
             }
 
+            var (vertexX, vertexZ) = HexMath.VertexToWorldPosition(vertex, hexScale);
+            var (hexX, hexZ) = HexMath.ToWorldPosition(vertex.Hex, hexScale);
+            Vector3 vertexPos = new Vector3(vertexX, hexTopY + BaseGapAboveHex, vertexZ);
+
+            Vector3 seaDir3;
+            if (board != null
+                && PortBadgePlacement.TryComputeBadgeCenter(
+                    board,
+                    vertex,
+                    hexScale,
+                    BadgeDiscWorldRadius,
+                    ColonistPresentation.IsActive,
+                    out Vector2 badgeCenter,
+                    out Vector2 seaOut))
+            {
+                seaDir3 = new Vector3(seaOut.x, 0f, seaOut.y);
+                if (seaDir3.sqrMagnitude < 1e-6f)
+                    seaDir3 = new Vector3(vertexX - hexX, 0f, vertexZ - hexZ).normalized;
+            }
+            else
+            {
+                seaDir3 = new Vector3(vertexX - hexX, 0f, vertexZ - hexZ);
+                if (seaDir3.sqrMagnitude < 1e-6f)
+                    seaDir3 = new Vector3(vertexX, 0f, vertexZ);
+                seaDir3.Normalize();
+                badgeCenter = new Vector2(
+                    vertexX + seaDir3.x * (BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc),
+                    vertexZ + seaDir3.z * (BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc));
+            }
+
+            var root = new GameObject(isGeneric ? "Port_Generic" : $"Port_{specificResource}");
+            root.transform.SetParent(parent, false);
+            root.transform.SetPositionAndRotation(vertexPos, Quaternion.LookRotation(seaDir3, Vector3.up));
+
+            Vector3 badgeWorld = new Vector3(badgeCenter.x, vertexPos.y, badgeCenter.y);
+            Vector3 badgeLocal = root.transform.InverseTransformPoint(badgeWorld);
+            float badgeLocalZ = Mathf.Max(
+                badgeLocal.z,
+                BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc);
+            if (ColonistPresentation.IsActive)
+            {
+                float maxBadgeZ = PierLength + BadgeDiscWorldRadius + PortBadgePlacement.SeaClearanceBeyondDisc + 0.05f;
+                badgeLocalZ = Mathf.Min(badgeLocalZ, maxBadgeZ);
+            }
+
+            float pierLen = ColonistPresentation.IsActive
+                ? PierLength
+                : Mathf.Max(PierWidth * 2f, badgeLocalZ);
+
+            CreatePart("PierPlank", root.transform,
+                new Vector3(0f, PierHeight * 0.5f, pierLen * 0.5f),
+                new Vector3(PierWidth, PierHeight, pierLen),
+                PierWoodColor);
+
+            CreatePart("PierPost", root.transform,
+                new Vector3(0f, PostHeight * 0.5f, badgeLocalZ - PostWidth * 0.25f),
+                new Vector3(PostWidth, PostHeight, PostWidth),
+                isGeneric ? GenericPostColor : resourceColor);
+
+            CreatePortRateBadge(
+                root.transform,
+                isGeneric,
+                specificResource,
+                PostHeight + 0.02f,
+                badgeLocalZ);
+
+            LogChildRenderersOnce(root);
             return root;
         }
+
+        private static GameObject CreateSeaSlotPort(
+            Transform parent,
+            BoardState board,
+            Vertex vertex,
+            HexCoord seaCoord,
+            float hexScale,
+            float hexTopY,
+            bool isGeneric,
+            ResourceType? specificResource,
+            Color resourceColor)
+        {
+            float y = hexTopY + BaseGapAboveHex;
+            if (!SeaFrameSlotLayout.TryGetBadgeCenter(
+                    board, vertex, hexScale, BadgeDiscWorldRadius, out MapPlaneXz badgeXZ))
+            {
+                var (seaX, seaZ) = HexMath.ToWorldPosition(seaCoord, hexScale);
+                badgeXZ = new MapPlaneXz(seaX, seaZ);
+            }
+
+            Vector3 badgeWorld = new Vector3(badgeXZ.X, y, badgeXZ.Z);
+            var root = new GameObject(isGeneric ? "Port_Generic" : $"Port_{specificResource}");
+            root.transform.SetParent(parent, false);
+            root.transform.SetPositionAndRotation(badgeWorld, Quaternion.identity);
+
+            if (SeaFrameSlotLayout.TryGetHarborCoastEdge(
+                    board, vertex, seaCoord, hexScale, out _, out MapPlaneXz coastA, out MapPlaneXz coastB))
+            {
+                // Each pier runs from the badge onto the coast edge it serves, landing a little in
+                // from the corner and continuing onto the tile's sand frame so it visibly connects.
+                var a = new Vector3(coastA.X, y, coastA.Z);
+                var b = new Vector3(coastB.X, y, coastB.Z);
+                foreach (var landing in new[]
+                         {
+                             Vector3.Lerp(a, b, PierLandingAlongEdge),
+                             Vector3.Lerp(b, a, PierLandingAlongEdge)
+                         })
+                {
+                    var dir = landing - badgeWorld;
+                    dir.y = 0f;
+                    var end = landing + dir.normalized * PierLandOverlap;
+                    CreateWorldPlank(
+                        root.transform,
+                        end,
+                        badgeWorld,
+                        PierWoodColor,
+                        SeaSlotPlankWidth,
+                        SeaSlotPlankHeight);
+                }
+            }
+
+            CreatePart("PierPost", root.transform,
+                new Vector3(0f, PostHeight * 0.5f, 0f),
+                new Vector3(PostWidth, PostHeight, PostWidth),
+                isGeneric ? GenericPostColor : resourceColor);
+
+            CreatePortRateBadge(
+                root.transform,
+                isGeneric,
+                specificResource,
+                PostHeight + 0.02f,
+                0f);
+
+            LogChildRenderersOnce(root);
+            return root;
+        }
+
+
+        /// <summary>World-space segment endpoints for a pier plank cube (coast → badge).</summary>
+        public static void GetPlankSegmentEnds(Transform plank, out Vector3 start, out Vector3 end)
+        {
+            float halfLen = plank.localScale.z * 0.5f;
+            start = plank.position - plank.forward * halfLen;
+            end = plank.position + plank.forward * halfLen;
+        }
+
+        /// <summary>Oriented pier plank footprint corners in XZ (for land-clearance tests).</summary>
+        public static MapPlaneXz[] GetPlankFootprintCorners(Transform plankTransform)
+        {
+            if (plankTransform == null)
+                return System.Array.Empty<MapPlaneXz>();
+
+            float halfWidth = plankTransform.localScale.x * 0.5f;
+            float halfLength = plankTransform.localScale.z * 0.5f;
+            Vector3 center = plankTransform.position;
+            Vector3 forward = plankTransform.forward * halfLength;
+            Vector3 right = plankTransform.right * halfWidth;
+            Vector3[] pts =
+            {
+                center - forward - right,
+                center - forward + right,
+                center + forward + right,
+                center + forward - right
+            };
+
+            var corners = new MapPlaneXz[4];
+            for (int i = 0; i < 4; i++)
+                corners[i] = new MapPlaneXz(pts[i].x, pts[i].z);
+            return corners;
+        }
+
+        private static Vector3 CoastPlankStart(
+            BoardState board,
+            Vertex portVertex,
+            MapPlaneXz coastCorner,
+            float hexScale,
+            float y,
+            float bisectorOffset)
+        {
+            // Start the plank off the coast corner along the outward normal n (away from the land
+            // hexes that meet at THIS corner). The land wedge edges make 60° with n for both 1- and
+            // 2-hex corners, so a start corner offset ±halfWidth clears them when
+            // d * sin(60°) >= halfWidth + margin.
+            const float margin = 0.02f;
+            float halfWidth = SeaSlotPlankWidth * 0.5f;
+            float d = Mathf.Max(bisectorOffset, (halfWidth + margin) / Mathf.Sin(60f * Mathf.Deg2Rad));
+            Vector3 n = ComputeCoastCornerSeaBisector(board, coastCorner, hexScale);
+            return new Vector3(coastCorner.X, y, coastCorner.Z) + n * d;
+        }
+
+        /// <summary>
+        /// Outward normal at a coast corner: away from the centroid of the land hexes touching that
+        /// corner. (Previously used the port vertex's hexes for both corners, which pointed the
+        /// non-port corner's offset along the wrong bisector, into land.)
+        /// </summary>
+        private static Vector3 ComputeCoastCornerSeaBisector(
+            BoardState board,
+            MapPlaneXz coastCorner,
+            float hexScale)
+        {
+            Vector3 sum = Vector3.zero;
+            int count = 0;
+            float touch = hexScale * HexMath.OuterRadius * 1.01f;
+            foreach (var hex in board.Tiles.Keys)
+            {
+                var (cx, cz) = HexMath.ToWorldPosition(hex, hexScale);
+                var away = new Vector3(coastCorner.X - cx, 0f, coastCorner.Z - cz);
+                if (away.magnitude > touch)
+                    continue;
+                sum += away.normalized;
+                count++;
+            }
+
+            if (count == 0 || sum.sqrMagnitude < 1e-8f)
+                return Vector3.forward;
+            return sum.normalized;
+        }
+
+        private static Vector3 RimPointToward(Vector3 badgeCenter, Vector3 toward, float radius)
+        {
+            Vector3 delta = toward - badgeCenter;
+            if (delta.sqrMagnitude < 1e-8f)
+                return badgeCenter;
+            return badgeCenter + delta.normalized * radius;
+        }
+
+        private static void CreateWorldPlank(
+            Transform parent,
+            Vector3 from,
+            Vector3 to,
+            Color color,
+            float width,
+            float height)
+        {
+            Vector3 delta = to - from;
+            float len = delta.magnitude;
+            if (len < 0.02f)
+                return;
+
+            Vector3 dir = delta.normalized;
+            Vector3 mid = (from + to) * 0.5f;
+
+            var part = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            part.name = "PierPlank";
+            part.transform.SetParent(parent, true);
+            part.transform.position = mid;
+            part.transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
+            part.transform.localScale = new Vector3(width, height, len);
+
+            var mat = BuiltInMaterials.CreateMatteOpaque(Color.white);
+            mat.mainTexture = PaintedPierTexture() ?? PierBoardTexture(color);
+            // Cube top-face V runs along the plank: one board every ~0.4 plank widths.
+            mat.mainTextureScale = new Vector2(1f, Mathf.Max(1f, len / (width * 0.4f)));
+            mat.renderQueue = 3075;
+            var renderer = part.GetComponent<Renderer>();
+            renderer.sharedMaterial = mat;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            DestroyCollider(part.GetComponent<Collider>());
+        }
+
+        private static Texture2D _pierBoards;
+
+        /// <summary>Painted port art folder (tools/art/make_port_art.py).</summary>
+        public const string PortArtFolder = "Art/Board/Ports";
+
+        /// <summary>Painted jetty boards (one tile = one board; repeats along the pier), or null.</summary>
+        internal static Texture2D PaintedPierTexture()
+        {
+            var tex = Resources.Load<Texture2D>($"{PortArtFolder}/PierPlanks");
+            if (tex != null)
+                tex.wrapMode = TextureWrapMode.Repeat;
+            return tex;
+        }
+
+        /// <summary>Painted badge face: carved wooden ring around a parchment disc, or null.</summary>
+        internal static Texture2D PaintedBadgeTexture() => Resources.Load<Texture2D>($"{PortArtFolder}/PortBadge");
+
+        /// <summary>
+        /// One painted cross-board of a wooden jetty (repeats along the plank): warm boards with
+        /// grain, a dark gap between boards and darker side rails.
+        /// </summary>
+        internal static Texture2D PierBoardTexture(Color wood)
+        {
+            if (_pierBoards != null)
+                return _pierBoards;
+
+            const int w = 64, h = 32;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, true)
+            {
+                name = "PierBoards",
+                wrapMode = TextureWrapMode.Repeat,
+                filterMode = FilterMode.Trilinear
+            };
+            var light = new Color(0.66f, 0.47f, 0.27f);
+            var dark = new Color(0.30f, 0.20f, 0.11f);
+            var px = new Color[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float u = x / (float)(w - 1);
+                    float grain = Mathf.PerlinNoise(u * 18f, y * 0.12f) * 0.5f + Mathf.Sin(u * 61f) * 0.06f;
+                    var c = Color.Lerp(wood, light, 0.35f + grain * 0.5f);
+                    if (y < 4)
+                        c = Color.Lerp(c, dark, 0.85f); // gap between boards
+                    if (x < 5 || x > w - 6)
+                        c = Color.Lerp(c, dark, 0.7f);  // side rails
+                    c.a = 1f;
+                    px[y * w + x] = c;
+                }
+            }
+
+            tex.SetPixels(px);
+            tex.Apply(true, true);
+            _pierBoards = tex;
+            return _pierBoards;
+        }
+
+        private static void CreatePortRateBadge(
+            Transform parent,
+            bool isGeneric,
+            ResourceType? specificResource,
+            float localY,
+            float localZ)
+        {
+            var badgeRoot = new GameObject("PortRateBadge");
+            badgeRoot.transform.SetParent(parent, false);
+            badgeRoot.transform.localPosition = new Vector3(0f, localY, localZ);
+
+            var disc = new GameObject("BadgeDisc");
+            disc.transform.SetParent(badgeRoot.transform, false);
+            disc.transform.localPosition = Vector3.zero;
+            float discDiameter = BadgeDiscWorldRadius * 2f;
+            float discYScale = BadgeDiscHeight / ThinDiskMesh.MeshHeight;
+            disc.transform.localScale = new Vector3(discDiameter, discYScale, discDiameter);
+            var meshFilter = disc.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = ThinDiskMesh.Shared;
+            var discRenderer = disc.AddComponent<MeshRenderer>();
+            var badgeArt = PaintedBadgeTexture();
+            // With the painted face the disc body is dark wood (its rim shows as the badge's edge).
+            discRenderer.sharedMaterial = BuiltInMaterials.CreateUnlit(badgeArt != null
+                ? new Color(0.36f, 0.22f, 0.11f, 1f)
+                : new Color(0.98f, 0.96f, 0.90f, 1f));
+            discRenderer.sharedMaterial.renderQueue = 3100;
+            discRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            if (badgeArt != null)
+            {
+                var face = ColonistFlatBoardQuad.Create(
+                    badgeRoot.transform,
+                    BadgeFacePartName,
+                    new Vector3(0f, discYScale * ThinDiskMesh.TopY + 0.003f, 0f),
+                    discDiameter * BadgeFaceOverDisc,
+                    discDiameter * BadgeFaceOverDisc,
+                    badgeArt,
+                    3150,
+                    placeAbove: null,
+                    alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);
+                ColonistFlatBoardQuad.ApplyWorldSize(
+                    face.transform, badgeRoot.transform, discDiameter * BadgeFaceOverDisc, discDiameter * BadgeFaceOverDisc);
+                ColonistFlatBoardQuad.PlaceWorldYAbove(face.transform, discRenderer);
+            }
+
+            float discTopLocalY = discYScale * ThinDiskMesh.TopY;
+            float labelLocalY = discTopLocalY + 0.006f;
+            var labelTexture = ColonistPortRateLabelTextures.Get(isGeneric);
+            bool hasRateIcon = !isGeneric && specificResource.HasValue;
+            float labelWorldWidth = discDiameter * (hasRateIcon
+                ? BadgeLabelWidthFractionSpecific
+                : BadgeLabelWidthFractionGeneric);
+            float aspect = labelTexture.height / (float)labelTexture.width;
+            float labelWorldHeight = labelWorldWidth * aspect;
+
+            Vector3 baseLabelLocal = new Vector3(0f, labelLocalY, 0f);
+            var labelGo = ColonistFlatBoardQuad.Create(
+                badgeRoot.transform,
+                "RateLabel",
+                baseLabelLocal,
+                labelWorldWidth,
+                labelWorldHeight,
+                labelTexture,
+                3210,
+                placeAbove: null,
+                alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);
+
+            if (hasRateIcon)
+            {
+                float iconWorldSize = discDiameter * BadgeRateIconDiameterFraction;
+                float stackGap = discDiameter * BadgeStackGapFraction;
+                Vector3 upBoard = ColonistFlatBoardQuad.GetColonistCameraUpOnBoard();
+                Vector3 upLocal = badgeRoot.transform.InverseTransformDirection(upBoard);
+                if (upLocal.sqrMagnitude > 1e-6f)
+                    upLocal.Normalize();
+
+                Vector3 labelLocal = baseLabelLocal - upLocal * (iconWorldSize * 0.5f + stackGap * 0.5f);
+                labelGo.transform.localPosition = labelLocal;
+                ColonistFlatBoardQuad.ApplyWorldSize(
+                    labelGo.transform,
+                    badgeRoot.transform,
+                    labelWorldWidth,
+                    labelWorldHeight);
+                ColonistFlatBoardQuad.PlaceWorldYAbove(labelGo.transform, discRenderer);
+
+                Vector3 iconLocal = labelLocal + upLocal * (labelWorldHeight * 0.5f + stackGap + iconWorldSize * 0.5f);
+                var iconGo = ColonistFlatBoardQuad.Create(
+                    badgeRoot.transform,
+                    "RateIcon",
+                    iconLocal,
+                    iconWorldSize,
+                    iconWorldSize,
+                    ColonistResourceIconTextures.GetForPortBadge(specificResource.Value),
+                    3220,
+                    placeAbove: null,
+                    alignment: ColonistFlatBoardQuad.AlignmentMode.ColonistCamera);
+                ColonistFlatBoardQuad.ApplyWorldSize(
+                    iconGo.transform,
+                    badgeRoot.transform,
+                    iconWorldSize,
+                    iconWorldSize);
+                ColonistFlatBoardQuad.PlaceWorldYAbove(iconGo.transform, discRenderer);
+            }
+            else
+            {
+                ColonistFlatBoardQuad.PlaceWorldYAbove(labelGo.transform, discRenderer);
+            }
+        }
+
+        private static void DestroyCollider(Collider collider) =>
+            ColonistSceneDestroy.SafeDestroy(collider);
 
         private static void CreatePart(
             string name,
             Transform parent,
             Vector3 localPosition,
             Vector3 localScale,
-            Color color)
+            Color color,
+            Quaternion localRotation = default)
         {
             var part = GameObject.CreatePrimitive(PrimitiveType.Cube);
             part.name = name;
             part.transform.SetParent(parent, false);
             part.transform.localPosition = localPosition;
+            part.transform.localRotation = localRotation;
             part.transform.localScale = localScale;
 
             var renderer = part.GetComponent<Renderer>();
             renderer.sharedMaterial = BuiltInMaterials.Create(color);
 
-            Object.DestroyImmediate(part.GetComponent<Collider>());
+            DestroyCollider(part.GetComponent<Collider>());
         }
     }
 }

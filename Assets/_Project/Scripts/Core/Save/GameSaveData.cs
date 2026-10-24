@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Cards;
+using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Events;
 using CatanRoguelike.Core.Leaders;
@@ -57,6 +58,8 @@ namespace CatanRoguelike.Core.Save
         public bool IsDesert { get; set; }
         /// <summary>Optional v1 — classic number token 2–12.</summary>
         public int? NumberToken { get; set; }
+        public bool IsFishTile { get; set; }
+        public int FishValue { get; set; }
     }
 
     public sealed class RoadSaveData
@@ -72,9 +75,18 @@ namespace CatanRoguelike.Core.Save
         public PlayerId Owner { get; set; }
     }
 
+    public sealed class PortSeaSlotSaveData
+    {
+        public VertexSaveData Vertex { get; set; }
+        public int SeaQ { get; set; }
+        public int SeaR { get; set; }
+    }
+
     public sealed class BoardSaveData
     {
         public List<HexTileSaveData> Tiles { get; set; } = new();
+        public List<HexTileSaveData> SeaFishGrounds { get; set; } = new();
+        public List<PortSeaSlotSaveData> PortSeaSlots { get; set; } = new();
         public List<RoadSaveData> Roads { get; set; } = new();
         public List<VertexBuildingSaveData> VertexBuildings { get; set; } = new();
         public List<EdgeSaveData> DisabledRoads { get; set; } = new();
@@ -160,6 +172,20 @@ namespace CatanRoguelike.Core.Save
         public VertexSaveData EventBlockedPortVertex { get; set; }
         public bool EventStoneDouble { get; set; }
         public int EventShopBonus { get; set; }
+        // v131 (nullable / defaulted so older saves load unchanged)
+        public CivilizationId Civilization { get; set; }
+        public List<CivilizationId> CivilizationOffer { get; set; }
+        public int? EventProductionPercent { get; set; }
+        public ResourceType? EventBlockedResource { get; set; }
+        public ResourceType? EventBonusResource { get; set; }
+        public bool EventFishStorm { get; set; }
+        public string EventDetail { get; set; }
+        public int? EventDay { get; set; }
         public BoardSaveData Board { get; set; }
+        public bool FishermenOfCatanEnabled { get; set; }
+        public int FishermenRunSeed { get; set; }
+        public int PlayerFish { get; set; }
+        public int AiFish { get; set; }
+        public List<int> FishBagRemaining { get; set; }
     }
 }

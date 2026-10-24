@@ -3,6 +3,7 @@
     "rootNamespace": "CatanRoguelike.Game",
     "references": [
         "CatanRoguelike.Core",
+        "Unity.ugui",
         "UnityEngine.ImageConversionModule"
     ],
     "includePlatforms": [],

@@ -21,7 +21,7 @@ namespace CatanRoguelike.Editor
             {
                 camera.gameObject.name = "Main Camera";
                 camera.clearFlags = CameraClearFlags.SolidColor;
-                camera.backgroundColor = new Color(0.12f, 0.14f, 0.18f);
+                camera.backgroundColor = new Color(0.10f, 0.16f, 0.22f);
                 camera.gameObject.AddComponent<TableCamera>();
             }
 

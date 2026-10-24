@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Events;
@@ -24,22 +25,266 @@ namespace CatanRoguelike.Game
         public float GetBoardBoundingRadius()
         {
             if (_tiles.Count > 0)
-                return TableCameraFraming.ComputeBoardBoundingRadius(_tiles.Keys, hexScale);
+                return TableCameraFraming.ComputeBoardBoundingRadius(GetLandTileCoords(), hexScale);
 
             if (_controller != null)
-                return TableCameraFraming.ComputeBoardBoundingRadius(_controller.State.Board, hexScale);
+                return TableCameraFraming.ComputeBoardBoundingRadius(GetLandCoords(_controller.State.Board), hexScale);
 
             return 0f;
         }
 
-        private readonly Dictionary<HexCoord, HexTileView> _tiles = new();
-        private GameController _controller;
+        /// <summary>Radius from board center that includes sand ring and port badges (world units).</summary>
+        public float GetColonistFramingExtentRadius()
+        {
+            float beachWidth = hexScale * ColonistCoastSandMesh.BeachWidthFactor;
+            Vector3 center = GetBoardWorldCenter();
+            float sandFromCenter = ColonistCoastSandMesh.SandSkirtEnabled
+                ? ComputeFarthestSandDistanceFromCenter(center, beachWidth)
+                : 0f;
+            float badgeFromCenter = ComputeLivePortBadgeExtentFromCenter(center);
+            float fishFromCenter = ComputeSeaFishGroundExtentFromCenter(center);
+            badgeFromCenter = Mathf.Max(badgeFromCenter, fishFromCenter);
+            if (badgeFromCenter <= 0f && _controller != null && _controller.State?.Board != null)
+            {
+                badgeFromCenter = PortBadgePlacement.ComputeMaxBadgeOuterDistanceFromCenter(
+                    _controller.State.Board,
+                    hexScale,
+                    PortMarkerVisuals.BadgeDiscWorldRadius,
+                    center);
+            }
 
-        private static readonly Color WoodColor = new(0.2f, 0.55f, 0.2f);
-        private static readonly Color BrickColor = new(0.7f, 0.35f, 0.2f);
-        private static readonly Color WheatColor = new(0.9f, 0.85f, 0.2f);
-        private static readonly Color SheepColor = new(0.5f, 0.85f, 0.5f);
-        private static readonly Color StoneColor = new(0.55f, 0.55f, 0.6f);
+            if (sandFromCenter <= 0f && badgeFromCenter <= 0f)
+            {
+                float boardRadius = GetBoardBoundingRadius();
+                return TableCameraFraming.ComputeColonistSandOuterRadius(boardRadius, hexScale, beachWidth);
+            }
+
+            return Mathf.Max(sandFromCenter, badgeFromCenter);
+        }
+
+        private float ComputeFarthestSandDistanceFromCenter(Vector3 center, float beachWidth)
+        {
+            if (_tiles.Count == 0)
+                return 0f;
+
+            var centerXZ = new Vector2(center.x, center.z);
+            float max = 0f;
+            foreach (var coord in _tiles.Keys)
+            {
+                for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
+                {
+                    var (x, z) = HexMath.VertexToWorldPosition(coord, corner, hexScale);
+                    float dist = Vector2.Distance(centerXZ, new Vector2(x, z)) + beachWidth;
+                    max = Mathf.Max(max, dist);
+                }
+            }
+
+            return max;
+        }
+
+        private float ComputeLivePortBadgeExtentFromCenter(Vector3 center)
+        {
+            if (boardRoot == null)
+                return 0f;
+
+            var centerXZ = new Vector2(center.x, center.z);
+            float max = 0f;
+            foreach (var disc in boardRoot.GetComponentsInChildren<Transform>(true))
+            {
+                if (disc.name != "BadgeDisc")
+                    continue;
+
+                float radius = disc.lossyScale.x * 0.5f;
+                var pos = disc.position;
+                float dist = Vector2.Distance(centerXZ, new Vector2(pos.x, pos.z))
+                    + radius * (1f + PortBadgePlacement.BadgeStackFramingPadFactor);
+                max = Mathf.Max(max, dist);
+            }
+
+            return max;
+        }
+
+        private float ComputeSeaFishGroundExtentFromCenter(Vector3 center)
+        {
+            var board = _controller?.State?.Board;
+            if (board == null || board.SeaFishGrounds.Count == 0)
+                return 0f;
+
+            var centerXZ = new Vector2(center.x, center.z);
+            float max = 0f;
+            foreach (var sea in board.SeaFishGrounds.Keys)
+            {
+                if (!SeaFrameSlotLayout.TryGetFishShoalPlacement(board, sea, hexScale, out FishShoalPlacement p))
+                    continue;
+
+                max = Mathf.Max(max, Vector2.Distance(centerXZ, new Vector2(p.SeaFlatLeft.X, p.SeaFlatLeft.Z)));
+                max = Mathf.Max(max, Vector2.Distance(centerXZ, new Vector2(p.SeaFlatRight.X, p.SeaFlatRight.Z)));
+                max = Mathf.Max(max, Vector2.Distance(centerXZ, new Vector2(p.InlandTip.X, p.InlandTip.Z)));
+            }
+
+            return max;
+        }
+
+        public Vector3 GetBoardWorldCenter()
+        {
+            if (_tiles.Count == 0)
+                return transform.position;
+
+            Vector3 sum = Vector3.zero;
+            int count = 0;
+            foreach (var tile in _tiles.Values)
+            {
+                if (IsSeaFishTile(tile.Data))
+                    continue;
+                sum += tile.transform.position;
+                count++;
+            }
+
+            return count > 0 ? sum / count : transform.position;
+        }
+
+        /// <summary>World samples for colonist camera fit (land corners, sand ring, port badges).</summary>
+        public void FillColonistFramingSamples(List<Vector3> samples)
+        {
+            if (samples == null)
+                return;
+
+            float beachWidth = hexScale * ColonistCoastSandMesh.BeachWidthFactor;
+            float sampleY = 0f;
+            foreach (var kvp in _tiles)
+            {
+                if (IsSeaFishTile(kvp.Value.Data))
+                    continue;
+
+                sampleY = GetHexTopWorldPoint(kvp.Value.transform).y;
+                break;
+            }
+
+            if (_controller?.State?.Board != null)
+            {
+                ColonistCoastSandMesh.AppendLandHexTopCornerSamples(
+                    _controller.State.Board,
+                    hexScale,
+                    sampleY,
+                    samples);
+            }
+            else
+            {
+                foreach (var kvp in _tiles)
+                {
+                    if (IsSeaFishTile(kvp.Value.Data))
+                        continue;
+
+                    var coord = kvp.Key;
+                    float y = GetHexTopWorldPoint(kvp.Value.transform).y;
+                    for (int corner = 0; corner < HexPrismMesh.SideCount; corner++)
+                    {
+                        var (x, z) = HexMath.VertexToWorldPosition(coord, corner, hexScale);
+                        samples.Add(new Vector3(x, y, z));
+                    }
+                }
+            }
+
+            if (boardRoot == null)
+                return;
+
+            foreach (var badgeRoot in boardRoot.GetComponentsInChildren<Transform>(true))
+            {
+                if (badgeRoot.name != "PortRateBadge")
+                    continue;
+
+                foreach (var renderer in badgeRoot.GetComponentsInChildren<Renderer>(true))
+                    ColonistBoardFraming.AppendBoundsCorners(renderer.bounds, samples);
+            }
+
+            AppendSeaFishGroundCornerSamples(samples, sampleY);
+        }
+
+        /// <summary>Outer corners of inset sea-fish hex prisms (full hex footprint, not centre).</summary>
+        public void AppendSeaFishGroundCornerSamples(List<Vector3> samples)
+        {
+            float sampleY = 0f;
+            foreach (var kvp in _tiles)
+            {
+                if (!IsSeaFishTile(kvp.Value.Data))
+                    continue;
+                sampleY = GetHexTopWorldPoint(kvp.Value.transform).y;
+                break;
+            }
+
+            AppendSeaFishGroundCornerSamples(samples, sampleY);
+        }
+
+        public void AppendSeaFishGroundCornerSamples(List<Vector3> samples, float sampleY)
+        {
+            if (samples == null)
+                return;
+
+            var board = _controller?.State?.Board;
+            if (board == null || board.SeaFishGrounds.Count == 0)
+                return;
+
+            var xz = new List<MapPlaneXz>(board.SeaFishGrounds.Count * 3);
+            SeaFrameSlotLayout.AppendFishShoalFramingSamples(board, hexScale, xz);
+            foreach (var p in xz)
+                samples.Add(new Vector3(p.X, sampleY, p.Z));
+        }
+
+        /// <summary>World point on the top of the reference hex for capture colour sampling.</summary>
+        public Vector3 GetCaptureReferenceWorldPoint()
+        {
+            var origin = new HexCoord(0, 0);
+            if (_tiles.TryGetValue(origin, out var centerTile))
+                return GetHexTopWorldPoint(centerTile.transform);
+
+            foreach (var tile in _tiles.Values)
+                return GetHexTopWorldPoint(tile.transform);
+
+            return transform.position;
+        }
+
+        /// <summary>Land hex top offset toward a corner (fully off centre number token) for capture sampling.</summary>
+        public Vector3 GetCaptureHexSampleWorldPoint()
+        {
+            HexTileView tile = null;
+            if (_tiles.TryGetValue(new HexCoord(1, -1), out var preferred) && !preferred.Data.IsDesert)
+                tile = preferred;
+
+            if (tile == null)
+            {
+                foreach (var kvp in _tiles)
+                {
+                    if (IsSeaFishTile(kvp.Value.Data) || kvp.Value.Data.IsDesert)
+                        continue;
+                    tile = kvp.Value;
+                    break;
+                }
+            }
+
+            if (tile == null)
+                return GetCaptureReferenceWorldPoint();
+
+            var top = GetHexTopWorldPoint(tile.transform);
+            float outer = hexScale * HexMath.OuterRadius;
+            const float cornerInset = 0.72f;
+            return new Vector3(
+                top.x + outer * cornerInset * 0.8660254f,
+                top.y + 0.002f,
+                top.z + outer * cornerInset * 0.5f);
+        }
+
+        private static Vector3 GetHexTopWorldPoint(Transform tileRoot)
+        {
+            float topY = tileRoot.position.y + tileRoot.lossyScale.y * HexPrismMesh.TopY;
+            return new Vector3(tileRoot.position.x, topY, tileRoot.position.z);
+        }
+
+        private readonly Dictionary<HexCoord, HexTileView> _tiles = new();
+        private readonly Dictionary<HexCoord, HexTileView> _fishShoalViews = new();
+        private readonly HashSet<HexCoord> _boardTileCoords = new();
+        private GameController _controller;
+        private int _lastBuildingVisualCount;
+
 
         public void Initialize(GameController controller)
         {
@@ -64,7 +309,12 @@ namespace CatanRoguelike.Game
                     DestroySceneObject(boardRoot.GetChild(i).gameObject);
             }
 
+            buildingsRoot = null;
+
             _tiles.Clear();
+            _fishShoalViews.Clear();
+            _boardTileCoords.Clear();
+            ColonistPortBadgeSizing.ResetBoardSession();
         }
 
         private static void DestroySceneObject(GameObject target)
@@ -76,7 +326,7 @@ namespace CatanRoguelike.Game
                 return;
             }
 #endif
-            Destroy(target);
+            ColonistSceneDestroy.SafeDestroy(target);
         }
 
         private void BuildBoard(BoardState board)
@@ -85,37 +335,86 @@ namespace CatanRoguelike.Game
 
             DisableLegacySceneTable();
 
+            _boardTileCoords.Clear();
+            foreach (var kvp in board.Tiles)
+            {
+                if (IsLandHexCoord(kvp.Value))
+                    _boardTileCoords.Add(kvp.Key);
+            }
+
             foreach (var kvp in board.Tiles)
             {
                 var tile = CreateHexTile(kvp.Value);
                 _tiles[kvp.Key] = tile;
             }
 
+            BuildCoastalFishShoals(board);
+
+            if (ColonistPresentation.IsActive)
+            {
+                ColonistBoardVisualScale.UpdateFromBoard(board, hexScale);
+                ColonistPortBadgeSizing.ConfigureFromTiles(_tiles.Values);
+            }
+
             CreateTableSurface(board);
             CreatePortMarkers(board);
         }
 
+        private void BuildCoastalFishShoals(BoardState board)
+        {
+            if (!ColonistPresentation.IsActive || board == null)
+                return;
+
+            foreach (var kvp in board.SeaFishGrounds)
+            {
+                if (!SeaFrameSlotLayout.TryGetFishShoalPlacement(
+                        board, kvp.Key, hexScale, out FishShoalPlacement placement))
+                    continue;
+
+                float hexHeight = tileHeight * 0.25f;
+                var view = ColonistCoastalFishShoalVisual.Build(
+                    boardRoot, kvp.Value, placement, hexHeight, hexScale);
+                _fishShoalViews[kvp.Key] = view;
+            }
+        }
+
         private void CreateTableSurface(BoardState board)
         {
-            float boundingRadius = TableCameraFraming.ComputeBoardBoundingRadius(board, hexScale);
+            float boundingRadius = ColonistPresentation.IsActive
+                ? TableCameraFraming.ComputeBoardBoundingRadius(GetLandCoords(board), hexScale)
+                : TableCameraFraming.ComputeBoardBoundingRadius(board, hexScale);
 
-            CreateTableDisk(
-                "BoardSurface",
-                TableCameraFraming.TableSurfaceLocalY,
-                TableCameraFraming.ComputeTableDiskScale(boundingRadius),
-                BoardSurfaceMaterial.Create());
+            if (!ColonistPresentation.IsActive)
+            {
+                CreateTableDisk(
+                    "BoardSurface",
+                    TableCameraFraming.TableSurfaceLocalY,
+                    TableCameraFraming.ComputeTableDiskScale(boundingRadius),
+                    BoardSurfaceMaterial.Create());
+            }
 
-            CreateTableDisk(
-                "WaterSurface",
-                TableCameraFraming.WaterSurfaceLocalY,
-                TableCameraFraming.ComputeWaterDiskScale(boundingRadius),
-                BoardWaterMaterial.Create());
+            if (ColonistPresentation.IsActive)
+            {
+                float colonistHexHeight = tileHeight * 0.25f;
+                ColonistBoardSurfaces.CreateOceanAndCoast(boardRoot, board, boundingRadius, colonistHexHeight, hexScale);
+            }
+            else
+            {
+                CreateTableDisk(
+                    "WaterSurface",
+                    TableCameraFraming.WaterSurfaceLocalY,
+                    TableCameraFraming.ComputeWaterDiskScale(boundingRadius),
+                    BoardWaterMaterial.Create());
+            }
 
-            CreateTableDisk(
-                "FeltSurface",
-                TableCameraFraming.FeltSurfaceLocalY,
-                TableCameraFraming.ComputeFeltDiskScale(boundingRadius),
-                BoardFeltMaterial.Create());
+            if (!ColonistPresentation.IsActive)
+            {
+                CreateTableDisk(
+                    "FeltSurface",
+                    TableCameraFraming.FeltSurfaceLocalY,
+                    TableCameraFraming.ComputeFeltDiskScale(boundingRadius),
+                    BoardFeltMaterial.Create());
+            }
         }
 
         private void CreateTableDisk(string name, float localY, Vector3 localScale, Material material)
@@ -156,11 +455,36 @@ namespace CatanRoguelike.Game
                     port.Vertex,
                     hexScale,
                     tileHeight,
+                    board,
                     port.IsGeneric,
                     port.SpecificResource,
                     port.IsGeneric
                         ? Color.white
                         : GetResourceColor(port.SpecificResource!.Value));
+            }
+        }
+
+        private static bool IsSeaFishTile(HexTileData data) =>
+            BoardState.IsSeaFishGround(data);
+
+        private static bool IsLandHexCoord(HexTileData data) =>
+            !BoardState.IsSeaFishGround(data);
+
+        private IEnumerable<HexCoord> GetLandTileCoords()
+        {
+            foreach (var kvp in _tiles)
+            {
+                if (!IsSeaFishTile(kvp.Value.Data))
+                    yield return kvp.Key;
+            }
+        }
+
+        private static IEnumerable<HexCoord> GetLandCoords(BoardState board)
+        {
+            foreach (var kvp in board.Tiles)
+            {
+                if (!IsSeaFishTile(kvp.Value))
+                    yield return kvp.Key;
             }
         }
 
@@ -171,17 +495,59 @@ namespace CatanRoguelike.Game
 
             var (x, z) = HexMath.ToWorldPosition(data.Coord, hexScale);
             go.transform.localPosition = new Vector3(x, 0f, z);
-            go.transform.localScale = new Vector3(1f, tileHeight, 1f);
+            float height = ColonistPresentation.IsActive ? tileHeight * 0.25f : tileHeight;
+            go.transform.localScale = new Vector3(1f, height, 1f);
 
-            var mesh = HexPrismMesh.Create(data.Coord, hexScale);
-            var meshFilter = go.AddComponent<MeshFilter>();
-            meshFilter.sharedMesh = mesh;
+            Renderer renderer;
+            {
+                var mesh = HexPrismMesh.Create(data.Coord, hexScale);
+                var meshFilter = go.AddComponent<MeshFilter>();
+                meshFilter.sharedMesh = mesh;
 
-            var renderer = go.AddComponent<MeshRenderer>();
-            renderer.material = BuiltInMaterials.Create(GetResourceColor(data.Resource));
+                renderer = go.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial = ColonistPresentation.IsActive
+                    ? BoardTerrainMaterialSlots.GetTileMaterialInstance(data)
+                    : BuiltInMaterials.Create(BoardResourceColors.GetTileFace(data));
 
-            var collider = go.AddComponent<MeshCollider>();
-            collider.sharedMesh = mesh;
+                var collider = go.AddComponent<MeshCollider>();
+                collider.sharedMesh = mesh;
+            }
+
+            bool blenderTop = ColonistPresentation.IsActive
+                && ColonistBlenderHexTerrainArt.Enabled
+                && !IsSeaFishTile(data)
+                && ColonistBoardTextureLoader.UsesBlenderTerrainTextures(
+                    data.IsDesert
+                        ? BoardTerrainSlot.Desert
+                        : BoardTerrainMaterialSlots.ResourceToSlot(data.Resource));
+            if (blenderTop && renderer.sharedMaterial != null && renderer.sharedMaterial.HasProperty("_Color"))
+                renderer.sharedMaterial.color *= BoardTerrainMaterialSlots.PerTileTint(data.Coord);
+            // Painted tiles carry their own cardboard bevel frame; the slate seam strips would
+            // draw a cold line through the middle of the sand borders.
+            if (!blenderTop)
+                HexCartoonTileDecor.ApplyOutline(go, data.Coord, hexScale, _boardTileCoords);
+            if (ColonistPresentation.IsActive)
+            {
+
+                if (!blenderTop && !data.IsDesert && !IsSeaFishTile(data))
+                    ColonistHexTileNatureDecor.Apply(go, data, hexScale);
+                if (!blenderTop && data.IsDesert && !data.IsFishTile)
+                {
+                    ColonistDesertDuneDecor.Apply(go, hexScale);
+                    ColonistHexTileNatureDecor.Apply(go, data, hexScale);
+                }
+                if (!blenderTop && data.IsDesert && data.IsFishTile)
+                {
+                    ColonistDesertLakeVisual.Apply(go, hexScale);
+                    ColonistHexTileNatureDecor.Apply(go, data, hexScale); // cacti/rocks around the pond
+                }
+                // v128: the painted desert has no oasis pond (the desert is still the Fishermen lake
+                // tile in the rules); its painted cacti are baked into Desert.png.
+                if (data.IsFishTile)
+                    ColonistFishTileVisual.Apply(go, data, hexScale);
+            }
+            else
+                HexCartoonTileDecor.ApplyTopCap(go, data, hexScale, go.transform.lossyScale);
 
             var view = go.AddComponent<HexTileView>();
             view.Initialize(data, renderer);
@@ -194,6 +560,15 @@ namespace CatanRoguelike.Game
             foreach (var kvp in state.Board.Tiles)
             {
                 if (_tiles.TryGetValue(kvp.Key, out var view))
+                {
+                    view.Refresh(kvp.Value);
+                    view.RefreshNumberToken(kvp.Value);
+                }
+            }
+
+            foreach (var kvp in state.Board.SeaFishGrounds)
+            {
+                if (_fishShoalViews.TryGetValue(kvp.Key, out var view))
                 {
                     view.Refresh(kvp.Value);
                     view.RefreshNumberToken(kvp.Value);
@@ -227,6 +602,55 @@ namespace CatanRoguelike.Game
             }
         }
 
+        public IEnumerator PulseProductionHex(HexCoord coord, float duration)
+        {
+            if (!_tiles.TryGetValue(coord, out var view))
+                yield break;
+            yield return view.PulseProduction(duration);
+        }
+
+        public IEnumerator PlayProductionHighlight(IReadOnlyList<HexCoord> producing, float duration)
+        {
+            var producingSet = new HashSet<HexCoord>(producing);
+            foreach (var kvp in _tiles)
+                kvp.Value.SetDimmed(!producingSet.Contains(kvp.Key));
+
+            foreach (var hex in producing)
+            {
+                if (_tiles.TryGetValue(hex, out var view))
+                    yield return view.PulseProduction(duration);
+            }
+
+            foreach (var view in _tiles.Values)
+                view.SetDimmed(false);
+        }
+
+        public void SetHexDimAll(bool dimmed)
+        {
+            foreach (var view in _tiles.Values)
+                view.SetDimmed(dimmed);
+        }
+
+        public bool TryGetHexWorldCenter(HexCoord coord, out Vector3 worldCenter)
+        {
+            if (_tiles.TryGetValue(coord, out var view))
+            {
+                worldCenter = view.transform.position + Vector3.up * (tileHeight * 0.5f);
+                return true;
+            }
+
+            var (x, z) = HexMath.ToWorldPosition(coord, hexScale);
+            var local = new Vector3(x, tileHeight, z);
+            if (boardRoot != null)
+            {
+                worldCenter = boardRoot.TransformPoint(local);
+                return true;
+            }
+
+            worldCenter = transform.TransformPoint(local);
+            return true;
+        }
+
         private void RefreshBuildings(GameState state)
         {
             if (buildingsRoot == null)
@@ -236,6 +660,7 @@ namespace CatanRoguelike.Game
                 buildingsRoot = root.transform;
             }
 
+            int priorCount = buildingsRoot.childCount;
             for (int i = buildingsRoot.childCount - 1; i >= 0; i--)
                 DestroySceneObject(buildingsRoot.GetChild(i).gameObject);
 
@@ -247,9 +672,9 @@ namespace CatanRoguelike.Game
                 var color = PlayerPieceVisuals.ColorForPlayer(owner);
 
                 if (building == BuildingType.City)
-                    PlayerPieceVisuals.CreateCity(buildingsRoot, position, color, tileHeight);
+                    PlayerPieceVisuals.CreateCity(buildingsRoot, position, color, tileHeight, hexScale);
                 else
-                    PlayerPieceVisuals.CreateSettlement(buildingsRoot, position, color, tileHeight);
+                    PlayerPieceVisuals.CreateSettlement(buildingsRoot, position, color, tileHeight, hexScale);
             }
 
             foreach (var road in state.Board.Roads)
@@ -268,18 +693,20 @@ namespace CatanRoguelike.Game
                     angle,
                     length,
                     color,
-                    tileHeight);
+                    tileHeight,
+                    hexScale);
             }
+
+            if (buildingsRoot.childCount > priorCount && buildingsRoot.childCount > _lastBuildingVisualCount)
+            {
+                var placed = buildingsRoot.GetChild(buildingsRoot.childCount - 1);
+                StartCoroutine(SimpleTweens.ScalePop(placed, 0.26f, 1.14f));
+            }
+
+            _lastBuildingVisualCount = buildingsRoot.childCount;
         }
 
-        private static Color GetResourceColor(ResourceType resource) => resource switch
-        {
-            ResourceType.Wood => WoodColor,
-            ResourceType.Brick => BrickColor,
-            ResourceType.Wheat => WheatColor,
-            ResourceType.Sheep => SheepColor,
-            ResourceType.Stone => StoneColor,
-            _ => Color.gray
-        };
+        private static Color GetResourceColor(ResourceType resource) =>
+            BoardResourceColors.GetHudSwatch(resource);
     }
 }

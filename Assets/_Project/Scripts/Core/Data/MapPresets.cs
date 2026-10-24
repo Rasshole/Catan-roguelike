@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
+using CatanRoguelike.Core;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Yield;
 
 namespace CatanRoguelike.Core.Data
@@ -43,25 +45,219 @@ namespace CatanRoguelike.Core.Data
 
         /// <summary>
         /// 19-hex classic Catan shape (radius 2 ring + center).
-        /// Resource counts: 4 wood, 4 wheat, 4 sheep, 4 brick, 3 stone (19 tiles).
-        /// Center stone = desert/robber tile equivalent.
+        /// Resource counts: 4 wood, 4 wheat, 4 sheep, 3 brick, 3 ore, 1 desert (center).
         /// </summary>
         public static IReadOnlyList<(HexCoord coord, ResourceType resource)> LargeNineteenHex()
         {
             var resources = new[]
             {
-                ResourceType.Stone,  // center — robber starts here
-                // ring 1 (clockwise from east)
+                ResourceType.Stone, // center — marked desert in CreateBoard / ApplyDesertCenter
                 ResourceType.Wood, ResourceType.Wheat, ResourceType.Sheep,
                 ResourceType.Brick, ResourceType.Wood, ResourceType.Wheat,
-                // ring 2
-                ResourceType.Sheep, ResourceType.Brick, ResourceType.Wood,
-                ResourceType.Wheat, ResourceType.Stone, ResourceType.Sheep,
-                ResourceType.Brick, ResourceType.Wood, ResourceType.Wheat,
-                ResourceType.Sheep, ResourceType.Stone, ResourceType.Brick
+                ResourceType.Sheep, ResourceType.Stone, ResourceType.Wood,
+                ResourceType.Wheat, ResourceType.Sheep, ResourceType.Brick,
+                ResourceType.Wood, ResourceType.Wheat, ResourceType.Sheep,
+                ResourceType.Stone, ResourceType.Brick, ResourceType.Stone
             };
 
             return BuildFromSpiral(2, resources);
+        }
+
+        /// <summary>
+        /// Classic 5–6 player island (30 land hexes) — row widths 3,4,5,6,5,4,3. v135: every row is centred on the
+        /// same axis (world x = −½ hex, through the middle of the 6-wide row), so the island mirrors left/right and
+        /// top/bottom instead of leaning like a parallelogram. The desert (0,0) is one of the two middle hexes.
+        /// </summary>
+        private static readonly int[] ExtendedThirtyHexRowR = { -3, -2, -1, 0, 1, 2, 3 };
+
+        private static readonly int[][] ExtendedThirtyHexRowQ =
+        {
+            new[] { 0, 1, 2 },
+            new[] { -1, 0, 1, 2 },
+            new[] { -2, -1, 0, 1, 2 },
+            new[] { -3, -2, -1, 0, 1, 2 },
+            new[] { -3, -2, -1, 0, 1 },
+            new[] { -3, -2, -1, 0 },
+            new[] { -3, -2, -1 }
+        };
+
+        public static IEnumerable<HexCoord> ExtendedThirtyHexCoords()
+        {
+            for (int row = 0; row < ExtendedThirtyHexRowR.Length; row++)
+            {
+                int r = ExtendedThirtyHexRowR[row];
+                foreach (int q in ExtendedThirtyHexRowQ[row])
+                    yield return new HexCoord(q, r);
+            }
+        }
+
+        /// <summary>37-hex full radius-3 hexagon.</summary>
+        public static IEnumerable<HexCoord> HugeThirtySevenHexCoords() =>
+            HexMath.Spiral(new HexCoord(0, 0), 3);
+
+        /// <summary>
+        /// v137: the ratio multiset is spread over the island per seed (it used to be laid out in coordinate order,
+        /// which grouped every terrain into one band). The same seed always gives the same island.
+        /// </summary>
+        public static IReadOnlyList<(HexCoord coord, ResourceType resource)> ExtendedThirtyHex(int? seed = null)
+        {
+            var coords = ExtendedThirtyHexCoords().ToList();
+            return ShuffleTerrain(BuildFromCoords(coords, BuildResourcesForLandCoords(coords, new HexCoord(0, 0))),
+                new HexCoord(0, 0), seed ?? 0);
+        }
+
+        public static IReadOnlyList<(HexCoord coord, ResourceType resource)> HugeThirtySevenHex(int? seed = null)
+        {
+            var coords = HugeThirtySevenHexCoords().ToList();
+            return ShuffleTerrain(BuildFromCoords(coords, BuildResourcesForLandCoords(coords, new HexCoord(0, 0))),
+                new HexCoord(0, 0), seed ?? 0);
+        }
+
+        /// <summary>Largest same-terrain group allowed by <see cref="ShuffleTerrain"/>.</summary>
+        public const int MaxTerrainClusterSize = 2;
+
+        /// <summary>
+        /// Seeded shuffle of the productive terrain (the <paramref name="fixedCoord"/> placeholder, the desert,
+        /// stays put), then swaps that break up same-terrain neighbours until no group is larger than
+        /// <see cref="MaxTerrainClusterSize"/> and only a few same-terrain edges remain, like a well-shuffled table.
+        /// </summary>
+        public static List<(HexCoord coord, ResourceType resource)> ShuffleTerrain(
+            IReadOnlyList<(HexCoord coord, ResourceType resource)> preset, HexCoord fixedCoord, int seed)
+        {
+            var coords = preset.Where(p => !p.coord.Equals(fixedCoord)).Select(p => p.coord).ToList();
+            var types = preset.Where(p => !p.coord.Equals(fixedCoord)).Select(p => p.resource).ToArray();
+            var rng = new System.Random(unchecked(seed * 31 + 0x7E11A1));
+            for (int i = types.Length - 1; i > 0; i--)
+            {
+                int j = rng.Next(i + 1);
+                (types[i], types[j]) = (types[j], types[i]);
+            }
+
+            var index = new Dictionary<HexCoord, int>();
+            for (int i = 0; i < coords.Count; i++)
+                index[coords[i]] = i;
+            var neighbours = coords.Select(c => HexCoord.Directions.Select(d => c + d)
+                .Where(index.ContainsKey).Select(n => index[n]).ToArray()).ToArray();
+            int edges = neighbours.Sum(n => n.Length) / 2;
+            int targetPairs = System.Math.Max(1, edges / 16);
+
+            int Score() => SameTerrainPairs(types, neighbours) * 4
+                           + System.Math.Max(0, LargestCluster(types, neighbours) - MaxTerrainClusterSize) * 10;
+
+            int score = Score();
+            for (int step = 0; step < 4000; step++)
+            {
+                if (SameTerrainPairs(types, neighbours) <= targetPairs
+                    && LargestCluster(types, neighbours) <= MaxTerrainClusterSize)
+                    break;
+                int a = rng.Next(types.Length), b = rng.Next(types.Length);
+                if (types[a] == types[b])
+                    continue;
+                (types[a], types[b]) = (types[b], types[a]);
+                int next = Score();
+                if (next <= score)
+                    score = next;
+                else
+                    (types[a], types[b]) = (types[b], types[a]);
+            }
+
+            var byCoord = new Dictionary<HexCoord, ResourceType>();
+            for (int i = 0; i < coords.Count; i++)
+                byCoord[coords[i]] = types[i];
+            return preset.Select(p => (p.coord, byCoord.TryGetValue(p.coord, out var t) ? t : p.resource)).ToList();
+        }
+
+        private static int SameTerrainPairs(ResourceType[] types, int[][] neighbours)
+        {
+            int pairs = 0;
+            for (int i = 0; i < types.Length; i++)
+                foreach (int n in neighbours[i])
+                    if (n > i && types[n] == types[i])
+                        pairs++;
+            return pairs;
+        }
+
+        private static int LargestCluster(ResourceType[] types, int[][] neighbours)
+        {
+            var seen = new bool[types.Length];
+            int best = 0;
+            var stack = new Stack<int>();
+            for (int i = 0; i < types.Length; i++)
+            {
+                if (seen[i])
+                    continue;
+                int size = 0;
+                seen[i] = true;
+                stack.Push(i);
+                while (stack.Count > 0)
+                {
+                    int c = stack.Pop();
+                    size++;
+                    foreach (int n in neighbours[c])
+                        if (!seen[n] && types[n] == types[i])
+                        {
+                            seen[n] = true;
+                            stack.Push(n);
+                        }
+                }
+
+                best = System.Math.Max(best, size);
+            }
+
+            return best;
+        }
+
+        private static ResourceType[] BuildResourcesForLandCoords(
+            IReadOnlyList<HexCoord> coords, HexCoord desertCoord)
+        {
+            int productive = coords.Count - 1;
+            var multiset = BuildProductiveResourceMultiset(productive);
+            var resources = new ResourceType[coords.Count];
+            int pi = 0;
+            for (int i = 0; i < coords.Count; i++)
+            {
+                if (coords[i].Equals(desertCoord))
+                    resources[i] = ResourceType.Stone;
+                else
+                    resources[i] = multiset[pi++];
+            }
+
+            return resources;
+        }
+
+        /// <summary>Classic ratios for productive land hexes (excludes desert).</summary>
+        private static ResourceType[] BuildProductiveResourceMultiset(int productiveCount)
+        {
+            int wood = RoundRatio(productiveCount, 4, 18);
+            int sheep = RoundRatio(productiveCount, 4, 18);
+            int wheat = RoundRatio(productiveCount, 4, 18);
+            int brick = RoundRatio(productiveCount, 3, 18);
+            int stone = productiveCount - wood - sheep - wheat - brick;
+            if (stone < 0)
+                stone = 0;
+
+            var list = new List<ResourceType>(productiveCount);
+            AddMany(list, ResourceType.Wood, wood);
+            AddMany(list, ResourceType.Sheep, sheep);
+            AddMany(list, ResourceType.Wheat, wheat);
+            AddMany(list, ResourceType.Brick, brick);
+            AddMany(list, ResourceType.Stone, stone);
+
+            while (list.Count < productiveCount)
+                list.Add(ResourceType.Wheat);
+            while (list.Count > productiveCount)
+                list.RemoveAt(list.Count - 1);
+
+            return list.ToArray();
+        }
+
+        private static int RoundRatio(int total, int part, int whole) =>
+            (int)System.Math.Round(total * (double)part / whole);
+
+        private static void AddMany(List<ResourceType> list, ResourceType type, int count)
+        {
+            for (int i = 0; i < count; i++)
+                list.Add(type);
         }
 
         /// <summary>
@@ -96,17 +292,21 @@ namespace CatanRoguelike.Core.Data
 
         public static string GetDisplayName(MapSize size) => size switch
         {
-            MapSize.Small => "Small — 7 hex",
-            MapSize.Medium => "Medium — 13 hex (kompakt Catan)",
-            MapSize.Large => "Large — 19 hex (klassisk Catan)",
+            MapSize.Small => "Tutorial — 7 hex",
+            MapSize.Medium => "Compact — 13 hex",
+            MapSize.Large => "Base — 19 hex (3–4 players)",
+            MapSize.Extended => "Extended — 30 hex (5–6 players)",
+            MapSize.Huge => "Huge — 37 hex (7–8+ players)",
             _ => size.ToString()
         };
 
         public static string GetDescription(MapSize size) => size switch
         {
-            MapSize.Small => "Hurtig tutorial — lille blomst.",
-            MapSize.Medium => "19-hex form uden de 6 yderhjørner — flade kanter som mini-Catan.",
-            MapSize.Large => "Fuld radius-2 hexagon — standard Catan-størrelse.",
+            MapSize.Small => "Quick tutorial — a small flower of seven hexes.",
+            MapSize.Medium => "The 19-hex shape without its six corners — flat edges, a mini Catan.",
+            MapSize.Large => "Standard Catan: 18 tokens, 9 ports, desert center.",
+            MapSize.Extended => "Colonist extended table — 30 land hexes.",
+            MapSize.Huge => "Full radius-3 island — largest standard hexagon.",
             _ => ""
         };
 
@@ -143,12 +343,7 @@ namespace CatanRoguelike.Core.Data
         /// </summary>
         public static int ExpandBoard(BoardState board, MapSize targetSize, int? seed = null)
         {
-            var preset = targetSize switch
-            {
-                MapSize.Medium => MediumThirteenHex(),
-                MapSize.Large => LargeNineteenHex(),
-                _ => SmallSevenHex()
-            };
+            var preset = GetLandPreset(targetSize, seed);
 
             int added = 0;
             foreach (var (coord, resource) in preset)
@@ -156,7 +351,7 @@ namespace CatanRoguelike.Core.Data
                 if (board.Tiles.ContainsKey(coord))
                     continue;
 
-                board.Tiles[coord] = new HexTileData(coord, resource, isCoastal: false);
+                board.Tiles[coord] = CreateLandTile(coord, resource);
                 added++;
             }
 
@@ -167,25 +362,24 @@ namespace CatanRoguelike.Core.Data
             foreach (var coord in allCoords)
                 board.Tiles[coord].IsCoastal = IsCoastalTile(coord, allCoords);
 
-            if (targetSize == MapSize.Large && board.TryGetTile(new HexCoord(0, 0), out var center))
-            {
-                center.IsDesert = true;
-                center.NumberToken = null;
-            }
+            ApplyDesertCenter(board, targetSize);
 
             NumberTokenLibrary.AssignMissingTokens(board, seed);
+
+            var ports = PortAccess.DiscoverPorts(board);
+            SeaFrameSlotLayout.AssignPortSeaSlots(board, ports);
 
             return added;
         }
 
-        public static BoardState CreateBoard(MapSize size = MapSize.Small, int? seed = null)
+        public static BoardState CreateBoard(
+            MapSize size = MapSize.Small,
+            int? seed = null,
+            MapGenerationOptions options = default)
         {
-            var preset = size switch
-            {
-                MapSize.Medium => MediumThirteenHex(),
-                MapSize.Large => LargeNineteenHex(),
-                _ => SmallSevenHex()
-            };
+            var preset = GetLandPreset(size, seed);
+            if (options.ShuffleTerrain && size == MapSize.Large)
+                preset = ShuffleTerrain(preset, new HexCoord(0, 0), seed ?? 0);
 
             var board = new BoardState();
             var coords = new HashSet<HexCoord>();
@@ -193,7 +387,7 @@ namespace CatanRoguelike.Core.Data
             foreach (var (coord, resource) in preset)
             {
                 coords.Add(coord);
-                board.Tiles[coord] = new HexTileData(coord, resource, isCoastal: false);
+                board.Tiles[coord] = CreateLandTile(coord, resource);
             }
 
             foreach (var coord in coords)
@@ -207,12 +401,52 @@ namespace CatanRoguelike.Core.Data
                 : new HexCoord(0, 0);
             board.PlaceRobber(robberStart);
 
-            if (size == MapSize.Large && board.TryGetTile(new HexCoord(0, 0), out var center))
-                center.IsDesert = true;
+            ApplyDesertCenter(board, size);
 
             NumberTokenLibrary.AssignMissingTokens(board, seed);
 
+            var ports = PortAccess.DiscoverPorts(board);
+            SeaFrameSlotLayout.AssignPortSeaSlots(board, ports);
+            if (options.FishermenOfCatan)
+            {
+                SeaFrameSlotLayout.AssignFishSeaGrounds(board, seed);
+                ApplyDesertFishingLake(board);
+            }
+
             return board;
+        }
+
+        private static IReadOnlyList<(HexCoord coord, ResourceType resource)> GetLandPreset(MapSize size, int? seed) =>
+            size switch
+            {
+                MapSize.Medium => MediumThirteenHex(),
+                MapSize.Large => LargeNineteenHex(),
+                MapSize.Extended => ExtendedThirtyHex(seed),
+                MapSize.Huge => HugeThirtySevenHex(seed),
+                _ => SmallSevenHex()
+            };
+
+        private static void ApplyDesertCenter(BoardState board, MapSize size)
+        {
+            if (size != MapSize.Large && size != MapSize.Extended && size != MapSize.Huge)
+                return;
+
+            if (!board.TryGetTile(new HexCoord(0, 0), out var center))
+                return;
+
+            center.IsDesert = true;
+            center.NumberToken = null;
+        }
+
+        private static void ApplyDesertFishingLake(BoardState board)
+        {
+            var center = new HexCoord(0, 0);
+            if (!board.TryGetTile(center, out var tile) || !tile.IsDesert)
+                return;
+
+            tile.IsFishTile = true;
+            tile.FishValue = 0;
+            tile.IsCoastal = true;
         }
 
         /// <summary>Coastal = has at least one missing neighbor (board edge → port vertex).</summary>
@@ -227,5 +461,11 @@ namespace CatanRoguelike.Core.Data
         }
 
         public static int GetHexCount(MapSize size) => (int)size;
+
+        private static HexTileData CreateLandTile(HexCoord coord, ResourceType resource)
+        {
+            var tile = new HexTileData(coord, resource, isCoastal: false);
+            return tile;
+        }
     }
 }

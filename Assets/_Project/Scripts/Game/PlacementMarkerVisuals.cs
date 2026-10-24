@@ -49,13 +49,25 @@ namespace CatanRoguelike.Game
 
         private static void ApplyGhostMaterials(GameObject root, Color ghostColor)
         {
-            var bodyMaterial = BuiltInMaterials.CreateGhost(ghostColor);
-            var roofMaterial = BuiltInMaterials.CreateGhost(PlayerPieceVisuals.DarkenForRoof(ghostColor));
-
+            // Pieces are single meshes with Wall / Roof / Edge slots: keep the roof and bevel
+            // shading in the ghost so the hover silhouette still reads as a house.
             foreach (var renderer in root.GetComponentsInChildren<Renderer>())
             {
-                bool isRoof = renderer.gameObject.name.Contains("Roof");
-                renderer.sharedMaterial = isRoof ? roofMaterial : bodyMaterial;
+                var slots = renderer.sharedMaterials;
+                var ghosts = new Material[slots.Length];
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    string kind = PlayerPieceVisuals.SlotKind(slots[i] != null ? slots[i].name : null);
+                    var tint = kind == PlayerPieceVisuals.RoofMaterialName
+                        ? PlayerPieceVisuals.DarkenForRoof(ghostColor)
+                        : kind == PlayerPieceVisuals.EdgeMaterialName
+                            ? PlayerPieceVisuals.DarkenForEdge(ghostColor)
+                            : ghostColor;
+                    ghosts[i] = BuiltInMaterials.CreateGhost(tint);
+                    ghosts[i].name = kind;
+                }
+
+                renderer.sharedMaterials = ghosts;
             }
         }
     }

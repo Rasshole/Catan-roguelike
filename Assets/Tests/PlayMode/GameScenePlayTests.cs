@@ -40,6 +40,7 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsNotNull(loadOp, $"Failed to start loading scene '{GameSceneName}'. Is it in Build Settings?");
             yield return loadOp;
 
+            Screen.SetResolution(GameSceneCapture.CaptureWidth, GameSceneCapture.CaptureHeight, false);
             for (int i = 0; i < 3; i++)
                 yield return null;
 
@@ -47,18 +48,54 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsNotNull(gameManager, "GameManager should exist after scene load.");
             Assert.IsNotNull(gameManager.Controller, "Controller should be initialized after Start().");
             Assert.IsNotNull(gameManager.Meta, "Meta should be loaded after Start().");
+            Assert.IsTrue(ColonistPresentation.IsActive, "Game scene should use colonist presentation by default.");
 
             GameScenePlayHarness.CompleteRunSelectAndSetup(gameManager.Controller, gameManager.Meta);
+            GameScenePlayHarness.AdvanceToDayPlayerActions(gameManager.Controller);
+            gameManager.EnsureRunHudReady();
+
+            var camera = Camera.main;
+            var tableCamera = UnityEngine.Object.FindFirstObjectByType<TableCamera>();
+            Assert.IsNotNull(camera);
+            Assert.IsNotNull(tableCamera);
+            NumberTokenLabelOrientation.RefreshAllLabelsForCamera(camera);
+            var facings = UnityEngine.Object.FindObjectsByType<FlatTokenLabelFacing>(FindObjectsSortMode.None);
+            if (facings.Length > 0)
+            {
+                int upright = 0;
+                for (int i = 0; i < facings.Length; i++)
+                {
+                    if (NumberTokenLabelOrientation.IsLabelUprightForCamera(facings[i].transform, camera))
+                        upright++;
+                }
+
+                Assert.Greater(upright, facings.Length / 2,
+                    "Game scene colonist tokens should be upright for top-down camera.");
+            }
 
             for (int i = 0; i < 8; i++)
                 yield return null;
 
-            GameSceneCapture.CaptureMainCameraToPng(outputPath);
+            var hud = gameManager.GetComponent<RunHudController>();
+            Assert.IsNotNull(hud, "RunHudController should exist on Game scene.");
+            hud.Refresh(gameManager.Controller.State);
+            Canvas.ForceUpdateCanvases();
+            Assert.IsTrue(hud.IsHudCaptureReady(), "HUD must be built before composited Game capture.");
+
+            GameSceneCapture.CaptureMainCameraToPng(outputPath, hud);
 
             Assert.True(File.Exists(outputPath), $"PNG should exist at {outputPath}");
             var bytes = File.ReadAllBytes(outputPath);
             Assert.Greater(bytes.Length, 0, "PNG should be non-empty.");
             Assert.AreEqual(0x89, bytes[0], "Output should be a PNG file.");
+
+            var boardOnlyPath = outputPath + ".board.png";
+            if (File.Exists(boardOnlyPath))
+            {
+                var boardBytes = File.ReadAllBytes(boardOnlyPath);
+                Assert.AreNotEqual(boardBytes.Length, bytes.Length,
+                    "HUD composite PNG should differ in size from board-only debug capture.");
+            }
         }
 
         private static readonly HashSet<GamePhase> SetupPhases = new()
@@ -162,6 +199,9 @@ namespace CatanRoguelike.Tests.PlayMode
                 $"expected a day/night phase after one cycle, got {game.State.Phase}");
         }
 
+        private static void SkipNightAndResolveMorning(GameController game) =>
+            PlayModeTestHelpers.SkipNightAndResolveMorning(game);
+
         private static void PrepareNightAdvance(GameController game)
         {
             if (game.State.TodayRolls.Count == 0 && game.State.TomorrowRolls.Count > 0)
@@ -173,7 +213,7 @@ namespace CatanRoguelike.Tests.PlayMode
         private static void CompleteOneDayCycle(GameController game)
         {
             PrepareNightAdvance(game);
-            game.SkipNightCard();
+            SkipNightAndResolveMorning(game);
 
             if (game.State.Phase == GamePhase.LevelUpChoice)
             {
@@ -186,6 +226,7 @@ namespace CatanRoguelike.Tests.PlayMode
                 "skipping the first night should reach day player actions");
 
             game.EndPlayerDay();
+            game.CompleteAiDayTurn();
 
             if (game.State.Phase == GamePhase.LevelUpChoice)
             {
