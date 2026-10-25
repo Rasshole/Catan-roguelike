@@ -108,7 +108,7 @@ namespace CatanRoguelike.Game
         {
             bool frontScreen = state.Phase == GamePhase.RunSelectMap && (_hotSeatLobbyOpen || _mainMenuOpen);
             var root = CreateFullscreenDim("PreGameMenu", frontScreen
-                ? new Color(0.05f, 0.04f, 0.03f, 0.66f)
+                ? new Color(0.05f, 0.04f, 0.03f, 0.93f)
                 : new Color(0.05f, 0.04f, 0.03f, 0.58f));
             var group = root.gameObject.AddComponent<CanvasGroup>();
             group.alpha = 1f;
