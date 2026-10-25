@@ -609,17 +609,45 @@ namespace CatanRoguelike.Game
             _hsTimerRoot.localScale = new Vector3(ringScale, ringScale, 1f);
         }
 
+        /// <summary>
+        /// The seat whose hand to show while an AI's trade offer waits for an answer, when exactly one human sits at
+        /// the table (nobody else could see it); -1 otherwise.
+        /// </summary>
+        private int HotSeatSoleHumanAnsweringAi()
+        {
+            var s = _hotSeat;
+            if (s == null || s.IsOver || s.PassScreenPending || !MatchAi.AwaitingHumanAnswer(s.Match))
+                return -1;
+            int human = -1;
+            for (int i = 0; i < s.State.Seats.Count; i++)
+            {
+                if (s.State.Seats[i].IsAi)
+                    continue;
+                if (human >= 0)
+                    return -1;
+                human = i;
+            }
+
+            var trade = s.State.ActiveTrade;
+            return human >= 0 && trade.Responses[human].Kind == TradeResponseKind.Pending ? human : -1;
+        }
+
         private void BuildHotSeatHand()
         {
             var s = _hotSeat;
             int seat = s.State.ActingSeat;
+            // v142: an AI's offer waiting on the only human at the table shows that human's hand to answer with.
+            int answering = HotSeatSoleHumanAnsweringAi();
+            if (answering >= 0)
+                seat = answering;
             var panel = CreateImage(_hotSeatRoot, "Hand", null);
             panel.preserveAspect = false;
             ColonistUiKit.Apply(panel, UiKitPiece.FrameMedium);
             SetRect(panel.rectTransform, new Vector2(0f, 0f), new Vector2(330f, 120f), new Vector2(580f, 170f));
             var ink = ColonistUiKit.TextOn(UiKitPiece.FrameMedium);
-            bool visible = s.IsHandVisible(seat);
-            string title = visible ? $"YOUR HAND  ·  {s.Acting.Name}" : s.Acting.IsAi ? "AI IS PLAYING" : "HAND HIDDEN";
+            bool visible = answering >= 0 || s.IsHandVisible(seat);
+            var owner = s.State.Seats[seat];
+            string title = visible ? $"YOUR HAND  ·  {owner.Name}" : s.Acting.IsAi ? "AI IS PLAYING" : "HAND HIDDEN";
             var t = RunHudUiFactory.CreateText(panel.rectTransform, "Title", title, 16, TextAnchor.MiddleCenter, ink,
                 FontStyle.Bold);
             SetRect(t.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -28f), new Vector2(520f, 22f));
@@ -632,7 +660,7 @@ namespace CatanRoguelike.Game
                 return;
             }
 
-            var hand = s.Acting.Hand;
+            var hand = owner.Hand;
             var resources = MatchController.AllResources;
             for (int i = 0; i < resources.Length; i++)
             {

@@ -384,6 +384,39 @@ how the group can playtest the rules before any server exists.
     (Bounty / Sabotage / Reroll tabs) in the trade card's place, the saboteur-guess card at the start of a turn, the
     sabotage reveal, and "$N" bounty / "?" face-down marks on the player strip.
 
+- **v142 (balance pass + human-like AI, party rules only):**
+  - Balance, tuned with `tools/party-sim` (fixed seeds; the final batch is 6000 games: 2000 each of 3/4/5 seats):
+    - Civs: Brickwrights only "roads cost no Lumber" (drawback: dev cards +1 Grain); Merchant Republic 3:1 bank and
+      a 2:1 first bank trade per turn (no drawback); Sea Folk start with Lumber + Brick, 3:1 bank and 2:1 at every
+      own harbour; Academy settlements +1 Grain; Steppe dev cards +1 Ore; Highland, Shepherd and Raiders lost their
+      drawbacks; Raiders steal on their own 7s or any 7 that finds a rival with 7+ cards; Sun Kingdom can't be robbed
+      while holding 4 or fewer cards.
+    - Traits: Lucky Dice and Prospector trigger on your own roll only; Tough Hide never discards on a 7; Granary
+      discards only above 8 and takes 1 Grain on every 7; Head Start takes 1 of each resource; Road Crew makes every
+      second road free; Harbour Pilot's first bank trade per turn is 2:1; Quartermaster dev cards cost no Wool and
+      every Knight gives 1 Grain.
+    - Quests (target: 1 VP 40–60 % done, 2 VP 25–50 %): Knighthood 1 knight, Trader 5 trades, Town Planner "a city
+      and 4 buildings"; Grand Army 2 knights, Merchant Prince 7 trades, Highway 6 roads, Metropolis "2 cities and 4
+      buildings", Ore Empire "border 2 Ore and own a city on Ore", Sprawl "5 buildings and a road of 5", Harbour Road
+      "a harbour and a road of 5" (was Twin Harbours). "Five Trades" was renamed "Five Harvests".
+    - Decrees: Harbour Tariff now closes the harbours for the day and pays every harbour-less seat with 4 or fewer
+      cards 1 card; Wealth Tax only hits seats at or above the average with 4+ cards. Night Market reserves: VP card
+      3 cards, sabotage 2, reroll 1.
+    - Seat edge: the first seat takes 1 card of its scarcest resource when play starts (it was ~3 points behind).
+  - Final sim (seed 1420): civ win ratios 0.88–1.17, traits 0.96–1.12; decrees pass 44 % (Harbour Tariff), 51 %
+    (Wealth Tax), 60 % (Desert Watch); auction prices VP 3.3, sabotage 2.0, reroll 1.4; seat edge 3p 36/31/34,
+    4p 25/24/24/26, 5p 21/20/20/19/21; 6–13 player trades per game; ~0.7 knights per seat; Largest Army in 25 % of
+    games (holder wins 58 %).
+  - AI (`MatchAi.Trade`): at most 2 proposals per turn, 1-for-1 first and sweetened once; answers by comparing the hand
+    value before and after (accept / decline / counter), refuses anyone within 2 VP of winning and never feeds the
+    leader; the offerer confirms with the best partner or withdraws. On hot-seat an AI offer waits for the human
+    (who sees "INCOMING OFFER" and their own hand when they are the only human); the turn clock declines for them.
+    Knights are played before rolling when the robber blocks the AI's hex, and to take or keep Largest Army; the
+    robber goes for the leader; dev cards are bought when the cards are worth more as a card (more so with a knight
+    quest). Everything uses the seeded match RNG, so replays stay deterministic.
+  - UI: sabotage hex/road target buttons show resource icons and number tokens instead of words; the sealed-bid card
+    shows the reserve price.
+
 ### Phase 5: Network-ready core
 - PCG32 RNG streams per subsystem, `GameState.ComputeHash()`, and a recorded log that replays to the same hash.
 - `GameStateView ForSeat(SeatId)` redaction (hands, quests, traits, sabotage, sealed bids) plus JSON snapshots.

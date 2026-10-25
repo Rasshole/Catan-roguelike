@@ -142,8 +142,11 @@ namespace CatanRoguelike.Core.Match
             {
                 var after = hand;
                 after.Pay(match.DevCardCostFor(seat));
+                var me = match.State.Seats[seat];
+                bool knightQuest = !me.QuestDone && (me.Quest == MatchQuestId.Knighthood || me.Quest == MatchQuestId.GrandArmy);
+                double worth = DevCardWorth + (knightQuest ? 1.5 : 0.0);
                 if (hand.Total > match.DiscardLimitFor(seat)
-                    || HandValue(match, seat, after) + DevCardWorth >= HandValue(match, seat, hand))
+                    || HandValue(match, seat, after) + worth >= HandValue(match, seat, hand))
                     return MatchCommand.Simple(MatchCommandType.BuyDevCard, seat);
             }
 

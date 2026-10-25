@@ -92,6 +92,22 @@ namespace CatanRoguelike.Tests.PlayMode
             yield return Settle(hud);
         }
 
+        /// <summary>Clicks away any public reveal (ballot, auction, sabotage) so the table underneath is visible.</summary>
+        private static IEnumerator DismissReveals(RunHudController hud)
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                yield return Settle(hud);
+                var b = hud.HotSeatRootForTests.GetComponentsInChildren<Button>(true).FirstOrDefault(x =>
+                    x.name == "RevealContinue" || x.name == "AuctionContinue" || x.name == "SabotageContinue");
+                if (b == null)
+                    yield break;
+                b.onClick.Invoke();
+            }
+
+            yield return Settle(hud);
+        }
+
         private static MatchConfig PartyConfig(int seed, params (SeatKind kind, string name)[] seats)
         {
             var config = new MatchConfig { Seed = seed, MapSize = MatchConfig.RecommendedMap(seats.Length), PartyRules = true };
@@ -182,7 +198,10 @@ namespace CatanRoguelike.Tests.PlayMode
             int offerer = state.ActiveTrade.From;
             Assert.IsTrue(MatchAi.AwaitingHumanAnswer(match));
             Assert.IsFalse(MatchRunner.HasAiWork(match), "the AI waits for the human");
-            yield return Settle(hud);
+            yield return DismissReveals(hud);
+            StringAssert.Contains("YOUR HAND", Find(hud, "Hand/Title").GetComponent<Text>().text,
+                "the only human sees their own cards while answering");
+            StringAssert.Contains("Rasmus", Find(hud, "Hand/Title").GetComponent<Text>().text);
             var board = Find(hud, "TradeBoard");
             Assert.IsNotNull(board, "the offer is on the table");
             StringAssert.Contains("INCOMING OFFER", board.Find("Kicker").GetComponent<Text>().text);
@@ -197,13 +216,8 @@ namespace CatanRoguelike.Tests.PlayMode
                                                                && (c.Type == MatchCommandType.ConfirmTrade || c.Type == MatchCommandType.CancelTrade)),
                 "once Rasmus answered, the AI closes the deal or withdraws");
 
-            // 2) Midgame: a 5-player board a few rounds in.
-            Assert.IsTrue(Drive(s, () => state.Round >= 4 && state.CurrentSeat == 0 && state.Phase == MatchPhase.Main
-                                         && state.ActiveTrade == null));
-            yield return Settle(hud);
-            MaybeWrite(hud, "v142-midgame-5p.png");
-
-            // 3) Rasmus offers; every AI answers at once — accept, decline or counter.
+            // 2) Early on (nobody runs away yet), Rasmus offers; every AI answers at once — accept, decline or counter.
+            Assert.IsTrue(Drive(s, () => state.CurrentSeat == 0 && state.Phase == MatchPhase.Main && state.ActiveTrade == null));
             state.Seats[0].Hand = new ResourceBundle { Wood = 3, Brick = 3, Wheat = 1, Sheep = 2, Stone = 0 };
             foreach (var seat in state.Seats.Where(x => x.Index != 0))
                 seat.Hand = new ResourceBundle { Wood = 1, Brick = 0, Wheat = 2, Sheep = 1, Stone = 2 };
@@ -216,11 +230,18 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsTrue(Enumerable.Range(1, 4).Any(i => trade.Responses[i].Kind != TradeResponseKind.Declined),
                 "two cards for one Ore: someone bites (or counters)");
             hud.SetHotSeatTradeViewerForTests(0);
-            yield return Settle(hud);
+            yield return DismissReveals(hud);
             StringAssert.Contains("YOUR OFFER", Find(hud, "TradeBoard/Kicker").GetComponent<Text>().text);
             MaybeWrite(hud, "v142-ai-answers.png");
             yield return Click(hud, "CancelOffer");
             Assert.IsNull(state.ActiveTrade);
+
+            // 3) Midgame: a 5-player board a few rounds in (5-player games last ~7–8 rounds).
+            Assert.IsTrue(Drive(s, () => state.Round >= 5 && state.CurrentSeat == 0 && state.Phase == MatchPhase.Main
+                                         && state.ActiveTrade == null));
+            yield return DismissReveals(hud);
+            MaybeWrite(hud, "v142-midgame-5p.png");
+
             hud.ExitHotSeat();
             yield return Settle(hud);
         }

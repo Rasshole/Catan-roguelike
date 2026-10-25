@@ -143,10 +143,10 @@ namespace CatanRoguelike.Tests
             match.State.Config.VictoryPoints = me.VictoryPoints + 1;
             while (match.State.Phase != MatchPhase.Main) Step(match);
             me.QuestDone = false;
-            me.Quest = MatchQuestId.Metropolis; // 2 VP: 3 cities
+            me.Quest = MatchQuestId.Metropolis; // 2 VP: 2 cities and 5 buildings
             var spots = match.UpgradableSettlements(0).ToList();
             foreach (var v in spots) match.State.Board.VertexBuildings[v] = (BuildingType.City, me.Owner);
-            int extra = 3 - spots.Count;
+            int extra = 5 - spots.Count;
             for (int i = 0; i < extra; i++)
             {
                 var v = match.ValidSetupSettlements().First();
@@ -176,7 +176,8 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(0, match.RoadCostFor(1).Wood, "Brickwrights: roads cost no Lumber");
             Assert.AreEqual(match.CountRoads(1) % 2 == 1 ? 0 : 1, match.RoadCostFor(1).Total,
                 "v142 Road Crew: every second road is free");
-            Assert.AreEqual(3, match.CityCostFor(1).Wheat, "v142: Brickwrights cities cost 1 extra Grain");
+            Assert.AreEqual(2, match.CityCostFor(1).Wheat, "v142: Brickwrights cities cost the normal 2 Grain");
+            Assert.AreEqual(2, match.DevCardCostFor(1).Wheat, "v142: Brickwrights development cards cost 1 extra Grain");
 
             s.Civilization = CivilizationId.SunKingdom;
             s.Trait = MatchTraitId.None;
@@ -192,7 +193,7 @@ namespace CatanRoguelike.Tests
             s.Trait = MatchTraitId.None;
             Assert.AreEqual(4, match.DiscardOwed(1));
             s.Trait = MatchTraitId.ToughHide;
-            Assert.AreEqual(1, match.DiscardOwed(1), "v142 Tough Hide: never more than 1");
+            Assert.AreEqual(0, match.DiscardOwed(1), "v142 Tough Hide: a 7 never costs a card");
         }
 
         [Test]

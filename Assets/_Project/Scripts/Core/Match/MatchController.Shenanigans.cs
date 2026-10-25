@@ -178,7 +178,7 @@ namespace CatanRoguelike.Core.Match
         }
 
         /// <summary>v142 Harbour Tariff: only small hands without a harbour get the card.</summary>
-        public const int HarbourTariffHandCap = 3;
+        public const int HarbourTariffHandCap = 4;
 
         public bool HarbourTariffPays(int seat) =>
             !OwnsHarbour(seat) && State.Seats[seat].CardCount <= HarbourTariffHandCap;

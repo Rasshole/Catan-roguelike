@@ -335,7 +335,7 @@ namespace CatanRoguelike.Core.Match
                 return 0;
             int owed = s.CardCount / 2;
             // v142: Tough Hide caps the loss at 2 cards.
-            return s.Trait == MatchTraitId.ToughHide ? Math.Min(1, owed) : owed;
+            return s.Trait == MatchTraitId.ToughHide ? 0 : owed;
         }
 
         /// <summary>Whether <paramref name="seat"/> may play <paramref name="card"/> now (owned since before this turn, one per turn).</summary>

@@ -23,8 +23,9 @@ namespace CatanRoguelike.Core.Match
             switch (state.BallotDecree)
             {
                 case MatchDecreeId.PortsThreeToOne:
-                    // v142: closing the harbours hurts their owners and pays everyone else a card.
-                    aye = match.HarbourTariffPays(seat);
+                    // v142: closing the harbours pays small hands without one a card, and costs a harbour-owning
+                    // leader their best trades; a harbour owner never wants it.
+                    aye = !match.OwnsHarbour(seat) && (match.HarbourTariffPays(seat) || match.OwnsHarbour(Leader(state, seat)));
                     break;
                 case MatchDecreeId.NoDesertRobber:
                     // The robber must then sit on someone's production: the bigger producers lose most.

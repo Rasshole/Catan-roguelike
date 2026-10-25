@@ -142,7 +142,9 @@ namespace CatanRoguelike.Game
             var owned = kinds.Where(k => me.DevCards.Contains(k) || me.NewDevCards.Contains(k)).ToList();
             if (owned.Count == 0)
             {
-                HsText(panel.rectTransform, "Empty", "No cards yet: buy one for 1 grain, 1 wool, 1 ore.", 16,
+                var cost = s.Match.DevCardCostFor(seat);
+                var parts = MatchController.AllResources.Where(r => cost[r] > 0).Select(r => $"{cost[r]} {ResourceLabel(r).ToLowerInvariant()}");
+                HsText(panel.rectTransform, "Empty", $"No cards yet: buy one for {string.Join(", ", parts)}.", 16,
                     new Vector2(0.5f, 0.5f), new Vector2(0f, -14f), new Vector2(520f, 30f), ColonistUiKit.InkMuted,
                     FontStyle.Italic);
                 return;

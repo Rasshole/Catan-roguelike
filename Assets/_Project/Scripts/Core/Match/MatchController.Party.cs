@@ -163,6 +163,7 @@ namespace CatanRoguelike.Core.Match
                 Give(seat, ResourceType.Brick, 1);
                 Give(seat, ResourceType.Wheat, 1);
                 Give(seat, ResourceType.Sheep, 1);
+                Give(seat, ResourceType.Stone, 1);
             }
 
             AppendLog($"{seat.Name} chose a secret quest.");
@@ -173,6 +174,12 @@ namespace CatanRoguelike.Core.Match
                 State.TurnNumber = 1;
                 State.Phase = MatchPhase.Roll;
                 AppendLog($"Quests chosen. {State.Current.Name} rolls first.");
+                // v142 seat-edge compensation: the sims show the first seat losing ~3 points of win rate (it gets the
+                // last pick of the setup snake's second round), so it takes 1 card of its scarcest resource.
+                var first = State.Seats[0];
+                var bonus = LeastHeld(first.Hand);
+                Give(first, bonus, 1);
+                AppendLog($"{first.Name} takes 1 {bonus} for going first.");
             }
             else
             {
@@ -198,7 +205,7 @@ namespace CatanRoguelike.Core.Match
                     {
                         var target = State.Seats.Where(o => o.Index != seat.Index && o.CardCount > 0)
                             .OrderByDescending(o => o.CardCount).ThenBy(o => o.Index).FirstOrDefault();
-                        if (target != null && (own || target.CardCount > DiscardLimit))
+                        if (target != null && (own || target.CardCount >= DiscardLimit))
                         {
                             TakeRandom(target, seat);
                             AppendLog($"{seat.Name} raids {target.Name}.");
