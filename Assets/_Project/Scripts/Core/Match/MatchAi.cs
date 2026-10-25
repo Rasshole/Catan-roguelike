@@ -25,12 +25,12 @@ namespace CatanRoguelike.Core.Match
             {
                 case MatchPhase.SetupSettlement:
                     return MatchCommand.AtVertex(MatchCommandType.PlaceSetupSettlement, seat,
-                        Best(match.ValidSetupSettlements(), v => VertexScore(state, v, seat)));
+                        Best(match.ValidSetupSettlements(), v => PlacementScore(match, v, seat)));
                 case MatchPhase.SetupRoad:
                     return MatchCommand.AtEdge(MatchCommandType.PlaceSetupRoad, seat,
                         Best(match.ValidSetupRoads(), e => RoadScore(match, e, seat)));
                 case MatchPhase.Roll:
-                    return ChooseGuess(match, seat) ?? KnightIfBlocked(match, seat)
+                    return ChooseGuess(match, seat) ?? ChooseKnight(match, seat, preRoll: true)
                         ?? MatchCommand.Simple(MatchCommandType.RollDice, seat);
                 case MatchPhase.Vote:
                     return ChooseVote(match, seat);
@@ -50,35 +50,14 @@ namespace CatanRoguelike.Core.Match
                     return MatchCommand.PickCiv(seat, state.Seats[seat].CivOffer[0]);
                 case MatchPhase.QuestPick:
                 {
-                    // Easiest quest offered (the 1-VP one), first trait.
+                    // v142: the quest with the best expected points for this start (first trait).
                     var me = state.Seats[seat];
-                    var quest = me.QuestOffer.OrderBy(q => MatchPartyLibrary.Quest(q)?.Points ?? 9).First();
+                    var quest = me.QuestOffer.OrderByDescending(q => QuestOutlook(match, seat, q)).ThenBy(q => (int)q).First();
                     return MatchCommand.PickQuestTrait(seat, quest, me.TraitOffer[0]);
                 }
                 default:
                     return null;
             }
-        }
-
-        /// <summary>
-        /// v135: AI answer to an open offer: accept when it can pay and doesn't lose cards, else decline.
-        /// v139 wildcards: for "N of any resource" it picks what it holds fewest of (from what the offerer can
-        /// spare); for "give me N of anything" it accepts only when it has N other cards to spare.
-        /// </summary>
-        public static MatchCommand ChooseTradeResponse(MatchController match, int seat)
-        {
-            var trade = match.State.ActiveTrade;
-            if (trade == null)
-                return MatchCommand.Respond(seat, TradeResponseKind.Declined);
-            var hand = match.State.Seats[seat].Hand;
-            var choice = ResourceBundle.Zero;
-            if (trade.GiveAny > 0)
-                choice = TradeWildcards.PickForNeed(match.AcceptWildPool(trade), trade.GiveAny, hand);
-            bool fair = trade.Give.Total + trade.GiveAny >= trade.Get.Total + trade.GetAny;
-            bool accept = fair && match.CanAcceptTrade(seat, trade, choice);
-            return accept
-                ? MatchCommand.AcceptWithChoice(seat, choice)
-                : MatchCommand.Respond(seat, TradeResponseKind.Declined);
         }
 
         /// <summary>v139: default pick for the offerer's get wildcards when confirming with <paramref name="partner"/>.</summary>
@@ -91,34 +70,14 @@ namespace CatanRoguelike.Core.Match
             return TradeWildcards.PickForNeed(pool, trade.GetAny, match.State.Seats[trade.From].Hand);
         }
 
-        /// <summary>Play a knight when the robber sits on one of our producing tiles (or it clinches Largest Army).</summary>
-        private static MatchCommand KnightIfBlocked(MatchController match, int seat)
-        {
-            if (!match.CanPlayDevCard(seat, MatchDevCard.Knight))
-                return null;
-            var state = match.State;
-            var me = state.Seats[seat];
-            bool blocked = false;
-            for (int c = 0; c < 6 && !blocked && state.Board.RobberTile.HasValue; c++)
-            {
-                var v = VertexGraph.Canonicalize(new Vertex(state.Board.RobberTile.Value, c));
-                blocked = state.Board.VertexBuildings.TryGetValue(v, out var b) && MatchSeats.ToSeat(b.owner) == seat;
-            }
-
-            bool army = state.LargestArmySeat != seat && me.KnightsPlayed + 1 >= MatchController.LargestArmyMinimum
-                        && (!state.LargestArmySeat.HasValue
-                            || me.KnightsPlayed + 1 > state.Seats[state.LargestArmySeat.Value].KnightsPlayed);
-            return blocked || army ? MatchCommand.Simple(MatchCommandType.PlayKnight, seat) : null;
-        }
-
         private static MatchCommand ChooseMainAction(MatchController match, int seat)
         {
             var state = match.State;
             var hand = state.Seats[seat].Hand;
             if (state.ActiveTrade != null)
-                return null;
+                return state.ActiveTrade.From == seat ? ResolveOwnOffer(match, seat) : null;
 
-            var knight = KnightIfBlocked(match, seat);
+            var knight = ChooseKnight(match, seat, preRoll: false);
             if (knight != null)
                 return knight;
 
@@ -127,7 +86,7 @@ namespace CatanRoguelike.Core.Match
                 : new List<Vertex>();
             if (spots.Count > 0 && hand.CanAfford(match.SettlementCostFor(seat)))
                 return MatchCommand.AtVertex(MatchCommandType.BuildSettlement, seat,
-                    Best(spots, v => VertexScore(state, v, seat)));
+                    Best(spots, v => PlacementScore(match, v, seat)));
 
             var upgradable = match.CountCities(seat) < BuildingPieceLimits.MaxCities
                 ? match.UpgradableSettlements(seat).ToList()
@@ -177,14 +136,26 @@ namespace CatanRoguelike.Core.Match
                         needs.Count > 1 ? needs[1] : needs[0]);
             }
 
-            if (match.CanBuyDevCard(seat) && (spots.Count == 0 || hand.Total >= 7)
-                                          && (upgradable.Count == 0 || hand.Stone > 3 || hand.Wheat > 2))
-                return MatchCommand.Simple(MatchCommandType.BuyDevCard, seat);
+            // v142: buy a development card when the cards are worth more as a card than toward the next builds
+            // (or the hand is at risk on a 7) — players buy knights to chase the army and guard against the robber.
+            if (match.CanBuyDevCard(seat))
+            {
+                var after = hand;
+                after.Pay(match.DevCardCostFor(seat));
+                if (hand.Total > match.DiscardLimitFor(seat)
+                    || HandValue(match, seat, after) + DevCardWorth >= HandValue(match, seat, hand))
+                    return MatchCommand.Simple(MatchCommandType.BuyDevCard, seat);
+            }
 
             // v141 shenanigans (party rules): rerolls, bounties, sabotage.
             var mischief = ChooseShenanigan(match, seat);
             if (mischief != null)
                 return mischief;
+
+            // v142: ask the table first (1-for-1 beats the bank), at most twice a turn.
+            var proposal = ChooseProposal(match, seat);
+            if (proposal != null)
+                return proposal;
 
             // Bank trade 4:1 toward the current goal (capped per turn so a flipping goal can never loop).
             if (TradesThisTurn(match, seat) >= MaxBankTradesPerTurn)
@@ -215,28 +186,23 @@ namespace CatanRoguelike.Core.Match
 
         public const int MaxBankTradesPerTurn = 3;
 
-        private static int TradesThisTurn(MatchController match, int seat)
-        {
-            int count = 0;
-            var log = match.CommandLog;
-            for (int i = log.Count - 1; i >= 0; i--)
-            {
-                var c = log[i];
-                if (c.Seat != seat || c.Type == MatchCommandType.EndTurn)
-                    break;
-                if (c.Type == MatchCommandType.BankTrade)
-                    count++;
-            }
+        /// <summary>v142: how much a face-down development card is worth in <see cref="HandValue"/> terms.</summary>
+        public const double DevCardWorth = 2.0;
 
-            return count;
-        }
+        private static int TradesThisTurn(MatchController match, int seat) =>
+            ThisTurn(match).Count(c => c.Seat == seat && c.Type == MatchCommandType.BankTrade);
 
         private static int Deficit(ResourceBundle hand, ResourceBundle cost) =>
             MatchController.AllResources.Sum(r => System.Math.Max(0, cost[r] - hand[r]));
 
-        private static MatchCommand ChooseRobber(MatchController match, int seat)
+        /// <summary>
+        /// v142 robber: the leader's (and other high scorers') best-producing hexes, never a hex with our own pieces
+        /// unless there is no other choice; bounties make a target juicier. Steals from the bounty target, else the leader.
+        /// </summary>
+        public static MatchCommand ChooseRobber(MatchController match, int seat)
         {
             var state = match.State;
+            int leader = Leader(state, seat);
             HexCoord bestHex = default;
             int bestScore = int.MinValue;
             foreach (var tile in state.Board.Tiles.Values.OrderBy(t => t.Coord.Q).ThenBy(t => t.Coord.R))
@@ -254,10 +220,19 @@ namespace CatanRoguelike.Core.Match
                         continue;
                     int owner = MatchSeats.ToSeat(b.owner);
                     int weight = (b.type == BuildingType.City ? 2 : 1) * (pips + 1);
-                    score += owner == seat ? -3 * weight : weight * (1 + state.Seats[owner].VictoryPoints);
+                    if (owner == seat)
+                    {
+                        score -= 1000;
+                        continue;
+                    }
+
+                    var o = state.Seats[owner];
+                    score += weight * (1 + o.PublicVictoryPoints) + (owner == leader ? 3 * weight : 0);
+                    if (o.CardCount > 0)
+                        score += 2;
                     // v141: a bounty on a robbable owner is worth chasing.
-                    if (owner != seat && state.Seats[owner].CardCount > 0)
-                        score += 6 * match.BountiesOn(owner).Where(b => b.Poster != seat).Sum(b => b.Reward.Total);
+                    if (o.CardCount > 0)
+                        score += 6 * match.BountiesOn(owner).Where(x => x.Poster != seat).Sum(x => x.Reward.Total);
                 }
 
                 if (score > bestScore)
@@ -269,11 +244,66 @@ namespace CatanRoguelike.Core.Match
 
             int victim = match.RobberVictims(seat, bestHex)
                 .OrderByDescending(s => match.BountiesOn(s).Any(b => b.Poster != seat))
+                .ThenByDescending(s => s == leader)
                 .ThenByDescending(s => state.Seats[s].PublicVictoryPoints)
                 .ThenByDescending(s => state.Seats[s].CardCount)
                 .ThenBy(s => s)
                 .DefaultIfEmpty(-1).First();
             return MatchCommand.Robber(seat, bestHex, victim);
+        }
+
+        /// <summary>
+        /// v142 settlement spot: production (<see cref="VertexScore"/>) plus resources we don't produce yet and a
+        /// harbour that suits what we produce.
+        /// </summary>
+        public static int PlacementScore(MatchController match, Vertex v, int seat)
+        {
+            var state = match.State;
+            int score = VertexScore(state, v, seat);
+            var owner = MatchSeats.ToPlayerId(seat);
+            var produced = new Dictionary<ResourceType, int>();
+            foreach (var kv in state.Board.VertexBuildings)
+            {
+                if (kv.Value.owner != owner)
+                    continue;
+                foreach (var hex in VertexGraph.GetHexesForVertex(kv.Key))
+                    if (state.Board.TryGetTile(hex, out var t) && !t.IsDesert)
+                        produced[t.Resource] = (produced.TryGetValue(t.Resource, out int had) ? had : 0)
+                                               + NumberTokenLibrary.GetPipWeight(t.NumberToken ?? 0);
+            }
+
+            var fresh = new HashSet<ResourceType>();
+            foreach (var hex in VertexGraph.GetHexesForVertex(v))
+                if (state.Board.TryGetTile(hex, out var t) && !t.IsDesert && !produced.ContainsKey(t.Resource)
+                    && (t.NumberToken ?? 0) > 0)
+                    fresh.Add(t.Resource);
+            score += 3 * fresh.Count;
+
+            var cv = VertexGraph.Canonicalize(v);
+            foreach (var port in state.Ports)
+            {
+                if (VertexGraph.Canonicalize(port.Vertex) != cv)
+                    continue;
+                if (port.IsGeneric)
+                    score += 3;
+                else if (port.SpecificResource.HasValue)
+                    score += 1 + System.Math.Min(6, produced.TryGetValue(port.SpecificResource.Value, out int made) ? made : 0);
+            }
+
+            return score;
+        }
+
+        /// <summary>v142 quest pick: points times a rough chance — a base rate per tier plus the progress already made.</summary>
+        public static double QuestOutlook(MatchController match, int seat, MatchQuestId id)
+        {
+            var q = MatchPartyLibrary.Quest(id);
+            if (q == null)
+                return -1;
+            double progress = q.Target > 0 ? (double)q.CurrentProgress(match, seat) / q.Target : 0;
+            double chance = (q.Points >= 2 ? 0.2 : 0.45) + 0.6 * progress;
+            if (!q.Plausible(match, seat))
+                chance *= 0.3;
+            return q.Points * System.Math.Min(1.0, chance);
         }
 
         /// <summary>Production value of a vertex: pip weight sum + a bonus per distinct resource.</summary>
@@ -335,7 +365,8 @@ namespace CatanRoguelike.Core.Match
                 var command = PendingAiResponse(match);
                 if (command == null)
                 {
-                    if (!match.State.Acting.IsAi)
+                    // v142: an AI's offer waits until the humans at the table have answered.
+                    if (!match.State.Acting.IsAi || MatchAi.AwaitingHumanAnswer(match))
                         break;
                     command = MatchAi.ChooseCommand(match);
                 }
@@ -362,7 +393,19 @@ namespace CatanRoguelike.Core.Match
         }
 
         public static bool HasAiWork(MatchController match) =>
-            !match.IsOver && (match.State.Acting.IsAi || PendingAiResponse(match) != null);
+            !match.IsOver && ((match.State.Acting.IsAi && !MatchAi.AwaitingHumanAnswer(match)) || PendingAiResponse(match) != null);
+
+        /// <summary>v142: any seat (AI or a scripted stand-in human) that still owes an answer, answered by the policy.</summary>
+        public static MatchCommand PendingResponse(MatchController match)
+        {
+            var trade = match.State.ActiveTrade;
+            if (trade == null)
+                return null;
+            for (int i = 0; i < match.State.Seats.Count; i++)
+                if (i != trade.From && trade.Responses[i].Kind == TradeResponseKind.Pending)
+                    return MatchAi.ChooseTradeResponse(match, i);
+            return null;
+        }
 
         /// <summary>
         /// Play the whole match, using <see cref="MatchAi"/> for every seat (humans included, as scripted stand-ins).
@@ -373,7 +416,7 @@ namespace CatanRoguelike.Core.Match
             int guard = 0;
             while (!match.IsOver && match.State.TurnNumber <= maxTurns && guard++ < 1000000)
             {
-                var command = MatchAi.ChooseCommand(match);
+                var command = PendingResponse(match) ?? MatchAi.ChooseCommand(match);
                 var result = match.Apply(command);
                 if (!result.Ok)
                     throw new System.InvalidOperationException($"Policy proposed an invalid command {command}: {result.Error}");
@@ -384,6 +427,16 @@ namespace CatanRoguelike.Core.Match
         public static void ResolveTimeout(MatchController match)
         {
             int seat = match.State.ActingSeat;
+            if (MatchAi.AwaitingHumanAnswer(match))
+            {
+                // v142: the humans ran out of time to answer an AI's offer: their silence is a no.
+                var trade = match.State.ActiveTrade;
+                for (int i = 0; i < match.State.Seats.Count; i++)
+                    if (i != trade.From && trade.Responses[i].Kind == TradeResponseKind.Pending)
+                        match.Apply(MatchCommand.Respond(i, TradeResponseKind.Declined));
+                return;
+            }
+
             if (match.State.ActiveTrade != null)
                 match.Apply(MatchCommand.Simple(MatchCommandType.CancelTrade, match.State.ActiveTrade.From));
             if (match.State.Phase == MatchPhase.Discard || match.State.IsBallot)

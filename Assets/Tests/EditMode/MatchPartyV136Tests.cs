@@ -167,27 +167,32 @@ namespace CatanRoguelike.Tests
             var s = match.State.Seats[1];
             s.Civilization = CivilizationId.SteppeNomads;
             Assert.AreEqual(0, match.SettlementCostFor(1).Brick);
-            Assert.AreEqual(4, match.CityCostFor(1).Stone);
+            Assert.AreEqual(2, match.DevCardCostFor(1).Stone, "v142: Steppe development cards cost 1 extra Ore");
             s.Civilization = CivilizationId.Academy;
             Assert.AreEqual(0, match.DevCardCostFor(1).Wheat);
-            Assert.AreEqual(2, match.SettlementCostFor(1).Wheat);
+            Assert.AreEqual(2, match.SettlementCostFor(1).Wheat, "Academy settlements cost 1 extra Grain");
             s.Civilization = CivilizationId.Brickwrights;
             s.Trait = MatchTraitId.RoadCrew;
-            Assert.AreEqual(0, match.RoadCostFor(1).Total, "Brickwrights + Road Crew: free roads");
+            Assert.AreEqual(0, match.RoadCostFor(1).Wood, "Brickwrights: roads cost no Lumber");
+            Assert.AreEqual(match.CountRoads(1) % 2 == 1 ? 0 : 1, match.RoadCostFor(1).Total,
+                "v142 Road Crew: every second road is free");
+            Assert.AreEqual(3, match.CityCostFor(1).Wheat, "v142: Brickwrights cities cost 1 extra Grain");
 
-            s.Civilization = CivilizationId.MerchantRepublic;
+            s.Civilization = CivilizationId.SunKingdom;
             s.Trait = MatchTraitId.None;
-            var plain = MatchController.AllResources.First(r => match.BankRatio(1, r) == 3);
+            var plain = MatchController.AllResources.First(r => match.BankRatio(1, r) == 4);
             s.Trait = MatchTraitId.HarbourPilot;
-            Assert.AreEqual(2, match.BankRatio(1, plain), "Harbour Pilot: first bank trade one cheaper");
+            Assert.AreEqual(2, match.BankRatio(1, plain), "v142 Harbour Pilot: the first bank trade each turn is 2:1");
             s.BankTradesThisTurn = 1;
-            Assert.AreEqual(3, match.BankRatio(1, plain));
+            Assert.AreEqual(3, match.BankRatio(1, plain), "v142: later trades one cheaper than 4:1");
 
-            s.Hand = new ResourceBundle { Wood = 9 };
+            s.Hand = new ResourceBundle { Wood = 8 };
             s.Trait = MatchTraitId.Granary;
-            Assert.AreEqual(0, match.DiscardOwed(1), "Granary: 9 cards are safe");
+            Assert.AreEqual(0, match.DiscardOwed(1), "v142 Granary: 8 cards are safe");
+            s.Trait = MatchTraitId.None;
+            Assert.AreEqual(4, match.DiscardOwed(1));
             s.Trait = MatchTraitId.ToughHide;
-            Assert.AreEqual(3, match.DiscardOwed(1), "Tough Hide: one fewer");
+            Assert.AreEqual(1, match.DiscardOwed(1), "v142 Tough Hide: never more than 1");
         }
 
         [Test]

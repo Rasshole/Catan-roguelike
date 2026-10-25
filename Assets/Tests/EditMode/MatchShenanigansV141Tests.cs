@@ -122,7 +122,7 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(MatchDecreeId.PortsThreeToOne, match.State.ActiveDecree);
             Assert.AreEqual(MatchPhase.Roll, match.State.Phase);
             Assert.AreEqual(0, match.State.ActingSeat);
-            Assert.That(match.State.Log.Last(), Does.Contain("2 aye, 1 nay"));
+            Assert.IsTrue(match.State.Log.Any(l => l.Contains("2 aye, 1 nay")));
         }
 
         [Test]
@@ -160,7 +160,7 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void PortsDecree_FlattensHarbourRates()
+        public void PortsDecree_ClosesHarbours()
         {
             var match = AtMain(3, 1414);
             match.State.Seats[0].Civilization = default;
@@ -171,22 +171,63 @@ namespace CatanRoguelike.Tests
             int before = match.BankRatio(0, give);
             match.State.ActiveDecree = MatchDecreeId.PortsThreeToOne;
             Assert.LessOrEqual(before, 2);
-            Assert.AreEqual(3, match.BankRatio(0, give));
+            Assert.AreEqual(MatchController.BankTradeRatio, match.BankRatio(0, give), "v142: harbours are closed for the day");
         }
 
         [Test]
-        public void WealthTax_RichestDiscardsDownToSeven()
+        public void HarbourTariff_Passes_SmallHandsWithoutAHarbourTakeACard()
         {
-            var match = AtMain(3, 1415);
+            var match = AtMain(3, 1414);
             NightWith(match, EventId.Decree);
-            match.State.BallotDecree = MatchDecreeId.RichestDiscardsToSeven;
-            match.State.Seats[1].Hand = Cards(wood: 4, brick: 3, stone: 3);
-            match.State.Seats[0].Hand = Cards(wood: 2);
-            match.State.Seats[2].Hand = Cards(sheep: 9);
+            match.State.BallotDecree = MatchDecreeId.PortsThreeToOne;
+            match.State.Seats[0].Hand = new ResourceBundle { Wood = 2 };
+            match.State.Seats[1].Hand = new ResourceBundle { Wood = 5 };
+            var owners = Enumerable.Range(0, 3).Select(i => !match.HarbourTariffPays(i)).ToList();
+            Assert.IsFalse(match.HarbourTariffPays(1), "v142: a big hand gets nothing");
+            var before = match.State.Seats.Select(s => s.CardCount).ToList();
             for (int i = 0; i < 3; i++)
                 Assert.IsTrue(match.Apply(MatchCommand.Vote(i, true)).Ok);
-            Assert.AreEqual(7, match.State.Seats[1].CardCount, "the richest discards down to 7");
-            Assert.AreEqual(9, match.State.Seats[2].CardCount, "only the richest pays");
+            Assert.IsTrue(match.State.LastBallot.Passed);
+            for (int i = 0; i < 3; i++)
+                Assert.AreEqual(before[i] + (owners[i] ? 0 : 1), match.State.Seats[i].CardCount, $"seat {i}");
+        }
+
+        [Test]
+        public void WealthTax_TheRicherHalfPaysOneCard()
+        {
+            var match = AtMain(4, 1415);
+            NightWith(match, EventId.Decree);
+            match.State.BallotDecree = MatchDecreeId.RichestDiscardsToSeven;
+            match.State.Seats[0].Hand = Cards(wood: 2);
+            match.State.Seats[1].Hand = Cards(wood: 4, brick: 3, stone: 3);
+            match.State.Seats[2].Hand = Cards(sheep: 6);
+            match.State.Seats[3].Hand = Cards(wheat: 3);
+            // Average 5.25: seats 1 (10) and 2 (6) pay; 0 and 3 don't.
+            CollectionAssert.AreEquivalent(new[] { 1, 2 }, match.WealthTaxPayers().ToArray());
+            for (int i = 0; i < 4; i++)
+                Assert.AreEqual(i == 0 || i == 3, MatchAi.ChooseVote(match, i).Pick == 1, $"AI seat {i} votes its interest");
+            foreach (var s in match.State.Seats)
+                s.VictoryPoints = s.Index == 0 ? 1 : 5;
+            for (int i = 0; i < 4; i++)
+                Assert.IsTrue(match.Apply(MatchCommand.Vote(i, i == 0 || i == 3)).Ok);
+            Assert.AreEqual(0, match.State.LastBallot.TieBreaker, "2–2: the seat with the fewest points decides");
+            Assert.IsTrue(match.State.LastBallot.Passed);
+            {
+                Assert.AreEqual(9, match.State.Seats[1].CardCount);
+                Assert.AreEqual(3, match.State.Seats[1].Hand.Wood, "pays from the biggest pile");
+                Assert.AreEqual(5, match.State.Seats[2].CardCount);
+                Assert.AreEqual(2, match.State.Seats[0].CardCount);
+                Assert.AreEqual(3, match.State.Seats[3].CardCount);
+            }
+        }
+
+        [Test]
+        public void WealthTax_SmallHandsNeverPay()
+        {
+            var match = AtMain(3, 1416);
+            foreach (var s in match.State.Seats)
+                s.Hand = Cards(wood: 3);
+            Assert.AreEqual(0, match.WealthTaxPayers().Count(), $"below {MatchController.WealthTaxFloor} cards nobody pays");
         }
 
         [Test]
@@ -224,31 +265,32 @@ namespace CatanRoguelike.Tests
             NightWith(match, EventId.NightMarket);
             Assert.AreEqual(MatchPhase.Auction, match.State.Phase);
             match.State.AuctionItem = MatchAuctionItem.VictoryPointCard;
-            match.State.Seats[0].Hand = Cards(wood: 3, brick: 1);
-            match.State.Seats[1].Hand = Cards(stone: 2);
+            match.State.Seats[0].Hand = Cards(wood: 4, brick: 1);
+            match.State.Seats[1].Hand = Cards(stone: 3);
             match.State.Seats[2].Hand = Cards(sheep: 1);
             int bankBefore = match.State.Seats.Sum(s => s.CardCount);
             int vpBefore = match.State.Seats[0].VictoryPoints;
             Assert.IsFalse(match.Apply(MatchCommand.Bid(0, Cards(stone: 1))).Ok, "can't bid cards you don't hold");
-            Assert.IsTrue(match.Apply(MatchCommand.Bid(0, Cards(wood: 3))).Ok);
+            Assert.IsFalse(match.Apply(MatchCommand.Bid(0, Cards(wood: 2))).Ok, "v142: a VP card has a reserve of 3");
+            Assert.IsTrue(match.Apply(MatchCommand.Bid(0, Cards(wood: 4))).Ok);
             Assert.IsNull(match.State.LastAuction, "bids stay sealed until everyone has bid");
-            Assert.IsTrue(match.Apply(MatchCommand.Bid(1, Cards(stone: 2))).Ok);
+            Assert.IsTrue(match.Apply(MatchCommand.Bid(1, Cards(stone: 3))).Ok);
             Assert.IsTrue(match.Apply(MatchCommand.Bid(2, ResourceBundle.Zero)).Ok);
 
             var result = match.State.LastAuction;
             Assert.AreEqual(0, result.Winner);
-            Assert.AreEqual(2, result.Price, "second price");
+            Assert.AreEqual(3, result.Price, "second price");
             Assert.AreEqual(2, result.Bidders);
             Assert.AreEqual(Cards(wood: 1, brick: 1), match.State.Seats[0].Hand);
-            Assert.AreEqual(Cards(stone: 2), match.State.Seats[1].Hand, "losers keep their bid");
-            Assert.AreEqual(bankBefore - 2, match.State.Seats.Sum(s => s.CardCount), "the price goes to the bank");
+            Assert.AreEqual(Cards(stone: 3), match.State.Seats[1].Hand, "losers keep their bid");
+            Assert.AreEqual(bankBefore - 3, match.State.Seats.Sum(s => s.CardCount), "the price goes to the bank");
             Assert.AreEqual(vpBefore + 1, match.State.Seats[0].VictoryPoints);
             Assert.AreEqual(MatchPhase.Roll, match.State.Phase);
             Assert.AreEqual(0, match.State.Bids.Count);
         }
 
         [Test]
-        public void Auction_TieGoesToFewestPoints_SoleBidderPaysOne()
+        public void Auction_TieGoesToFewestPoints_SoleBidderPaysTheReserve()
         {
             var match = AtMain(3, 1422);
             NightWith(match, EventId.NightMarket);
@@ -273,8 +315,8 @@ namespace CatanRoguelike.Tests
             Assert.IsTrue(solo.Apply(MatchCommand.Bid(0, ResourceBundle.Zero)).Ok);
             Assert.IsTrue(solo.Apply(MatchCommand.Bid(1, ResourceBundle.Zero)).Ok);
             Assert.IsTrue(solo.Apply(MatchCommand.Bid(2, Cards(stone: 4))).Ok);
-            Assert.AreEqual(1, solo.State.LastAuction.Price);
-            Assert.AreEqual(3, solo.State.Seats[2].Hand.Stone);
+            Assert.AreEqual(2, solo.State.LastAuction.Price, "v142: a sabotage card costs at least 2");
+            Assert.AreEqual(2, solo.State.Seats[2].Hand.Stone);
             Assert.AreEqual(1, solo.State.Seats[2].Sabotage.Count);
         }
 

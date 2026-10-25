@@ -125,6 +125,8 @@ namespace CatanRoguelike.PartySim
     internal sealed class GameRecord
     {
         public int Id, Seats, Seed, Rounds, Turns, Commands, Winner = -1, FirstSeat = -1;
+        // v142: player trading + knights.
+        public int Proposals, Accepts, Counters, Declines, Confirms, Cancels, Knights, KnightsPreRoll, LargestArmySeat = -1;
         public MapSize Map;
         public string EndReason = "win", Error = "";
         public double Ms;
@@ -156,7 +158,7 @@ namespace CatanRoguelike.PartySim
                     var command = MatchRunner.PendingAiResponse(match) ?? MatchAi.ChooseCommand(match);
                     if (randomQuests && command != null && command.Type == MatchCommandType.PickQuest)
                     {
-                        // Sim-only policy: pick uniformly among the offered quests (the shipped AI always takes a 1-VP one).
+                        // Sim-only policy: pick uniformly among the offered quests (the shipped AI weighs points against its chances).
                         var offer = s.Seats[command.Seat].QuestOffer;
                         var pick = offer[(int)((uint)(seed * 31 + command.Seat * 7919) % (uint)offer.Count)];
                         command = MatchCommand.PickQuestTrait(command.Seat, pick, (MatchTraitId)command.Pick2);
@@ -174,6 +176,7 @@ namespace CatanRoguelike.PartySim
                             string.Join("|", s.Seats[command.Seat].CivOffer));
                     string lastLine = s.Log.Count > 0 ? s.Log[^1] : null;
                     int round = s.Round;
+                    var phaseBefore = s.Phase;
                     var result = match.Apply(command);
                     g.Commands++;
                     if (!result.Ok)
@@ -181,6 +184,22 @@ namespace CatanRoguelike.PartySim
                         g.EndReason = "invalid_command";
                         g.Error = $"{command}: {result.Error}";
                         break;
+                    }
+
+                    switch (command.Type)
+                    {
+                        case MatchCommandType.ProposeTrade: g.Proposals++; break;
+                        case MatchCommandType.RespondTrade:
+                            if (command.Response == TradeResponseKind.Accepted) g.Accepts++;
+                            else if (command.Response == TradeResponseKind.Countered) g.Counters++;
+                            else g.Declines++;
+                            break;
+                        case MatchCommandType.ConfirmTrade: g.Confirms++; break;
+                        case MatchCommandType.CancelTrade: g.Cancels++; break;
+                        case MatchCommandType.PlayKnight:
+                            g.Knights++;
+                            if (phaseBefore == MatchPhase.Roll) g.KnightsPreRoll++;
+                            break;
                     }
 
                     if (g.FirstSeat < 0 && s.Phase == MatchPhase.Roll)
@@ -365,6 +384,7 @@ namespace CatanRoguelike.PartySim
             g.Rounds = s.Round;
             g.Turns = s.TurnNumber;
             g.Winner = s.Winner ?? -1;
+            g.LargestArmySeat = s.LargestArmySeat ?? -1;
             if (g.EndReason == "win" && g.Winner < 0)
                 g.EndReason = "no_winner";
             var ranks = s.Seats.OrderByDescending(x => x.VictoryPoints).Select(x => x.Index).ToList();
@@ -404,10 +424,13 @@ namespace CatanRoguelike.PartySim
         public static void WriteAll(string dir, List<GameRecord> games)
         {
             var inv = CultureInfo.InvariantCulture;
-            var sb = new StringBuilder("game,seed,seats,map,end_reason,winner,first_seat,rounds,turns,commands,ms,events,error\n");
+            var sb = new StringBuilder("game,seed,seats,map,end_reason,winner,first_seat,rounds,turns,commands,ms,"
+                                       + "proposals,accepts,counters,declines,confirms,cancels,knights,knights_preroll,largest_army_seat,events,error\n");
             foreach (var g in games)
                 sb.Append(string.Join(",", g.Id, g.Seed, g.Seats, g.Map, g.EndReason, g.Winner, g.FirstSeat, g.Rounds, g.Turns,
-                    g.Commands, g.Ms.ToString("F1", inv), string.Join("|", g.Events.Select(e => e.Event)), g.Error)).Append('\n');
+                    g.Commands, g.Ms.ToString("F1", inv), g.Proposals, g.Accepts, g.Counters, g.Declines, g.Confirms, g.Cancels,
+                    g.Knights, g.KnightsPreRoll, g.LargestArmySeat,
+                    string.Join("|", g.Events.Select(e => e.Event)), g.Error)).Append('\n');
             File.WriteAllText(Path.Combine(dir, "games.csv"), sb.ToString());
 
             sb = new StringBuilder("game,seats,map,end_reason,seat,winner,civ,trait,quest,quest_vp,quest_done,vp,settlements,cities,"

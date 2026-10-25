@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Yield;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
@@ -84,9 +85,9 @@ namespace CatanRoguelike.Core.Match
 
         public static string DecreeText(MatchDecreeId id) => id switch
         {
-            MatchDecreeId.PortsThreeToOne => "All harbours trade at 3:1 today.",
+            MatchDecreeId.PortsThreeToOne => $"Harbours close today; players without one holding {HarbourTariffHandCap} or fewer cards take 1.",
             MatchDecreeId.NoDesertRobber => "The robber can't enter a desert today.",
-            MatchDecreeId.RichestDiscardsToSeven => "Whoever holds the most cards (above 7) discards down to 7.",
+            MatchDecreeId.RichestDiscardsToSeven => $"Everyone holding at least the average hand ({WealthTaxFloor}+ cards) pays 1 card.",
             _ => ""
         };
 
@@ -138,20 +139,55 @@ namespace CatanRoguelike.Core.Match
 
             if (decree == MatchDecreeId.RichestDiscardsToSeven)
             {
-                int most = State.Seats.Max(s => s.CardCount);
-                if (most > DiscardLimit)
+                // v142: the richer half of the table pays 1 card each (their most plentiful).
+                foreach (int i in WealthTaxPayers().ToList())
                 {
-                    foreach (var seat in State.Seats.Where(s => s.CardCount == most))
-                    {
-                        var h = seat.Hand;
-                        h.Pay(SuggestDiscard(h, seat.CardCount - DiscardLimit));
-                        seat.Hand = h;
-                        AppendLog($"{seat.Name} discards down to {DiscardLimit}.");
-                    }
+                    var seat = State.Seats[i];
+                    var h = seat.Hand;
+                    var r = MostHeld(h);
+                    h.Add(r, -1);
+                    seat.Hand = h;
+                    AppendLog($"{seat.Name} pays 1 {r} in tax.");
                 }
             }
             else
+            {
                 State.ActiveDecree = decree;
+                if (decree == MatchDecreeId.PortsThreeToOne)
+                {
+                    // v142: the harbours close for the day; everyone without one takes a card.
+                    foreach (var seat in State.Seats.Where(s => HarbourTariffPays(s.Index)).ToList())
+                    {
+                        var r = LeastHeld(seat.Hand);
+                        Give(seat, r, 1);
+                        AppendLog($"{seat.Name} takes 1 {r}.");
+                    }
+                }
+            }
+        }
+
+        /// <summary>v142 Wealth Tax: nobody with fewer cards pays.</summary>
+        public const int WealthTaxFloor = 4;
+
+        /// <summary>v142: seats the Wealth Tax would hit — hands at or above the table average (and at least
+        /// <see cref="WealthTaxFloor"/> cards), so roughly half the table pays and the vote is contested.</summary>
+        public IEnumerable<int> WealthTaxPayers()
+        {
+            double avg = State.Seats.Average(s => (double)s.CardCount);
+            return State.Seats.Where(s => s.CardCount >= WealthTaxFloor && s.CardCount >= avg).Select(s => s.Index);
+        }
+
+        /// <summary>v142 Harbour Tariff: only small hands without a harbour get the card.</summary>
+        public const int HarbourTariffHandCap = 3;
+
+        public bool HarbourTariffPays(int seat) =>
+            !OwnsHarbour(seat) && State.Seats[seat].CardCount <= HarbourTariffHandCap;
+
+        /// <summary>v142: whether <paramref name="seat"/> has a settlement or city on any harbour.</summary>
+        public bool OwnsHarbour(int seat)
+        {
+            var owner = MatchSeats.ToPlayerId(seat);
+            return State.Ports.Any(p => PortAccess.PlayerControlsVertex(State.Board, owner, p.Vertex));
         }
 
         // ---------- Night Market (sealed-bid, second-price) ----------
@@ -169,6 +205,14 @@ namespace CatanRoguelike.Core.Match
             AppendLog($"Night Market: {AuctionItemName(State.AuctionItem)} goes to sealed bids.");
         }
 
+        /// <summary>v142: minimum bid (and price) per item — a VP card 3, a sabotage card 2, a reroll 1.</summary>
+        public static int ReservePrice(MatchAuctionItem item) => item switch
+        {
+            MatchAuctionItem.VictoryPointCard => 3,
+            MatchAuctionItem.SabotageCard => 2,
+            _ => 1
+        };
+
         public static string AuctionItemName(MatchAuctionItem item) => item switch
         {
             MatchAuctionItem.TokenReroll => "a token reroll",
@@ -185,6 +229,9 @@ namespace CatanRoguelike.Core.Match
                 return MatchCommandResult.Rejected("Invalid bid.");
             if (!State.Seats[c.Seat].Hand.CanAfford(c.Offer))
                 return MatchCommandResult.Rejected("You don't have those cards.");
+            int reserve = ReservePrice(State.AuctionItem);
+            if (c.Offer.Total > 0 && c.Offer.Total < reserve)
+                return MatchCommandResult.Rejected($"The minimum bid is {reserve} cards.");
             State.Bids[c.Seat] = c.Offer;
             State.PickStep++;
             if (State.PickStep >= State.PickOrder.Count)
@@ -205,7 +252,7 @@ namespace CatanRoguelike.Core.Match
                 int top = bidders.Max(i => totals[i]);
                 int winner = TieBreakSeat(bidders.Where(i => totals[i] == top));
                 int second = bidders.Where(i => i != winner).Select(i => totals[i]).DefaultIfEmpty(0).Max();
-                int price = System.Math.Max(1, second);
+                int price = System.Math.Max(ReservePrice(item), second);
                 var seat = State.Seats[winner];
                 var h = seat.Hand;
                 h.Pay(SuggestDiscard(State.Bids[winner], price));

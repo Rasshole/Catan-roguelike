@@ -151,11 +151,14 @@ namespace CatanRoguelike.Tests
             Assert.IsTrue(match.Apply(MatchCommand.Simple(MatchCommandType.CancelTrade, 0)).Ok);
 
             Assert.IsTrue(match.Apply(MatchCommand.Propose(0, Cards(sheep: 2), Cards(), getAny: 2)).Ok);
-            Assert.AreEqual(TradeResponseKind.Accepted, MatchAi.ChooseTradeResponse(match, 1).Response);
-            Assert.AreEqual(TradeResponseKind.Accepted, MatchAi.ChooseTradeResponse(match, 2).Response);
+            Assert.AreNotEqual(TradeResponseKind.Accepted, MatchAi.ChooseTradeResponse(match, 1).Response,
+                "v142: it won't hand over the wood and brick it builds with for more sheep");
+            match.State.Seats[1].Hand = Cards(stone: 5);
+            Assert.AreEqual(TradeResponseKind.Accepted, MatchAi.ChooseTradeResponse(match, 1).Response,
+                "spare ore for the wool it lacks is a fine deal");
             Assert.IsTrue(match.Apply(MatchAi.ChooseTradeResponse(match, 1)).Ok);
             var pick = MatchAi.ChooseConfirmWildcards(match, 1);
-            Assert.AreEqual(2, pick.Wood, "sheep is offered, so only wood can be taken");
+            Assert.AreEqual(2, pick.Stone, "sheep is offered, so only ore can be taken");
             Assert.IsTrue(match.Apply(MatchCommand.Confirm(0, 1, pick)).Ok);
         }
 

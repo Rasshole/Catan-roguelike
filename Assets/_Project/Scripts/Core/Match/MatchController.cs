@@ -255,6 +255,9 @@ namespace CatanRoguelike.Core.Match
                 .Select(kv => kv.Key);
         }
 
+        /// <summary>v142: Sun Kingdom hands this small can't be robbed.</summary>
+        public const int SunKingdomSafeHand = 4;
+
         public IEnumerable<int> RobberVictims(int seat, HexCoord hex)
         {
             var victims = new SortedSet<int>();
@@ -264,7 +267,10 @@ namespace CatanRoguelike.Core.Match
                 if (State.Board.VertexBuildings.TryGetValue(v, out var b))
                 {
                     int s = MatchSeats.ToSeat(b.owner);
-                    if (s != seat && State.Seats[s].CardCount > 0)
+                    // v142: Sun Kingdom can't be robbed under party rules.
+                    if (s != seat && State.Seats[s].CardCount > 0
+                        && !(PartyRules && State.Seats[s].Civilization == CivilizationId.SunKingdom
+                             && State.Seats[s].CardCount <= SunKingdomSafeHand))
                         victims.Add(s);
                 }
             }
@@ -279,31 +285,38 @@ namespace CatanRoguelike.Core.Match
             var s = State.Seats[seat];
             int best = BankTradeRatio;
             // v136 party rules: civ base rate, Market Day, Sea Folk harbours, Harbour Pilot.
-            if (s.Civilization == CivilizationId.NorthernRaiders) best = 5;
-            if (s.Civilization == CivilizationId.MerchantRepublic) best = 3;
+            if (s.Civilization == CivilizationId.MerchantRepublic) best = s.BankTradesThisTurn == 0 ? 2 : 3;
+            if (s.Civilization == CivilizationId.SeaFolk) best = 3;
             if (State.ActiveEvent == EventId.MarketDay) best = Math.Min(best, 3);
             int generic = s.Civilization == CivilizationId.SeaFolk ? 2 : 3;
-            // v141 decree: every harbour trades at 3:1 today.
-            bool flatPorts = State.ActiveDecree == MatchDecreeId.PortsThreeToOne;
-            if (flatPorts) generic = 3;
+            // v142 Harbour Tariff decree: the harbours are closed today.
+            bool closed = State.ActiveDecree == MatchDecreeId.PortsThreeToOne;
             foreach (var port in State.Ports)
             {
+                if (closed)
+                    break;
                 if (!PortAccess.PlayerControlsVertex(State.Board, owner, port.Vertex))
                     continue;
-                if (port.SpecificResource == give)
-                    best = Math.Min(best, flatPorts ? 3 : 2);
+                if (port.SpecificResource == give || (port.SpecificResource != null && s.Civilization == CivilizationId.SeaFolk))
+                    best = Math.Min(best, 2);
                 if (port.IsGeneric)
                     best = Math.Min(best, generic);
             }
 
-            if (s.Trait == MatchTraitId.HarbourPilot && s.BankTradesThisTurn == 0)
-                best = Math.Max(2, best - 1);
+            if (s.Trait == MatchTraitId.HarbourPilot)
+                best = s.BankTradesThisTurn == 0 ? 2 : Math.Max(2, best - 1);
             return best;
         }
 
         // v136: per-seat build costs (civilization + trait modifiers; the classic costs when party rules are off).
-        public ResourceBundle RoadCostFor(int seat) =>
-            MatchCivRules.RoadCost(State.Seats[seat].Civilization, State.Seats[seat].Trait);
+        public ResourceBundle RoadCostFor(int seat)
+        {
+            var c = MatchCivRules.RoadCost(State.Seats[seat].Civilization, State.Seats[seat].Trait);
+            // v142 Road Crew: every second road (an odd count already on the board) is free.
+            if (State.Seats[seat].Trait == MatchTraitId.RoadCrew && CountRoads(seat) % 2 == 1)
+                c = default;
+            return c;
+        }
         public ResourceBundle SettlementCostFor(int seat) =>
             MatchCivRules.SettlementCost(State.Seats[seat].Civilization, State.Seats[seat].Trait);
         public ResourceBundle CityCostFor(int seat) =>
@@ -312,7 +325,7 @@ namespace CatanRoguelike.Core.Match
             MatchCivRules.DevCardCost(State.Seats[seat].Civilization, State.Seats[seat].Trait);
 
         /// <summary>v136: hand size above which a 7 forces a discard (Granary raises it).</summary>
-        public int DiscardLimitFor(int seat) => DiscardLimit + (State.Seats[seat].Trait == MatchTraitId.Granary ? 2 : 0);
+        public int DiscardLimitFor(int seat) => DiscardLimit + (State.Seats[seat].Trait == MatchTraitId.Granary ? 1 : 0);
 
         /// <summary>v136: cards owed on a 7 (0 = none).</summary>
         public int DiscardOwed(int seat)
@@ -320,7 +333,9 @@ namespace CatanRoguelike.Core.Match
             var s = State.Seats[seat];
             if (s.CardCount <= DiscardLimitFor(seat))
                 return 0;
-            return Math.Max(0, s.CardCount / 2 - (s.Trait == MatchTraitId.ToughHide ? 1 : 0));
+            int owed = s.CardCount / 2;
+            // v142: Tough Hide caps the loss at 2 cards.
+            return s.Trait == MatchTraitId.ToughHide ? Math.Min(1, owed) : owed;
         }
 
         /// <summary>Whether <paramref name="seat"/> may play <paramref name="card"/> now (owned since before this turn, one per turn).</summary>
@@ -643,6 +658,8 @@ namespace CatanRoguelike.Core.Match
             {
                 case MatchDevCard.Knight:
                     seat.KnightsPlayed++;
+                    if (PartyRules && seat.Trait == MatchTraitId.Quartermaster)
+                        Give(seat, ResourceType.Wheat, 1);
                     State.ResumePhase = resume;
                     State.Phase = MatchPhase.MoveRobber;
                     AppendLog($"{seat.Name} played a Knight.");

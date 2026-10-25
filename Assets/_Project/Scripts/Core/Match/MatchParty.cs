@@ -125,32 +125,32 @@ namespace CatanRoguelike.Core.Match
                 (m, s) => OwnedHarbours(m, s), (m, s) => HarbourWithin(m, s, 3)),
             new MatchQuestDefinition(MatchQuestId.RoadBuilder, "Road Builder", "Build a continuous road of 5 or more.", 1, 5,
                 (m, s) => LongestRoad(m, s)),
-            new MatchQuestDefinition(MatchQuestId.Knighthood, "Knighthood", "Play 2 Knights.", 1, 2,
+            new MatchQuestDefinition(MatchQuestId.Knighthood, "Knighthood", "Play a Knight.", 1, 1,
                 (m, s) => m.State.Seats[s].KnightsPlayed),
-            new MatchQuestDefinition(MatchQuestId.Expansion, "Expansion", "Own 4 settlements or cities.", 1, 4,
+            new MatchQuestDefinition(MatchQuestId.Expansion, "Expansion", "Own 5 settlements or cities.", 1, 5,
                 (m, s) => Buildings(m, s)),
             new MatchQuestDefinition(MatchQuestId.OreBaron, "Ore Baron", "Border 2 different Ore hexes.", 1, 2,
                 (m, s) => Bordered(m, s, ResourceType.Stone), (m, s) => Bordered(m, s, ResourceType.Stone) >= 1),
-            new MatchQuestDefinition(MatchQuestId.Breadbasket, "Breadbasket", "Border 3 different Grain hexes.", 1, 3,
+            new MatchQuestDefinition(MatchQuestId.Breadbasket, "Breadbasket", "Border 2 different Grain hexes.", 1, 2,
                 (m, s) => Bordered(m, s, ResourceType.Wheat), (m, s) => Bordered(m, s, ResourceType.Wheat) >= 1),
             new MatchQuestDefinition(MatchQuestId.Diverse, "Five Trades", "Border all five resources.", 1, 5,
                 (m, s) => DistinctResources(m, s)),
             new MatchQuestDefinition(MatchQuestId.TownPlanner, "Town Planner", "Own 2 cities.", 1, 2,
                 (m, s) => m.CountCities(s)),
-            new MatchQuestDefinition(MatchQuestId.Trader, "Trader", "Complete 2 trades with other players.", 1, 2,
+            new MatchQuestDefinition(MatchQuestId.Trader, "Trader", "Complete 5 trades with other players.", 1, 5,
                 (m, s) => m.State.Seats[s].PlayerTrades),
 
             new MatchQuestDefinition(MatchQuestId.TwinHarbours, "Twin Harbours", "Own 2 different harbours.", 2, 2,
                 (m, s) => OwnedHarbours(m, s), (m, s) => HarbourWithin(m, s, 3)),
-            new MatchQuestDefinition(MatchQuestId.GrandArmy, "Grand Army", "Play 4 Knights.", 2, 4,
+            new MatchQuestDefinition(MatchQuestId.GrandArmy, "Grand Army", "Play 3 Knights.", 2, 3,
                 (m, s) => m.State.Seats[s].KnightsPlayed),
             new MatchQuestDefinition(MatchQuestId.Metropolis, "Metropolis", "Own 3 cities.", 2, 3,
                 (m, s) => m.CountCities(s)),
-            new MatchQuestDefinition(MatchQuestId.Highway, "Highway", "Build a continuous road of 8 or more.", 2, 8,
+            new MatchQuestDefinition(MatchQuestId.Highway, "Highway", "Build a continuous road of 6 or more.", 2, 6,
                 (m, s) => LongestRoad(m, s)),
-            new MatchQuestDefinition(MatchQuestId.OreEmpire, "Ore Empire", "Border 4 different Ore hexes.", 2, 4,
-                (m, s) => Bordered(m, s, ResourceType.Stone), (m, s) => Bordered(m, s, ResourceType.Stone) >= 1),
-            new MatchQuestDefinition(MatchQuestId.MerchantPrince, "Merchant Prince", "Complete 5 trades with other players.", 2, 5,
+            new MatchQuestDefinition(MatchQuestId.OreEmpire, "Ore Empire", "Own 2 cities bordering Ore.", 2, 2,
+                (m, s) => CitiesBordering(m, s, ResourceType.Stone), (m, s) => Bordered(m, s, ResourceType.Stone) >= 1),
+            new MatchQuestDefinition(MatchQuestId.MerchantPrince, "Merchant Prince", "Complete 8 trades with other players.", 2, 8,
                 (m, s) => m.State.Seats[s].PlayerTrades),
             new MatchQuestDefinition(MatchQuestId.Sprawl, "Sprawl", "Own 6 settlements or cities.", 2, 6,
                 (m, s) => Buildings(m, s)),
@@ -159,16 +159,16 @@ namespace CatanRoguelike.Core.Match
         public static readonly IReadOnlyList<MatchTraitDefinition> Traits = new[]
         {
             new MatchTraitDefinition(MatchTraitId.LuckyDice, "Lucky Dice",
-                "On a roll of 2, 3, 11 or 12, take 1 of the resource you hold least of."),
+                "When you roll 2, 3, 4, 10, 11 or 12 yourself, take 1 of the resource you hold least of."),
             new MatchTraitDefinition(MatchTraitId.HarbourPilot, "Harbour Pilot",
-                "Your first bank trade each turn is 1 card cheaper (never below 2:1)."),
-            new MatchTraitDefinition(MatchTraitId.ToughHide, "Tough Hide", "Discard 1 card fewer when a 7 is rolled."),
-            new MatchTraitDefinition(MatchTraitId.HeadStart, "Head Start", "Take 1 Lumber and 1 Brick now."),
-            new MatchTraitDefinition(MatchTraitId.Granary, "Granary", "A 7 only makes you discard above 9 cards (not 7)."),
-            new MatchTraitDefinition(MatchTraitId.RoadCrew, "Road Crew", "Your roads cost no Brick."),
-            new MatchTraitDefinition(MatchTraitId.Quartermaster, "Quartermaster", "Development cards cost you no Wool."),
+                "Your first bank trade each turn is 2:1; the rest are 1 card cheaper (never below 2:1)."),
+            new MatchTraitDefinition(MatchTraitId.ToughHide, "Tough Hide", "A 7 never makes you discard more than 1 card."),
+            new MatchTraitDefinition(MatchTraitId.HeadStart, "Head Start", "Take 1 Lumber, 1 Brick, 1 Grain and 1 Wool now."),
+            new MatchTraitDefinition(MatchTraitId.Granary, "Granary", "A 7 only makes you discard above 8 cards, and every 7 gives you 1 Grain."),
+            new MatchTraitDefinition(MatchTraitId.RoadCrew, "Road Crew", "Every second road you build is free."),
+            new MatchTraitDefinition(MatchTraitId.Quartermaster, "Quartermaster", "Development cards cost you no Wool, and every Knight you play gives you 1 Grain."),
             new MatchTraitDefinition(MatchTraitId.Prospector, "Prospector",
-                "Once per round, when a roll (not a 7) gives you nothing, take 1 of the resource you hold least of."),
+                "When your own roll (not a 7) gives you nothing, take 1 of the resource you hold least of."),
         };
 
         public static readonly IReadOnlyList<MatchEventDefinition> Events = new[]
@@ -208,6 +208,23 @@ namespace CatanRoguelike.Core.Match
         /// <summary>Distinct hexes of <paramref name="resource"/> touching one of the seat's buildings.</summary>
         public static int Bordered(MatchController m, int seat, ResourceType resource) =>
             BorderedTiles(m, seat).Count(t => t.Resource == resource);
+
+        /// <summary>v142: cities with at least one <paramref name="resource"/> hex next to them.</summary>
+        public static int CitiesBordering(MatchController m, int seat, ResourceType resource)
+        {
+            var owner = MatchSeats.ToPlayerId(seat);
+            int n = 0;
+            foreach (var kv in m.State.Board.VertexBuildings)
+            {
+                if (kv.Value.owner != owner || kv.Value.type != BuildingType.City)
+                    continue;
+                if (VertexGraph.GetHexesForVertex(kv.Key).Any(h => m.State.Board.TryGetTile(h, out var t) && !t.IsDesert
+                                                                  && t.Resource == resource))
+                    n++;
+            }
+
+            return n;
+        }
 
         public static int DistinctResources(MatchController m, int seat) =>
             BorderedTiles(m, seat).Select(t => t.Resource).Where(r => MatchController.AllResources.Contains(r)).Distinct().Count();
@@ -263,27 +280,24 @@ namespace CatanRoguelike.Core.Match
     {
         public static string Passive(CivilizationId civ) => civ switch
         {
-            CivilizationId.SeaFolk => "Your 3:1 harbours trade at 2:1.",
+            CivilizationId.SeaFolk => "Start with 1 Lumber and 1 Brick. Bank trades are 3:1, and every harbour you own trades any resource at 2:1.",
             CivilizationId.ForestFolk => "On a 2 or 12, take 1 Lumber per forest you border (at least 1).",
-            CivilizationId.MerchantRepublic => "Bank trades are 3:1 without a harbour.",
+            CivilizationId.MerchantRepublic => "Bank trades are 3:1 without a harbour, and your first bank trade each turn is 2:1.",
             CivilizationId.SteppeNomads => "Settlements cost no Brick.",
             CivilizationId.HighlandClans => "Mountains give +1 Ore per hit.",
             CivilizationId.ShepherdKingdom => "Start with 2 Wool. Pastures give +1 Wool per hit.",
-            CivilizationId.Brickwrights => "Roads cost no Lumber. Every 7 gives you 1 Brick.",
+            CivilizationId.Brickwrights => "Roads cost no Lumber.",
             CivilizationId.Academy => "Development cards cost no Grain.",
-            CivilizationId.NorthernRaiders => "On every 7, steal 1 card from the richest opponent.",
-            CivilizationId.SunKingdom => "The robber never blocks your production.",
+            CivilizationId.NorthernRaiders => "On every 7 you roll — or any 7 that finds a rival above 7 cards — steal 1 card from the richest opponent.",
+            CivilizationId.SunKingdom => "The robber never blocks your production, and nobody can rob you while you hold 4 or fewer cards.",
             _ => ""
         };
 
         public static string Drawback(CivilizationId civ) => civ switch
         {
-            CivilizationId.MerchantRepublic => "Every 7 costs you 1 random card.",
-            CivilizationId.SteppeNomads => "Cities cost 1 extra Ore.",
-            CivilizationId.HighlandClans => "Pastures give 1 Wool fewer per hit.",
-            CivilizationId.ShepherdKingdom => "Cities cost 1 extra Grain.",
+            CivilizationId.SteppeNomads => "Development cards cost 1 extra Ore.",
             CivilizationId.Academy => "Settlements cost 1 extra Grain.",
-            CivilizationId.NorthernRaiders => "Bank trades without a harbour are 5:1.",
+            CivilizationId.Brickwrights => "Cities cost 1 extra Grain.",
             _ => ""
         };
 
@@ -291,7 +305,6 @@ namespace CatanRoguelike.Core.Match
         {
             var c = MatchController.RoadCost;
             if (civ == CivilizationId.Brickwrights) c.Set(ResourceType.Wood, 0);
-            if (trait == MatchTraitId.RoadCrew) c.Set(ResourceType.Brick, 0);
             return c;
         }
 
@@ -306,8 +319,7 @@ namespace CatanRoguelike.Core.Match
         public static ResourceBundle CityCost(CivilizationId civ, MatchTraitId trait)
         {
             var c = MatchController.CityCost;
-            if (civ == CivilizationId.SteppeNomads) c.Add(ResourceType.Stone, 1);
-            if (civ == CivilizationId.ShepherdKingdom) c.Add(ResourceType.Wheat, 1);
+            if (civ == CivilizationId.Brickwrights) c.Add(ResourceType.Wheat, 1);
             return c;
         }
 
@@ -315,6 +327,7 @@ namespace CatanRoguelike.Core.Match
         {
             var c = MatchController.DevCardCost;
             if (civ == CivilizationId.Academy) c.Set(ResourceType.Wheat, 0);
+            if (civ == CivilizationId.SteppeNomads) c.Add(ResourceType.Stone, 1);
             if (trait == MatchTraitId.Quartermaster) c.Set(ResourceType.Sheep, 0);
             return c;
         }
@@ -324,7 +337,6 @@ namespace CatanRoguelike.Core.Match
         {
             int amount = baseAmount;
             if (civ == CivilizationId.HighlandClans && resource == ResourceType.Stone) amount++;
-            if (civ == CivilizationId.HighlandClans && resource == ResourceType.Sheep) amount--;
             if (civ == CivilizationId.ShepherdKingdom && resource == ResourceType.Sheep) amount++;
             return Math.Max(0, amount);
         }

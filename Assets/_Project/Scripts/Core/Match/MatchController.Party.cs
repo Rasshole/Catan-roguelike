@@ -68,6 +68,11 @@ namespace CatanRoguelike.Core.Match
             seat.CivOffer.Clear();
             if (civ == CivilizationId.ShepherdKingdom)
                 Give(seat, ResourceType.Sheep, 2);
+            if (civ == CivilizationId.SeaFolk)
+            {
+                Give(seat, ResourceType.Wood, 1);
+                Give(seat, ResourceType.Brick, 1);
+            }
 
             State.PickStep++;
             if (State.PickStep >= State.PickOrder.Count)
@@ -156,6 +161,8 @@ namespace CatanRoguelike.Core.Match
             {
                 Give(seat, ResourceType.Wood, 1);
                 Give(seat, ResourceType.Brick, 1);
+                Give(seat, ResourceType.Wheat, 1);
+                Give(seat, ResourceType.Sheep, 1);
             }
 
             AppendLog($"{seat.Name} chose a secret quest.");
@@ -182,19 +189,16 @@ namespace CatanRoguelike.Core.Match
         {
             foreach (var seat in State.Seats)
             {
+                bool own = seat.Index == State.CurrentSeat;
+                if (seat.Trait == MatchTraitId.Granary)
+                    Give(seat, ResourceType.Wheat, 1);
                 switch (seat.Civilization)
                 {
-                    case CivilizationId.MerchantRepublic when seat.CardCount > 0:
-                        TakeRandom(seat, null);
-                        break;
-                    case CivilizationId.Brickwrights:
-                        Give(seat, ResourceType.Brick, 1);
-                        break;
                     case CivilizationId.NorthernRaiders:
                     {
                         var target = State.Seats.Where(o => o.Index != seat.Index && o.CardCount > 0)
                             .OrderByDescending(o => o.CardCount).ThenBy(o => o.Index).FirstOrDefault();
-                        if (target != null)
+                        if (target != null && (own || target.CardCount > DiscardLimit))
                         {
                             TakeRandom(target, seat);
                             AppendLog($"{seat.Name} raids {target.Name}.");
@@ -212,9 +216,10 @@ namespace CatanRoguelike.Core.Match
             {
                 if (seat.Civilization == CivilizationId.ForestFolk && (roll == 2 || roll == 12))
                     Give(seat, ResourceType.Wood, System.Math.Max(1, MatchPartyLibrary.Bordered(this, seat.Index, ResourceType.Wood)));
-                if (seat.Trait == MatchTraitId.LuckyDice && (roll <= 3 || roll >= 11))
+                bool own = seat.Index == State.CurrentSeat;
+                if (seat.Trait == MatchTraitId.LuckyDice && own && (roll <= 4 || roll >= 10))
                     Give(seat, LeastHeld(seat.Hand), 1);
-                if (seat.Trait == MatchTraitId.Prospector && gained[seat.Index].Total == 0 && seat.ProspectorRound != State.Round)
+                if (seat.Trait == MatchTraitId.Prospector && own && gained[seat.Index].Total == 0 && seat.ProspectorRound != State.Round)
                 {
                     Give(seat, LeastHeld(seat.Hand), 1);
                     seat.ProspectorRound = State.Round;

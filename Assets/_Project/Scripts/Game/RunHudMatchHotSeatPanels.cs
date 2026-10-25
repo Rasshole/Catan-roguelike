@@ -487,7 +487,7 @@ namespace CatanRoguelike.Game
             var match = _hotSeat.Match;
             var from = state.Seats[trade.From];
             if (_hsTradeViewer < 0 || _hsTradeViewer >= state.Seats.Count || state.Seats[_hsTradeViewer].IsAi)
-                _hsTradeViewer = trade.From;
+                _hsTradeViewer = DefaultTradeViewer(trade);
             int viewer = _hsTradeViewer;
             bool offererView = viewer == trade.From;
             var viewerResp = offererView ? null : trade.Responses[viewer];
@@ -562,6 +562,24 @@ namespace CatanRoguelike.Game
                     _hotSeat.Apply(MatchCommand.Simple(MatchCommandType.CancelTrade, trade.From));
                     HsMark();
                 }, 18);
+        }
+
+        /// <summary>
+        /// v142: who looks at an offer by default — the offerer, unless an AI made it; then the first human who still
+        /// has to answer (or any human), so the card reads "INCOMING OFFER" with Accept / Decline / Counter.
+        /// </summary>
+        private int DefaultTradeViewer(MatchTradeOffer trade)
+        {
+            var seats = _hotSeat.State.Seats;
+            if (!seats[trade.From].IsAi)
+                return trade.From;
+            for (int i = 0; i < seats.Count; i++)
+                if (i != trade.From && !seats[i].IsAi && trade.Responses[i].Kind == TradeResponseKind.Pending)
+                    return i;
+            for (int i = 0; i < seats.Count; i++)
+                if (i != trade.From && !seats[i].IsAi)
+                    return i;
+            return trade.From;
         }
 
         /// <summary>v139: whether a responder could accept (cards for the request + any wildcards backed).</summary>

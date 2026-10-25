@@ -111,6 +111,12 @@ namespace CatanRoguelike.Tests.PlayMode
                     return false;
                 if (s.PassScreenPending)
                     s.ConfirmPass();
+                if (MatchAi.AwaitingHumanAnswer(s.Match))
+                {
+                    s.Apply(MatchRunner.PendingResponse(s.Match));
+                    continue;
+                }
+
                 if (s.Acting.IsAi)
                     continue;
                 if (stop())
@@ -316,8 +322,7 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsTrue(s.PassScreenPending, "Rasmus's bid is hidden before Freja bids");
             s.ConfirmPass();
             yield return Settle(hud);
-            yield return Click(hud, "BidMore_Sheep");
-            yield return Click(hud, "SealBid");
+            yield return Click(hud, "PassBid"); // v142: one Wool is below every lot's minimum
 
             Assert.AreEqual(MatchPhase.Roll, state.Phase, "the AI bid at once and the market closed");
             var auction = state.LastAuction;

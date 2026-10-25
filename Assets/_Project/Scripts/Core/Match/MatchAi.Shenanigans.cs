@@ -1,5 +1,6 @@
 using System.Linq;
 using CatanRoguelike.Core.Hex;
+using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Victory;
 using CatanRoguelike.Core.Yield;
@@ -22,19 +23,16 @@ namespace CatanRoguelike.Core.Match
             switch (state.BallotDecree)
             {
                 case MatchDecreeId.PortsThreeToOne:
-                    // Only seats without a 2:1 harbour gain from flattening the harbours.
-                    aye = !state.Ports.Any(p => p.SpecificResource.HasValue
-                                               && PortAccess.PlayerControlsVertex(state.Board, me.Owner, p.Vertex));
+                    // v142: closing the harbours hurts their owners and pays everyone else a card.
+                    aye = match.HarbourTariffPays(seat);
                     break;
                 case MatchDecreeId.NoDesertRobber:
-                    aye = me.PublicVictoryPoints < state.Seats.Max(s => s.PublicVictoryPoints);
+                    // The robber must then sit on someone's production: the bigger producers lose most.
+                    aye = ProductionPips(match, seat) * state.Seats.Count < state.Seats.Sum(s => ProductionPips(match, s.Index));
                     break;
                 case MatchDecreeId.RichestDiscardsToSeven:
-                {
-                    int most = state.Seats.Max(s => s.CardCount);
-                    aye = !(me.CardCount == most && most > MatchController.DiscardLimit);
+                    aye = !match.WealthTaxPayers().Contains(seat);
                     break;
-                }
                 default:
                     aye = false;
                     break;
@@ -43,17 +41,65 @@ namespace CatanRoguelike.Core.Match
             return MatchCommand.Vote(seat, aye);
         }
 
+        /// <summary>
+        /// v142 sealed bids: a VP card is worth a lot (more when it would nearly win), a sabotage card only when
+        /// someone is ahead, a reroll only for a poor token. Never below the reserve, never the whole hand.
+        /// </summary>
         public static MatchCommand ChooseBid(MatchController match, int seat)
         {
-            var hand = match.State.Seats[seat].Hand;
-            int amount = match.State.AuctionItem switch
+            var state = match.State;
+            var me = state.Seats[seat];
+            var hand = me.Hand;
+            var item = state.AuctionItem;
+            int reserve = MatchController.ReservePrice(item);
+            int spare = hand.Total - 1;
+            int amount = 0;
+            switch (item)
             {
-                MatchAuctionItem.TokenReroll => System.Math.Min(2, hand.Total / 3),
-                MatchAuctionItem.SabotageCard => hand.Total >= 5 ? 1 : 0,
-                MatchAuctionItem.VictoryPointCard => System.Math.Min(4, hand.Total / 2),
-                _ => 0
-            };
+                case MatchAuctionItem.VictoryPointCard:
+                {
+                    bool closing = me.VictoryPoints + 1 >= state.Config.VictoryPoints - 1;
+                    amount = System.Math.Min(closing ? 6 : 4, hand.Total / 2 + (closing ? 2 : 0));
+                    break;
+                }
+                case MatchAuctionItem.SabotageCard:
+                {
+                    var lead = state.Seats[Leader(state, seat)];
+                    amount = hand.Total >= 6 && lead.PublicVictoryPoints > me.PublicVictoryPoints && me.Sabotage.Count == 0 ? 2 : 0;
+                    break;
+                }
+                case MatchAuctionItem.TokenReroll:
+                {
+                    bool poor = match.RerollableTiles(seat).Any(h =>
+                        NumberTokenLibrary.GetPipWeight(state.Board.Tiles[h].NumberToken ?? 0) <= 2);
+                    amount = poor ? System.Math.Min(2, hand.Total / 3) : 0;
+                    break;
+                }
+            }
+
+            amount = System.Math.Min(amount, spare);
+            if (amount < reserve)
+                amount = 0;
             return MatchCommand.Bid(seat, amount > 0 ? MatchController.SuggestDiscard(hand, amount) : ResourceBundle.Zero);
+        }
+
+        /// <summary>Pip weight a seat collects from its buildings (cities count twice).</summary>
+        public static int ProductionPips(MatchController match, int seat)
+        {
+            var state = match.State;
+            var owner = MatchSeats.ToPlayerId(seat);
+            int total = 0;
+            foreach (var kv in state.Board.VertexBuildings)
+            {
+                if (kv.Value.owner != owner)
+                    continue;
+                int mult = kv.Value.type == BuildingType.City ? 2 : 1;
+                foreach (var hex in VertexGraph.GetHexesForVertex(kv.Key))
+                    if (state.Board.TryGetTile(hex, out var t) && !t.IsDesert)
+                        total += mult * NumberTokenLibrary.GetPipWeight(t.NumberToken ?? 0);
+            }
+
+            return total;
         }
 
         /// <summary>Before rolling: pay 1 card to name the likeliest author (the leader) of a face-down card on us.</summary>
@@ -95,7 +141,8 @@ namespace CatanRoguelike.Core.Match
                 return MatchCommand.Bounty(seat, leader, reward);
             }
 
-            if (me.Sabotage.Count > 0 && lead.PublicVictoryPoints >= me.PublicVictoryPoints)
+            // v142: sabotage only on a leader who is actually ahead.
+            if (me.Sabotage.Count > 0 && lead.PublicVictoryPoints > me.PublicVictoryPoints)
             {
                 foreach (var kind in me.Sabotage.Distinct().OrderBy(k => (int)k))
                 {

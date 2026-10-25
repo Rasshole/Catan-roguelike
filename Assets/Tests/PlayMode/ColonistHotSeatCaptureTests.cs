@@ -158,6 +158,12 @@ namespace CatanRoguelike.Tests.PlayMode
                 s.Tick(0f);
                 if (s.PassScreenPending)
                     s.ConfirmPass();
+                if (MatchAi.AwaitingHumanAnswer(s.Match))
+                {
+                    s.Apply(MatchRunner.PendingResponse(s.Match));
+                    continue;
+                }
+
                 if (s.Acting.IsAi)
                     continue;
                 if (s.State.Round >= 8 && s.State.Phase == MatchPhase.Main && s.Current.CardCount >= 3)
@@ -249,6 +255,12 @@ namespace CatanRoguelike.Tests.PlayMode
 
                 if (s.PassScreenPending)
                     s.ConfirmPass();
+                if (MatchAi.AwaitingHumanAnswer(s.Match))
+                {
+                    s.Apply(MatchRunner.PendingResponse(s.Match));
+                    continue;
+                }
+
                 if (s.Acting.IsAi)
                     continue;
                 switch (state.Phase)
@@ -305,6 +317,12 @@ namespace CatanRoguelike.Tests.PlayMode
                 s.Tick(0f);
                 if (s.PassScreenPending)
                     s.ConfirmPass();
+                if (MatchAi.AwaitingHumanAnswer(s.Match))
+                {
+                    s.Apply(MatchRunner.PendingResponse(s.Match));
+                    continue;
+                }
+
                 if (s.Acting.IsAi)
                     continue;
                 if (state.CurrentSeat == 0 && state.Phase == MatchPhase.Main && state.ActiveTrade == null)

@@ -235,8 +235,13 @@ namespace CatanRoguelike.Game
                 new Vector2(0.5f, 0f), new Vector2(0f, 150f), new Vector2(860f, 22f), ColonistUiKit.InkMuted, FontStyle.Italic);
             int v = seat;
             int total = _hsBid.Total;
-            HsButton(card, "SealBid", total > 0 ? $"Seal bid · {total} card{(total == 1 ? "" : "s")}" : "Add cards to bid",
-                new Vector2(0.5f, 0f), new Vector2(-140f, 74f), new Vector2(280f, 62f), total > 0 && me.Hand.CanAfford(_hsBid),
+            // v142: every lot has a minimum price (VP card 3, sabotage 2, reroll 1).
+            int reserve = MatchController.ReservePrice(state.AuctionItem);
+            string sealLabel = total <= 0 ? $"Add cards to bid · min {reserve}"
+                : total < reserve ? $"Minimum bid · {reserve} cards"
+                : $"Seal bid · {total} card{(total == 1 ? "" : "s")}";
+            HsButton(card, "SealBid", sealLabel,
+                new Vector2(0.5f, 0f), new Vector2(-140f, 74f), new Vector2(280f, 62f), total >= reserve && total > 0 && me.Hand.CanAfford(_hsBid),
                 true, () =>
                 {
                     var bid = _hsBid;
@@ -614,11 +619,16 @@ namespace CatanRoguelike.Game
                 for (int i = 0; i < shown; i++)
                 {
                     int idx = i;
-                    string label = hexes != null ? TileLabel(state, hexes[i]) : RoadLabel(state, roads[i]);
                     float bw = (right - tx - 10f) / 2f;
-                    HsButton(card, "Spot_" + i, label, new Vector2(0f, 1f),
+                    // v142: the spot reads like the board — resource icon + number token — instead of "Lumber 10".
+                    var spot = HsButton(card, "Spot_" + i, "", new Vector2(0f, 1f),
                         new Vector2(tx + bw / 2f + (i % 2) * (bw + 10f), -360f - (i / 2) * 50f), new Vector2(bw, 42f), true,
                         _hsSabotageSpot == i, () => _hsSabotageSpot = idx, 15);
+                    var spotHexes = hexes != null ? new List<HexCoord> { hexes[i] } : RoadHexes(state, roads[i]);
+                    BuildSpotFace((RectTransform)spot.transform, state, spotHexes, hexes == null);
+                    var accessible = spot.GetComponentInChildren<Text>();
+                    if (accessible != null)
+                        accessible.name = hexes != null ? TileLabel(state, hexes[i]) : RoadLabel(state, roads[i]);
                 }
             }
 
@@ -641,6 +651,60 @@ namespace CatanRoguelike.Game
                     if (_hotSeat.Apply(command).Ok)
                         OpenScheme(HotSeatScheme.None);
                 }, 19);
+        }
+
+        /// <summary>v142: the land hexes on either side of a road (one on the coast).</summary>
+        private static List<HexCoord> RoadHexes(MatchState state, HexMath.Edge e)
+        {
+            var list = new List<HexCoord>();
+            if (state.Board.TryGetTile(e.A.Hex, out _))
+                list.Add(e.A.Hex);
+            if (e.B.Hex != e.A.Hex && state.Board.TryGetTile(e.B.Hex, out _))
+                list.Add(e.B.Hex);
+            return list;
+        }
+
+        /// <summary>
+        /// v142: a sabotage spot button's face — for each hex its resource icon and a board-style number token
+        /// (red 6 / 8), a road glyph in front when it is a road. Centered in the button.
+        /// </summary>
+        private void BuildSpotFace(RectTransform button, MatchState state, List<HexCoord> hexes, bool road)
+        {
+            const float icon = 30f, token = 30f, gap = 4f, pairGap = 14f, roadW = 34f;
+            float width = hexes.Count * (icon + gap + token) + Mathf.Max(0, hexes.Count - 1) * pairGap + (road ? roadW + 6f : 0f);
+            float x = -width / 2f;
+            if (road)
+            {
+                var bar = CreateImage(button, "RoadGlyph", null);
+                bar.color = new Color(0.45f, 0.28f, 0.16f, 1f);
+                SetRect(bar.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(x + roadW / 2f, 0f), new Vector2(roadW, 9f));
+                bar.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 30f);
+                bar.raycastTarget = false;
+                x += roadW + 6f;
+            }
+
+            for (int h = 0; h < hexes.Count; h++)
+            {
+                if (!state.Board.TryGetTile(hexes[h], out var tile))
+                    continue;
+                var img = CreateImage(button, "SpotIcon_" + h, ColonistHudResourceSprites.Get(tile.Resource));
+                img.preserveAspect = true;
+                img.raycastTarget = false;
+                SetRect(img.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(x + icon / 2f, 0f), new Vector2(icon, icon));
+                x += icon + gap;
+                var disc = CreateDisc(button, "SpotToken_" + h, new Color(0.96f, 0.91f, 0.78f, 1f), token);
+                disc.raycastTarget = false;
+                SetRect(disc.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(x + token / 2f, 0f), new Vector2(token, token));
+                bool hot = tile.NumberToken == 6 || tile.NumberToken == 8;
+                var n = RunHudUiFactory.CreateText(disc.rectTransform, "N", tile.NumberToken.ToString(), 17,
+                    TextAnchor.MiddleCenter, hot ? new Color(0.78f, 0.12f, 0.1f, 1f) : ColonistUiKit.Ink, FontStyle.Bold);
+                var font = ColonistNumberTokenFont.Get();
+                if (font != null)
+                    n.font = font;
+                n.raycastTarget = false;
+                Stretch(n.rectTransform);
+                x += token + pairGap;
+            }
         }
 
         private static string RoadLabel(MatchState state, HexMath.Edge e)

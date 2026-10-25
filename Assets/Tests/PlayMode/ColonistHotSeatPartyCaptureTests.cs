@@ -104,6 +104,12 @@ namespace CatanRoguelike.Tests.PlayMode
                     return false;
                 if (s.PassScreenPending)
                     s.ConfirmPass();
+                if (MatchAi.AwaitingHumanAnswer(s.Match))
+                {
+                    s.Apply(MatchRunner.PendingResponse(s.Match));
+                    continue;
+                }
+
                 if (s.Acting.IsAi)
                     continue;
                 if (stop())

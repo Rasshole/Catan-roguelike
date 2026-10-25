@@ -72,3 +72,13 @@ for kind in ['bounty_post','sabotage_play','auction']:
     print(f"seats that did {kind}: n={len(d)} win%={100*(d.seat==d.winner).mean():.1f} vs baseline {100*(1/d.seats).mean():.1f}")
 # game length
 print("== rounds"); print(g.groupby('seats').rounds.describe().round(1))
+# v142: player trading + knights
+print("== TRADES & KNIGHTS per game (by seats)")
+tk=g.groupby('seats')[['proposals','accepts','counters','declines','confirms','cancels','knights','knights_preroll']].mean().round(2)
+tk['trades/game']=tk.confirms; tk['confirm%']=(100*g.groupby('seats').confirms.sum()/g.groupby('seats').proposals.sum().clip(lower=1)).round(1)
+print(tk)
+print("largest army held at game end: games %", round(100*(g.largest_army_seat>=0).mean(),1), "seats %", round(100*(s.largest_army>0).mean(),1))
+print("largest army holder wins %", round(100*(g[g.largest_army_seat>=0].largest_army_seat==g[g.largest_army_seat>=0].winner).mean(),1))
+print("knights per seat", s.knights.mean().round(2), "player trades per seat", s.player_trades.mean().round(2))
+print("== seat edge (win% by seat index, fair = 100/seats)")
+print((100*s.groupby(['seats','seat']).winner.mean()).round(1).unstack())
