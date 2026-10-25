@@ -64,6 +64,7 @@ namespace CatanRoguelike.Game
 
             Controller = newController;
             Controller.SetMeta(Meta);
+            Controller.UnlockAll = true; // v143: everything playable (loaded runs too)
             Controller.OnStateChanged += HandleStateChanged;
             Controller.OnBoardRebuilt += HandleBoardRebuilt;
             Controller.OnAutosavePoint += HandleAutosavePoint;
@@ -84,11 +85,66 @@ namespace CatanRoguelike.Game
             HandleStateChanged(Controller.State);
         }
 
+        private int _menuReturns;
+        private bool _returnQueued;
+
+        /// <summary>
+        /// v143: leave the current match (pass &amp; play or single player) and go back to the map-select menu with a
+        /// fresh controller. Deferred to the next frame so it is safe to call from a button's onClick.
+        /// </summary>
+        public void ReturnToMainMenu()
+        {
+            if (_returnQueued)
+                return;
+            _returnQueued = true;
+            StartCoroutine(ReturnNextFrame());
+        }
+
+        private System.Collections.IEnumerator ReturnNextFrame()
+        {
+            yield return null;
+            _returnQueued = false;
+            ReturnToMainMenuNow();
+        }
+
+        /// <summary>v143: immediate variant of <see cref="ReturnToMainMenu"/> (tests, non-UI callers).</summary>
+        public void ReturnToMainMenuNow()
+        {
+            EnsureRunHud();
+            _runHud.ResetForMainMenu();
+            if (boardInput != null)
+            {
+                boardInput.CancelBuildMode();
+                boardInput.enabled = true;
+            }
+
+            if (_feel != null)
+                _feel.StopAllCoroutines();
+            _menuReturns++;
+            var bootMapSize = ColonistPresentation.IsActive ? MapSize.Large : mapSize;
+            SwapController(new GameController(randomSeed + _menuReturns * 7919, bootMapSize, Meta)
+            {
+                CivilizationPickEnabled = true,
+                UnlockAll = true
+            });
+        }
+
         private void EnsureRunHud()
         {
             _runHud = GetComponent<RunHudController>();
             if (_runHud == null)
                 _runHud = gameObject.AddComponent<RunHudController>();
+        }
+
+        /// <summary>v143: the "Menu" popup (volume, mute, leave match).</summary>
+        public GameSettingsMenu SettingsMenu { get; private set; }
+
+        private void EnsureSettingsMenu()
+        {
+            SettingsMenu = GetComponent<GameSettingsMenu>();
+            if (SettingsMenu == null)
+                SettingsMenu = gameObject.AddComponent<GameSettingsMenu>();
+            SettingsMenu.Bind(_runHud);
         }
 
         private void EnsureFeel()
@@ -102,7 +158,7 @@ namespace CatanRoguelike.Game
         {
             Meta = MetaProgressionFile.LoadOrCreate();
             var bootMapSize = ColonistPresentation.IsActive ? MapSize.Large : mapSize;
-            Controller = new GameController(randomSeed, bootMapSize, Meta) { CivilizationPickEnabled = true };
+            Controller = new GameController(randomSeed, bootMapSize, Meta) { CivilizationPickEnabled = true, UnlockAll = true };
             Controller.OnStateChanged += HandleStateChanged;
             Controller.OnBoardRebuilt += HandleBoardRebuilt;
             Controller.OnAutosavePoint += HandleAutosavePoint;
@@ -114,6 +170,7 @@ namespace CatanRoguelike.Game
             _runHud.Initialize(Controller, Meta, boardInput);
             _feel.Initialize(Controller, boardView, _runHud);
             _runHud.BindFeel(_feel);
+            EnsureSettingsMenu();
 
             if (boardInput != null)
                 boardInput.Initialize(Controller, boardView);
@@ -174,7 +231,7 @@ namespace CatanRoguelike.Game
         public void DebugRestart(int seed)
         {
             randomSeed = seed;
-            SwapController(new GameController(randomSeed, mapSize, Meta) { CivilizationPickEnabled = true });
+            SwapController(new GameController(randomSeed, mapSize, Meta) { CivilizationPickEnabled = true, UnlockAll = true });
         }
 
         /// <summary>
@@ -187,7 +244,7 @@ namespace CatanRoguelike.Game
                 return;
 
             Meta = MetaProgressionFile.LoadOrCreate();
-            Controller = new GameController(randomSeed, mapSize, Meta) { CivilizationPickEnabled = true };
+            Controller = new GameController(randomSeed, mapSize, Meta) { CivilizationPickEnabled = true, UnlockAll = true };
             Controller.OnStateChanged += HandleStateChanged;
             Controller.OnBoardRebuilt += HandleBoardRebuilt;
             Controller.OnAutosavePoint += HandleAutosavePoint;

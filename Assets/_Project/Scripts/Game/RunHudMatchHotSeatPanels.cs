@@ -426,17 +426,22 @@ namespace CatanRoguelike.Game
                     Limit = _hsGetAny > 0 ? 0 : GiveWildLimit(me.Hand, _hsGive, _hsGet)
                 });
 
-            bool bankOk = _hsGiveAny == 0 && _hsGetAny == 0
-                          && TryReadBankTrade(_hsGive, _hsGet, r => s.Match.BankRatio(seat, r), out _, out _, out int amount)
-                          && amount == 1 && me.Hand.CanAfford(_hsGive);
-            TryReadBankTrade(_hsGive, _hsGet, r => s.Match.BankRatio(seat, r), out var giveType, out var getType, out _);
+            // v143: multi-batch bank trades — e.g. 4 Wool → 2 at a 2:1 harbour, 8 → 2 at 4:1, or 2 Wool (2:1) + 3 Ore (3:1)
+            // for two different cards. Every give-resource must be whole batches at its own rate.
+            int batchCards = _hsGive.Total > 0 ? s.Match.BankBatchCards(seat, _hsGive) : -1;
+            bool disjoint = !MatchController.AllResources.Any(r => _hsGive[r] > 0 && _hsGet[r] > 0);
+            bool bankOk = _hsGiveAny == 0 && _hsGetAny == 0 && batchCards > 0 && batchCards == _hsGet.Total && disjoint
+                          && me.Hand.CanAfford(_hsGive);
             int shownRate = TradeResources.Any(r => _hsGive[r] > 0)
                 ? s.Match.BankRatio(seat, TradeResources.First(r => _hsGive[r] > 0))
                 : TradeResources.Min(r => s.Match.BankRatio(seat, r));
-            TradeButton(card, "BankTrade", $"Bank {shownRate}:1", null, new Vector2(0.5f, 0f), new Vector2(-186f, 58f),
+            string bankLabel = bankOk && (_hsGet.Total > 1 || TradeResources.Count(r => _hsGive[r] > 0) > 1)
+                ? $"Bank {_hsGive.Total}→{_hsGet.Total}"
+                : $"Bank {shownRate}:1";
+            TradeButton(card, "BankTrade", bankLabel, null, new Vector2(0.5f, 0f), new Vector2(-186f, 58f),
                 new Vector2(176f, 52f), bankOk, false, () =>
                 {
-                    var r = s.Apply(MatchCommand.Trade(seat, giveType, getType));
+                    var r = s.Apply(MatchCommand.BankBatch(seat, _hsGive, _hsGet));
                     if (r.Ok)
                     {
                         _hsGive = ResourceBundle.Zero;

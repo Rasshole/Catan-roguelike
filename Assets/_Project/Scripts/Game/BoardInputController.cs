@@ -19,6 +19,8 @@ namespace CatanRoguelike.Game
         private GameController _controller;
         private Transform _highlightsRoot;
         private readonly List<GameObject> _highlights = new();
+        private readonly List<GameObject> _setupSpots = new();
+        private string _setupSpotsKey;
         private Vertex? _hoverVertex;
         private Edge? _hoverEdge;
         private BuildMode _mode = BuildMode.None;
@@ -67,8 +69,13 @@ namespace CatanRoguelike.Game
                 return;
             }
 
-            if (!IsPlayerBuildPhase()) return;
+            if (!IsPlayerBuildPhase())
+            {
+                ClearSetupSpots();
+                return;
+            }
 
+            RefreshSetupSpots();
             UpdateHighlights();
             HandleClick();
         }
@@ -311,15 +318,76 @@ namespace CatanRoguelike.Game
             return best;
         }
 
+        /// <summary>
+        /// v143: during setup every valid corner (or road edge) shows a small pulsing circle/dash in the human's colour
+        /// so the choices read at a glance without a field of ghost houses.
+        /// </summary>
+        private void RefreshSetupSpots()
+        {
+            if (!_controller.State.IsSetupPhase)
+            {
+                ClearSetupSpots();
+                return;
+            }
+
+            bool road = IsRoadSetupPhase();
+            bool settlement = IsSettlementSetupPhase();
+            string key = _controller.State.Phase.ToString() + (road ? _controller.GetValidRoads(PlayerId.Human).Count()
+                : settlement ? _controller.GetValidSettlements(PlayerId.Human).Count() : 0);
+            if (key == _setupSpotsKey && _setupSpots.Count > 0)
+                return;
+            ClearSetupSpots();
+            _setupSpotsKey = key;
+            float scale = boardView.HexScale;
+            float top = boardView.TileHeight;
+            var color = Color.Lerp(PlayerPieceVisuals.ColorForPlayer(PlayerId.Human), Color.white, 0.12f);
+            if (settlement)
+            {
+                foreach (var v in _controller.GetValidSettlements(PlayerId.Human))
+                {
+                    var (x, z) = HexMath.VertexToWorldPosition(v, scale);
+                    _setupSpots.Add(PlacementMarkerVisuals.CreateSpotCircle(_highlightsRoot, new Vector3(x, 0f, z), color,
+                        top, scale));
+                }
+            }
+            else if (road)
+            {
+                foreach (var e in _controller.GetValidRoads(PlayerId.Human))
+                {
+                    var (mx, mz) = HexMath.EdgeMidpoint(e, scale);
+                    var (ax, az) = HexMath.VertexToWorldPosition(e.A, scale);
+                    var (bx, bz) = HexMath.VertexToWorldPosition(e.B, scale);
+                    float length = Vector3.Distance(new Vector3(ax, 0, az), new Vector3(bx, 0, bz));
+                    _setupSpots.Add(PlacementMarkerVisuals.CreateRoadDash(_highlightsRoot, new Vector3(mx, 0f, mz),
+                        HexMath.EdgeAngle(e), length, color, top, scale));
+                }
+            }
+        }
+
+        private void ClearSetupSpots()
+        {
+            foreach (var h in _setupSpots)
+                if (h != null) ColonistSceneDestroy.SafeDestroy(h);
+            _setupSpots.Clear();
+            _setupSpotsKey = null;
+        }
+
+        public int SetupSpotCountForTests => _setupSpots.Count;
+
+        private Color HoverSpotColor() =>
+            Color.Lerp(PlayerPieceVisuals.ColorForPlayer(PlayerId.Human), Color.white, 0.45f);
+
         private void SpawnVertexMarker(Vertex v, Color color, float scale, bool isCity)
         {
             var (x, z) = HexMath.VertexToWorldPosition(v, scale);
             var position = new Vector3(x, 0f, z);
             float hexTopY = boardView.TileHeight;
 
+            // v143: a settlement spot is a larger circle (not a ghost house); city upgrades keep the city preview.
             GameObject go = isCity
                 ? PlacementMarkerVisuals.CreateCityGhost(_highlightsRoot, position, color, hexTopY)
-                : PlacementMarkerVisuals.CreateSettlementGhost(_highlightsRoot, position, color, hexTopY);
+                : PlacementMarkerVisuals.CreateSpotCircle(_highlightsRoot, position, HoverSpotColor(), hexTopY, scale,
+                    1.55f, pulse: false);
             _highlights.Add(go);
         }
 
@@ -330,13 +398,16 @@ namespace CatanRoguelike.Game
             var (bx, bz) = HexMath.VertexToWorldPosition(e.B, scale);
             float length = Vector3.Distance(new Vector3(ax, 0, az), new Vector3(bx, 0, bz));
 
-            var go = PlacementMarkerVisuals.CreateRoadGhost(
+            var go = PlacementMarkerVisuals.CreateRoadDash(
                 _highlightsRoot,
                 new Vector3(mx, 0f, mz),
                 HexMath.EdgeAngle(e),
                 length,
-                color,
-                boardView.TileHeight);
+                HoverSpotColor(),
+                boardView.TileHeight,
+                scale,
+                1.45f,
+                pulse: false);
             _highlights.Add(go);
         }
 

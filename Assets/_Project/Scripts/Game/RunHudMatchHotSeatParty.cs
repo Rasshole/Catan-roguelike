@@ -112,12 +112,20 @@ namespace CatanRoguelike.Game
                 _hsPickSeat = seat;
                 _hsQuestChoice = MatchQuestId.None;
                 _hsTraitChoice = MatchTraitId.None;
+                _hsPickHidden = false;
+            }
+
+            if (_hsPickHidden)
+            {
+                BuildHotSeatPickPeekBar(state); // v143: the board is on view; one button brings the cards back
+                return;
             }
 
             if (state.Phase == MatchPhase.CivPick)
                 BuildCivPick(state.Seats[seat]);
             else
                 BuildQuestPick(state.Seats[seat]);
+            AddHotSeatPickHideButton();
         }
 
         private RectTransform PartyModal(string name, Vector2 size)

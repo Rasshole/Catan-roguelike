@@ -68,134 +68,6 @@ namespace CatanRoguelike.Game
             RebuildPreGame();
         }
 
-        private string HotSeatLobbyKey() =>
-            _hotSeatLobbyOpen
-                ? "hs:" + string.Join(",", _lobbySeats.Select(s => s?.ToString() ?? "open")) + (_lobbyPartyRules ? "|party" : "")
-                : "";
-
-        public MatchConfig BuildLobbyConfig(int seed)
-        {
-            var config = new MatchConfig
-            {
-                Seed = seed, MapSize = MatchConfig.RecommendedMap(_lobbySeats.Count), PartyRules = _lobbyPartyRules
-            };
-            for (int i = 0; i < _lobbySeats.Count; i++)
-            {
-                var kind = _lobbySeats[i];
-                config.Seats.Add(kind.HasValue
-                    ? new SeatConfig(kind.Value, kind == SeatKind.Human ? $"Player {i + 1}" : $"AI {i + 1}")
-                    : null);
-            }
-
-            return config;
-        }
-
-        private void BuildHotSeatLobby(RectTransform root)
-        {
-            var dim = new GameObject("HotSeatLobbyDim").AddComponent<Image>();
-            dim.transform.SetParent(root, false);
-            dim.color = new Color(0.04f, 0.03f, 0.02f, 0.62f);
-            dim.raycastTarget = true;
-            Stretch(dim.rectTransform);
-
-            var card = CreateCardFrame(root, "HotSeatLobby", wide: false);
-            var cardImg = card.GetComponent<Image>();
-            var sliced = ColonistRoguelikeArt.GetCardFrameSliced(false);
-            if (sliced != null)
-            {
-                cardImg.sprite = sliced;
-                cardImg.type = Image.Type.Sliced;
-                cardImg.preserveAspect = false;
-            }
-
-            float h = 394f + _lobbySeats.Count * 78f;
-            SetRect(card, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(820f, h));
-
-            var kicker = RunHudUiFactory.CreateText(card, "Kicker", "PASS & PLAY  ·  ONE DEVICE", 16,
-                TextAnchor.MiddleCenter, ColonistUiKit.InkGold, FontStyle.Bold);
-            SetRect(kicker.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -46f), new Vector2(640f, 24f));
-            var title = RunHudUiFactory.CreateText(card, "Title", "Seat your table", 36, TextAnchor.MiddleCenter,
-                ColonistUiKit.Ink, FontStyle.Bold);
-            SetRect(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(640f, 46f));
-
-            // Seat count stepper.
-            var countLabel = RunHudUiFactory.CreateText(card, "SeatCount", $"{_lobbySeats.Count} seats", 24,
-                TextAnchor.MiddleCenter, ColonistUiKit.Ink, FontStyle.Bold);
-            SetRect(countLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -134f), new Vector2(200f, 40f));
-            AddLobbyButton(card, "SeatMinus", "−", new Vector2(-150f, -134f), new Vector2(64f, 46f),
-                _lobbySeats.Count > MatchConfig.MinSeats, false, () =>
-                {
-                    _lobbySeats.RemoveAt(_lobbySeats.Count - 1);
-                    RebuildPreGame();
-                });
-            AddLobbyButton(card, "SeatPlus", "+", new Vector2(150f, -134f), new Vector2(64f, 46f),
-                _lobbySeats.Count < MatchConfig.MaxSeats, false, () =>
-                {
-                    _lobbySeats.Add(null);
-                    RebuildPreGame();
-                });
-
-            for (int i = 0; i < _lobbySeats.Count; i++)
-            {
-                int seat = i;
-                float y = -200f - i * 78f;
-                var disc = CreateDisc(card, "SeatDisc_" + i, PlayerPieceVisuals.ColorForSeat(i), 52f);
-                SetRect(disc.rectTransform, new Vector2(0.5f, 1f), new Vector2(-250f, y), new Vector2(52f, 52f));
-                var num = RunHudUiFactory.CreateText(disc.rectTransform, "N", (i + 1).ToString(), 24,
-                    TextAnchor.MiddleCenter, SeatInk(i), FontStyle.Bold);
-                Stretch(num.rectTransform);
-                var label = RunHudUiFactory.CreateText(card, "SeatLabel_" + i, $"Seat {i + 1}", 24,
-                    TextAnchor.MiddleLeft, ColonistUiKit.Ink, FontStyle.Bold);
-                SetRect(label.rectTransform, new Vector2(0.5f, 1f), new Vector2(-120f, y), new Vector2(170f, 40f));
-                var kind = _lobbySeats[i];
-                string text = kind == SeatKind.Human ? "Human" : kind == SeatKind.Ai ? "AI player" : "Open seat";
-                AddLobbyButton(card, "SeatKind_" + i, text, new Vector2(140f, y), new Vector2(250f, 54f), true,
-                    kind == SeatKind.Human, () =>
-                    {
-                        _lobbySeats[seat] = _lobbySeats[seat] switch
-                        {
-                            SeatKind.Human => SeatKind.Ai,
-                            SeatKind.Ai => null,
-                            _ => SeatKind.Human
-                        };
-                        RebuildPreGame();
-                    });
-            }
-
-            int humans = _lobbySeats.Count(s => s == SeatKind.Human);
-            int ai = _lobbySeats.Count(s => s == SeatKind.Ai);
-            int open = _lobbySeats.Count(s => s == null);
-            string map = MatchConfig.RecommendedMap(_lobbySeats.Count) == Core.Data.MapSize.Extended
-                ? "Extended map (30 hexes)"
-                : "Base map (19 hexes)";
-            string summary = $"{humans} human{(humans == 1 ? "" : "s")} · {ai} AI · {open} open  ·  {map}";
-            var info = RunHudUiFactory.CreateText(card, "Summary", summary, 19, TextAnchor.MiddleCenter,
-                ColonistUiKit.InkMuted, FontStyle.Italic);
-            SetRect(info.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 118f), new Vector2(680f, 28f));
-
-            AddLobbyButton(card, "PartyRules",
-                _lobbyPartyRules ? "Civs · secret quests · events: ON" : "Classic rules (no civs, quests, events)",
-                new Vector2(0f, 176f), new Vector2(470f, 52f), true, _lobbyPartyRules, () =>
-                {
-                    _lobbyPartyRules = !_lobbyPartyRules;
-                    RebuildPreGame();
-                }, anchorBottom: true);
-
-            AddLobbyButton(card, "FillAi", "Fill open seats with AI", new Vector2(-185f, 62f), new Vector2(290f, 56f),
-                open > 0, false, FillLobbyWithAi, anchorBottom: true);
-            AddLobbyButton(card, "StartMatch", open > 0 ? "Fill open seats first" : "Start match",
-                new Vector2(135f, 62f), new Vector2(260f, 56f), open == 0, true, () =>
-                {
-                    var config = BuildLobbyConfig((_controller?.RunSeed ?? 1) * 31 + 7);
-                    StartHotSeat(config);
-                }, anchorBottom: true);
-            AddLobbyButton(card, "CloseLobby", "✕", new Vector2(330f, 62f), new Vector2(64f, 56f), true, false, () =>
-            {
-                _hotSeatLobbyOpen = false;
-                RebuildPreGame();
-            }, anchorBottom: true);
-        }
-
         private static void AddLobbyButton(RectTransform parent, string name, string label, Vector2 pos, Vector2 size,
             bool enabled, bool green, System.Action click, bool anchorBottom = false)
         {
@@ -227,6 +99,7 @@ namespace CatanRoguelike.Game
             _hotSeatDisplay = new GameController(config.Seed, config.MapSize);
             _hotSeatDisplay.State.ResetForNewMap(_hotSeat.State.Board, config.MapSize);
             _hotSeatDisplay.State.Phase = GamePhase.DayPlayerActions;
+            _hotSeatDisplay.State.FishermenOfCatanEnabled = config.Fishermen; // v143: draw the fishing grounds
             var boardView = Object.FindFirstObjectByType<BoardView>();
             // v136: the table chrome frames the board (timer bottom-right), and the robber stays token-sized.
             ColonistPlayAreaLayout.Override = HotSeatPlayArea;
@@ -241,6 +114,7 @@ namespace CatanRoguelike.Game
             _hsVictimCommand = null;
             _hsPickSeat = -1;
             _hsTradeOpen = false;
+            _hsFishPick = false;
             ResetShenanigansUi();
             _hsPicker = null;
             _hsCounterSeat = -1;
@@ -261,6 +135,7 @@ namespace CatanRoguelike.Game
             PlaceholderHudLayout.SetActivePanelWidth(380f);
             _canvas.gameObject.SetActive(true);
 
+            ResetMatchFx();
             _hotSeat.Tick(0f); // AI seats that act first
             RebuildHotSeat();
         }
@@ -270,6 +145,8 @@ namespace CatanRoguelike.Game
             if (_hotSeat == null)
                 return;
             _hotSeat = null;
+            ResetMatchFx();
+            _mainMenuOpen = true; // v143: leaving (or finishing) a table lands on the main menu
             _hsVictimCommand = null;
             ColonistPlayAreaLayout.Override = null;
             ColonistBoardVisualScale.RobberScaleCap = float.MaxValue;
@@ -323,13 +200,14 @@ namespace CatanRoguelike.Game
             if (_hotSeatDirty)
                 RefreshHotSeatNow();
             UpdateHotSeatTimer();
+            ObserveMatchFx();
         }
 
         private void HideRunHudForHotSeat()
         {
             foreach (Transform child in _canvas.transform)
             {
-                if (child == _hotSeatRoot || child.name == "HotSeatTable")
+                if (child == _hotSeatRoot || child.name == "HotSeatTable" || child.name == FxRootName)
                     continue;
                 var group = child.GetComponent<CanvasGroup>();
                 if (group == null)
@@ -429,7 +307,7 @@ namespace CatanRoguelike.Game
             leave.name = "LeaveMatch";
             SetRect((RectTransform)leave.transform, new Vector2(0f, 1f), new Vector2(110f, -52f), new Vector2(170f, 50f));
             ColonistKenneyHudArt.ApplyColonistWarmButton(leave.GetComponent<Image>(), primaryGreen: false);
-            leave.onClick.AddListener(ExitHotSeat);
+            leave.onClick.AddListener(LeaveMatchToMenu); // v143: clean return to the start menu
         }
 
         private void BuildSeatStrip(MatchState state)
@@ -550,7 +428,7 @@ namespace CatanRoguelike.Game
             Stretch(ring.rectTransform);
             _hsTimerDisc = CreateDisc(holder, "Disc", new Color(0.16f, 0.11f, 0.07f, 0.96f), 136f);
             SetRect(_hsTimerDisc.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(136f, 136f));
-            var label = RunHudUiFactory.CreateText(holder, "Label", s.Acting.IsAi ? "AI TURN" : "TURN TIME", 13,
+            var label = RunHudUiFactory.CreateText(holder, "Label", s.Acting.IsAi ? "AI TURN" : s.Clock.Enabled ? "TURN TIME" : "UNTIMED", 13,
                 TextAnchor.MiddleCenter, ColonistUiKit.Cream, FontStyle.Bold);
             SetRect(label.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 38f), new Vector2(130f, 18f));
             _hsTimerText = RunHudUiFactory.CreateText(holder, "Seconds", "", 46, TextAnchor.MiddleCenter,
@@ -560,7 +438,8 @@ namespace CatanRoguelike.Game
             SetRect(_hsTimerText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -6f), new Vector2(130f, 60f));
 
             var seat = s.Current;
-            string chargeText = s.Match.IsPregame ? "+90 s (after setup)"
+            string chargeText = !s.Clock.Enabled ? "No turn timer"
+                : s.Match.IsPregame ? "+90 s (after setup)"
                 : seat.ExtraTimeUsedThisTurn ? "+90 s used this turn"
                 : $"+90 s  ·  {seat.ExtraTimeCharges} charge{(seat.ExtraTimeCharges == 1 ? "" : "s")}";
             var charge = RunHudUiFactory.CreateButton(_hotSeatRoot, chargeText, RunHudUiFactory.ButtonFill);
@@ -578,7 +457,7 @@ namespace CatanRoguelike.Game
             charge.interactable = usable;
             charge.onClick.AddListener(() => _hotSeat?.UseExtraTime());
             var hint = RunHudUiFactory.CreateText(_hotSeatRoot, "ChargeHint",
-                "1 charge at start · +1 every 5 rounds", 15, TextAnchor.MiddleCenter, ColonistUiKit.Cream,
+                s.Clock.Enabled ? "1 charge at start · +1 every 5 rounds" : "Turns are untimed (setup screen)", 15, TextAnchor.MiddleCenter, ColonistUiKit.Cream,
                 FontStyle.Italic);
             SetRect(hint.rectTransform, new Vector2(1f, 0f), new Vector2(-200f, 90f), new Vector2(320f, 22f));
             AddShadow(hint.gameObject, 1.2f);
@@ -589,9 +468,12 @@ namespace CatanRoguelike.Game
             if (_hotSeat == null || _hsTimerText == null)
                 return;
             var clock = _hotSeat.Clock;
-            if (_hotSeat.Acting.IsAi || _hotSeat.IsOver)
+            if (_hotSeat.Acting.IsAi || _hotSeat.IsOver || !clock.Enabled)
             {
                 _hsTimerText.text = "—";
+                _hsTimerText.rectTransform.localScale = Vector3.one;
+                _hsTimerText.fontSize = 46;
+                _hsTimerText.color = ColonistUiKit.Cream;
                 _hsTimerRoot.localScale = Vector3.one;
                 return;
             }
@@ -672,6 +554,8 @@ namespace CatanRoguelike.Game
                     TextAnchor.MiddleCenter, ink, FontStyle.Bold);
                 SetRect(count.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(x, -58f), new Vector2(70f, 30f));
             }
+
+            BuildHotSeatFish(panel.rectTransform, seat);
         }
 
         private void BuildHotSeatActions()
@@ -848,7 +732,7 @@ namespace CatanRoguelike.Game
             }
 
             AddLobbyButton(card, "BackToMenu", "Back to menu", new Vector2(0f, 60f), new Vector2(260f, 58f), true,
-                true, ExitHotSeat, anchorBottom: true);
+                true, LeaveMatchToMenu, anchorBottom: true);
         }
 
         // ---------- helpers ----------

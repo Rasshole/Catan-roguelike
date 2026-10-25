@@ -306,7 +306,14 @@ namespace CatanRoguelike.Game
             if (boardRoot != null)
             {
                 for (int i = boardRoot.childCount - 1; i >= 0; i--)
-                    DestroySceneObject(boardRoot.GetChild(i).gameObject);
+                {
+                    var child = boardRoot.GetChild(i);
+                    // v143: the board root can be the GameManager itself, which also hosts the HUD canvas — a board
+                    // rebuild (e.g. "Leave match" → main menu) must not take the freshly built HUD with it.
+                    if (child.GetComponent<Canvas>() != null)
+                        continue;
+                    DestroySceneObject(child.gameObject);
+                }
             }
 
             buildingsRoot = null;

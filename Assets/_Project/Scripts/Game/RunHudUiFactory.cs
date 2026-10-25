@@ -105,6 +105,8 @@ namespace CatanRoguelike.Game
                 ColonistKenneyHudArt.ApplySecondaryButtonImage(image);
 
             var button = go.AddComponent<Button>();
+            // v143: a soft wooden click on every HUD button (deduped, respects the volume/mute settings).
+            button.onClick.AddListener(() => GameAudio.Play(Sfx.Click, 0.7f));
             var colors = button.colors;
             colors.highlightedColor = new Color(1f, 0.97f, 0.88f, 1f);
             colors.pressedColor = new Color(0.86f, 0.80f, 0.70f, 1f);

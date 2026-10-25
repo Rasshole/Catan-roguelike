@@ -80,7 +80,9 @@ namespace CatanRoguelike.Game
             {
                 if (_civPickRoot != null)
                     ColonistSceneDestroy.SafeDestroy(_civPickRoot.gameObject);
+                _civPickHidden = false;
                 _civPickRoot = BuildCivilizationPick(state.CivilizationOffer);
+                AddCivPickPeekButtons(_civPickRoot);
                 _civPickOfferKey = key;
             }
 

@@ -49,7 +49,14 @@ namespace CatanRoguelike.Game
 
         private void HandleHumanBuildCostPaid(ResourceBundle paid)
         {
-            if (_hud == null || paid.Total <= 0)
+            if (paid.Total <= 0)
+                return;
+            // v143 sounds for the single-player run too (cost shape tells what was bought).
+            GameAudio.Play(paid.Wheat == 2 && paid.Stone == 3 ? Sfx.City
+                : paid.Wood == 1 && paid.Brick == 1 && paid.Total == 2 ? Sfx.Road
+                : paid.Wood == 1 && paid.Brick == 1 && paid.Wheat == 1 && paid.Sheep == 1 ? Sfx.Settlement
+                : Sfx.DevBuy);
+            if (_hud == null)
                 return;
             StartCoroutine(_hud.PlaySpendToBankFlies(paid, ResourceFlySeconds));
         }
@@ -91,7 +98,10 @@ namespace CatanRoguelike.Game
 
             var before = state.PlayerInventory;
 
+            GameAudio.Play(Sfx.Dice);
             yield return AnimateDice(state.TodayDiceRolls, isSeven);
+            if (isSeven)
+                GameAudio.Play(Sfx.Robber);
 
             if (_boardView != null)
             {
@@ -114,6 +124,8 @@ namespace CatanRoguelike.Game
                     PlayerId.Human,
                     rolls,
                     gained);
+                if (flySources.Count > 0)
+                    GameAudio.Play(Sfx.CardDraw);
                 if (flySources.Count > 0)
                     yield return _hud.PlayProductionFlies(_boardView, flySources, ResourceFlySeconds);
                 yield return _hud.AnimateResourceCounts(before, _controller.State.PlayerInventory, ResourceTickSeconds);

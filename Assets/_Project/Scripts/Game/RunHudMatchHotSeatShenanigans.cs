@@ -78,7 +78,7 @@ namespace CatanRoguelike.Game
             _hotSeat != null && _hsScheme != HotSeatScheme.None && !_hotSeat.IsOver && !_hotSeat.PassScreenPending
             && _hotSeat.State.Phase == MatchPhase.Main && !_hotSeat.Acting.IsAi && _hotSeat.State.ActiveTrade == null;
 
-        private bool PartyTable => _hotSeat != null && _hotSeat.State.Config.PartyRules;
+        private bool PartyTable => _hotSeat != null && _hotSeat.Match.ShenanigansOn;
 
         private void BuildShenanigans()
         {
@@ -743,7 +743,7 @@ namespace CatanRoguelike.Game
         /// <summary>Bounty and face-down marks on a strip row (public: amounts and targets, never authors).</summary>
         private void BuildSeatShenaniganMarks(RectTransform row, MatchState state, int i)
         {
-            if (!state.Config.PartyRules)
+            if (!_hotSeat.Match.ShenanigansOn)
                 return;
             int bounty = _hotSeat.Match.BountiesOn(i).Sum(b => b.Reward.Total);
             if (bounty > 0)

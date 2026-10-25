@@ -66,6 +66,7 @@ namespace CatanRoguelike.Game
             string drafted = string.Join(",", state.DraftedUniques.OrderBy(x => x));
             return $"{state.Phase}|{state.MapSize}|{drafted}|{_meta?.Stars}|{_unlockPanelOpen}|" +
                    $"{_controller.FishermenMapOption}|{OnboardingTipsStore.TipsEnabled}|{HotSeatLobbyKey()}|" +
+                   $"{(_mainMenuOpen ? "main" : "")}|{_controller.UnlockAll}|" +
                    (_meta != null ? string.Join(",", _meta.GetPurchasableUnlocks()) : "");
         }
 
@@ -105,9 +106,22 @@ namespace CatanRoguelike.Game
 
         private RectTransform BuildPreGame(GameState state)
         {
-            var root = CreateFullscreenDim("PreGameMenu", new Color(0.05f, 0.04f, 0.03f, 0.58f));
+            bool frontScreen = state.Phase == GamePhase.RunSelectMap && (_hotSeatLobbyOpen || _mainMenuOpen);
+            var root = CreateFullscreenDim("PreGameMenu", frontScreen
+                ? new Color(0.05f, 0.04f, 0.03f, 0.66f)
+                : new Color(0.05f, 0.04f, 0.03f, 0.58f));
             var group = root.gameObject.AddComponent<CanvasGroup>();
             group.alpha = 1f;
+
+            // v143: the front door — main menu, then the setup screen (map + rules + seats) — owns the whole screen.
+            if (frontScreen)
+            {
+                if (_hotSeatLobbyOpen)
+                    BuildGameSetup(root);
+                else
+                    BuildMainMenu(root);
+                return root;
+            }
 
             string step, title;
             switch (state.Phase)
@@ -163,8 +177,6 @@ namespace CatanRoguelike.Game
             BuildPreGameFooter(root, state);
             if (state.Phase == GamePhase.RunSelectMap && _unlockPanelOpen && _meta != null)
                 BuildUnlockPanel(root);
-            if (state.Phase == GamePhase.RunSelectMap && _hotSeatLobbyOpen)
-                BuildHotSeatLobby(root);
             return root;
         }
 
@@ -263,9 +275,10 @@ namespace CatanRoguelike.Game
             var sizes = new List<(MapSize size, bool available, int cost)>();
             foreach (MapSize size in System.Enum.GetValues(typeof(MapSize)))
             {
-                bool available = _meta == null
-                    ? size == MapSize.Small || size == MapSize.Medium || size == MapSize.Large
-                    : _meta.IsMapAvailable(size);
+                bool available = _controller != null && _controller.UnlockAll
+                                 || (_meta == null
+                                     ? size == MapSize.Small || size == MapSize.Medium || size == MapSize.Large
+                                     : _meta.IsMapAvailable(size));
                 int cost = 0;
                 if (!available)
                 {
@@ -420,7 +433,7 @@ namespace CatanRoguelike.Game
             var leaders = new List<(LeaderId id, bool available, int cost)>();
             foreach (LeaderId leader in System.Enum.GetValues(typeof(LeaderId)))
             {
-                bool available = _meta == null || _meta.IsLeaderAvailable(leader);
+                bool available = _controller != null && _controller.UnlockAll || _meta == null || _meta.IsLeaderAvailable(leader);
                 int cost = 0;
                 if (!available)
                 {
@@ -528,15 +541,16 @@ namespace CatanRoguelike.Game
                     _controller.FishermenMapOption = !_controller.FishermenMapOption;
                     RebuildPreGame();
                 }));
-                if (_meta != null)
+                // v143: everything is unlocked, so the star shop stays hidden (its code is kept for later).
+                if (_meta != null && !_controller.UnlockAll)
                     buttons.Add((_unlockPanelOpen ? "Hide unlocks" : "Spend stars / Unlocks", false, true, () =>
                     {
                         _unlockPanelOpen = !_unlockPanelOpen;
                         RebuildPreGame();
                     }));
-                buttons.Add(("Pass & play (2–5)", false, true, () =>
+                buttons.Add(("Main menu", false, true, () =>
                 {
-                    _hotSeatLobbyOpen = !_hotSeatLobbyOpen;
+                    _mainMenuOpen = true;
                     _unlockPanelOpen = false;
                     RebuildPreGame();
                 }));

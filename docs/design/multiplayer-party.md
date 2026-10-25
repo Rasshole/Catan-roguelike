@@ -417,6 +417,43 @@ how the group can playtest the rules before any server exists.
   - UI: sabotage hex/road target buttons show resource icons and number tokens instead of words; the sealed-bid card
     shows the reserve price.
 
+### v143: Front door, table feel and port fixes — **DONE in v143**
+
+- **Main menu**: pressing Play opens a painted parchment main menu with the title "Catan Roguelike", a big
+  **Start game** button and smaller extras: *Single-player run* (the roguelike map → civ → draft steps),
+  *Settings & volume* and *Quit*. Leaving a match, or finishing one, always comes back here.
+- **Setup screen** (Start game): pick ANY map (Tutorial 7, Medium 13, Base 19, Extended 30, Huge 37 hexes, all with
+  hex thumbnails; the seat-count suggestion is marked), 2–5 seats each Human/AI/open (with "Fill open seats with AI"),
+  Fishermen of Catan, victory points (3–20), a turn timer that can be switched off or set to 0:30–5:00, civs &
+  secret quests, event cards and shenanigans (the last two need party rules). Every option is stored in
+  `MatchConfig` (`TurnTimer`, `TurnSeconds`, `EventCards`, `Shenanigans`, `Fishermen`), so it is serializable and
+  deterministic. Untimed tables show "—" on the timer and have no extra-time charge.
+- **Everything unlocked**: `GameController.UnlockAll` (set by the game) skips the star unlock checks for maps, leaders
+  and civilizations; the "Spend stars / Unlocks" button is hidden but the meta-progression code is kept.
+- **Fishermen of Catan in pass & play**: fishing grounds with number tokens sit along the coast; settlements on their
+  coast corners catch 1 fish (cities 2) when the number comes up. 4 fish buy any one card from the bank on your turn
+  (`MatchCommand.Fish`, command 30). Fish are public (chip on the hand panel) and the AI uses them for what it needs.
+- **Leave match** (top-left on the table, and in the bottom-right Menu popup in every mode) tears down every overlay
+  and returns to the main menu with all state reset; a new game starts cleanly afterwards.
+- **Hide / Show board** on the civ pick and the quest/trait pick, so you can study the island before choosing.
+- **Table feel**: an animated two-dice roll (~1 s, lands on the real dice, stays visible) for human and AI rolls;
+  cards fly from the bank or another seat into the hand (0.5 s, batched) for production, dev buys, trades, steals,
+  bank trades, events and fish, and spending flies hand → bank; placement shows small pulsing player-colour circles
+  and road markers instead of ghost pieces.
+- **Sound**: cozy synthesized effects (no audio files; see `docs/art/CREDITS.md`) for building, cards, dice, robber,
+  steal, trade answers, turn start, the last 5 s of the timer, quests, votes/auctions/sabotage, victory and button
+  clicks, also in the single-player run. Volume slider and mute in the Menu popup (saved in PlayerPrefs).
+- **Port bug fixed**: a harbour serves BOTH of its pier corners (a settlement on the second pier of the 2:1 Wool
+  harbour got 4:1 before). Market Day is min(rate, 3) per resource and never overrides a better harbour. The AI
+  uses the same rates.
+- **Multi-batch bank trades**: one `BankTradeBatch` command (29) gives several resources at once; each give must be an
+  exact multiple of its rate and the cards received equal the sum of give/rate. The bank composer and the AI
+  (`MatchAi.PlanBankBatch`) both use it.
+- Tests: EditMode `MatchPortsBatchV143Tests` and `MatchSetupOptionsV143Tests` (every map × 2–5 seats plays, timer
+  off/length, events off, shenanigans off, fish rules and AI fish use, determinism); PlayMode
+  `ColonistHotSeatV143CaptureTests` (leave → main menu → start again, show board, setup circles, batch trade, dice and
+  card flies, main menu → setup → every map starts).
+
 ### Phase 5: Network-ready core
 - PCG32 RNG streams per subsystem, `GameState.ComputeHash()`, and a recorded log that replays to the same hash.
 - `GameStateView ForSeat(SeatId)` redaction (hands, quests, traits, sabotage, sealed bids) plus JSON snapshots.

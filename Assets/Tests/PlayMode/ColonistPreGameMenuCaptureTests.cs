@@ -92,7 +92,15 @@ namespace CatanRoguelike.Tests.PlayMode
 
             RunHudController hud = null;
             yield return Settle(gameManager, h => hud = h);
-            Assert.IsTrue(hud.IsPreGameMenuVisibleForTests, "painted map menu visible");
+            Assert.IsTrue(hud.IsPreGameMenuVisibleForTests, "painted main menu visible");
+            // v143: Play opens the main menu; the single-player run is one of its small extras.
+            Assert.IsTrue(hud.IsMainMenuOpenForTests, "main menu first");
+            Assert.IsNull(FindButton(hud, "Footer_"), "no star shop / footer behind the main menu");
+            FindButton(hud, RunHudController.MainMenuSoloName).onClick.Invoke();
+            yield return Settle(gameManager, h => hud = h);
+            Assert.IsFalse(hud.IsMainMenuOpenForTests);
+            Assert.IsFalse(hud.PreGameMenuRootForTests.GetComponentsInChildren<Text>(true)
+                .Any(t => t.text.Contains("Spend stars")), "v143: unlock shop hidden");
             Assert.IsTrue(RunHudController.PaintedPreGameMenusVisible, "IMGUI menu should defer to painted menu");
             Assert.IsTrue(hud.HudCanvas.gameObject.activeSelf, "HUD canvas hosts the pre-game menu");
             foreach (Transform child in hud.HudCanvas.transform)
@@ -105,21 +113,6 @@ namespace CatanRoguelike.Tests.PlayMode
             }
 
             MaybeWrite(hud, "menu-map");
-
-            if (!string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("COLONIST_MENU_SHOT_DIR")))
-            {
-                var unlocks = FindButton(hud, "Footer_1");
-                if (unlocks != null && gameManager.Meta != null)
-                {
-                    unlocks.onClick.Invoke();
-                    yield return Settle(gameManager, h => hud = h);
-                    MaybeWrite(hud, "menu-unlocks");
-                    var close = hud.PreGameMenuRootForTests.GetComponentsInChildren<Button>(true)
-                        .First(b => b.GetComponentInChildren<Text>()?.text == "Close");
-                    close.onClick.Invoke();
-                    yield return Settle(gameManager, h => hud = h);
-                }
-            }
 
             var map = FindButton(hud, "Map_");
             Assert.IsNotNull(map, "an available map card");

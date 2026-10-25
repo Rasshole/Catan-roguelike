@@ -21,7 +21,6 @@ namespace CatanRoguelike.Game
         private GameObject _hover;
         private string _targetsKey;
 
-        private static readonly Color HoverColor = new(0.2f, 1f, 0.3f, 0.75f);
         private static readonly Color CityHoverColor = new(1f, 0.5f, 0.9f, 0.75f);
         private static readonly Color RobberColor = new(0.2f, 0.85f, 1f, 0.65f);
 
@@ -93,19 +92,17 @@ namespace CatanRoguelike.Game
             // Ghosts in the acting seat's own colour (lightened) read clearly on every tile; cream/white ghosts
             // vanished into the cream hex borders.
             var seatColor = PlayerPieceVisuals.ColorForPlayer(_session.Acting.Owner);
-            var spotColor = Color.Lerp(seatColor, Color.white, 0.3f);
-            spotColor.a = 0.8f;
-            var roadColor = spotColor;
-            roadColor.a = 0.75f;
             var (vertices, edges, _) = MatchBoardPick.Targets(_session.Match, MatchBuildMode.Auto);
+            // v143: small pulsing seat-colour circles / dashes instead of ghost houses and ghost roads.
+            var markColor = Color.Lerp(seatColor, Color.white, 0.12f);
             foreach (var v in vertices)
             {
                 var (x, z) = HexMath.VertexToWorldPosition(v, scale);
-                _markers.Add(PlacementMarkerVisuals.CreateSettlementGhost(_root, new Vector3(x, 0f, z), spotColor, top));
+                _markers.Add(PlacementMarkerVisuals.CreateSpotCircle(_root, new Vector3(x, 0f, z), markColor, top, scale));
             }
 
             foreach (var e in edges)
-                _markers.Add(RoadMarker(e, roadColor, scale, top));
+                _markers.Add(RoadDash(e, markColor, scale, top, 1f));
         }
 
         private void Update()
@@ -146,7 +143,7 @@ namespace CatanRoguelike.Game
             {
                 case MatchCommandType.PlaceSetupRoad:
                 case MatchCommandType.BuildRoad:
-                    return RoadMarker(command.Edge, HoverColor, scale, top);
+                    return RoadDash(command.Edge, HoverTint(), scale, top, 1.45f);
                 case MatchCommandType.MoveRobber:
                 {
                     var (hx, hz) = HexMath.ToWorldPosition(command.Hex, scale);
@@ -160,19 +157,23 @@ namespace CatanRoguelike.Game
                 default:
                 {
                     var (x, z) = HexMath.VertexToWorldPosition(command.Vertex, scale);
-                    return PlacementMarkerVisuals.CreateSettlementGhost(_root, new Vector3(x, 0f, z), HoverColor, top);
+                    return PlacementMarkerVisuals.CreateSpotCircle(_root, new Vector3(x, 0f, z), HoverTint(), top, scale,
+                        1.55f, pulse: false);
                 }
             }
         }
 
-        private GameObject RoadMarker(Edge e, Color color, float scale, float top)
+        private Color HoverTint() =>
+            Color.Lerp(PlayerPieceVisuals.ColorForPlayer(_session.Acting.Owner), Color.white, 0.45f);
+
+        private GameObject RoadDash(Edge e, Color color, float scale, float top, float sizeMul)
         {
             var (mx, mz) = HexMath.EdgeMidpoint(e, scale);
             var (ax, az) = HexMath.VertexToWorldPosition(e.A, scale);
             var (bx, bz) = HexMath.VertexToWorldPosition(e.B, scale);
             float length = Vector3.Distance(new Vector3(ax, 0, az), new Vector3(bx, 0, bz));
-            return PlacementMarkerVisuals.CreateRoadGhost(_root, new Vector3(mx, 0f, mz), HexMath.EdgeAngle(e), length,
-                color, top);
+            return PlacementMarkerVisuals.CreateRoadDash(_root, new Vector3(mx, 0f, mz), HexMath.EdgeAngle(e), length,
+                color, top, scale, sizeMul, pulse: sizeMul <= 1f);
         }
 
         private void Clear()
