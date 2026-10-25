@@ -88,6 +88,8 @@ namespace CatanRoguelike.Core.Match
         public int VictoryPoints { get; set; }
         public int ExtraTimeCharges { get; set; } = TurnClock.StartingCharges;
         public bool ExtraTimeUsedThisTurn { get; set; }
+        /// <summary>v143 Fishermen of Catan: fish caught on the coast (spent 4 for a card; public).</summary>
+        public int Fish { get; set; }
 
         /// <summary>v135: playable development cards (hidden from other seats).</summary>
         public List<MatchDevCard> DevCards { get; set; } = new();
@@ -153,6 +155,9 @@ namespace CatanRoguelike.Core.Match
         public int Round { get; set; }
         public int TurnNumber { get; set; }
         public int LastRoll { get; set; }
+        /// <summary>v143: the two dice of <see cref="LastRoll"/> (presentation only; not part of the hash).</summary>
+        public int LastDieA { get; set; }
+        public int LastDieB { get; set; }
         public int? LongestRoadSeat { get; set; }
         public int? Winner { get; set; }
         public MatchRng Rng { get; set; }
@@ -263,6 +268,8 @@ namespace CatanRoguelike.Core.Match
                          .OrderBy(x => x, StringComparer.Ordinal))
                 sb.Append(line).Append(';');
 
+            if (Config.Fishermen)
+                sb.Append("F").Append(string.Join(",", Seats.Select(s => s.Fish))).Append('|');
             if (Config.PartyRules)
             {
                 sb.Append("P").Append(PickStep).Append(':').Append(PartyRng?.State ?? 0).Append(':')

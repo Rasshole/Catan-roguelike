@@ -56,7 +56,15 @@ namespace CatanRoguelike.Core.Match
         /// <summary>Roll (before rolling): the target of a face-down card names its author. Victim = guessed author, Offer = 1 card paid.</summary>
         GuessSaboteur = 27,
         /// <summary>Main: spend a reroll won at the Night Market on the tile at Q/R.</summary>
-        RerollToken = 28
+        RerollToken = 28,
+        // ---- v143 ----
+        /// <summary>
+        /// Main: several bank/harbour trades in one go. Offer = everything given, Request = everything received.
+        /// Each give-resource must be spent in whole batches at its own rate; Request.Total = the number of batches.
+        /// </summary>
+        BankTradeBatch = 29,
+        /// <summary>Main (Fishermen on): pay <see cref="MatchController.FishPerCard"/> fish for 1 card. Request = the card.</summary>
+        FishForCard = 30
     }
 
     /// <summary>
@@ -139,6 +147,20 @@ namespace CatanRoguelike.Core.Match
         {
             Type = MatchCommandType.BankTrade, Seat = seat, Give = give, Receive = receive
         };
+
+        /// <summary>v143: a multi-batch bank trade (e.g. 4 Wool → 2 at a 2:1 harbour, or 2 Wool + 3 Ore → 2 cards).</summary>
+        public static MatchCommand BankBatch(int seat, ResourceBundle give, ResourceBundle get) => new()
+        {
+            Type = MatchCommandType.BankTradeBatch, Seat = seat, Offer = give, Request = get
+        };
+
+        /// <summary>v143 Fishermen: trade fish for one card from the bank.</summary>
+        public static MatchCommand Fish(int seat, ResourceType card)
+        {
+            var get = ResourceBundle.Zero;
+            get.Add(card, 1);
+            return new MatchCommand { Type = MatchCommandType.FishForCard, Seat = seat, Request = get };
+        }
 
         public static MatchCommand Card(MatchCommandType type, int seat, ResourceType a = default, ResourceType b = default) =>
             new() { Type = type, Seat = seat, Give = a, Receive = b };
@@ -230,6 +252,7 @@ namespace CatanRoguelike.Core.Match
             MatchCommandType.MoveRobber => $"{Type}(seat {Seat}, {Hex}, victim {Victim})",
             MatchCommandType.BankTrade => $"{Type}(seat {Seat}, {Give}->{Receive})",
             MatchCommandType.Discard => $"{Type}(seat {Seat}, {Offer.Total} cards)",
+            MatchCommandType.BankTradeBatch => $"{Type}(seat {Seat}, {Offer.Total} -> {Request.Total})",
             MatchCommandType.ProposeTrade => $"{Type}(seat {Seat}, give {Offer.Total}+{GiveAny}* get {Request.Total}+{GetAny}*)",
             MatchCommandType.RespondTrade => $"{Type}(seat {Seat}, {Response})",
             MatchCommandType.ConfirmTrade => $"{Type}(seat {Seat} with {Victim})",

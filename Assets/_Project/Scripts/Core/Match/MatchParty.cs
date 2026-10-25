@@ -202,7 +202,7 @@ namespace CatanRoguelike.Core.Match
         public static int OwnedHarbours(MatchController m, int seat)
         {
             var owner = MatchSeats.ToPlayerId(seat);
-            return m.State.Ports.Count(p => PortAccess.PlayerControlsVertex(m.State.Board, owner, p.Vertex));
+            return m.State.Ports.Count(p => PortAccess.PlayerControlsPort(m.State.Board, owner, p));
         }
 
         /// <summary>Distinct hexes of <paramref name="resource"/> touching one of the seat's buildings.</summary>
@@ -250,7 +250,7 @@ namespace CatanRoguelike.Core.Match
             var owner = MatchSeats.ToPlayerId(seat);
             var frontier = board.VertexBuildings.Where(kv => kv.Value.owner == owner).Select(kv => kv.Key).ToList();
             var seen = new HashSet<Vertex>(frontier);
-            var ports = new HashSet<Vertex>(m.State.Ports.Select(p => p.Vertex));
+            var ports = new HashSet<Vertex>(m.State.Ports.SelectMany(p => PortAccess.ServedVertices(board, p)));
             for (int d = 0; d <= steps; d++)
             {
                 foreach (var v in frontier)

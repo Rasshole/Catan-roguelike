@@ -58,6 +58,15 @@ namespace CatanRoguelike.Core
         /// </summary>
         public bool CivilizationPickEnabled { get; set; }
 
+        /// <summary>
+        /// v143: every map, leader and civilization is playable (the star unlock code stays, but nothing is gated
+        /// while this is on). The game sets it; tests of the meta progression leave it off.
+        /// </summary>
+        public bool UnlockAll { get; set; }
+
+        private bool IsMapUnlocked(MapSize size) => UnlockAll || Meta == null || Meta.IsMapAvailable(size);
+        private bool IsLeaderUnlocked(LeaderId leader) => UnlockAll || Meta == null || Meta.IsLeaderAvailable(leader);
+
         public GameController(int? seed = null, MapSize mapSize = MapSize.Small, MetaProgression meta = null)
         {
             Meta = meta;
@@ -122,7 +131,7 @@ namespace CatanRoguelike.Core
         public void SelectMap(MapSize mapSize)
         {
             if (State.Phase != GamePhase.RunSelectMap) return;
-            if (Meta != null && !Meta.IsMapAvailable(mapSize))
+            if (!IsMapUnlocked(mapSize))
             {
                 State.StatusMessage = $"{MapPresets.GetDisplayName(mapSize)} is locked — spend stars in Unlocks.";
                 NotifyChanged();
@@ -383,7 +392,7 @@ namespace CatanRoguelike.Core
         public void SelectLeader(LeaderId leader)
         {
             if (State.Phase != GamePhase.RunSelectLeader) return;
-            if (Meta != null && !Meta.IsLeaderAvailable(leader))
+            if (!IsLeaderUnlocked(leader))
             {
                 State.StatusMessage = $"{LeaderLibrary.Get(leader).Name} is locked — spend stars in Unlocks.";
                 NotifyChanged();
@@ -456,7 +465,7 @@ namespace CatanRoguelike.Core
         {
             State.CivilizationOffer.Clear();
             State.CivilizationOffer.AddRange(CivilizationOffer.Generate(RunSeed, CivilizationOffer.OfferSize,
-                def => Meta == null || Meta.IsLeaderAvailable(def.Leader)));
+                def => IsLeaderUnlocked(def.Leader)));
             State.Phase = GamePhase.RunSelectCivilization;
             State.StatusMessage = "Choose your civilization.";
             NotifyChanged();

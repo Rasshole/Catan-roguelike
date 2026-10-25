@@ -187,7 +187,7 @@ namespace CatanRoguelike.Core.Match
         public bool OwnsHarbour(int seat)
         {
             var owner = MatchSeats.ToPlayerId(seat);
-            return State.Ports.Any(p => PortAccess.PlayerControlsVertex(State.Board, owner, p.Vertex));
+            return State.Ports.Any(p => PortAccess.PlayerControlsPort(State.Board, owner, p));
         }
 
         // ---------- Night Market (sealed-bid, second-price) ----------
@@ -401,7 +401,7 @@ namespace CatanRoguelike.Core.Match
         }
 
         public bool CanBuySabotage(int seat) =>
-            PartyRules && seat == State.CurrentSeat && State.Phase == MatchPhase.Main
+            ShenanigansOn && seat == State.CurrentSeat && State.Phase == MatchPhase.Main
             && State.Seats[seat].Sabotage.Count < MaxSabotageHeld && State.Seats[seat].Hand.CanAfford(SabotageCost);
 
         public MatchSabotage PendingSabotageOn(int target) => State.PendingSabotage.FirstOrDefault(p => p.Target == target);
@@ -492,7 +492,7 @@ namespace CatanRoguelike.Core.Match
         public bool CanGuessSaboteur(int seat)
         {
             var p = PendingSabotageOn(seat);
-            return PartyRules && p != null && !p.Guessed && seat == State.CurrentSeat && State.Phase == MatchPhase.Roll
+            return ShenanigansOn && p != null && !p.Guessed && seat == State.CurrentSeat && State.Phase == MatchPhase.Roll
                    && State.Seats[seat].CardCount > 0;
         }
 

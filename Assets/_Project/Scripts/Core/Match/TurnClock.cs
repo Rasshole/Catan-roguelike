@@ -15,15 +15,33 @@ namespace CatanRoguelike.Core.Match
         public const int StartingCharges = 1;
         public const int RoundsPerNewCharge = 5;
 
+        public TurnClock() : this(TurnSeconds, true)
+        {
+        }
+
+        /// <summary>v143: the setup screen picks the turn length, or switches the timer off entirely.</summary>
+        public TurnClock(float turnSeconds, bool enabled)
+        {
+            Seconds = turnSeconds > 0f ? turnSeconds : TurnSeconds;
+            Enabled = enabled;
+            Budget = Seconds;
+        }
+
+        /// <summary>Length of a fresh turn.</summary>
+        public float Seconds { get; }
+
+        /// <summary>False = untimed turns: never expires, never pulses.</summary>
+        public bool Enabled { get; }
+
         public float Elapsed { get; private set; }
-        public float Budget { get; private set; } = TurnSeconds;
+        public float Budget { get; private set; }
         public bool Paused { get; set; }
 
-        public float Remaining => Math.Max(0f, Budget - Elapsed);
-        public bool Expired => Remaining <= 0f;
+        public float Remaining => Enabled ? Math.Max(0f, Budget - Elapsed) : Budget;
+        public bool Expired => Enabled && Remaining <= 0f;
 
         /// <summary>True in the last 5 seconds: the HUD grows/pulses the number so you know to use a charge.</summary>
-        public bool ShouldPulse => !Expired && Remaining <= PulseThresholdSeconds;
+        public bool ShouldPulse => Enabled && !Expired && Remaining <= PulseThresholdSeconds;
 
         /// <summary>Whole seconds for display, rounded up (so "1" shows until the very end).</summary>
         public int DisplaySeconds => (int)Math.Ceiling(Remaining);
@@ -31,13 +49,13 @@ namespace CatanRoguelike.Core.Match
         public void StartTurn()
         {
             Elapsed = 0f;
-            Budget = TurnSeconds;
+            Budget = Seconds;
             Paused = false;
         }
 
         public void Tick(float deltaSeconds)
         {
-            if (Paused || deltaSeconds <= 0f)
+            if (!Enabled || Paused || deltaSeconds <= 0f)
                 return;
             Elapsed += deltaSeconds;
         }

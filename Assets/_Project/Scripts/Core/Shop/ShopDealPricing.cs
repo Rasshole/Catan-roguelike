@@ -98,7 +98,7 @@ namespace CatanRoguelike.Core.Shop
 
             bool perkActive = player == PlayerId.Human
                 && state.HasPerk(LevelUpPerkId.PortDiscount)
-                && state.Ports.Any(p => PortAccess.PlayerControlsVertex(state.Board, player, p.Vertex));
+                && state.Ports.Any(p => PortAccess.PlayerControlsPort(state.Board, player, p));
             int afterPerk = perkActive ? Math.Max(2, afterMerchant - 1) : afterMerchant;
 
             if (perkActive && afterPerk < afterMerchant)

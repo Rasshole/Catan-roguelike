@@ -7,6 +7,7 @@ using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 using Edge = CatanRoguelike.Core.Hex.HexMath.Edge;
 
 using CatanRoguelike.Core.Trade;
+using CatanRoguelike.Core.Shop;
 
 namespace CatanRoguelike.Core.Match
 {
@@ -161,8 +162,6 @@ namespace CatanRoguelike.Core.Match
                 return proposal;
 
             // Bank trade 4:1 toward the current goal (capped per turn so a flipping goal can never loop).
-            if (TradesThisTurn(match, seat) >= MaxBankTradesPerTurn)
-                return null;
             ResourceBundle goal;
             if (spots.Count > 0)
                 goal = match.SettlementCostFor(seat);
@@ -172,6 +171,18 @@ namespace CatanRoguelike.Core.Match
                 goal = match.CityCostFor(seat);
             else
                 goal = match.RoadCostFor(seat);
+            // v143 Fishermen: fish buy the missing card (bounded by the fish held, so this can't loop).
+            if (match.CanFishForCard(seat))
+            {
+                foreach (var need in MatchController.AllResources)
+                {
+                    if (hand[need] < goal[need])
+                        return MatchCommand.Fish(seat, need);
+                }
+            }
+
+            if (TradesThisTurn(match, seat) >= MaxBankTradesPerTurn)
+                return null;
             foreach (var need in MatchController.AllResources)
             {
                 if (hand[need] >= goal[need])
@@ -180,11 +191,50 @@ namespace CatanRoguelike.Core.Match
                     .Where(r => r != need && hand[r] - goal[r] >= match.BankRatio(seat, r))
                     .OrderByDescending(r => hand[r] - goal[r]).ThenBy(r => (int)r)
                     .Cast<ResourceType?>().FirstOrDefault();
-                if (give.HasValue)
-                    return MatchCommand.Trade(seat, give.Value, need);
+                if (!give.HasValue)
+                    continue;
+                var batch = PlanBankBatch(match, seat, hand, goal);
+                if (batch != null)
+                    return batch;
+                return MatchCommand.Trade(seat, give.Value, need);
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// v143: plan the same greedy one-for-one bank trades the AI would make in sequence, and if there are two or
+        /// more, fold them into one <see cref="MatchCommandType.BankTradeBatch"/> (validated with the controller's
+        /// own per-batch rates so first-trade perks count exactly like single trades).
+        /// </summary>
+        private static MatchCommand PlanBankBatch(MatchController match, int seat, ResourceBundle hand, ResourceBundle goal)
+        {
+            var give = new ResourceBundle();
+            var get = new ResourceBundle();
+            var sim = hand;
+            int room = MaxBankTradesPerTurn - TradesThisTurn(match, seat);
+            for (int guard = 0; guard < room; guard++)
+            {
+                var need = MatchController.AllResources.Where(r => sim[r] < goal[r] && give[r] == 0)
+                    .Cast<ResourceType?>().FirstOrDefault();
+                if (!need.HasValue)
+                    break;
+                var from = MatchController.AllResources
+                    .Where(r => r != need.Value && get[r] == 0 && sim[r] - goal[r] >= match.BankRatio(seat, r))
+                    .OrderByDescending(r => sim[r] - goal[r]).ThenBy(r => (int)r)
+                    .Cast<ResourceType?>().FirstOrDefault();
+                if (!from.HasValue)
+                    break;
+                int rate = match.BankRatio(seat, from.Value);
+                sim.Add(from.Value, -rate);
+                sim.Add(need.Value, 1);
+                give.Add(from.Value, rate);
+                get.Add(need.Value, 1);
+            }
+
+            if (get.Total < 2 || match.BankBatchCards(seat, give) != get.Total || !hand.CanAfford(give))
+                return null;
+            return MatchCommand.BankBatch(seat, give, get);
         }
 
         public const int MaxBankTradesPerTurn = 3;
@@ -193,7 +243,7 @@ namespace CatanRoguelike.Core.Match
         public const double DevCardWorth = 2.0;
 
         private static int TradesThisTurn(MatchController match, int seat) =>
-            ThisTurn(match).Count(c => c.Seat == seat && c.Type == MatchCommandType.BankTrade);
+            ThisTurn(match).Count(c => c.Seat == seat && (c.Type == MatchCommandType.BankTrade || c.Type == MatchCommandType.BankTradeBatch));
 
         private static int Deficit(ResourceBundle hand, ResourceBundle cost) =>
             MatchController.AllResources.Sum(r => System.Math.Max(0, cost[r] - hand[r]));
@@ -285,7 +335,7 @@ namespace CatanRoguelike.Core.Match
             var cv = VertexGraph.Canonicalize(v);
             foreach (var port in state.Ports)
             {
-                if (VertexGraph.Canonicalize(port.Vertex) != cv)
+                if (!PortAccess.Serves(state.Board, port, cv))
                     continue;
                 if (port.IsGeneric)
                     score += 3;

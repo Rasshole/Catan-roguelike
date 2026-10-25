@@ -11,7 +11,7 @@ namespace CatanRoguelike.Core.Match
     public sealed class HotSeatSession
     {
         public MatchController Match { get; }
-        public TurnClock Clock { get; } = new();
+        public TurnClock Clock { get; }
 
         /// <summary>True while the "pass the device to X" screen covers the table (clock paused, hands hidden).</summary>
         public bool PassScreenPending { get; private set; }
@@ -28,6 +28,7 @@ namespace CatanRoguelike.Core.Match
         public HotSeatSession(MatchConfig config)
         {
             Match = new MatchController(config);
+            Clock = new TurnClock(config.TurnSeconds, config.TurnTimer);
             _turnKey = Key();
             BeginTurn(force: true);
         }
@@ -48,7 +49,7 @@ namespace CatanRoguelike.Core.Match
             get
             {
                 var s = Current;
-                return !IsOver && !s.IsAi && !PassScreenPending && !Match.IsPregame
+                return Clock.Enabled && !IsOver && !s.IsAi && !PassScreenPending && !Match.IsPregame
                        && s.ExtraTimeCharges > 0 && !s.ExtraTimeUsedThisTurn;
             }
         }

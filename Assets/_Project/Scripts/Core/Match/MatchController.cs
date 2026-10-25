@@ -48,7 +48,7 @@ namespace CatanRoguelike.Core.Match
         {
             config.Validate();
             // v137: every match shuffles its terrain per seed, like dealing the tiles at a real table.
-            var board = MapPresets.CreateBoard(config.MapSize, config.Seed, new MapGenerationOptions(shuffleTerrain: true));
+            var board = MapPresets.CreateBoard(config.MapSize, config.Seed, new MapGenerationOptions(fishermenOfCatan: config.Fishermen, shuffleTerrain: true));
             State = new MatchState(config, board)
             {
                 Rng = new MatchRng(config.Seed, 0x5EA7), PartyRng = new MatchRng(config.Seed, 0x9A27)
@@ -115,7 +115,14 @@ namespace CatanRoguelike.Core.Match
         /// <summary>v136: before the first roll (civ pick, placement, quest pick).</summary>
         public bool IsPregame => IsSetup || State.IsPicking;
         public bool PartyRules => State.Config.PartyRules;
+        /// <summary>v143 setup screen: party event cards (one per round) on.</summary>
+        public bool EventsOn => PartyRules && State.Config.EventCards;
+        /// <summary>v143 setup screen: sabotage, bounties, saboteur guesses (and the Decree/Night Market/Chaos events).</summary>
+        public bool ShenanigansOn => PartyRules && State.Config.Shenanigans;
         public bool IsOver => State.Phase == MatchPhase.GameOver;
+
+        private static MatchCommandResult NoShenanigans() =>
+            MatchCommandResult.Rejected("Shenanigans are switched off for this match.");
 
         public MatchCommandResult Apply(MatchCommand command)
         {
@@ -146,6 +153,8 @@ namespace CatanRoguelike.Core.Match
                 MatchCommandType.BuildSettlement => BuildSettlement(command),
                 MatchCommandType.BuildCity => BuildCity(command),
                 MatchCommandType.BankTrade => BankTrade(command),
+                MatchCommandType.BankTradeBatch => BankTradeBatch(command),
+                MatchCommandType.FishForCard => FishForCard(command),
                 MatchCommandType.UseExtraTime => UseExtraTime(command),
                 MatchCommandType.EndTurn => EndTurn(command),
                 MatchCommandType.BuyDevCard => BuyDevCard(command),
@@ -162,10 +171,10 @@ namespace CatanRoguelike.Core.Match
                 MatchCommandType.PickQuest => PickQuest(command),
                 MatchCommandType.CastVote => CastVote(command),
                 MatchCommandType.PlaceBid => PlaceBid(command),
-                MatchCommandType.PostBounty => PostBounty(command),
-                MatchCommandType.BuySabotage => BuySabotage(command),
-                MatchCommandType.PlaySabotage => PlaySabotage(command),
-                MatchCommandType.GuessSaboteur => GuessSaboteur(command),
+                MatchCommandType.PostBounty => ShenanigansOn ? PostBounty(command) : NoShenanigans(),
+                MatchCommandType.BuySabotage => ShenanigansOn ? BuySabotage(command) : NoShenanigans(),
+                MatchCommandType.PlaySabotage => ShenanigansOn ? PlaySabotage(command) : NoShenanigans(),
+                MatchCommandType.GuessSaboteur => ShenanigansOn ? GuessSaboteur(command) : NoShenanigans(),
                 MatchCommandType.RerollToken => RerollToken(command),
                 _ => MatchCommandResult.Rejected("Unknown command.")
             };
@@ -295,7 +304,7 @@ namespace CatanRoguelike.Core.Match
             {
                 if (closed)
                     break;
-                if (!PortAccess.PlayerControlsVertex(State.Board, owner, port.Vertex))
+                if (!PortAccess.PlayerControlsPort(State.Board, owner, port))
                     continue;
                 if (port.SpecificResource == give || (port.SpecificResource != null && s.Civilization == CivilizationId.SeaFolk))
                     best = Math.Min(best, 2);
@@ -425,10 +434,14 @@ namespace CatanRoguelike.Core.Match
         {
             if (State.Phase != MatchPhase.Roll)
                 return MatchCommandResult.Rejected("Already rolled.");
-            if (PartyRules)
+            if (ShenanigansOn)
                 OnDawnSabotage();
-            int roll = State.Rng.RollDie() + State.Rng.RollDie();
+            int dieA = State.Rng.RollDie();
+            int dieB = State.Rng.RollDie();
+            int roll = dieA + dieB;
             State.LastRoll = roll;
+            State.LastDieA = dieA; // v143: the two faces, for the dice animation (presentation only, not hashed)
+            State.LastDieB = dieB;
             AppendLog($"{State.Current.Name} rolled {roll}.");
             if (roll == 7)
             {
@@ -455,7 +468,7 @@ namespace CatanRoguelike.Core.Match
                 State.Phase = MatchPhase.Main;
             }
 
-            if (PartyRules)
+            if (ShenanigansOn)
                 AfterRollSabotage();
 
             return MatchCommandResult.Accepted;
@@ -491,6 +504,9 @@ namespace CatanRoguelike.Core.Match
                     gains[seat].Add(tile.Resource, amount);
                 }
             }
+
+            if (State.Config.Fishermen)
+                ProduceFish(roll);
 
             for (int i = 0; i < gains.Length; i++)
             {
@@ -940,6 +956,77 @@ namespace CatanRoguelike.Core.Match
             return MatchCommandResult.Accepted;
         }
 
+        /// <summary>
+        /// v143: how many cards a multi-batch bank trade buys. Give-resources are spent in a fixed order, one batch at a
+        /// time at the rate that applies at that moment (so "first trade of the turn" perks like Merchant Republic or
+        /// Harbour Pilot count once, exactly as the same trades made one by one). Returns -1 when any give-resource
+        /// isn't spent in exact whole batches.
+        /// </summary>
+        public int BankBatchCards(int seat, ResourceBundle give)
+        {
+            var s = State.Seats[seat];
+            int saved = s.BankTradesThisTurn;
+            int cards = 0;
+            try
+            {
+                foreach (var r in AllResources)
+                {
+                    int left = give[r];
+                    if (left < 0)
+                        return -1;
+                    while (left > 0)
+                    {
+                        int rate = BankRatio(seat, r);
+                        if (left < rate)
+                            return -1;
+                        left -= rate;
+                        cards++;
+                        s.BankTradesThisTurn++;
+                    }
+                }
+            }
+            finally
+            {
+                s.BankTradesThisTurn = saved;
+            }
+
+            return cards;
+        }
+
+        private MatchCommandResult BankTradeBatch(MatchCommand c)
+        {
+            if (State.Phase != MatchPhase.Main)
+                return MatchCommandResult.Rejected("Roll first.");
+            if (c.Seat != State.CurrentSeat)
+                return MatchCommandResult.Rejected("Not your turn.");
+            var give = c.Offer;
+            var get = c.Request;
+            if (give.Total <= 0 || get.Total <= 0)
+                return MatchCommandResult.Rejected("Pick what to give and what to get.");
+            foreach (var r in AllResources)
+            {
+                if (get[r] < 0)
+                    return MatchCommandResult.Rejected("Bad request.");
+                if (give[r] > 0 && get[r] > 0)
+                    return MatchCommandResult.Rejected("Give and get different resources.");
+            }
+
+            var hand = State.Current.Hand;
+            if (!hand.CanAfford(give))
+                return MatchCommandResult.Rejected("Not enough cards.");
+            int cards = BankBatchCards(c.Seat, give);
+            if (cards <= 0)
+                return MatchCommandResult.Rejected("Give whole batches at your bank rates.");
+            if (cards != get.Total)
+                return MatchCommandResult.Rejected($"That buys {cards} card(s), not {get.Total}.");
+            hand.Pay(give);
+            hand.Add(get);
+            State.Current.Hand = hand;
+            State.Current.BankTradesThisTurn += cards;
+            AppendLog($"{State.Current.Name} traded {give.Total} cards with the bank for {get.Total}.");
+            return MatchCommandResult.Accepted;
+        }
+
         private MatchCommandResult UseExtraTime(MatchCommand c)
         {
             if (IsPregame || State.Phase == MatchPhase.GameOver)
@@ -985,7 +1072,8 @@ namespace CatanRoguelike.Core.Match
                 if (PartyRules)
                 {
                     BeginNight();
-                    DrawEvent();
+                    if (EventsOn)
+                        DrawEvent();
                 }
             }
 

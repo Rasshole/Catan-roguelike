@@ -42,7 +42,7 @@ namespace CatanRoguelike.Core
             if (player == PlayerId.Human && LeaderTraits.HasArchetypePassive(state, LeaderId.Merchant))
                 give = Math.Max(2, give - 1);
             if (player == PlayerId.Human && state.HasPerk(LevelUpPerkId.PortDiscount)
-                && state.Ports.Any(p => PortAccess.PlayerControlsVertex(state.Board, player, p.Vertex)))
+                && state.Ports.Any(p => PortAccess.PlayerControlsPort(state.Board, player, p)))
                 give = Math.Max(2, give - 1);
             return Math.Max(2, give);
         }

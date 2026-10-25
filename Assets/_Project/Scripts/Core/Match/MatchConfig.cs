@@ -50,6 +50,21 @@ namespace CatanRoguelike.Core.Match
         /// </summary>
         public bool PartyRules { get; set; }
 
+        /// <summary>v143 setup screen: per-turn timer on/off and its length (seconds, 30–300).</summary>
+        public bool TurnTimer { get; set; } = true;
+        public const float MinTurnSeconds = 30f;
+        public const float MaxTurnSeconds = 300f;
+        public float TurnSeconds { get; set; } = TurnClock.TurnSeconds;
+
+        /// <summary>v143: party rules only — draw an event card each round (off = no events, votes or auctions).</summary>
+        public bool EventCards { get; set; } = true;
+
+        /// <summary>v143: party rules only — sabotage, bounties and saboteur guesses (and the events that start them).</summary>
+        public bool Shenanigans { get; set; } = true;
+
+        /// <summary>v143: Fishermen of Catan — fishing grounds on the coast and a lake; fish buy cards.</summary>
+        public bool Fishermen { get; set; }
+
         public int SeatCount => Seats.Count;
         public int HumanCount => Seats.Count(s => s.Kind == SeatKind.Human);
         public int AiCount => Seats.Count(s => s.Kind == SeatKind.Ai);
@@ -92,6 +107,8 @@ namespace CatanRoguelike.Core.Match
                 throw new ArgumentException("Every seat must be a human or an AI (fill empty seats with AI).");
             if (VictoryPoints < 3)
                 throw new ArgumentException("Victory target must be at least 3.");
+            if (TurnSeconds < MinTurnSeconds || TurnSeconds > MaxTurnSeconds)
+                throw new ArgumentException($"Turn length must be {MinTurnSeconds}–{MaxTurnSeconds} seconds.");
         }
     }
 }

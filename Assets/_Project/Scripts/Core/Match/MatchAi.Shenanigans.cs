@@ -115,7 +115,7 @@ namespace CatanRoguelike.Core.Match
 
         private static MatchCommand ChooseShenanigan(MatchController match, int seat)
         {
-            if (!match.PartyRules)
+            if (!match.ShenanigansOn)
                 return null;
             var state = match.State;
             var me = state.Seats[seat];

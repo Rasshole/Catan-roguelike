@@ -19,12 +19,17 @@ namespace CatanRoguelike.Core.Match
 
         // ---------- civ pick ----------
 
+        /// <summary>v143: with shenanigans off the ballot, auction and chaos cards stay out of the deck.</summary>
+        private IEnumerable<EventId> EventPool() =>
+            MatchPartyLibrary.Events.Select(e => e.Id)
+                .Where(id => ShenanigansOn || (id != EventId.Decree && id != EventId.NightMarket && id != EventId.Chaos));
+
         private void BeginCivPick()
         {
             State.CivDeck.AddRange(Shuffled(CivilizationLibrary.Pool.Select(c => c.Id)));
             State.QuestDeck.AddRange(Shuffled(MatchPartyLibrary.Quests.Select(q => q.Id)));
             State.TraitDeck.AddRange(Shuffled(MatchPartyLibrary.Traits.Select(t => t.Id)));
-            State.EventDeck.AddRange(Shuffled(MatchPartyLibrary.Events.Select(e => e.Id)));
+            State.EventDeck.AddRange(Shuffled(EventPool()));
             State.PickOrder.Clear();
             for (int i = 0; i < State.Seats.Count; i++)
                 State.PickOrder.Add(i);
@@ -272,7 +277,7 @@ namespace CatanRoguelike.Core.Match
         private void DrawEvent()
         {
             if (State.EventDeck.Count == 0)
-                State.EventDeck.AddRange(Shuffled(MatchPartyLibrary.Events.Select(e => e.Id)));
+                State.EventDeck.AddRange(Shuffled(EventPool()));
             var id = State.EventDeck[State.EventDeck.Count - 1];
             State.EventDeck.RemoveAt(State.EventDeck.Count - 1);
             State.ActiveEvent = id;

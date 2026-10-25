@@ -46,6 +46,57 @@ namespace CatanRoguelike.Core.Shop
             _ => (System.Math.Min(5, tileCount / 2), System.Math.Max(1, tileCount / 6))
         };
 
+        /// <summary>
+        /// v143: every corner a harbour serves. A harbour that sits in a sea slot is drawn as two piers onto both ends
+        /// of the coast edge facing that slot (classic Catan), so a building on EITHER pier corner uses it — before
+        /// v143 only the single discovery vertex counted, so a settlement on the other pier silently got nothing.
+        /// Always includes <see cref="PortDefinition.Vertex"/>.
+        /// </summary>
+        public static IReadOnlyList<HexMath.Vertex> ServedVertices(BoardState board, PortDefinition port)
+        {
+            var v = VertexGraph.Canonicalize(port.Vertex);
+            var list = new List<HexMath.Vertex> { v };
+            if (board == null || !board.TryGetSeaSlotForPort(v, out var sea))
+                return list;
+            // Same edge choice as SeaFrameSlotLayout.TryGetHarborCoastEdge (what PortMarkerVisuals draws piers onto).
+            foreach (var hex in VertexGraph.GetHexesForVertex(v))
+            {
+                if (!board.Tiles.ContainsKey(hex))
+                    continue;
+                for (int d = 0; d < 6; d++)
+                {
+                    if (HexMath.GetNeighbor(hex, d) != sea)
+                        continue;
+                    var edge = HexMath.GetEdgeFacing(hex, d);
+                    foreach (var end in new[] { VertexGraph.Canonicalize(edge.A), VertexGraph.Canonicalize(edge.B) })
+                        if (!list.Contains(end))
+                            list.Add(end);
+                    return list;
+                }
+            }
+
+            return list;
+        }
+
+        /// <summary>v143: true when <paramref name="player"/> has a building on any corner the harbour serves.</summary>
+        public static bool PlayerControlsPort(BoardState board, PlayerId player, PortDefinition port)
+        {
+            foreach (var v in ServedVertices(board, port))
+                if (PlayerControlsVertex(board, player, v))
+                    return true;
+            return false;
+        }
+
+        /// <summary>v143: true when <paramref name="vertex"/> is one of the harbour's pier corners.</summary>
+        public static bool Serves(BoardState board, PortDefinition port, HexMath.Vertex vertex)
+        {
+            vertex = VertexGraph.Canonicalize(vertex);
+            foreach (var v in ServedVertices(board, port))
+                if (v.Equals(vertex))
+                    return true;
+            return false;
+        }
+
         public static bool PlayerControlsVertex(BoardState board, PlayerId player, HexMath.Vertex vertex)
         {
             vertex = VertexGraph.Canonicalize(vertex);
@@ -56,7 +107,7 @@ namespace CatanRoguelike.Core.Shop
             IReadOnlyList<PortDefinition> ports, HexMath.Vertex? blockedPortVertex = null)
         {
             return ports.Any(p => p.SpecificResource == resource
-                && PlayerControlsVertex(board, player, p.Vertex)
+                && PlayerControlsPort(board, player, p)
                 && !IsPortVertexBlocked(p.Vertex, blockedPortVertex));
         }
 
@@ -64,7 +115,7 @@ namespace CatanRoguelike.Core.Shop
             HexMath.Vertex? blockedPortVertex = null)
         {
             return ports.Any(p => p.IsGeneric
-                && PlayerControlsVertex(board, player, p.Vertex)
+                && PlayerControlsPort(board, player, p)
                 && !IsPortVertexBlocked(p.Vertex, blockedPortVertex));
         }
 
