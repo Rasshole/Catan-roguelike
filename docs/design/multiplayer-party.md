@@ -403,8 +403,12 @@ how the group can playtest the rules before any server exists.
       every Knight gives 1 Grain.
     - Quests (target: 1 VP 40–60 % done, 2 VP 25–50 %): Knighthood 1 knight, Trader 5 trades, Town Planner "a city
       and 4 buildings"; Grand Army 2 knights, Merchant Prince 7 trades, Highway 6 roads, Metropolis "2 cities and 4
-      buildings", Ore Empire "border 2 Ore and own a city on Ore", Sprawl "5 buildings and a road of 5", Harbour Road
+      buildings", Ore Empire "border 2 Ore and own a city on Ore" (v144: plus a Wool or Grain hex), Sprawl "5 buildings and a road of 5", Harbour Road
       "a harbour and a road of 5" (was Twin Harbours). "Five Trades" was renamed "Five Harvests".
+    - v144 quests ("border X" = one of your settlements/cities touches an X hex): Five Harvests needs the buildings
+      covering all five resources joined by one network of your own roads (ships will count); Breadbasket 2 Grain + 1
+      Brick; Ore Baron 2 Ore + 1 Wool; Ore Empire 2 Ore + 1 Wool or Grain + a city on Ore. The AI scores settlement,
+      city and (for Five Harvests) road spots by the quest progress they add.
     - Decrees: Harbour Tariff now closes the harbours for the day and pays every harbour-less seat with 4 or fewer
       cards 1 card; Wealth Tax only hits seats at or above the average with 4+ cards. Night Market reserves: VP card
       3 cards, sabotage 2, reroll 1.

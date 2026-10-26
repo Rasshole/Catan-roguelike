@@ -129,12 +129,13 @@ namespace CatanRoguelike.Core.Match
                 (m, s) => m.State.Seats[s].KnightsPlayed),
             new MatchQuestDefinition(MatchQuestId.Expansion, "Expansion", "Own 5 settlements or cities.", 1, 5,
                 (m, s) => Buildings(m, s)),
-            new MatchQuestDefinition(MatchQuestId.OreBaron, "Ore Baron", "Border 2 different Ore hexes.", 1, 2,
-                (m, s) => Bordered(m, s, ResourceType.Stone), (m, s) => Bordered(m, s, ResourceType.Stone) >= 1),
-            new MatchQuestDefinition(MatchQuestId.Breadbasket, "Breadbasket", "Border 2 different Grain hexes.", 1, 2,
-                (m, s) => Bordered(m, s, ResourceType.Wheat), (m, s) => Bordered(m, s, ResourceType.Wheat) >= 1),
-            new MatchQuestDefinition(MatchQuestId.Diverse, "Five Harvests", "Border all five resources.", 1, 5,
-                (m, s) => DistinctResources(m, s)),
+            new MatchQuestDefinition(MatchQuestId.OreBaron, "Ore Baron", "Border 2 different Ore hexes and a Wool hex.", 1, 3,
+                (m, s) => Math.Min(2, Bordered(m, s, ResourceType.Stone)) + Math.Min(1, Bordered(m, s, ResourceType.Sheep)), (m, s) => Bordered(m, s, ResourceType.Stone) >= 1),
+            new MatchQuestDefinition(MatchQuestId.Breadbasket, "Breadbasket", "Border 2 different Grain hexes and a Brick hex.", 1, 3,
+                (m, s) => Math.Min(2, Bordered(m, s, ResourceType.Wheat)) + Math.Min(1, Bordered(m, s, ResourceType.Brick)), (m, s) => Bordered(m, s, ResourceType.Wheat) >= 1),
+            new MatchQuestDefinition(MatchQuestId.Diverse, "Five Harvests",
+                "Border all five resources with settlements and cities joined by one road network of your own.", 1, 5,
+                (m, s) => ConnectedDistinctResources(m, s)),
             new MatchQuestDefinition(MatchQuestId.TownPlanner, "Town Planner", "Own a city and 4 settlements or cities.", 1, 5,
                 (m, s) => Math.Min(1, m.CountCities(s)) + Math.Min(4, Buildings(m, s))),
             new MatchQuestDefinition(MatchQuestId.Trader, "Trader", "Complete 5 trades with other players.", 1, 5,
@@ -148,8 +149,11 @@ namespace CatanRoguelike.Core.Match
                 (m, s) => Math.Min(2, m.CountCities(s)) + Math.Min(4, Buildings(m, s))),
             new MatchQuestDefinition(MatchQuestId.Highway, "Highway", "Build a continuous road of 6 or more.", 2, 6,
                 (m, s) => LongestRoad(m, s)),
-            new MatchQuestDefinition(MatchQuestId.OreEmpire, "Ore Empire", "Border 2 Ore hexes and own a city on Ore.", 2, 3,
-                (m, s) => Math.Min(2, Bordered(m, s, ResourceType.Stone)) + Math.Min(1, CitiesBordering(m, s, ResourceType.Stone)), (m, s) => Bordered(m, s, ResourceType.Stone) >= 1),
+            new MatchQuestDefinition(MatchQuestId.OreEmpire, "Ore Empire",
+                "Border 2 Ore hexes and a Wool or Grain hex, and own a city on Ore.", 2, 4,
+                (m, s) => Math.Min(2, Bordered(m, s, ResourceType.Stone))
+                          + Math.Min(1, Bordered(m, s, ResourceType.Sheep) + Bordered(m, s, ResourceType.Wheat))
+                          + Math.Min(1, CitiesBordering(m, s, ResourceType.Stone)), (m, s) => Bordered(m, s, ResourceType.Stone) >= 1),
             new MatchQuestDefinition(MatchQuestId.MerchantPrince, "Merchant Prince", "Complete 7 trades with other players.", 2, 7,
                 (m, s) => m.State.Seats[s].PlayerTrades),
             new MatchQuestDefinition(MatchQuestId.Sprawl, "Sprawl", "Own 5 settlements or cities and a continuous road of 5.", 2, 10,
@@ -228,6 +232,55 @@ namespace CatanRoguelike.Core.Match
 
         public static int DistinctResources(MatchController m, int seat) =>
             BorderedTiles(m, seat).Select(t => t.Resource).Where(r => MatchController.AllResources.Contains(r)).Distinct().Count();
+
+        /// <summary>
+        /// v144 Five Harvests: the most distinct resources bordered by one group of the seat's settlements/cities that
+        /// its own roads join (a rival building on a corner cuts the network there). Ships will join the network too.
+        /// </summary>
+        public static int ConnectedDistinctResources(MatchController m, int seat)
+        {
+            var owner = MatchSeats.ToPlayerId(seat);
+            var board = m.State.Board;
+            var parent = new Dictionary<Vertex, Vertex>();
+            Vertex Find(Vertex v)
+            {
+                if (!parent.TryGetValue(v, out var p))
+                    return v;
+                var root = Find(p);
+                parent[v] = root;
+                return root;
+            }
+
+            bool Blocked(Vertex v) => board.VertexBuildings.TryGetValue(v, out var b) && b.owner != owner;
+            foreach (var kv in board.Roads)
+            {
+                if (kv.Value != owner)
+                    continue;
+                var a = VertexGraph.Canonicalize(kv.Key.A);
+                var b = VertexGraph.Canonicalize(kv.Key.B);
+                if (Blocked(a) || Blocked(b))
+                    continue;
+                var ra = Find(a);
+                var rb = Find(b);
+                if (!ra.Equals(rb))
+                    parent[ra] = rb;
+            }
+
+            var groups = new Dictionary<Vertex, HashSet<ResourceType>>();
+            foreach (var kv in board.VertexBuildings)
+            {
+                if (kv.Value.owner != owner)
+                    continue;
+                var root = Find(VertexGraph.Canonicalize(kv.Key));
+                if (!groups.TryGetValue(root, out var set))
+                    groups[root] = set = new HashSet<ResourceType>();
+                foreach (var hex in VertexGraph.GetHexesForVertex(kv.Key))
+                    if (board.TryGetTile(hex, out var tile) && !tile.IsDesert && MatchController.AllResources.Contains(tile.Resource))
+                        set.Add(tile.Resource);
+            }
+
+            return groups.Count == 0 ? 0 : groups.Values.Max(g => g.Count);
+        }
 
         private static IEnumerable<HexTileData> BorderedTiles(MatchController m, int seat)
         {

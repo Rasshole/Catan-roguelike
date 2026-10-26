@@ -639,5 +639,164 @@ namespace CatanRoguelike.Tests
             Assert.AreEqual(total + 1, match.State.Seats[me].Hand.Total);
             Assert.AreNotEqual(me, match.State.CurrentSeat, "turn ended after the auto-pick");
         }
+        // ---------- v144 quests ----------
+
+        private static MatchController QuestBoard(MatchQuestId quest, out int seat)
+        {
+            var match = Plain(AfterSetup(3, 0, 11, party: true));
+            seat = 0;
+            match.State.Seats[0].Quest = quest;
+            match.State.Board.VertexBuildings.Clear();
+            match.State.Board.Roads.Clear();
+            return match;
+        }
+
+        private static HashSet<ResourceType> Touches(MatchController m, Vertex v) =>
+            new(VertexGraph.GetHexesForVertex(v).Where(h => m.State.Board.TryGetTile(h, out var t) && !t.IsDesert)
+                .Select(h => m.State.Board.Tiles[h].Resource));
+
+        /// <summary>Puts a building of seat on a free corner touching a new <paramref name="want"/> hex and none of <paramref name="avoid"/>.</summary>
+        private static Vertex Settle(MatchController m, int seat, ResourceType want, BuildingType type = BuildingType.Settlement,
+            params ResourceType[] avoid)
+        {
+            var board = m.State.Board;
+            var owner = m.State.Seats[seat].Owner;
+            int had = MatchPartyLibrary.Bordered(m, seat, want);
+            foreach (var tile in board.Tiles.Values.Where(t => !t.IsDesert && t.Resource == want).OrderBy(t => t.Coord.Q).ThenBy(t => t.Coord.R))
+                for (int c = 0; c < 6; c++)
+                {
+                    var v = VertexGraph.Canonicalize(new Vertex(tile.Coord, c));
+                    if (board.VertexBuildings.ContainsKey(v) || Touches(m, v).Overlaps(avoid))
+                        continue;
+                    board.VertexBuildings[v] = (type, owner);
+                    if (MatchPartyLibrary.Bordered(m, seat, want) > had)
+                        return v;
+                    board.VertexBuildings.Remove(v);
+                }
+
+            Assert.Inconclusive($"no corner for {want} avoiding {string.Join(",", avoid)}");
+            return default;
+        }
+
+        private static bool Done(MatchController m, int seat) =>
+            MatchPartyLibrary.Quest(m.State.Seats[seat].Quest).IsComplete(m, seat);
+
+        [Test]
+        public void Breadbasket_NeedsTwoGrainAndABrick()
+        {
+            var m = QuestBoard(MatchQuestId.Breadbasket, out int me);
+            Settle(m, me, ResourceType.Wheat, BuildingType.Settlement, ResourceType.Brick);
+            Settle(m, me, ResourceType.Wheat, BuildingType.Settlement, ResourceType.Brick);
+            Assert.AreEqual(0, MatchPartyLibrary.Bordered(m, me, ResourceType.Brick));
+            Assert.IsFalse(Done(m, me), "two grain without a brick hex is not enough");
+            var v = Settle(m, me, ResourceType.Brick);
+            Assert.IsTrue(Done(m, me));
+            Assert.Greater(MatchAi.QuestBuildGain(QuestBoardUndo(m, v), me, v, BuildingType.Settlement), 0,
+                "the AI values the missing brick corner");
+        }
+
+        /// <summary>Removes the building at v again (to probe the AI's gain for building there).</summary>
+        private static MatchController QuestBoardUndo(MatchController m, Vertex v)
+        {
+            m.State.Board.VertexBuildings.Remove(v);
+            return m;
+        }
+
+        [Test]
+        public void OreBaron_NeedsTwoOreAndAWool()
+        {
+            var m = QuestBoard(MatchQuestId.OreBaron, out int me);
+            Settle(m, me, ResourceType.Stone, BuildingType.Settlement, ResourceType.Sheep);
+            Settle(m, me, ResourceType.Stone, BuildingType.Settlement, ResourceType.Sheep);
+            Assert.IsFalse(Done(m, me), "two ore without a wool hex is not enough");
+            Settle(m, me, ResourceType.Sheep);
+            Assert.IsTrue(Done(m, me));
+        }
+
+        [Test]
+        public void OreEmpire_NeedsTwoOre_AWoolOrGrain_AndACityOnOre()
+        {
+            var m = QuestBoard(MatchQuestId.OreEmpire, out int me);
+            var a = Settle(m, me, ResourceType.Stone, BuildingType.City, ResourceType.Sheep, ResourceType.Wheat);
+            Settle(m, me, ResourceType.Stone, BuildingType.Settlement, ResourceType.Sheep, ResourceType.Wheat);
+            Assert.AreEqual(1, MatchPartyLibrary.CitiesBordering(m, me, ResourceType.Stone));
+            Assert.IsFalse(Done(m, me), "no wool/grain hex yet");
+            var w = Settle(m, me, ResourceType.Wheat);
+            Assert.IsTrue(Done(m, me), "grain counts");
+            m.State.Board.VertexBuildings.Remove(w);
+            Settle(m, me, ResourceType.Sheep);
+            Assert.IsTrue(Done(m, me), "wool counts");
+            m.State.Board.VertexBuildings[a] = (BuildingType.Settlement, m.State.Seats[me].Owner);
+            Assert.IsFalse(Done(m, me), "needs the city on ore");
+            Assert.Greater(MatchAi.QuestBuildGain(m, me, a, BuildingType.City), 0, "the AI values the ore city");
+        }
+
+        [Test]
+        public void FiveHarvests_NeedsOneConnectedRoadNetwork()
+        {
+            var m = QuestBoard(MatchQuestId.Diverse, out int me);
+            var board = m.State.Board;
+            var owner = m.State.Seats[me].Owner;
+            var spots = new List<Vertex>();
+            foreach (var r in MatchController.AllResources)
+                if (MatchPartyLibrary.Bordered(m, me, r) == 0)
+                    spots.Add(Settle(m, me, r));
+            Assert.AreEqual(5, MatchPartyLibrary.DistinctResources(m, me));
+            Assert.Less(MatchPartyLibrary.ConnectedDistinctResources(m, me), 5);
+            Assert.IsFalse(Done(m, me), "all five bordered but the buildings aren't joined");
+            Assert.IsTrue(MatchAi.WantsQuestRoads(m, me), "the AI goes for connecting roads");
+
+            // Join every building to the first one with own roads (shortest paths over land corners).
+            var path = new List<Vertex>();
+            for (int i = 1; i < spots.Count; i++)
+            {
+                var p = ShortestPath(m, spots[0], spots[i]);
+                Assert.IsNotNull(p);
+                for (int k = 0; k + 1 < p.Count; k++)
+                    board.Roads[MatchController.NormalizeEdge(new HexMath.Edge(p[k], p[k + 1]))] = owner;
+                path.AddRange(p.Skip(1).Take(p.Count - 2));
+            }
+
+            Assert.IsTrue(Done(m, me), "one connected network covers all five");
+
+            // A rival settlement on a corner the network runs through cuts it.
+            var cut = path.FirstOrDefault(v => !board.VertexBuildings.ContainsKey(v));
+            if (!cut.Equals(default(Vertex)))
+            {
+                board.VertexBuildings[cut] = (BuildingType.Settlement, m.State.Seats[1].Owner);
+                Assert.IsFalse(Done(m, me), "a rival building cuts the network");
+            }
+        }
+
+        private static List<Vertex> ShortestPath(MatchController m, Vertex from, Vertex to)
+        {
+            var board = m.State.Board;
+            var prev = new Dictionary<Vertex, Vertex>();
+            var seen = new HashSet<Vertex> { from };
+            var queue = new Queue<Vertex>();
+            queue.Enqueue(from);
+            while (queue.Count > 0)
+            {
+                var v = queue.Dequeue();
+                if (v.Equals(to))
+                {
+                    var path = new List<Vertex> { to };
+                    while (!path[0].Equals(from))
+                        path.Insert(0, prev[path[0]]);
+                    return path;
+                }
+
+                foreach (var n0 in VertexGraph.GetAdjacentVertices(v))
+                {
+                    var n = VertexGraph.Canonicalize(n0);
+                    if (!seen.Add(n) || !VertexGraph.GetHexesForVertex(n).Any(h => board.TryGetTile(h, out _)))
+                        continue;
+                    prev[n] = v;
+                    queue.Enqueue(n);
+                }
+            }
+
+            return null;
+        }
     }
 }

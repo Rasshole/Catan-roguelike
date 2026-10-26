@@ -96,11 +96,13 @@ namespace CatanRoguelike.Core.Match
                 : new List<Vertex>();
             if (upgradable.Count > 0 && hand.CanAfford(match.CityCostFor(seat)))
                 return MatchCommand.AtVertex(MatchCommandType.BuildCity, seat,
-                    Best(upgradable, v => VertexScore(state, v, seat)));
+                    Best(upgradable, v => VertexScore(state, v, seat)
+                                          + QuestStepWorth * QuestBuildGain(match, seat, v, BuildingType.City)));
 
             // Roads only when they lead somewhere: no free spot yet, or racing for longest road.
             bool wantsRoad = false;
-            if (spots.Count == 0 && match.CountRoads(seat) < BuildingPieceLimits.MaxRoads)
+            bool questRoads = WantsQuestRoads(match, seat);
+            if ((spots.Count == 0 || questRoads) && match.CountRoads(seat) < BuildingPieceLimits.MaxRoads)
             {
                 var roads = match.ValidRoads(seat).ToList();
                 if (roads.Count > 0)
@@ -314,7 +316,7 @@ namespace CatanRoguelike.Core.Match
         public static int PlacementScore(MatchController match, Vertex v, int seat)
         {
             var state = match.State;
-            int score = VertexScore(state, v, seat);
+            int score = VertexScore(state, v, seat) + QuestStepWorth * QuestBuildGain(match, seat, v, BuildingType.Settlement);
             var owner = MatchSeats.ToPlayerId(seat);
             var produced = new Dictionary<ResourceType, int>();
             foreach (var kv in state.Board.VertexBuildings)
@@ -381,7 +383,7 @@ namespace CatanRoguelike.Core.Match
         {
             var state = match.State;
             var owner = MatchSeats.ToPlayerId(seat);
-            int best = 0;
+            int best = WantsQuestRoads(match, seat) ? QuestRoadScore(match, e, seat) : 0;
             foreach (var end in new[] { e.A, e.B })
             {
                 if (match.Placement.CanPlaceSettlement(state.Board, end, owner, true))
@@ -405,6 +407,134 @@ namespace CatanRoguelike.Core.Match
                 .OrderByDescending(x => x.s)
                 .ThenBy(x => x.k, System.StringComparer.Ordinal)
                 .First().o;
+        }
+
+        /// <summary>v144: score per quest-progress step (times the quest's points) a build would add.</summary>
+        public const int QuestStepWorth = 6;
+
+        /// <summary>v144 quest pursuit: progress steps × points a settlement/city at <paramref name="v"/> would add.</summary>
+        public static int QuestBuildGain(MatchController match, int seat, Vertex v, BuildingType type)
+        {
+            var me = match.State.Seats[seat];
+            if (!match.PartyRules || me.QuestDone || !IsBoardQuest(me.Quest))
+                return 0;
+            var q = MatchPartyLibrary.Quest(me.Quest);
+            if (q == null)
+                return 0;
+            var board = match.State.Board;
+            var cv = VertexGraph.Canonicalize(v);
+            bool had = board.VertexBuildings.TryGetValue(cv, out var old);
+            int before = q.CurrentProgress(match, seat);
+            board.VertexBuildings[cv] = (type, me.Owner);
+            int after = q.CurrentProgress(match, seat);
+            if (had)
+                board.VertexBuildings[cv] = old;
+            else
+                board.VertexBuildings.Remove(cv);
+            return System.Math.Max(0, after - before) * q.Points;
+        }
+
+        /// <summary>Quests whose progress depends on where buildings stand (the others don't need a board probe).</summary>
+        private static bool IsBoardQuest(MatchQuestId id) =>
+            id is MatchQuestId.Diverse or MatchQuestId.Breadbasket or MatchQuestId.OreBaron or MatchQuestId.OreEmpire
+                or MatchQuestId.Harbourmaster or MatchQuestId.TwinHarbours or MatchQuestId.Expansion
+                or MatchQuestId.TownPlanner or MatchQuestId.Metropolis or MatchQuestId.Sprawl;
+
+        /// <summary>v144 Five Harvests: all five are bordered but not by one connected network — link it up.</summary>
+        public static bool WantsQuestRoads(MatchController match, int seat)
+        {
+            var me = match.State.Seats[seat];
+            return match.PartyRules && !me.QuestDone && me.Quest == MatchQuestId.Diverse
+                   && MatchPartyLibrary.DistinctResources(match, seat) == 5
+                   && MatchPartyLibrary.ConnectedDistinctResources(match, seat) < 5;
+        }
+
+        /// <summary>
+        /// A road toward the seat's other road/building groups: 40 if it joins them up (quest progress), otherwise
+        /// the closer its new end gets to a piece outside its own group, the better.
+        /// </summary>
+        private static int QuestRoadScore(MatchController match, Edge e, int seat)
+        {
+            var board = match.State.Board;
+            var owner = MatchSeats.ToPlayerId(seat);
+            var key = MatchController.NormalizeEdge(e);
+            if (board.Roads.ContainsKey(key))
+                return 0;
+            int before = MatchPartyLibrary.ConnectedDistinctResources(match, seat);
+            board.Roads[key] = owner;
+            int after = MatchPartyLibrary.ConnectedDistinctResources(match, seat);
+            var group = OwnGroup(board, owner, key.A);
+            board.Roads.Remove(key);
+            if (after > before)
+                return 40;
+
+            // Breadth-first distance from the new road's group to any own piece outside it.
+            var targets = new HashSet<Vertex>();
+            foreach (var kv in board.VertexBuildings)
+                if (kv.Value.owner == owner && !group.Contains(VertexGraph.Canonicalize(kv.Key)))
+                    targets.Add(VertexGraph.Canonicalize(kv.Key));
+            if (targets.Count == 0)
+                return 0;
+            var dist = new Dictionary<Vertex, int>();
+            var queue = new Queue<Vertex>();
+            foreach (var t in targets)
+            {
+                dist[t] = 0;
+                queue.Enqueue(t);
+            }
+
+            int best = int.MaxValue;
+            while (queue.Count > 0)
+            {
+                var v = queue.Dequeue();
+                if (dist[v] >= 6)
+                    break;
+                if (v.Equals(VertexGraph.Canonicalize(key.A)) || v.Equals(VertexGraph.Canonicalize(key.B)))
+                    best = System.Math.Min(best, dist[v]);
+                foreach (var n0 in VertexGraph.GetAdjacentVertices(v))
+                {
+                    var n = VertexGraph.Canonicalize(n0);
+                    if (dist.ContainsKey(n))
+                        continue;
+                    var edge = MatchController.NormalizeEdge(new Edge(v, n));
+                    if (board.Roads.TryGetValue(edge, out var o) && o != owner)
+                        continue;
+                    if (board.VertexBuildings.TryGetValue(n, out var b) && b.owner != owner)
+                        continue;
+                    if (!VertexGraph.GetHexesForVertex(n).Any(h => board.TryGetTile(h, out _)))
+                        continue;
+                    dist[n] = dist[v] + 1;
+                    queue.Enqueue(n);
+                }
+            }
+
+            return best == int.MaxValue ? 0 : System.Math.Max(0, 30 - 5 * best);
+        }
+
+        /// <summary>Vertices reachable from <paramref name="start"/> over the owner's roads (rival buildings cut).</summary>
+        private static HashSet<Vertex> OwnGroup(BoardState board, PlayerId owner, Vertex start)
+        {
+            var seen = new HashSet<Vertex> { VertexGraph.Canonicalize(start) };
+            var stack = new Stack<Vertex>(seen);
+            while (stack.Count > 0)
+            {
+                var v = stack.Pop();
+                if (board.VertexBuildings.TryGetValue(v, out var b) && b.owner != owner)
+                    continue;
+                foreach (var n0 in VertexGraph.GetAdjacentVertices(v))
+                {
+                    var n = VertexGraph.Canonicalize(n0);
+                    if (seen.Contains(n))
+                        continue;
+                    if (board.Roads.TryGetValue(MatchController.NormalizeEdge(new Edge(v, n)), out var o) && o == owner)
+                    {
+                        seen.Add(n);
+                        stack.Push(n);
+                    }
+                }
+            }
+
+            return seen;
         }
 
         /// <summary>v144 Harbour Pilot: the resource furthest short of the AI's next build (least held if none is short).</summary>
