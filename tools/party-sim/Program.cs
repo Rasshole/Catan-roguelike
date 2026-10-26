@@ -48,10 +48,22 @@ namespace CatanRoguelike.PartySim
                     Console.Error.WriteLine($"{d}/{jobs.Count} games, {sw.Elapsed.TotalSeconds:F0}s");
             });
 
+            // v144: the timeout is wall-clock, so a box stall can cut in-flight games short. Games are deterministic per
+            // seed, so replay each timed-out game alone (generous budget) and keep that result; only a game that still
+            // times out on its own is a real stall.
+            int retried = 0;
+            foreach (var slow in results.Where(r => r.EndReason == "timeout").ToList())
+            {
+                retried++;
+                var again = GameRunner.Play(slow.Id, slow.Seats, slow.Map, slow.Seed, o.RoundCap, o.TimeoutMs * 4, o.QuestPick == "random");
+                Console.Error.WriteLine($"retry game {slow.Id} seed {slow.Seed}: {again.EndReason} in {again.Ms:F0} ms");
+                results = new ConcurrentBag<GameRecord>(results.Where(r => r.Id != slow.Id).Append(again));
+            }
+
             var list = results.OrderBy(r => r.Id).ToList();
             CsvWriter.WriteAll(o.OutDir, list);
             var bad = list.Where(r => r.EndReason != "win").ToList();
-            Console.WriteLine($"{list.Count} games in {sw.Elapsed.TotalSeconds:F1}s; non-wins: {bad.Count}");
+            Console.WriteLine($"{list.Count} games in {sw.Elapsed.TotalSeconds:F1}s; non-wins: {bad.Count}; timeouts retried alone: {retried}");
             foreach (var g in bad.Take(20))
                 Console.WriteLine($"  game {g.Id} seed {g.Seed} {g.Seats}p {g.Map}: {g.EndReason} {g.Error}");
             return 0;
