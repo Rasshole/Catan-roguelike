@@ -391,23 +391,25 @@ how the group can playtest the rules before any server exists.
       own harbour; Academy settlements +1 Grain; Steppe dev cards +1 Ore; Highland, Shepherd and Raiders lost their
       drawbacks; Raiders steal on their own 7s or any 7 that finds a rival with 7+ cards; Sun Kingdom can't be robbed
       while holding 4 or fewer cards.
-    - Traits: Lucky Dice pays on any player's 2 or 12 (v144: 1 of your least-held resource, random among ties);
-      Prospector triggers on your own roll only; Tough Hide never discards on a 7 and (v144) takes 1 random
-      resource on every second 7 of the match; Granary
+    - Traits: Lucky Dice pays on any player's 2, 3, 11 or 12 (v144: 1 of your least-held resource, random among
+      ties); Prospector triggers on your own roll only, once per round, and (v144) your own 7 counts as an empty roll;
+      Tough Hide (v144) has discard limit +3 (discards only from 11 cards) and takes 1 random resource on every third
+      7 of the match; Granary
       discards only above 8 and takes 1 Grain on every 7; Head Start takes 1 of each resource and (v144) until its first
-      normal turn ends can't be made to discard or be stolen from (robber or Raiders); Road Crew makes every
+      normal turn ends can't be made to discard or be stolen from (robber or Raiders), but loses the very first
+      production card it would get (once a game, one card; `HeadStartCardSkipped`); Road Crew makes every
       third road free (v144; setup roads count); Harbour Pilot's first bank trade per turn is 2:1
       and (v144) every settlement or city it builds on a harbour corner — setup settlements included, counted when the
       trait is picked — owes a free pick of 1 resource (`ChooseHarbourPilotResource`; the seat acts before anything
       else; the AI takes what its next build lacks most; a timed-out human gets the AI pick); Quartermaster dev cards cost no Wool and
       every Knight gives 1 Grain.
     - Quests (target: 1 VP 40–60 % done, 2 VP 25–50 %): Knighthood 1 knight, Trader 5 trades, Town Planner "a city
-      and 4 buildings"; Grand Army 2 knights, Merchant Prince 7 trades, Highway 6 roads, Metropolis "2 cities and 4
-      buildings", Ore Empire "border 2 Ore and own a city on Ore" (v144: plus a Wool or Grain hex), Sprawl "5 buildings and a road of 5", Harbour Road
+      and 4 buildings"; Grand Army 2 knights, Merchant Prince 7 trades, Highway 6 roads, Metropolis (v144) "3 cities and 3
+      more buildings" (6 in all), Ore Empire (v144) "3 buildings on Ore, one a city", Sprawl (v144) "6 buildings and a road of 5", Harbour Road
       "a harbour and a road of 5" (was Twin Harbours). "Five Trades" was renamed "Five Harvests".
     - v144 quests ("border X" = one of your settlements/cities touches an X hex): Five Harvests needs the buildings
       covering all five resources joined by one network of your own roads (ships will count); Breadbasket 2 Grain + 1
-      Brick; Ore Baron 2 Ore + 1 Wool; Ore Empire 2 Ore + 1 Wool or Grain + a city on Ore. The AI scores settlement,
+      Brick; Ore Baron 2 Ore + 1 Wool; Ore Empire 3 settlements/cities each on an Ore hex, at least one a city. The AI scores settlement,
       city and (for Five Harvests) road spots by the quest progress they add.
     - Decrees: Harbour Tariff now closes the harbours for the day and pays every harbour-less seat with 4 or fewer
       cards 1 card; Wealth Tax only hits seats at or above the average with 4+ cards. Night Market reserves: VP card

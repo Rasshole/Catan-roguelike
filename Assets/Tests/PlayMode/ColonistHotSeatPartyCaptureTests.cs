@@ -594,7 +594,8 @@ namespace CatanRoguelike.Tests.PlayMode
             RunHudController hud = null;
             yield return ReadyHud(gameManager, h => hud = h);
 
-            var config = PartyConfig(1406, (SeatKind.Human, "Rasmus"), (SeatKind.Ai, "AI 2"), (SeatKind.Human, "Freja"),
+            // v144 traits/quests: seed 1406 now ends in round 5 before a human Roll with 3 cities; 1408 reaches it.
+            var config = PartyConfig(1408, (SeatKind.Human, "Rasmus"), (SeatKind.Ai, "AI 2"), (SeatKind.Human, "Freja"),
                 (SeatKind.Ai, "AI 4"), (SeatKind.Ai, "AI 5"));
             hud.HotSeatClockFrozenForTests = true;
             hud.StartHotSeat(config);

@@ -355,7 +355,15 @@ namespace CatanRoguelike.Core.Match
             MatchCivRules.DevCardCost(State.Seats[seat].Civilization, State.Seats[seat].Trait);
 
         /// <summary>v136: hand size above which a 7 forces a discard (Granary raises it).</summary>
-        public int DiscardLimitFor(int seat) => DiscardLimit + (State.Seats[seat].Trait == MatchTraitId.Granary ? 1 : 0);
+        public int DiscardLimitFor(int seat) => DiscardLimit + State.Seats[seat].Trait switch
+        {
+            MatchTraitId.Granary => 1,
+            MatchTraitId.ToughHide => ToughHideExtraLimit, // v144: discards only from 11 cards
+            _ => 0,
+        };
+
+        /// <summary>v144 Tough Hide: discard limit +3 (a 7 forces a discard only at 11+ cards).</summary>
+        public const int ToughHideExtraLimit = 3;
 
         /// <summary>v136: cards owed on a 7 (0 = none).</summary>
         public int DiscardOwed(int seat)
@@ -363,9 +371,7 @@ namespace CatanRoguelike.Core.Match
             var s = State.Seats[seat];
             if (s.CardCount <= DiscardLimitFor(seat) || IsHeadStartProtected(seat))
                 return 0;
-            int owed = s.CardCount / 2;
-            // v142: Tough Hide caps the loss at 2 cards.
-            return s.Trait == MatchTraitId.ToughHide ? 0 : owed;
+            return s.CardCount / 2;
         }
 
         /// <summary>Whether <paramref name="seat"/> may play <paramref name="card"/> now (owned since before this turn, one per turn).</summary>
@@ -500,6 +506,7 @@ namespace CatanRoguelike.Core.Match
         private ResourceBundle[] Produce(int roll)
         {
             var gains = new ResourceBundle[State.Seats.Count];
+            var firstGain = new ResourceType?[State.Seats.Count];
             foreach (var tile in State.Board.Tiles.Values)
             {
                 if (tile.IsDesert || tile.NumberToken != roll)
@@ -525,7 +532,20 @@ namespace CatanRoguelike.Core.Match
                         continue;
                     int amount = MatchCivRules.HitAmount(civ, tile.Resource, b.type == BuildingType.City ? 2 : 1) * factor;
                     gains[seat].Add(tile.Resource, amount);
+                    firstGain[seat] ??= tile.Resource;
                 }
+            }
+
+            // v144 Head Start drawback: the very first production card this seat would get is withheld (once a game).
+            for (int i = 0; i < gains.Length; i++)
+            {
+                var s = State.Seats[i];
+                if (!PartyRules || s.Trait != MatchTraitId.HeadStart || s.HeadStartCardSkipped || gains[i].Total == 0
+                    || firstGain[i] is not ResourceType skipped)
+                    continue;
+                gains[i].Add(skipped, -1);
+                s.HeadStartCardSkipped = true;
+                AppendLog($"{s.Name}'s Head Start skips 1 {skipped} (first production).");
             }
 
             if (State.Config.Fishermen)

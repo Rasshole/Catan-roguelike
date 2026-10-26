@@ -212,6 +212,12 @@ namespace CatanRoguelike.Core.Match
                     Give(seat, r, 1);
                     AppendLog($"{seat.Name}'s Tough Hide finds 1 {r}.");
                 }
+                // v144: a 7 produces nothing, so the roller's own 7 counts as "your roll gave you nothing".
+                if (seat.Trait == MatchTraitId.Prospector && own && seat.ProspectorRound != State.Round)
+                {
+                    Give(seat, LeastHeld(seat.Hand), 1);
+                    seat.ProspectorRound = State.Round;
+                }
                 switch (seat.Civilization)
                 {
                     case CivilizationId.NorthernRaiders:
@@ -247,11 +253,11 @@ namespace CatanRoguelike.Core.Match
             }
         }
 
-        /// <summary>v144 Tough Hide: every second 7 of the match (the 2nd, 4th, ...) pays 1 random resource.</summary>
-        public static bool ToughHidePaysOn(int sevensRolled) => sevensRolled > 0 && sevensRolled % 2 == 0;
+        /// <summary>v144 Tough Hide: every third 7 of the match (the 3rd, 6th, ...) pays 1 random resource.</summary>
+        public static bool ToughHidePaysOn(int sevensRolled) => sevensRolled > 0 && sevensRolled % 3 == 0;
 
-        /// <summary>v144 Lucky Dice: any player's 2 or 12 pays every Lucky Dice holder.</summary>
-        public static bool LuckyDiceTriggers(int roll) => roll == 2 || roll == 12;
+        /// <summary>v144 Lucky Dice: any player's 2, 3, 11 or 12 pays every Lucky Dice holder.</summary>
+        public static bool LuckyDiceTriggers(int roll) => roll == 2 || roll == 3 || roll == 11 || roll == 12;
 
         /// <summary>The resource held least; ties are broken uniformly with <paramref name="rng"/> (one draw only on a tie).</summary>
         public static ResourceType LeastHeldRandom(ResourceBundle hand, MatchRng rng)

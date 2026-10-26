@@ -114,6 +114,8 @@ namespace CatanRoguelike.Core.Match
         public int ProspectorRound { get; set; } = -1;
         /// <summary>v144: set when this seat ends its first normal (post-setup) turn; ends Head Start's protection.</summary>
         public bool HasTakenFirstTurn { get; set; }
+        /// <summary>v144 Head Start: the one withheld first production card has been taken.</summary>
+        public bool HeadStartCardSkipped { get; set; }
         /// <summary>v144 Harbour Pilot: resource picks still owed (one per port settlement / port city).</summary>
         public int HarbourPilotPicks { get; set; }
 
@@ -300,7 +302,7 @@ namespace CatanRoguelike.Core.Match
                     .Append(':').Append(SevensRolled).Append('|');
                 foreach (var s in Seats)
                     sb.Append($"Q{s.Index}:{(int)s.Civilization},{(int)s.Quest},{(int)s.Trait},{(s.QuestDone ? 1 : 0)},"
-                              + $"{s.PlayerTrades},{s.BankTradesThisTurn},{s.ProspectorRound},{(s.HasTakenFirstTurn ? 1 : 0)},{s.HarbourPilotPicks},"
+                              + $"{s.PlayerTrades},{s.BankTradesThisTurn},{s.ProspectorRound},{(s.HasTakenFirstTurn ? 1 : 0)},{(s.HeadStartCardSkipped ? 1 : 0)},{s.HarbourPilotPicks},"
                               + $"{string.Join(".", s.CivOffer.Select(c => (int)c))}/{string.Join(".", s.QuestOffer.Select(c => (int)c))}/"
                               + $"{string.Join(".", s.TraitOffer.Select(c => (int)c))};");
                 AppendShenanigans(sb);

@@ -143,10 +143,10 @@ namespace CatanRoguelike.Tests
             match.State.Config.VictoryPoints = me.VictoryPoints + 1;
             while (match.State.Phase != MatchPhase.Main) Step(match);
             me.QuestDone = false;
-            me.Quest = MatchQuestId.Metropolis; // 2 VP: 2 cities and 5 buildings
+            me.Quest = MatchQuestId.Metropolis; // 2 VP (v144): 3 cities and 6 buildings
             var spots = match.UpgradableSettlements(0).ToList();
             foreach (var v in spots) match.State.Board.VertexBuildings[v] = (BuildingType.City, me.Owner);
-            int extra = 5 - spots.Count;
+            int extra = 6 - spots.Count;
             for (int i = 0; i < extra; i++)
             {
                 var v = match.ValidSetupSettlements().First();
@@ -216,7 +216,9 @@ namespace CatanRoguelike.Tests
             s.Trait = MatchTraitId.None;
             Assert.AreEqual(4, match.DiscardOwed(1));
             s.Trait = MatchTraitId.ToughHide;
-            Assert.AreEqual(0, match.DiscardOwed(1), "v142 Tough Hide: a 7 never costs a card");
+            Assert.AreEqual(0, match.DiscardOwed(1), "v144 Tough Hide: 8 cards are safe (limit 10)");
+            s.Hand = new ResourceBundle { Wood = 11 };
+            Assert.AreEqual(5, match.DiscardOwed(1), "v144 Tough Hide: 11 cards discard half");
         }
 
         [Test]

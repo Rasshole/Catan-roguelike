@@ -235,7 +235,7 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void LuckyDice_PaysOnAnyonesTwoOrTwelve_NotThreeOrEleven_ProspectorOwnRollOnly()
+        public void LuckyDice_PaysOnAnyonesTwoThreeElevenOrTwelve_NotFourOrTen()
         {
             int luckyRolls = 0, nearMiss = 0;
             for (int seed = 1; seed < 600 && (luckyRolls < 2 || nearMiss < 2); seed++)
@@ -260,10 +260,10 @@ namespace CatanRoguelike.Tests
                 Assert.AreEqual(roll, b.State.LastRoll);
                 if (roll == 7)
                     continue;
-                bool lucky = roll == 2 || roll == 12;
-                if (lucky)
-                    luckyRolls++;
+                bool lucky = roll == 2 || roll == 3 || roll == 11 || roll == 12;
                 if (roll == 3 || roll == 11)
+                    luckyRolls++;
+                if (roll == 4 || roll == 10)
                     nearMiss++;
                 Assert.AreEqual(lucky, MatchController.LuckyDiceTriggers(roll));
                 Assert.AreEqual(b.State.Seats[other].Hand.Total + (lucky ? 1 : 0), a.State.Seats[other].Hand.Total,
@@ -271,10 +271,11 @@ namespace CatanRoguelike.Tests
                 Assert.AreEqual(b.State.Seats[me].Hand.Total, a.State.Seats[me].Hand.Total, "roller has no trait");
             }
 
-            Assert.Greater(luckyRolls, 0, "at least one 2/12 by another player in the sample");
-            Assert.Greater(nearMiss, 0, "at least one 3/11 in the sample");
+            Assert.Greater(luckyRolls, 0, "at least one 3/11 by another player in the sample (v144: now triggers)");
+            Assert.Greater(nearMiss, 0, "at least one 4/10 in the sample (never triggers)");
             for (int roll = 2; roll <= 12; roll++)
-                Assert.AreEqual(roll == 2 || roll == 12, MatchController.LuckyDiceTriggers(roll), $"roll {roll}");
+                Assert.AreEqual(roll == 2 || roll == 3 || roll == 11 || roll == 12, MatchController.LuckyDiceTriggers(roll),
+                    $"roll {roll}");
         }
 
         [Test]
@@ -365,11 +366,11 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void ToughHide_EverySecondSeven_GivesOneRandomResource()
+        public void ToughHide_EveryThirdSeven_GivesOneRandomResource()
         {
             FirstRollSeven(out int seed);
-            var expected = new[] { 0, 1, 0, 1 };
-            for (int nth = 1; nth <= 4; nth++)
+            var expected = new[] { 0, 0, 1, 0, 0, 1 };
+            for (int nth = 1; nth <= 6; nth++)
             {
                 var match = Plain(AfterSetup(3, 0, seed, party: true));
                 int me = match.State.CurrentSeat;
@@ -380,7 +381,7 @@ namespace CatanRoguelike.Tests
                 Assert.IsTrue(match.Apply(MatchCommand.Simple(MatchCommandType.RollDice, me)).Ok);
                 Assert.AreEqual(7, match.State.LastRoll);
                 Assert.AreEqual(nth, match.State.SevensRolled);
-                Assert.IsFalse(match.State.PendingDiscards.ContainsKey(hide), "Tough Hide still never discards");
+                Assert.IsFalse(match.State.PendingDiscards.ContainsKey(hide), "9 cards: under Tough Hide's limit");
                 Assert.AreEqual(9 + expected[nth - 1], match.State.Seats[hide].Hand.Total, $"7 number {nth}");
 
                 var again = Plain(AfterSetup(3, 0, seed, party: true));
@@ -391,8 +392,90 @@ namespace CatanRoguelike.Tests
                 Assert.AreEqual(match.State.Seats[hide].Hand, again.State.Seats[hide].Hand, "deterministic pick");
             }
 
-            for (int n = 1; n <= 8; n++)
-                Assert.AreEqual(n % 2 == 0, MatchController.ToughHidePaysOn(n), $"7 number {n}");
+            for (int n = 1; n <= 9; n++)
+                Assert.AreEqual(n % 3 == 0, MatchController.ToughHidePaysOn(n), $"7 number {n}");
+        }
+
+        [Test]
+        public void ToughHide_DiscardsOnlyFromElevenCards()
+        {
+            foreach (int cards in new[] { 10, 11 })
+            {
+                var match = FirstRollSeven(out _);
+                int me = match.State.CurrentSeat;
+                int hide = (me + 1) % 3;
+                match.State.Seats[hide].Trait = MatchTraitId.ToughHide;
+                match.State.Seats[hide].Hand = new ResourceBundle { Wood = 6, Brick = cards - 6 };
+                Assert.AreEqual(10, match.DiscardLimitFor(hide));
+                Assert.AreEqual(cards == 11 ? 5 : 0, match.DiscardOwed(hide), $"{cards} cards");
+                Assert.IsTrue(match.Apply(MatchCommand.Simple(MatchCommandType.RollDice, me)).Ok);
+                Assert.AreEqual(7, match.State.LastRoll);
+                Assert.AreEqual(cards == 11, match.State.PendingDiscards.ContainsKey(hide), $"{cards} cards on a 7");
+            }
+        }
+
+        [Test]
+        public void Prospector_OwnSevenCountsAsAnEmptyRoll_OncePerRound()
+        {
+            foreach (bool alreadyThisRound in new[] { false, true })
+            {
+                var match = FirstRollSeven(out _);
+                int me = match.State.CurrentSeat;
+                var s = match.State.Seats[me];
+                s.Trait = MatchTraitId.Prospector;
+                if (alreadyThisRound)
+                    s.ProspectorRound = match.State.Round;
+                int other = (me + 1) % 3;
+                match.State.Seats[other].Trait = MatchTraitId.Prospector;
+                Assert.IsTrue(match.Apply(MatchCommand.Simple(MatchCommandType.RollDice, me)).Ok);
+                Assert.AreEqual(7, match.State.LastRoll);
+                Assert.AreEqual(alreadyThisRound ? 1 : 2, s.Hand.Total, alreadyThisRound ? "once per round" : "own 7 pays");
+                Assert.AreEqual(match.State.Round, s.ProspectorRound);
+                Assert.AreEqual(1, match.State.Seats[other].Hand.Total, "someone else's 7 doesn't trigger it");
+            }
+        }
+
+        [Test]
+        public void HeadStart_LosesOnlyTheVeryFirstProductionCard()
+        {
+            int checkedGames = 0;
+            for (int seed = 1; seed < 200 && checkedGames < 2; seed++)
+            {
+                var a = Plain(AfterSetup(3, 0, seed, party: true));
+                var b = Plain(AfterSetup(3, 0, seed, party: true));
+                int hs = 1;
+                a.State.Seats[hs].Trait = MatchTraitId.HeadStart;
+                int productions = 0;
+                bool skipped = false;
+                for (int turn = 0; turn < 40 && productions < 3; turn++)
+                {
+                    int cur = a.State.CurrentSeat;
+                    int beforeA = a.State.Seats[hs].Hand.Total, beforeB = b.State.Seats[hs].Hand.Total;
+                    Assert.IsTrue(a.Apply(MatchCommand.Simple(MatchCommandType.RollDice, cur)).Ok);
+                    Assert.IsTrue(b.Apply(MatchCommand.Simple(MatchCommandType.RollDice, cur)).Ok);
+                    if (a.State.LastRoll == 7)
+                        break; // keep the two games identical: stop at the first 7
+                    int gainA = a.State.Seats[hs].Hand.Total - beforeA, gainB = b.State.Seats[hs].Hand.Total - beforeB;
+                    if (gainB > 0)
+                    {
+                        productions++;
+                        Assert.AreEqual(skipped ? gainB : gainB - 1, gainA,
+                            skipped ? "later productions are paid in full" : "the first production card is withheld");
+                        skipped = true;
+                        Assert.IsTrue(a.State.Seats[hs].HeadStartCardSkipped);
+                    }
+                    else
+                        Assert.AreEqual(skipped, a.State.Seats[hs].HeadStartCardSkipped);
+
+                    Assert.IsTrue(a.Apply(MatchCommand.Simple(MatchCommandType.EndTurn, cur)).Ok);
+                    Assert.IsTrue(b.Apply(MatchCommand.Simple(MatchCommandType.EndTurn, cur)).Ok);
+                }
+
+                if (productions >= 2)
+                    checkedGames++;
+            }
+
+            Assert.Greater(checkedGames, 0, "a sample game with a first and a later production for Head Start");
         }
 
         [Test]
@@ -713,22 +796,91 @@ namespace CatanRoguelike.Tests
             Assert.IsTrue(Done(m, me));
         }
 
+        /// <summary>Puts a building of seat on a free corner (optionally one touching <paramref name="touching"/>) not already counted.</summary>
+        private static Vertex Place(MatchController m, int seat, BuildingType type, ResourceType? touching = null,
+            ResourceType? avoid = null)
+        {
+            var board = m.State.Board;
+            foreach (var tile in board.Tiles.Values.OrderBy(t => t.Coord.Q).ThenBy(t => t.Coord.R))
+                for (int c = 0; c < 6; c++)
+                {
+                    var v = VertexGraph.Canonicalize(new Vertex(tile.Coord, c));
+                    if (board.VertexBuildings.ContainsKey(v) || touching.HasValue && !Touches(m, v).Contains(touching.Value)
+                        || avoid.HasValue && Touches(m, v).Contains(avoid.Value))
+                        continue;
+                    board.VertexBuildings[v] = (type, m.State.Seats[seat].Owner);
+                    return v;
+                }
+
+            Assert.Inconclusive("no free corner");
+            return default;
+        }
+
+        /// <summary>A continuous road of 5: five edges around one inner hex.</summary>
+        private static void RoadOfFive(MatchController m, int seat)
+        {
+            var board = m.State.Board;
+            var hex = board.Tiles.Keys.First(h => Enumerable.Range(0, 6).All(c =>
+                VertexGraph.GetHexesForVertex(new Vertex(h, c)).All(n => board.TryGetTile(n, out _))));
+            for (int c = 0; c < 5; c++)
+                board.Roads[MatchController.NormalizeEdge(new HexMath.Edge(VertexGraph.Canonicalize(new Vertex(hex, c)),
+                    VertexGraph.Canonicalize(new Vertex(hex, c + 1))))] = m.State.Seats[seat].Owner;
+            Assert.AreEqual(5, MatchPartyLibrary.LongestRoad(m, seat));
+        }
+
         [Test]
-        public void OreEmpire_NeedsTwoOre_AWoolOrGrain_AndACityOnOre()
+        public void OreEmpire_NeedsThreeBuildingsOnOre_OneOfThemACity()
         {
             var m = QuestBoard(MatchQuestId.OreEmpire, out int me);
-            var a = Settle(m, me, ResourceType.Stone, BuildingType.City, ResourceType.Sheep, ResourceType.Wheat);
-            Settle(m, me, ResourceType.Stone, BuildingType.Settlement, ResourceType.Sheep, ResourceType.Wheat);
-            Assert.AreEqual(1, MatchPartyLibrary.CitiesBordering(m, me, ResourceType.Stone));
-            Assert.IsFalse(Done(m, me), "no wool/grain hex yet");
-            var w = Settle(m, me, ResourceType.Wheat);
-            Assert.IsTrue(Done(m, me), "grain counts");
-            m.State.Board.VertexBuildings.Remove(w);
-            Settle(m, me, ResourceType.Sheep);
-            Assert.IsTrue(Done(m, me), "wool counts");
+            var a = Place(m, me, BuildingType.City, ResourceType.Stone);
+            Place(m, me, BuildingType.Settlement, ResourceType.Stone);
+            Place(m, me, BuildingType.City, avoid: ResourceType.Stone); // a city off ore doesn't count
+            Assert.AreEqual(2, MatchPartyLibrary.BuildingsBordering(m, me, ResourceType.Stone));
+            Assert.IsFalse(Done(m, me), "2 buildings on ore are not enough");
+            var c = Place(m, me, BuildingType.Settlement, ResourceType.Stone);
+            Assert.IsTrue(Done(m, me), "3 on ore, one a city");
             m.State.Board.VertexBuildings[a] = (BuildingType.Settlement, m.State.Seats[me].Owner);
-            Assert.IsFalse(Done(m, me), "needs the city on ore");
-            Assert.Greater(MatchAi.QuestBuildGain(m, me, a, BuildingType.City), 0, "the AI values the ore city");
+            Assert.AreEqual(3, MatchPartyLibrary.BuildingsBordering(m, me, ResourceType.Stone));
+            Assert.IsFalse(Done(m, me), "3 settlements on ore without a city on ore");
+            Assert.Greater(MatchAi.QuestBuildGain(m, me, c, BuildingType.City), 0, "the AI values the ore city");
+            m.State.Board.VertexBuildings[c] = (BuildingType.City, m.State.Seats[me].Owner);
+            Assert.IsTrue(Done(m, me));
+        }
+
+        [Test]
+        public void Sprawl_NeedsSixBuildingsAndARoadOfFive()
+        {
+            var m = QuestBoard(MatchQuestId.Sprawl, out int me);
+            RoadOfFive(m, me);
+            for (int i = 0; i < 5; i++)
+                Place(m, me, BuildingType.Settlement);
+            Assert.IsFalse(Done(m, me), "5 buildings are not enough");
+            var v = Place(m, me, BuildingType.Settlement);
+            Assert.IsTrue(Done(m, me), "6 buildings and the road of 5");
+            Assert.Greater(MatchAi.QuestBuildGain(QuestBoardUndo(m, v), me, v, BuildingType.Settlement), 0,
+                "the AI values the 6th building");
+            m.State.Board.VertexBuildings[v] = (BuildingType.Settlement, m.State.Seats[me].Owner);
+            m.State.Board.Roads.Remove(m.State.Board.Roads.Keys.First());
+            Assert.IsFalse(Done(m, me), "still needs the road of 5");
+        }
+
+        [Test]
+        public void Metropolis_NeedsThreeCitiesAndSixBuildings()
+        {
+            var m = QuestBoard(MatchQuestId.Metropolis, out int me);
+            var owner = m.State.Seats[me].Owner;
+            var spots = new List<Vertex>();
+            for (int i = 0; i < 3; i++) spots.Add(Place(m, me, BuildingType.City));
+            for (int i = 0; i < 2; i++) spots.Add(Place(m, me, BuildingType.Settlement));
+            Assert.IsFalse(Done(m, me), "3 cities + 2 settlements");
+            var sixth = Place(m, me, BuildingType.Settlement);
+            m.State.Board.VertexBuildings[spots[0]] = (BuildingType.Settlement, owner);
+            Assert.IsFalse(Done(m, me), "2 cities + 4 settlements");
+            Assert.Greater(MatchAi.QuestBuildGain(m, me, spots[0], BuildingType.City), 0, "the AI values the 3rd city");
+            m.State.Board.VertexBuildings[spots[0]] = (BuildingType.City, owner);
+            Assert.IsTrue(Done(m, me), "3 cities + 3 settlements");
+            Assert.AreEqual(6, MatchPartyLibrary.Buildings(m, me));
+            Assert.IsTrue(m.State.Board.VertexBuildings.ContainsKey(sixth));
         }
 
         [Test]
