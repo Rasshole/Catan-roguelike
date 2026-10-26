@@ -262,7 +262,7 @@ namespace CatanRoguelike.Tests.PlayMode
             var view = Object.FindFirstObjectByType<BoardView>();
             float hexW = PlayerPieceVisuals.FlatHexWidth(view.HexScale) * view.transform.lossyScale.x;
             var settlement = view.GetComponentsInChildren<Transform>().First(t => t.name == PlayerPieceVisuals.SettlementName);
-            var sb = settlement.GetComponentsInChildren<MeshFilter>()
+            var sb = settlement.GetComponentsInChildren<MeshFilter>().Where(f => f.name != PlayerPieceVisuals.OutlinePartName)
                 .Select(f => f.sharedMesh.bounds.size.x * f.transform.lossyScale.x).Max();
             Debug.Log($"v136 piece scale: settlement mesh width {sb:F3} / hex width {hexW:F3} = {sb / hexW:F3}");
             Assert.AreEqual(PlayerPieceVisuals.SettlementFootprintOfHex * RunHudController.HotSeatBuildingScale, sb / hexW, 0.015f);
@@ -610,7 +610,7 @@ namespace CatanRoguelike.Tests.PlayMode
 
             var view = Object.FindFirstObjectByType<BoardView>();
             float hexW = PlayerPieceVisuals.FlatHexWidth(view.HexScale) * view.transform.lossyScale.x;
-            float Width(Transform t) => t.GetComponentsInChildren<MeshFilter>()
+            float Width(Transform t) => t.GetComponentsInChildren<MeshFilter>().Where(f => f.name != PlayerPieceVisuals.OutlinePartName)
                 .Select(f => f.sharedMesh.bounds.size.x * f.transform.lossyScale.x).Max();
             var all = view.GetComponentsInChildren<Transform>();
             var settlement = all.First(t => t.name == PlayerPieceVisuals.SettlementName);

@@ -132,6 +132,36 @@ namespace CatanRoguelike.Tests.PlayMode
             return config;
         }
 
+        /// <summary>Party matches reveal a ballot each round; click it away so captures show the board.</summary>
+        private static void DismissBallot(RunHudController hud)
+        {
+            var b = hud.HotSeatRootForTests.GetComponentsInChildren<Button>(true).FirstOrDefault(x => x.name == "RevealContinue");
+            if (b == null)
+                return;
+            b.onClick.Invoke();
+            hud.RefreshHotSeatNow();
+        }
+
+        /// <summary>v147: every settlement/city in the match is on the board, visible, outlined and house-sized.</summary>
+        private static void AssertSettlementsDrawn(MatchState state)
+        {
+            var view = Object.FindFirstObjectByType<BoardView>();
+            var root = view.transform.Find("Buildings");
+            Assert.IsNotNull(root, "buildings root");
+            var houses = root.Cast<Transform>()
+                .Where(t => t.name == PlayerPieceVisuals.SettlementName || t.name == PlayerPieceVisuals.CityName).ToList();
+            Assert.AreEqual(state.Board.VertexBuildings.Count, houses.Count, "one house per settlement/city");
+            Assert.Greater(houses.Count, 0);
+            foreach (var h in houses)
+            {
+                Assert.IsTrue(h.gameObject.activeInHierarchy, h.name + " active");
+                var body = h.Find(PlayerPieceVisuals.BodyPartName).GetComponent<Renderer>();
+                Assert.IsTrue(body.enabled, h.name + " body rendered");
+                Assert.Greater(body.bounds.size.x, 0.5f, h.name + " house-sized");
+                Assert.IsNotNull(h.Find(PlayerPieceVisuals.OutlinePartName), h.name + " outline");
+            }
+        }
+
         [Timeout(240000)]
         [UnityTest]
         public IEnumerator RandomLakeBoard_FishSpendMenu_PublicTraits_QuestWhileWaiting()
@@ -157,6 +187,9 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsNotNull(lake, "the lake tile view");
             Assert.IsTrue(lake.HasVisibleToken, "the lake shows its numbers");
             Assert.AreEqual(HexTileView.LakeTokenText, lake.TokenLabelText);
+            Assert.IsTrue(lake.LakeArtApplied, "v147: the lake hex is painted as water, not sand");
+            AssertSettlementsDrawn(s.State);
+            MaybeWrite(hud, "v147-random-board-lake.png");
 
             // Traits are public: a chip on every seat row, a hover tooltip for another seat's trait.
             var root = hud.HotSeatRootForTests;
@@ -177,8 +210,7 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsNotNull(hud.OwnQuestCardForTests, "my quest on my own turn");
             var myQuest = MatchPartyLibrary.Quest(s.State.Seats[0].Quest);
             Assert.IsTrue(hud.OwnQuestCardForTests.GetComponentsInChildren<Text>(true).Any(t => t.text.Contains(myQuest.Name.ToUpperInvariant())));
-            MaybeWrite(hud, "v146-random-board-lake.png");
-            MaybeWrite(hud, "v146-traits.png");
+            MaybeWrite(hud, "v147-traits.png"); // with Astrid's trait tooltip open
             hud.HideTraitTooltipForTests();
 
             // Fish: the spend menu (2/3/4/5/7) and the old boot.
@@ -202,7 +234,7 @@ namespace CatanRoguelike.Tests.PlayMode
                 Assert.IsNotNull(root.GetComponentsInChildren<Button>(true).FirstOrDefault(b => b.name == "FishSpend_" + cost), "spend " + cost);
             Assert.IsTrue(Named(root, "FishSpend_2").interactable, "robber off is live");
             Assert.IsTrue(root.GetComponentsInChildren<Button>(true).Any(b => b.name == "BootTo_1"), "pass the boot to Astrid");
-            MaybeWrite(hud, "v146-fish-spend.png");
+            MaybeWrite(hud, "v147-fish-spend.png");
 
             int ore = me.Hand[ResourceType.Stone];
             Named(root, "FishSpend_4").onClick.Invoke();
@@ -235,7 +267,7 @@ namespace CatanRoguelike.Tests.PlayMode
             yield return Settle(hud, 3);
             Assert.IsNotNull(hud.OwnQuestCardForTests, "quest visible while waiting");
             StringAssert.Contains("QUEST", string.Join("|", hud.OwnQuestCardForTests.GetComponentsInChildren<Text>(true).Select(t => t.text)));
-            MaybeWrite(hud, "v146-quest-while-waiting.png");
+            MaybeWrite(hud, "v147-quest-while-waiting.png");
             hud.ExitHotSeat();
         }
 
@@ -278,7 +310,7 @@ namespace CatanRoguelike.Tests.PlayMode
             RunHudController hud = null;
             yield return ReadyHud(gm, h => hud = h);
             hud.HotSeatClockFrozenForTests = true;
-            hud.StartHotSeat(Config(1463, false, (SeatKind.Human, "Rasmus"), (SeatKind.Ai, "Astrid"), (SeatKind.Ai, "Bjorn")));
+            hud.StartHotSeat(Config(1463, true, (SeatKind.Human, "Rasmus"), (SeatKind.Ai, "Astrid"), (SeatKind.Ai, "Bjorn")));
             var s = hud.HotSeatSessionForTests;
             var view = Object.FindFirstObjectByType<BoardView>();
             Assert.IsNotNull(view);
@@ -292,6 +324,7 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.Greater(view.ActiveDropCountForTests, 0, "the new settlement drops in");
             yield return new WaitForSeconds(BoardView.PieceDropSeconds + 0.1f);
             Assert.AreEqual(0, view.ActiveDropCountForTests, "and lands");
+            AssertSettlementsDrawn(s.State);
 
             // Buttons lean in on hover.
             var anyButton = hud.HotSeatRootForTests.GetComponentsInChildren<ButtonJuice>(true)
@@ -313,6 +346,7 @@ namespace CatanRoguelike.Tests.PlayMode
                 Assert.IsTrue(s.Roll().Ok);
                 yield return Settle(hud, 3);
                 Assert.IsTrue(hud.DiceThrownForTests, "the dice are thrown out of the tray");
+                DismissBallot(hud);
                 Assert.IsTrue(hud.DiceRollingForTests);
                 if (s.State.LastRoll == 7)
                 {
@@ -326,7 +360,7 @@ namespace CatanRoguelike.Tests.PlayMode
                 Assert.Greater(hud.LastPoppedTokensForTests, 0, "number tokens hit by the roll pop");
                 Assert.Greater(view.PoppingTokenCountForTests, 0, "popping now");
                 HudMotion.SnapOnCapture = false;
-                try { MaybeWrite(hud, "v146-number-pop.png"); }
+                try { MaybeWrite(hud, "v147-number-pop.png"); }
                 finally { HudMotion.SnapOnCapture = true; }
                 popped = true;
                 yield return new WaitForSeconds(BoardView.NumberPopSeconds + 0.1f);
@@ -348,11 +382,15 @@ namespace CatanRoguelike.Tests.PlayMode
             hud.RefreshHotSeatNow();
             yield return Settle(hud, 3);
             Assert.AreEqual("Closes in 15 s", hud.TradeCountdownTextForTests);
+            DismissBallot(hud);
             s.Tick(9.3f);
             yield return Settle(hud, 3);
             Assert.IsNotNull(s.State.ActiveTrade, "still open at 9 s");
             Assert.AreEqual("Closes in 6 s", hud.TradeCountdownTextForTests);
-            MaybeWrite(hud, "v146-trade-countdown.png");
+            for (int i = 0; i < 3; i++)
+                Assert.IsNotNull(hud.HotSeatRootForTests.Find($"SeatStrip/Seat_{i}/{RunHudController.TraitChipName}"),
+                    "trait chips stay on the strip while a trade is open, seat " + i);
+            MaybeWrite(hud, "v147-trade-countdown.png");
             s.Tick(6f);
             yield return Settle(hud, 3);
             Assert.IsNull(s.State.ActiveTrade, "closed after 15 s");

@@ -107,6 +107,7 @@ namespace CatanRoguelike.Game
             ColonistBoardVisualScale.RobberOffsetScale = HotSeatRobberOffsetScale;
             PlayerPieceVisuals.BuildingScaleMultiplier = HotSeatBuildingScale;
             PlayerPieceVisuals.RoadScaleMultiplier = HotSeatRoadScale;
+            PlayerPieceVisuals.BuildingOutline = true; // v147: houses read apart from their roads
             BoardView.MatchMotion = true; // v146: pieces drop in, robber/pirate slide, numbers pop
             BoardView.MatchLakeNumbers = config.Fishermen;
             if (boardView != null)
@@ -156,6 +157,7 @@ namespace CatanRoguelike.Game
             ColonistBoardVisualScale.RobberOffsetScale = 1f;
             PlayerPieceVisuals.BuildingScaleMultiplier = 1f;
             PlayerPieceVisuals.RoadScaleMultiplier = 1f;
+            PlayerPieceVisuals.BuildingOutline = false;
             BoardView.MatchMotion = false;
             BoardView.MatchLakeNumbers = false;
             if (_hsBoardInput != null)

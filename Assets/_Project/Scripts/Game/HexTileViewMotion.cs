@@ -37,21 +37,44 @@ namespace CatanRoguelike.Game
         private SpriteRenderer _popGlow;
         private static Sprite _glowSprite;
 
+        public const string LakeTexturePath = ColonistBlenderHexTerrainArt.TextureFolder + "/Lake";
+        /// <summary>v147: the lake token is larger than a number token so "2 3 / 11 12" reads at table size.</summary>
+        public const float LakeChipScale = 1.3f;
+        public const float LakeLabelScale = 1.45f;
+        public bool LakeArtApplied { get; private set; }
+
         private void RefreshLakeToken(HexTileData data)
         {
+            ApplyLakeArt();
             EnsureTokenChip();
             EnsureTokenLabel();
             SetTokenVisible(true);
             ApplyTokenChipStyle(2, true);
             UpdateTokenChipGeometry();
+            // Absolute (not *=): RefreshToken runs on every board refresh and must not compound.
+            _tokenChip.transform.localScale = new Vector3(LakeChipScale, 1f, LakeChipScale);
             SyncLabelElevationAboveChip();
             _tokenLabel.text = LakeTokenText;
             var rgb = NumberTokenVisualStyle.GetLabel(2, true);
             _tokenLabel.color = new Color(rgb.R, rgb.G, rgb.B);
-            _tokenLabel.characterSize = NumberTokenVisualStyle.GetLabelCharacterSize(2) * 0.6f;
-            _tokenLabel.lineSpacing = 0.85f;
+            _tokenLabel.characterSize = NumberTokenVisualStyle.GetLabelCharacterSize(8) * 0.62f * LakeLabelScale;
+            _tokenLabel.lineSpacing = 0.8f;
             ApplyTokenLabelFontMaterial();
             ClearPipDots();
+        }
+
+        /// <summary>v147: paint the hex as a real lake (water, reeds, lily pads, fish) instead of the sand desert.</summary>
+        private void ApplyLakeArt()
+        {
+            if (LakeArtApplied || _renderer == null || _renderer.sharedMaterial == null)
+                return;
+            var tex = Resources.Load<Texture2D>(LakeTexturePath);
+            if (tex == null)
+                return;
+            tex.mipMapBias = ColonistBlenderHexTerrainArt.MipMapBias;
+            _renderer.sharedMaterial.mainTexture = tex;
+            _renderer.sharedMaterial.color = Color.white;
+            LakeArtApplied = true;
         }
 
         /// <summary>Applies the pop at progress <paramref name="t"/> (0..1); t &gt;= 1 restores the token.</summary>
