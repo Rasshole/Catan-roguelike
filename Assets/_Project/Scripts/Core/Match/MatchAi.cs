@@ -43,6 +43,8 @@ namespace CatanRoguelike.Core.Match
                     return MatchCommand.DiscardCards(seat,
                         MatchController.SuggestDiscard(state.Seats[seat].Hand, state.PendingDiscards[seat]));
                 case MatchPhase.RoadBuilding:
+                    if (match.SeafarersOn)
+                        return ChooseFreePiece(match, seat); // v145: roads or ships, mixed
                     return MatchCommand.AtEdge(MatchCommandType.BuildRoad, seat,
                         Best(match.ValidRoads(seat), e => RoadScore(match, e, seat)));
                 case MatchPhase.MoveRobber:
@@ -99,10 +101,35 @@ namespace CatanRoguelike.Core.Match
                     Best(upgradable, v => VertexScore(state, v, seat)
                                           + QuestStepWorth * QuestBuildGain(match, seat, v, BuildingType.City)));
 
+            // v145 Seafarers: sail the open ship closer to a spot (free, once a turn).
+            var sail = spots.Count == 0 ? ChooseShipMove(match, seat) : null;
+            if (sail != null)
+                return sail;
+
             // Roads only when they lead somewhere: no free spot yet, or racing for longest road.
             bool wantsRoad = false;
             bool questRoads = WantsQuestRoads(match, seat);
+            // v145: a ship toward a spot across the water when no road leads anywhere better.
+            int shipScore = 0;
+            var ship = spots.Count == 0 ? BestShip(match, seat, out shipScore) : null;
+            int roadBest = 0;
             if ((spots.Count == 0 || questRoads) && match.CountRoads(seat) < BuildingPieceLimits.MaxRoads)
+            {
+                var land = match.ValidRoads(seat).ToList();
+                if (land.Count > 0)
+                    roadBest = RoadScore(match, Best(land, e => RoadScore(match, e, seat)), seat);
+            }
+
+            if (ship.HasValue && shipScore > roadBest)
+            {
+                if (match.CanPlayDevCard(seat, MatchDevCard.RoadBuilding))
+                    return MatchCommand.Simple(MatchCommandType.PlayRoadBuilding, seat);
+                if (hand.CanAfford(match.ShipCostFor(seat)))
+                    return MatchCommand.Ship(seat, ship.Value);
+            }
+
+            if ((spots.Count == 0 || questRoads) && match.CountRoads(seat) < BuildingPieceLimits.MaxRoads
+                && !(ship.HasValue && shipScore > roadBest))
             {
                 var roads = match.ValidRoads(seat).ToList();
                 if (roads.Count > 0)
@@ -173,6 +200,8 @@ namespace CatanRoguelike.Core.Match
                      && (Deficit(hand, match.CityCostFor(seat)) <= Deficit(hand, match.RoadCostFor(seat)) + 1
                          || match.CountRoads(seat) >= BuildingPieceLimits.MaxRoads))
                 goal = match.CityCostFor(seat);
+            else if (ship.HasValue && shipScore > roadBest)
+                goal = match.ShipCostFor(seat); // v145
             else
                 goal = match.RoadCostFor(seat);
             // v143 Fishermen: fish buy the missing card (bounded by the fish held, so this can't loop).
@@ -306,7 +335,7 @@ namespace CatanRoguelike.Core.Match
                 .ThenByDescending(s => state.Seats[s].CardCount)
                 .ThenBy(s => s)
                 .DefaultIfEmpty(-1).First();
-            return MatchCommand.Robber(seat, bestHex, victim);
+            return ChoosePirate(match, seat, null, bestScore) ?? MatchCommand.Robber(seat, bestHex, victim);
         }
 
         /// <summary>

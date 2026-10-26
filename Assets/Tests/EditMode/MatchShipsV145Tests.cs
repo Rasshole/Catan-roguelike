@@ -19,7 +19,7 @@ namespace CatanRoguelike.Tests
     /// </summary>
     public class MatchShipsV145Tests
     {
-        private static MatchController Islands(int seats = 3, int seed = 145, bool party = false)
+        internal static MatchController Islands(int seats = 3, int seed = 145, bool party = false)
         {
             var match = new MatchController(MatchConfig.Create(seats, 0, seed, MapSize.Islands, party));
             while (match.IsSetup || match.State.IsPicking)
@@ -28,7 +28,7 @@ namespace CatanRoguelike.Tests
         }
 
         /// <summary>An empty Islands board at seat 0's main phase.</summary>
-        private static MatchController EmptyIslands(bool party = false)
+        internal static MatchController EmptyIslands(bool party = false)
         {
             var m = Islands(party: party);
             var b = m.State.Board;
@@ -59,7 +59,7 @@ namespace CatanRoguelike.Tests
         }
 
         /// <summary>A home-island coast corner on the strait (q = 1): touches home land and sea.</summary>
-        private static Vertex StraitCorner(BoardState b) =>
+        internal static Vertex StraitCorner(BoardState b) =>
             AllVertices(b).Where(v =>
                 {
                     var hexes = VertexGraph.GetHexesForVertex(v).ToList();
@@ -73,7 +73,7 @@ namespace CatanRoguelike.Tests
         /// Shortest corner path over ship edges from <paramref name="from"/> to a corner on an islet that is at
         /// least <paramref name="minEdges"/> ships away.
         /// </summary>
-        private static List<Vertex> SeaPathToIslet(BoardState b, Vertex from, int minEdges = 3)
+        internal static List<Vertex> SeaPathToIslet(BoardState b, Vertex from, int minEdges = 3)
         {
             var islets = new HashSet<HexCoord>(MapPresets.IslandsIsletCoords);
             var prev = new Dictionary<Vertex, Vertex> { [from] = from };

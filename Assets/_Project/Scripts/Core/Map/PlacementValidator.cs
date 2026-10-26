@@ -20,9 +20,10 @@ namespace CatanRoguelike.Core.Map
                 return false;
 
             // Catan distance rule: no settlement within 2 edges (adjacent vertices forbidden)
-            foreach (var existing in board.VertexBuildings.Keys)
+            // (v145: checks the 3 neighbouring corners instead of a search to every building — same rule, far cheaper.)
+            foreach (var next in VertexGraph.GetAdjacentVertices(vertex))
             {
-                if (VertexGraph.VertexDistance(vertex, existing) < 2)
+                if (board.VertexBuildings.ContainsKey(VertexGraph.Canonicalize(next)))
                     return false;
             }
 

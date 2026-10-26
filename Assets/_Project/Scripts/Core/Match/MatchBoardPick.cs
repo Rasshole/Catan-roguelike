@@ -13,7 +13,11 @@ namespace CatanRoguelike.Core.Match
         Auto,
         Settlement,
         City,
-        Road
+        Road,
+        /// <summary>v145 Seafarers: build a ship on a sea edge (also the free pieces of Road Building).</summary>
+        Ship,
+        /// <summary>v145 Seafarers: move your open ship; first pick the ship, then where it goes.</summary>
+        MoveShip
     }
 
     /// <summary>
@@ -28,7 +32,14 @@ namespace CatanRoguelike.Core.Match
         public const int VictimPending = -2;
 
         public static MatchCommand Pick(MatchController match, MatchBuildMode mode, float x, float z, float scale,
-            float radius = DefaultRadius)
+            float radius = DefaultRadius) => Pick(match, mode, x, z, scale, null, radius);
+
+        /// <summary>
+        /// v145: <paramref name="moveFrom"/> is the ship picked for <see cref="MatchBuildMode.MoveShip"/> (null until
+        /// one is picked: see <see cref="PickMovableShip"/>).
+        /// </summary>
+        public static MatchCommand Pick(MatchController match, MatchBuildMode mode, float x, float z, float scale,
+            Edge? moveFrom, float radius = DefaultRadius)
         {
             var state = match.State;
             int seat = state.ActingSeat;
@@ -40,14 +51,42 @@ namespace CatanRoguelike.Core.Match
                 case MatchPhase.SetupRoad:
                     return At(MatchCommandType.PlaceSetupRoad, seat, Nearest(match.ValidSetupRoads(), x, z, scale, max));
                 case MatchPhase.RoadBuilding:
-                    return At(MatchCommandType.BuildRoad, seat, Nearest(match.ValidRoads(seat), x, z, scale, max));
+                    return FreePieceShips(match, seat, mode)
+                        ? At(MatchCommandType.BuildShip, seat, Nearest(match.ValidShips(seat), x, z, scale, max))
+                        : At(MatchCommandType.BuildRoad, seat, Nearest(match.ValidRoads(seat), x, z, scale, max));
                 case MatchPhase.MoveRobber:
                     return PickRobber(match, seat, x, z, scale);
+                case MatchPhase.Main when mode == MatchBuildMode.MoveShip:
+                {
+                    if (!moveFrom.HasValue)
+                        return null;
+                    var to = Nearest(match.ShipMoveTargets(seat, moveFrom.Value), x, z, scale, max);
+                    return to.HasValue ? MatchCommand.MoveShipTo(seat, moveFrom.Value, to.Value) : null;
+                }
+                case MatchPhase.Main when mode == MatchBuildMode.Ship:
+                    return state.ActiveTrade == null
+                        ? At(MatchCommandType.BuildShip, seat, Nearest(Targets(match, mode).edges, x, z, scale, max))
+                        : null;
                 case MatchPhase.Main:
                     return PickBuild(match, seat, mode, x, z, scale, max);
                 default:
                     return null;
             }
+        }
+
+        /// <summary>v145: Road Building places ships when asked to, or when no road fits anywhere.</summary>
+        public static bool FreePieceShips(MatchController match, int seat, MatchBuildMode mode) =>
+            match.SeafarersOn && (mode == MatchBuildMode.Ship
+                                  || !match.ValidRoads(seat).Any() && match.ValidShips(seat).Any());
+
+        /// <summary>v145: the acting seat's movable ship nearest the click (step one of a ship move), if any.</summary>
+        public static Edge? PickMovableShip(MatchController match, float x, float z, float scale,
+            float radius = DefaultRadius)
+        {
+            var state = match.State;
+            if (state.Phase != MatchPhase.Main || state.ActiveTrade != null)
+                return null;
+            return Nearest(match.MovableShips(state.ActingSeat), x, z, scale, radius * scale);
         }
 
         /// <summary>The spots a click can hit right now (for highlighting): vertices and edges.</summary>
@@ -63,7 +102,18 @@ namespace CatanRoguelike.Core.Match
                 case MatchPhase.SetupRoad:
                     return (new List<Vertex>(), match.ValidSetupRoads().ToList(), false);
                 case MatchPhase.RoadBuilding:
-                    return (new List<Vertex>(), match.ValidRoads(seat).ToList(), false);
+                    return (new List<Vertex>(),
+                        (FreePieceShips(match, seat, mode) ? match.ValidShips(seat) : match.ValidRoads(seat)).ToList(), false);
+                case MatchPhase.Main when state.ActiveTrade == null && mode == MatchBuildMode.Ship:
+                {
+                    var e = new List<Edge>();
+                    if (match.SeafarersOn && hand.CanAfford(match.ShipCostFor(seat))
+                                          && match.CountShips(seat) < MatchController.MaxShips)
+                        e.AddRange(match.ValidShips(seat));
+                    return (new List<Vertex>(), e, false);
+                }
+                case MatchPhase.Main when state.ActiveTrade == null && mode == MatchBuildMode.MoveShip:
+                    return (new List<Vertex>(), match.MovableShips(seat).ToList(), false);
                 case MatchPhase.Main when state.ActiveTrade == null:
                 {
                     var v = new List<Vertex>();
@@ -123,9 +173,32 @@ namespace CatanRoguelike.Core.Match
                 }
             }
 
+            // v145 Seafarers: a click on open sea moves the pirate instead.
+            bool pirate = false;
+            if (match.SeafarersOn)
+            {
+                foreach (var coord in match.PirateTargets())
+                {
+                    var (tx, tz) = HexMath.ToWorldPosition(coord, scale);
+                    float d = (x - tx) * (x - tx) + (z - tz) * (z - tz);
+                    if (d < bestD)
+                    {
+                        bestD = d;
+                        best = coord;
+                        pirate = true;
+                    }
+                }
+            }
+
             // Clicks beyond a tile's reach (in the sea) don't count.
             if (!best.HasValue || bestD > scale * scale * 1.1f)
                 return null;
+            if (pirate)
+            {
+                var pv = match.PirateVictims(seat, best.Value).ToList();
+                return MatchCommand.Pirate(seat, best.Value, pv.Count == 0 ? -1 : pv.Count == 1 ? pv[0] : VictimPending);
+            }
+
             // v136: one possible victim is robbed directly; with two or more the player chooses (victim picker):
             // the command comes back with Victim = VictimPending and the HUD asks before applying it.
             var victims = match.RobberVictims(seat, best.Value).ToList();
