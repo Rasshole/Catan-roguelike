@@ -391,10 +391,10 @@ how the group can playtest the rules before any server exists.
       own harbour; Academy settlements +1 Grain; Steppe dev cards +1 Ore; Highland, Shepherd and Raiders lost their
       drawbacks; Raiders steal on their own 7s or any 7 that finds a rival with 7+ cards; Sun Kingdom can't be robbed
       while holding 4 or fewer cards.
-    - Traits: Lucky Dice pays on any player's 2, 3, 11 or 12 (v144: 1 of your least-held resource, random among
-      ties); Prospector triggers on your own roll only, once per round, and (v144) your own 7 counts as an empty roll;
-      Tough Hide (v144) has discard limit +3 (discards only from 11 cards) and takes 1 random resource on every third
-      7 of the match; Granary
+    - Traits: Lucky Dice pays on your own roll of 2, 3, 11 or 12 (v144: 1 of your least-held resource, random among
+      ties; another player's roll doesn't count); Prospector triggers on your own roll only, once per round, and (v144) your own 7 counts as an empty roll;
+      Tough Hide (v144) has discard limit +3 (discards only from 11 cards) and takes 1 random resource on every second
+      7 of the match (rolled by anyone: the 2nd, 4th, ...); Granary
       discards only above 8 and takes 1 Grain on every 7; Head Start takes 1 of each resource and (v144) until its first
       normal turn ends can't be made to discard or be stolen from (robber or Raiders), but loses the very first
       production card it would get (once a game, one card; `HeadStartCardSkipped`); Road Crew makes every
@@ -404,8 +404,8 @@ how the group can playtest the rules before any server exists.
       else; the AI takes what its next build lacks most; a timed-out human gets the AI pick); Quartermaster dev cards cost no Wool and
       every Knight gives 1 Grain.
     - Quests (target: 1 VP 40–60 % done, 2 VP 25–50 %): Knighthood 1 knight, Trader 5 trades, Town Planner "a city
-      and 4 buildings"; Grand Army 2 knights, Merchant Prince 7 trades, Highway 6 roads, Metropolis (v144) "3 cities and 3
-      more buildings" (6 in all), Ore Empire (v144) "3 buildings on Ore, one a city", Sprawl (v144) "6 buildings and a road of 5", Harbour Road
+      and 4 buildings"; Grand Army 2 knights, Merchant Prince 7 trades, Highway 6 roads, Metropolis (v144) "3 cities and 1
+      more settlement or city" (4 buildings, at least 3 of them cities), Ore Empire (v144) "3 buildings on Ore, one a city", Sprawl (v144) "6 buildings and a road of 5", Harbour Road
       "a harbour and a road of 5" (was Twin Harbours). "Five Trades" was renamed "Five Harvests".
     - v144 quests ("border X" = one of your settlements/cities touches an X hex): Five Harvests needs the buildings
       covering all five resources joined by one network of your own roads (ships will count); Breadbasket 2 Grain + 1

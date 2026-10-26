@@ -235,10 +235,13 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void LuckyDice_PaysOnAnyonesTwoThreeElevenOrTwelve_NotFourOrTen()
+        public void LuckyDice_PaysOnlyOnYourOwnTwoThreeElevenOrTwelve()
         {
-            int luckyRolls = 0, nearMiss = 0;
-            for (int seed = 1; seed < 600 && (luckyRolls < 2 || nearMiss < 2); seed++)
+            // Both the roller and another seat hold Lucky Dice; only the roller's own lucky number pays.
+            var seenOwn = new HashSet<int>();
+            bool otherTwo = false;
+            int nearMiss = 0;
+            for (int seed = 1; seed < 3000 && (!seenOwn.Contains(3) || !seenOwn.Contains(11) || !otherTwo || nearMiss < 1); seed++)
             {
                 var a = AfterSetup(3, 0, seed, party: true);
                 var b = AfterSetup(3, 0, seed, party: true);
@@ -253,6 +256,7 @@ namespace CatanRoguelike.Tests
                         s.Quest = MatchQuestId.None;
                     }
 
+                a.State.Seats[me].Trait = MatchTraitId.LuckyDice;
                 a.State.Seats[other].Trait = MatchTraitId.LuckyDice;
                 Assert.IsTrue(a.Apply(MatchCommand.Simple(MatchCommandType.RollDice, me)).Ok);
                 Assert.IsTrue(b.Apply(MatchCommand.Simple(MatchCommandType.RollDice, me)).Ok);
@@ -261,17 +265,22 @@ namespace CatanRoguelike.Tests
                 if (roll == 7)
                     continue;
                 bool lucky = roll == 2 || roll == 3 || roll == 11 || roll == 12;
-                if (roll == 3 || roll == 11)
-                    luckyRolls++;
+                if (lucky)
+                    seenOwn.Add(roll);
+                if (roll == 2)
+                    otherTwo = true;
                 if (roll == 4 || roll == 10)
                     nearMiss++;
                 Assert.AreEqual(lucky, MatchController.LuckyDiceTriggers(roll));
-                Assert.AreEqual(b.State.Seats[other].Hand.Total + (lucky ? 1 : 0), a.State.Seats[other].Hand.Total,
-                    $"roll {roll} by another player");
-                Assert.AreEqual(b.State.Seats[me].Hand.Total, a.State.Seats[me].Hand.Total, "roller has no trait");
+                Assert.AreEqual(b.State.Seats[me].Hand.Total + (lucky ? 1 : 0), a.State.Seats[me].Hand.Total,
+                    $"own roll {roll}");
+                Assert.AreEqual(b.State.Seats[other].Hand.Total, a.State.Seats[other].Hand.Total,
+                    $"roll {roll} by another player never pays");
             }
 
-            Assert.Greater(luckyRolls, 0, "at least one 3/11 by another player in the sample (v144: now triggers)");
+            Assert.IsTrue(seenOwn.Contains(3), "an own 3 in the sample (pays)");
+            Assert.IsTrue(seenOwn.Contains(11), "an own 11 in the sample (pays)");
+            Assert.IsTrue(otherTwo, "another player's 2 in the sample (doesn't pay the other holder)");
             Assert.Greater(nearMiss, 0, "at least one 4/10 in the sample (never triggers)");
             for (int roll = 2; roll <= 12; roll++)
                 Assert.AreEqual(roll == 2 || roll == 3 || roll == 11 || roll == 12, MatchController.LuckyDiceTriggers(roll),
@@ -366,10 +375,11 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void ToughHide_EveryThirdSeven_GivesOneRandomResource()
+        public void ToughHide_EverySecondSeven_GivesOneRandomResource()
         {
             FirstRollSeven(out int seed);
-            var expected = new[] { 0, 0, 1, 0, 0, 1 };
+            // The 2nd and 4th 7 (rolled by anyone — here another seat) pay; the 1st and 3rd don't.
+            var expected = new[] { 0, 1, 0, 1, 0, 1 };
             for (int nth = 1; nth <= 6; nth++)
             {
                 var match = Plain(AfterSetup(3, 0, seed, party: true));
@@ -393,7 +403,7 @@ namespace CatanRoguelike.Tests
             }
 
             for (int n = 1; n <= 9; n++)
-                Assert.AreEqual(n % 3 == 0, MatchController.ToughHidePaysOn(n), $"7 number {n}");
+                Assert.AreEqual(n % 2 == 0, MatchController.ToughHidePaysOn(n), $"7 number {n}");
         }
 
         [Test]
@@ -865,22 +875,21 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void Metropolis_NeedsThreeCitiesAndSixBuildings()
+        public void Metropolis_NeedsThreeCitiesAndOneMoreBuilding()
         {
             var m = QuestBoard(MatchQuestId.Metropolis, out int me);
             var owner = m.State.Seats[me].Owner;
             var spots = new List<Vertex>();
             for (int i = 0; i < 3; i++) spots.Add(Place(m, me, BuildingType.City));
-            for (int i = 0; i < 2; i++) spots.Add(Place(m, me, BuildingType.Settlement));
-            Assert.IsFalse(Done(m, me), "3 cities + 2 settlements");
-            var sixth = Place(m, me, BuildingType.Settlement);
+            Assert.IsFalse(Done(m, me), "3 cities alone");
+            var fourth = Place(m, me, BuildingType.Settlement);
             m.State.Board.VertexBuildings[spots[0]] = (BuildingType.Settlement, owner);
-            Assert.IsFalse(Done(m, me), "2 cities + 4 settlements");
+            Assert.IsFalse(Done(m, me), "2 cities + 2 settlements");
             Assert.Greater(MatchAi.QuestBuildGain(m, me, spots[0], BuildingType.City), 0, "the AI values the 3rd city");
             m.State.Board.VertexBuildings[spots[0]] = (BuildingType.City, owner);
-            Assert.IsTrue(Done(m, me), "3 cities + 3 settlements");
-            Assert.AreEqual(6, MatchPartyLibrary.Buildings(m, me));
-            Assert.IsTrue(m.State.Board.VertexBuildings.ContainsKey(sixth));
+            Assert.IsTrue(Done(m, me), "3 cities + 1 settlement");
+            Assert.AreEqual(4, MatchPartyLibrary.Buildings(m, me));
+            Assert.IsTrue(m.State.Board.VertexBuildings.ContainsKey(fourth));
         }
 
         [Test]

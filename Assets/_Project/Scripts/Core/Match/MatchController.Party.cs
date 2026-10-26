@@ -243,7 +243,7 @@ namespace CatanRoguelike.Core.Match
                 if (seat.Civilization == CivilizationId.ForestFolk && (roll == 2 || roll == 12))
                     Give(seat, ResourceType.Wood, System.Math.Max(1, MatchPartyLibrary.Bordered(this, seat.Index, ResourceType.Wood)));
                 bool own = seat.Index == State.CurrentSeat;
-                if (seat.Trait == MatchTraitId.LuckyDice && LuckyDiceTriggers(roll))
+                if (seat.Trait == MatchTraitId.LuckyDice && own && LuckyDiceTriggers(roll))
                     Give(seat, LeastHeldRandom(seat.Hand, State.PartyRng), 1);
                 if (seat.Trait == MatchTraitId.Prospector && own && gained[seat.Index].Total == 0 && seat.ProspectorRound != State.Round)
                 {
@@ -253,10 +253,10 @@ namespace CatanRoguelike.Core.Match
             }
         }
 
-        /// <summary>v144 Tough Hide: every third 7 of the match (the 3rd, 6th, ...) pays 1 random resource.</summary>
-        public static bool ToughHidePaysOn(int sevensRolled) => sevensRolled > 0 && sevensRolled % 3 == 0;
+        /// <summary>v144 Tough Hide: every second 7 of the match (the 2nd, 4th, ...), by anyone, pays 1 random resource.</summary>
+        public static bool ToughHidePaysOn(int sevensRolled) => sevensRolled > 0 && sevensRolled % 2 == 0;
 
-        /// <summary>v144 Lucky Dice: any player's 2, 3, 11 or 12 pays every Lucky Dice holder.</summary>
+        /// <summary>v144 Lucky Dice: the holder's own roll of 2, 3, 11 or 12 pays 1 least-held resource.</summary>
         public static bool LuckyDiceTriggers(int roll) => roll == 2 || roll == 3 || roll == 11 || roll == 12;
 
         /// <summary>The resource held least; ties are broken uniformly with <paramref name="rng"/> (one draw only on a tie).</summary>

@@ -143,10 +143,10 @@ namespace CatanRoguelike.Tests
             match.State.Config.VictoryPoints = me.VictoryPoints + 1;
             while (match.State.Phase != MatchPhase.Main) Step(match);
             me.QuestDone = false;
-            me.Quest = MatchQuestId.Metropolis; // 2 VP (v144): 3 cities and 6 buildings
+            me.Quest = MatchQuestId.Metropolis; // 2 VP (v144): 3 cities and 4 buildings
             var spots = match.UpgradableSettlements(0).ToList();
             foreach (var v in spots) match.State.Board.VertexBuildings[v] = (BuildingType.City, me.Owner);
-            int extra = 6 - spots.Count;
+            int extra = 4 - spots.Count;
             for (int i = 0; i < extra; i++)
             {
                 var v = match.ValidSetupSettlements().First();

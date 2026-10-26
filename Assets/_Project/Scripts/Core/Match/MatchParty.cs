@@ -145,8 +145,8 @@ namespace CatanRoguelike.Core.Match
                 (m, s) => Math.Min(1, OwnedHarbours(m, s)) + Math.Min(5, LongestRoad(m, s)), (m, s) => HarbourWithin(m, s, 3)),
             new MatchQuestDefinition(MatchQuestId.GrandArmy, "Grand Army", "Play 2 Knights.", 2, 2,
                 (m, s) => m.State.Seats[s].KnightsPlayed),
-            new MatchQuestDefinition(MatchQuestId.Metropolis, "Metropolis", "Own 3 cities and 3 more settlements or cities.", 2, 9,
-                (m, s) => Math.Min(3, m.CountCities(s)) + Math.Min(6, Buildings(m, s))),
+            new MatchQuestDefinition(MatchQuestId.Metropolis, "Metropolis", "Own 3 cities and 1 more settlement or city.", 2, 7,
+                (m, s) => Math.Min(3, m.CountCities(s)) + Math.Min(4, Buildings(m, s))),
             new MatchQuestDefinition(MatchQuestId.Highway, "Highway", "Build a continuous road of 6 or more.", 2, 6,
                 (m, s) => LongestRoad(m, s)),
             new MatchQuestDefinition(MatchQuestId.OreEmpire, "Ore Empire",
@@ -162,10 +162,10 @@ namespace CatanRoguelike.Core.Match
         public static readonly IReadOnlyList<MatchTraitDefinition> Traits = new[]
         {
             new MatchTraitDefinition(MatchTraitId.LuckyDice, "Lucky Dice",
-                "When anyone rolls 2, 3, 11 or 12, take 1 of the resource you hold least of (random among ties)."),
+                "When you roll 2, 3, 11 or 12, take 1 of the resource you hold least of (random among ties)."),
             new MatchTraitDefinition(MatchTraitId.HarbourPilot, "Harbour Pilot",
                 "Your first bank trade each turn is 2:1; the rest are 1 card cheaper (never below 2:1). Each settlement or city you build on a harbour lets you take 1 resource of your choice (setup settlements count)."),
-            new MatchTraitDefinition(MatchTraitId.ToughHide, "Tough Hide", "A 7 only makes you discard from 11 cards; every third 7 rolled gives you 1 random resource."),
+            new MatchTraitDefinition(MatchTraitId.ToughHide, "Tough Hide", "A 7 only makes you discard from 11 cards; every second 7 rolled (by anyone) gives you 1 random resource."),
             new MatchTraitDefinition(MatchTraitId.HeadStart, "Head Start", "Start with 1 of each resource. Until your first turn ends, a 7 can't make you discard and the robber can't steal from you. Your first production card is lost."),
             new MatchTraitDefinition(MatchTraitId.Granary, "Granary", "A 7 only makes you discard above 8 cards, and every 7 gives you 1 Grain."),
             new MatchTraitDefinition(MatchTraitId.RoadCrew, "Road Crew", "Every third road you build is free."),
