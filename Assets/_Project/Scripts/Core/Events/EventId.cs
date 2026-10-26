@@ -10,6 +10,23 @@ namespace CatanRoguelike.Core.Events
         GoodHarvest,
         BanditRaid,
         PortBlockade,
-        ResourceLevy
+        ResourceLevy,
+
+        // v131 (appended: saves store the enum as an int)
+        Earthquake,
+        ShiftingFortunes,
+        DoubleHarvest,
+        LeanTimes,
+        RoyalPatronage,
+        HarvestFestival,
+        Blight,
+        Squall,
+        Bountiful,
+        RestlessRobber,
+
+        // v141 pass-and-play shenanigans (match events only)
+        Decree,
+        NightMarket,
+        Chaos
     }
 }

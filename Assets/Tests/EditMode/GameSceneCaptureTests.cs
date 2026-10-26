@@ -1,10 +1,16 @@
 using System;
 using System.Reflection;
 using CatanRoguelike.Core;
+using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Data;
+using CatanRoguelike.Core.Leaders;
+using CatanRoguelike.Core.Map;
+using CatanRoguelike.Core.Progression;
+using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Game;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace CatanRoguelike.Tests
 {
@@ -41,6 +47,74 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
+        public void PrepareCanvasForCameraCapture_AssignsWorldCamera()
+        {
+            var root = new GameObject("ColonistCaptureHudTests_Root");
+            RenderTexture captureRt = null;
+            Camera camera = null;
+            Camera uiCamera = null;
+            try
+            {
+                var camGo = new GameObject("Camera");
+                camGo.transform.SetParent(root.transform);
+                camera = camGo.AddComponent<Camera>();
+
+                var hudGo = new GameObject("RunHud");
+                hudGo.transform.SetParent(root.transform);
+                var hud = hudGo.AddComponent<RunHudController>();
+
+                var game = new GameController(11, MapSize.Small);
+                game.SelectMap(MapSize.Small);
+                game.SelectLeader(LeaderId.Merchant);
+                game.ToggleDraftUnique(UniqueBuildingId.Sawmill);
+                game.ToggleDraftUnique(UniqueBuildingId.GuildHall);
+                game.ConfirmRunSetup();
+                game.State.Phase = GamePhase.DayPlayerActions;
+
+                hud.Initialize(game, new MetaProgression(), null);
+                Assert.IsNotNull(hud.HudCanvas, "RunHud should build a canvas during Initialize.");
+
+                captureRt = new RenderTexture(
+                    GameSceneCapture.CaptureWidth,
+                    GameSceneCapture.CaptureHeight,
+                    24,
+                    RenderTextureFormat.ARGB32);
+                camera.targetTexture = captureRt;
+                hud.PrepareCanvasForCameraCapture(camera);
+
+                var canvas = hud.HudCanvas;
+                Assert.IsNotNull(canvas, "HudCanvas should remain reachable after capture prep (canvas may be reparented).");
+                Assert.AreEqual(RenderMode.WorldSpace, canvas.renderMode);
+                Assert.IsNotNull(canvas.worldCamera);
+                Assert.AreEqual("HudCaptureUiCamera", canvas.worldCamera.name);
+                Assert.AreNotEqual(camera, canvas.worldCamera);
+                Assert.IsTrue(canvas.worldCamera.orthographic);
+                float expectedOrtho = GameSceneCapture.CaptureHeight * RunHudController.WorldCaptureCanvasUnitScale * 0.5f;
+                Assert.AreEqual(expectedOrtho, canvas.worldCamera.orthographicSize, 0.0001f);
+                Assert.AreEqual(RunHudController.HudCaptureUiLayer, canvas.gameObject.layer);
+                var canvasRect = canvas.GetComponent<RectTransform>();
+                Assert.AreEqual(GameSceneCapture.CaptureWidth, canvasRect.sizeDelta.x, 0.01f);
+                Assert.AreEqual(GameSceneCapture.CaptureHeight, canvasRect.sizeDelta.y, 0.01f);
+                uiCamera = canvas.worldCamera;
+            }
+            finally
+            {
+                if (camera != null)
+                    camera.targetTexture = null;
+                if (uiCamera != null)
+                    uiCamera.targetTexture = null;
+
+                if (captureRt != null)
+                {
+                    captureRt.Release();
+                    UnityEngine.Object.DestroyImmediate(captureRt);
+                }
+
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
         public void ApplyPoseForCapture_MovesCameraOffSceneDefault_WhenBoardHasData()
         {
             var root = new GameObject("GameSceneCaptureTests_Root");
@@ -63,12 +137,26 @@ namespace CatanRoguelike.Tests
                 tableCamera.ApplyPoseForCapture(GameSceneCapture.CaptureWidth, GameSceneCapture.CaptureHeight);
 
                 Assert.AreNotEqual(SceneDefaultCameraPosition, cameraGo.transform.position);
-                Assert.Greater(cameraGo.transform.position.y, SceneDefaultCameraPosition.y + 1f);
+                Vector3 boardCenter = GetTableLookPoint(tableCamera);
+                Vector3 toBoard = (boardCenter - cameraGo.transform.position).normalized;
+                float facingBoard = Vector3.Dot(cameraGo.transform.forward, toBoard);
+                Assert.Greater(facingBoard, 0.5f, "Capture pose should face the board center.");
+                Assert.Less(cameraGo.transform.position.z, boardCenter.z + 0.01f,
+                    "Table camera should sit on the −Z side (same as Play Mode default orbit).");
             }
             finally
             {
                 UnityEngine.Object.DestroyImmediate(root);
             }
+        }
+
+        private static Vector3 GetTableLookPoint(TableCamera tableCamera)
+        {
+            var field = typeof(TableCamera).GetField("lookTarget", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(field);
+            var lookTarget = field.GetValue(tableCamera) as Transform;
+            Vector3 center = lookTarget != null ? lookTarget.position : Vector3.zero;
+            return center + Vector3.up * 0.5f;
         }
 
         private static void SetPrivateField(object target, string fieldName, object value)

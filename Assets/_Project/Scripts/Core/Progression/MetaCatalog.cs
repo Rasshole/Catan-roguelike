@@ -131,6 +131,8 @@ namespace CatanRoguelike.Core.Progression
         {
             MapSize.Medium => MetaUnlockId.MediumMap,
             MapSize.Large => MetaUnlockId.LargeMap,
+            MapSize.Extended => MetaUnlockId.LargeMap,
+            MapSize.Huge => MetaUnlockId.LargeMap,
             _ => null
         };
 

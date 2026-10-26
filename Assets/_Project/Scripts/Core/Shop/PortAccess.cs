@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using CatanRoguelike.Core;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 
@@ -30,39 +31,24 @@ namespace CatanRoguelike.Core.Shop
         /// </summary>
         public static List<PortDefinition> DiscoverPorts(BoardState board)
         {
-            var edgeVertices = CollectBoardEdgeVertices(board);
-            var (specificTarget, genericTarget) = GetPortTargets(board.Tiles.Count);
+            int landTiles = board.Tiles.Values.Count(t => !t.IsFishTile || t.IsDesert);
+            var (specificTarget, genericTarget) = GetPortTargets(landTiles);
+            var ports = PortFrameLayout.DiscoverFramePorts(board, specificTarget, genericTarget);
+            return board.PortShuffleSeed is int seed ? ShuffleTypes(ports, seed) : ports;
+        }
 
-            var ports = new List<PortDefinition>();
-            var used = new HashSet<HexMath.Vertex>();
-
-            foreach (var resource in System.Enum.GetValues(typeof(ResourceType)).Cast<ResourceType>())
+        /// <summary>v146: seeded permutation of the harbour types (2:1 resources and 3:1) over the same positions.</summary>
+        public static List<PortDefinition> ShuffleTypes(List<PortDefinition> ports, int seed)
+        {
+            var types = ports.Select(p => p.SpecificResource).ToArray();
+            var rng = new System.Random(unchecked(seed * 131 + 0x5A7F0));
+            for (int i = types.Length - 1; i > 0; i--)
             {
-                if (ports.Count(p => !p.IsGeneric) >= specificTarget)
-                    break;
-
-                foreach (var vertex in edgeVertices)
-                {
-                    if (used.Contains(vertex)) continue;
-                    if (!VertexTouchesCoastalResource(board, vertex, resource)) continue;
-
-                    ports.Add(new PortDefinition(vertex, resource));
-                    used.Add(vertex);
-                    break;
-                }
+                int j = rng.Next(i + 1);
+                (types[i], types[j]) = (types[j], types[i]);
             }
 
-            var remaining = edgeVertices.Where(v => !used.Contains(v)).ToList();
-            int genericCount = System.Math.Min(genericTarget, remaining.Count);
-            for (int i = 0; i < genericCount; i++)
-            {
-                int idx = (i * remaining.Count) / genericCount;
-                var vertex = remaining[idx];
-                ports.Add(new PortDefinition(vertex, null));
-                used.Add(vertex);
-            }
-
-            return ports;
+            return ports.Select((p, i) => new PortDefinition(p.Vertex, types[i])).ToList();
         }
 
         private static (int specific, int generic) GetPortTargets(int tileCount) => tileCount switch
@@ -70,60 +56,60 @@ namespace CatanRoguelike.Core.Shop
             7 => (3, 2),
             13 => (4, 3),
             19 => (5, 4),
+            30 => (7, 4),
+            37 => (7, 5),
             _ => (System.Math.Min(5, tileCount / 2), System.Math.Max(1, tileCount / 6))
         };
 
-        private static List<HexMath.Vertex> CollectBoardEdgeVertices(BoardState board)
+        /// <summary>
+        /// v143: every corner a harbour serves. A harbour that sits in a sea slot is drawn as two piers onto both ends
+        /// of the coast edge facing that slot (classic Catan), so a building on EITHER pier corner uses it — before
+        /// v143 only the single discovery vertex counted, so a settlement on the other pier silently got nothing.
+        /// Always includes <see cref="PortDefinition.Vertex"/>.
+        /// </summary>
+        public static IReadOnlyList<HexMath.Vertex> ServedVertices(BoardState board, PortDefinition port)
         {
-            var seen = new HashSet<HexMath.Vertex>();
-            var edgeVertices = new List<HexMath.Vertex>();
-
-            foreach (var hex in board.Tiles.Values)
+            var v = VertexGraph.Canonicalize(port.Vertex);
+            var list = new List<HexMath.Vertex> { v };
+            if (board == null || !board.TryGetSeaSlotForPort(v, out var sea))
+                return list;
+            // Same edge choice as SeaFrameSlotLayout.TryGetHarborCoastEdge (what PortMarkerVisuals draws piers onto).
+            foreach (var hex in VertexGraph.GetHexesForVertex(v))
             {
-                if (!hex.IsCoastal) continue;
-
-                for (int c = 0; c < 6; c++)
+                if (!board.Tiles.ContainsKey(hex))
+                    continue;
+                for (int d = 0; d < 6; d++)
                 {
-                    var vertex = VertexGraph.Canonicalize(new HexMath.Vertex(hex.Coord, c));
-                    if (!seen.Add(vertex)) continue;
-                    if (!IsBoardEdgeVertex(board, vertex)) continue;
-                    edgeVertices.Add(vertex);
+                    if (HexMath.GetNeighbor(hex, d) != sea)
+                        continue;
+                    var edge = HexMath.GetEdgeFacing(hex, d);
+                    foreach (var end in new[] { VertexGraph.Canonicalize(edge.A), VertexGraph.Canonicalize(edge.B) })
+                        if (!list.Contains(end))
+                            list.Add(end);
+                    return list;
                 }
             }
 
-            edgeVertices.Sort(CompareVertices);
-            return edgeVertices;
+            return list;
         }
 
-        private static int CompareVertices(HexMath.Vertex a, HexMath.Vertex b)
+        /// <summary>v143: true when <paramref name="player"/> has a building on any corner the harbour serves.</summary>
+        public static bool PlayerControlsPort(BoardState board, PlayerId player, PortDefinition port)
         {
-            int cmp = a.Hex.Q.CompareTo(b.Hex.Q);
-            if (cmp != 0) return cmp;
-            cmp = a.Hex.R.CompareTo(b.Hex.R);
-            if (cmp != 0) return cmp;
-            return a.CornerIndex.CompareTo(b.CornerIndex);
-        }
-
-        private static bool VertexTouchesCoastalResource(BoardState board, HexMath.Vertex vertex,
-            ResourceType resource)
-        {
-            foreach (var hex in VertexGraph.GetHexesForVertex(vertex))
-            {
-                if (!board.Tiles.TryGetValue(hex, out var tile)) continue;
-                if (tile.IsCoastal && tile.Resource == resource)
+            foreach (var v in ServedVertices(board, port))
+                if (PlayerControlsVertex(board, player, v))
                     return true;
-            }
             return false;
         }
 
-        private static bool IsBoardEdgeVertex(BoardState board, HexMath.Vertex vertex)
+        /// <summary>v143: true when <paramref name="vertex"/> is one of the harbour's pier corners.</summary>
+        public static bool Serves(BoardState board, PortDefinition port, HexMath.Vertex vertex)
         {
-            int onBoard = 0;
-            foreach (var hex in VertexGraph.GetHexesForVertex(vertex))
-            {
-                if (board.Tiles.ContainsKey(hex)) onBoard++;
-            }
-            return onBoard <= 2;
+            vertex = VertexGraph.Canonicalize(vertex);
+            foreach (var v in ServedVertices(board, port))
+                if (v.Equals(vertex))
+                    return true;
+            return false;
         }
 
         public static bool PlayerControlsVertex(BoardState board, PlayerId player, HexMath.Vertex vertex)
@@ -136,7 +122,7 @@ namespace CatanRoguelike.Core.Shop
             IReadOnlyList<PortDefinition> ports, HexMath.Vertex? blockedPortVertex = null)
         {
             return ports.Any(p => p.SpecificResource == resource
-                && PlayerControlsVertex(board, player, p.Vertex)
+                && PlayerControlsPort(board, player, p)
                 && !IsPortVertexBlocked(p.Vertex, blockedPortVertex));
         }
 
@@ -144,7 +130,7 @@ namespace CatanRoguelike.Core.Shop
             HexMath.Vertex? blockedPortVertex = null)
         {
             return ports.Any(p => p.IsGeneric
-                && PlayerControlsVertex(board, player, p.Vertex)
+                && PlayerControlsPort(board, player, p)
                 && !IsPortVertexBlocked(p.Vertex, blockedPortVertex));
         }
 

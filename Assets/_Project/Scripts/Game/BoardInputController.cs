@@ -19,15 +19,19 @@ namespace CatanRoguelike.Game
         private GameController _controller;
         private Transform _highlightsRoot;
         private readonly List<GameObject> _highlights = new();
+        private readonly List<GameObject> _setupSpots = new();
+        private string _setupSpotsKey;
         private Vertex? _hoverVertex;
         private Edge? _hoverEdge;
-        private BuildMode _mode = BuildMode.Auto;
+        private BuildMode _mode = BuildMode.None;
+
+        public event System.Action PlacementCancelled;
 
         private static readonly Color ValidVertexColor = new(0.2f, 1f, 0.3f, 0.55f);
         private static readonly Color ValidEdgeColor = new(1f, 0.85f, 0.1f, 0.55f);
         private static readonly Color CityColor = new(1f, 0.5f, 0.9f, 0.6f);
 
-        private enum BuildMode { Auto, Settlement, Road, City }
+        private enum BuildMode { None, Auto, Settlement, Road, City }
 
         public void Initialize(GameController controller, BoardView view)
         {
@@ -45,16 +49,94 @@ namespace CatanRoguelike.Game
         {
             if (_controller == null || boardView == null) return;
             if (_controller.State.Winner.HasValue) return;
-            if (!IsPlayerBuildPhase()) return;
 
+            if (!_controller.State.IsSetupPhase
+                && _controller.State.Phase == GamePhase.DayPlayerActions
+                && (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1)))
+            {
+                if (_mode != BuildMode.None)
+                {
+                    _mode = BuildMode.None;
+                    ClearHighlights();
+                    PlacementCancelled?.Invoke();
+                }
+            }
+
+            if (_controller.State.Phase == GamePhase.DayPlaceRobberSeven)
+            {
+                UpdateRobberPlacementHighlights();
+                HandleRobberPlacementClick();
+                return;
+            }
+
+            if (!IsPlayerBuildPhase())
+            {
+                ClearSetupSpots();
+                return;
+            }
+
+            RefreshSetupSpots();
             UpdateHighlights();
             HandleClick();
         }
 
-        private bool IsPlayerBuildPhase() =>
-            _controller.State.RunSetupComplete
-            && (_controller.State.IsSetupPhase
-                || _controller.State.Phase == GamePhase.DayPlayerActions);
+        private HexCoord? _robberHoverHex;
+
+        private void UpdateRobberPlacementHighlights()
+        {
+            ClearHighlights();
+            _robberHoverHex = null;
+            var hit = RaycastBoardPoint();
+            if (!hit.HasValue || _controller == null)
+                return;
+
+            float scale = boardView.HexScale;
+            HexCoord? nearest = null;
+            float best = float.MaxValue;
+            foreach (var coord in _controller.State.Board.Tiles.Keys)
+            {
+                var (x, z) = HexMath.ToWorldPosition(coord, scale);
+                float d = (hit.Value.x - x) * (hit.Value.x - x) + (hit.Value.z - z) * (hit.Value.z - z);
+                if (d < best)
+                {
+                    best = d;
+                    nearest = coord;
+                }
+            }
+
+            if (!nearest.HasValue)
+                return;
+
+            _robberHoverHex = nearest;
+            var (hx, hz) = HexMath.ToWorldPosition(nearest.Value, scale);
+            var marker = PlacementMarkerVisuals.CreateSettlementGhost(
+                _highlightsRoot,
+                new Vector3(hx, 0f, hz),
+                new Color(0.2f, 0.85f, 1f, 0.65f),
+                boardView.TileHeight);
+            _highlights.Add(marker);
+        }
+
+        private void HandleRobberPlacementClick()
+        {
+            if (!Input.GetMouseButtonDown(0) || IsPointerOverUI())
+                return;
+            if (!_robberHoverHex.HasValue)
+                return;
+            _controller.PlaceRobberForSeven(_robberHoverHex.Value);
+        }
+
+        private bool IsPlayerBuildPhase()
+        {
+            if (!_controller.State.RunSetupComplete)
+                return false;
+            if (_controller.State.IsSetupPhase)
+                return true;
+            return _controller.State.Phase == GamePhase.DayPlayerActions && _mode != BuildMode.None;
+        }
+
+        private BuildMode ActiveMode =>
+            _controller.State.IsSetupPhase ? BuildMode.Auto : _mode;
 
         private void UpdateHighlights()
         {
@@ -68,7 +150,8 @@ namespace CatanRoguelike.Game
             float scale = boardView.HexScale;
             var player = PlayerId.Human;
 
-            if (_mode == BuildMode.City || (_mode == BuildMode.Auto && IsCityOnlyContext()))
+            var mode = ActiveMode;
+            if (mode == BuildMode.City || (mode == BuildMode.Auto && IsCityOnlyContext()))
             {
                 var cities = _controller.GetUpgradeableCities(player).ToList();
                 _hoverVertex = FindNearestVertex(hit.Value, cities, scale);
@@ -77,7 +160,7 @@ namespace CatanRoguelike.Game
                 return;
             }
 
-            if (_mode == BuildMode.Settlement || ShouldPickSettlement())
+            if (mode == BuildMode.Settlement || ShouldPickSettlement())
             {
                 var settlements = _controller.GetValidSettlements(player).ToList();
                 _hoverVertex = FindNearestVertex(hit.Value, settlements, scale);
@@ -85,7 +168,7 @@ namespace CatanRoguelike.Game
                     SpawnVertexMarker(_hoverVertex.Value, ValidVertexColor, scale, isCity: false);
             }
 
-            if (_mode == BuildMode.Road || ShouldPickRoad())
+            if (mode == BuildMode.Road || ShouldPickRoad())
             {
                 var roads = _controller.GetValidRoads(player).ToList();
                 _hoverEdge = FindNearestEdge(hit.Value, roads, scale);
@@ -93,7 +176,7 @@ namespace CatanRoguelike.Game
                     SpawnEdgeMarker(_hoverEdge.Value, ValidEdgeColor, scale);
             }
 
-            if (_mode == BuildMode.Auto && _controller.State.Phase == GamePhase.DayPlayerActions)
+            if (mode == BuildMode.Auto && _controller.State.Phase == GamePhase.DayPlayerActions)
             {
                 var settlements = _controller.GetValidSettlements(player).ToList();
                 var roads = _controller.GetValidRoads(player).ToList();
@@ -123,18 +206,20 @@ namespace CatanRoguelike.Game
 
         private bool ShouldPickSettlement()
         {
-            if (_mode == BuildMode.Road) return false;
+            var mode = ActiveMode;
+            if (mode == BuildMode.Road) return false;
             if (_controller.State.IsSetupPhase)
                 return IsSettlementSetupPhase();
-            return _mode == BuildMode.Settlement;
+            return mode == BuildMode.Settlement;
         }
 
         private bool ShouldPickRoad()
         {
-            if (_mode == BuildMode.Settlement) return false;
+            var mode = ActiveMode;
+            if (mode == BuildMode.Settlement) return false;
             if (_controller.State.IsSetupPhase)
                 return IsRoadSetupPhase();
-            return _mode == BuildMode.Road;
+            return mode == BuildMode.Road;
         }
 
         private bool IsSettlementSetupPhase()
@@ -158,7 +243,7 @@ namespace CatanRoguelike.Game
 
             if (_hoverVertex.HasValue)
             {
-                if (_mode == BuildMode.City)
+                if (ActiveMode == BuildMode.City)
                     _controller.UpgradeCity(_hoverVertex.Value, player);
                 else if (ShouldPickSettlement())
                     _controller.PlaceSettlement(_hoverVertex.Value, player);
@@ -233,15 +318,76 @@ namespace CatanRoguelike.Game
             return best;
         }
 
+        /// <summary>
+        /// v143: during setup every valid corner (or road edge) shows a small pulsing circle/dash in the human's colour
+        /// so the choices read at a glance without a field of ghost houses.
+        /// </summary>
+        private void RefreshSetupSpots()
+        {
+            if (!_controller.State.IsSetupPhase)
+            {
+                ClearSetupSpots();
+                return;
+            }
+
+            bool road = IsRoadSetupPhase();
+            bool settlement = IsSettlementSetupPhase();
+            string key = _controller.State.Phase.ToString() + (road ? _controller.GetValidRoads(PlayerId.Human).Count()
+                : settlement ? _controller.GetValidSettlements(PlayerId.Human).Count() : 0);
+            if (key == _setupSpotsKey && _setupSpots.Count > 0)
+                return;
+            ClearSetupSpots();
+            _setupSpotsKey = key;
+            float scale = boardView.HexScale;
+            float top = boardView.TileHeight;
+            var color = Color.Lerp(PlayerPieceVisuals.ColorForPlayer(PlayerId.Human), Color.white, 0.12f);
+            if (settlement)
+            {
+                foreach (var v in _controller.GetValidSettlements(PlayerId.Human))
+                {
+                    var (x, z) = HexMath.VertexToWorldPosition(v, scale);
+                    _setupSpots.Add(PlacementMarkerVisuals.CreateSpotCircle(_highlightsRoot, new Vector3(x, 0f, z), color,
+                        top, scale));
+                }
+            }
+            else if (road)
+            {
+                foreach (var e in _controller.GetValidRoads(PlayerId.Human))
+                {
+                    var (mx, mz) = HexMath.EdgeMidpoint(e, scale);
+                    var (ax, az) = HexMath.VertexToWorldPosition(e.A, scale);
+                    var (bx, bz) = HexMath.VertexToWorldPosition(e.B, scale);
+                    float length = Vector3.Distance(new Vector3(ax, 0, az), new Vector3(bx, 0, bz));
+                    _setupSpots.Add(PlacementMarkerVisuals.CreateRoadDash(_highlightsRoot, new Vector3(mx, 0f, mz),
+                        HexMath.EdgeAngle(e), length, color, top, scale));
+                }
+            }
+        }
+
+        private void ClearSetupSpots()
+        {
+            foreach (var h in _setupSpots)
+                if (h != null) ColonistSceneDestroy.SafeDestroy(h);
+            _setupSpots.Clear();
+            _setupSpotsKey = null;
+        }
+
+        public int SetupSpotCountForTests => _setupSpots.Count;
+
+        private Color HoverSpotColor() =>
+            Color.Lerp(PlayerPieceVisuals.ColorForPlayer(PlayerId.Human), Color.white, 0.45f);
+
         private void SpawnVertexMarker(Vertex v, Color color, float scale, bool isCity)
         {
             var (x, z) = HexMath.VertexToWorldPosition(v, scale);
             var position = new Vector3(x, 0f, z);
             float hexTopY = boardView.TileHeight;
 
+            // v143: a settlement spot is a larger circle (not a ghost house); city upgrades keep the city preview.
             GameObject go = isCity
                 ? PlacementMarkerVisuals.CreateCityGhost(_highlightsRoot, position, color, hexTopY)
-                : PlacementMarkerVisuals.CreateSettlementGhost(_highlightsRoot, position, color, hexTopY);
+                : PlacementMarkerVisuals.CreateSpotCircle(_highlightsRoot, position, HoverSpotColor(), hexTopY, scale,
+                    1.55f, pulse: false);
             _highlights.Add(go);
         }
 
@@ -252,20 +398,23 @@ namespace CatanRoguelike.Game
             var (bx, bz) = HexMath.VertexToWorldPosition(e.B, scale);
             float length = Vector3.Distance(new Vector3(ax, 0, az), new Vector3(bx, 0, bz));
 
-            var go = PlacementMarkerVisuals.CreateRoadGhost(
+            var go = PlacementMarkerVisuals.CreateRoadDash(
                 _highlightsRoot,
                 new Vector3(mx, 0f, mz),
                 HexMath.EdgeAngle(e),
                 length,
-                color,
-                boardView.TileHeight);
+                HoverSpotColor(),
+                boardView.TileHeight,
+                scale,
+                1.45f,
+                pulse: false);
             _highlights.Add(go);
         }
 
         private void ClearHighlights()
         {
             foreach (var h in _highlights)
-                if (h != null) Destroy(h);
+                if (h != null) ColonistSceneDestroy.SafeDestroy(h);
             _highlights.Clear();
         }
 
@@ -273,5 +422,8 @@ namespace CatanRoguelike.Game
         public void SetBuildModeRoad() => _mode = BuildMode.Road;
         public void SetBuildModeCity() => _mode = BuildMode.City;
         public void SetBuildModeAuto() => _mode = BuildMode.Auto;
+        public void CancelBuildMode() => _mode = BuildMode.None;
+
+        public bool IsPlacementModeActive => _mode != BuildMode.None;
     }
 }

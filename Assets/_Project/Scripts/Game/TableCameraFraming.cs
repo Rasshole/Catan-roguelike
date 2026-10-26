@@ -11,8 +11,8 @@ namespace CatanRoguelike.Game
     public static class TableCameraFraming
     {
         public const float DistanceToRadiusRatio = 2.0f;
-        public const float HeightToDistanceRatio = 7f / 8f;
-        public const float DefaultMarginFactor = 1.08f;
+        public const float HeightToDistanceRatio = 0.72f;
+        public const float DefaultMarginFactor = 0.82f;
         public const float MinOrbitDistance = 2.4f;
 
         /// <summary>World thickness of the decorative table disk under the hex cluster.</summary>
@@ -27,7 +27,7 @@ namespace CatanRoguelike.Game
         public const float TableSurfaceLocalY = -0.08f;
 
         /// <summary>Multiplier on the wood disk world radius for the sea ring (not camera framing).</summary>
-        public const float WaterSurfacePadFactor = 1.55f;
+        public const float WaterSurfacePadFactor = 1.30f;
 
         /// <summary>Maximum sea ring radius as a multiple of the wood disk world radius.</summary>
         public const float MaxWaterToWoodRadiusRatio = 1.75f;
@@ -39,7 +39,7 @@ namespace CatanRoguelike.Game
         public const float WaterSurfaceLocalY = -0.09f;
 
         /// <summary>Multiplier on the sea disk world radius for the felt tablecloth (not camera framing).</summary>
-        public const float FeltSurfacePadFactor = 1.45f;
+        public const float FeltSurfacePadFactor = 1.18f;
 
         /// <summary>Maximum felt disk radius as a multiple of the sea disk world radius.</summary>
         public const float MaxFeltToWaterRadiusRatio = 1.6f;
@@ -60,14 +60,15 @@ namespace CatanRoguelike.Game
 
         public static float ComputeBoardBoundingRadius(IEnumerable<HexCoord> coords, float hexScale)
         {
-            float hexOuter = hexScale * HexMath.OuterRadius;
             float maxRadius = 0f;
 
             foreach (var coord in coords)
             {
-                var (x, z) = HexMath.ToWorldPosition(coord, hexScale);
-                float centerDistance = Mathf.Sqrt(x * x + z * z);
-                maxRadius = Mathf.Max(maxRadius, centerDistance + hexOuter);
+                for (int corner = 0; corner < 6; corner++)
+                {
+                    var (vx, vz) = HexMath.VertexToWorldPosition(coord, corner, hexScale);
+                    maxRadius = Mathf.Max(maxRadius, Mathf.Sqrt(vx * vx + vz * vz));
+                }
             }
 
             return maxRadius;
@@ -129,6 +130,49 @@ namespace CatanRoguelike.Game
             ComputeCylinderDiskScale(
                 ComputeFeltDiskWorldRadius(boardBoundingRadius),
                 FeltSurfaceThinY);
+
+        public static Vector3 ComputeDiskScaleForWorldRadius(float worldRadius, float thinY) =>
+            ComputeCylinderDiskScale(worldRadius, thinY);
+
+        public static float ComputeColonistSandInnerRadius(float boardBoundingRadius) =>
+            boardBoundingRadius;
+
+        public static float ComputeColonistSandOuterRadius(float boardBoundingRadius, float hexScale, float beachWidth) =>
+            boardBoundingRadius + beachWidth;
+
+        public struct ColonistSurfaceLayout
+        {
+            public float HexBottomY;
+            public float SandCenterY;
+            public float SandTopY;
+            public float SandInnerRadius;
+            public float SandOuterRadius;
+            public float SandThicknessY;
+        }
+
+        /// <summary>Ocean below sand below hex prism base (top-down camera sees hex tops first).</summary>
+        public static ColonistSurfaceLayout ComputeColonistSurfaceLayout(
+            float boardBoundingRadius,
+            float hexPrismHeightScale,
+            float hexScale,
+            float beachWidth)
+        {
+            float sandThin = WaterSurfaceThinY * 0.9f;
+            const float gap = 0.01f;
+            float hexBottom = -hexPrismHeightScale;
+            float sandHalf = sandThin / 2f;
+            float sandCenterY = hexBottom - gap - sandHalf;
+
+            return new ColonistSurfaceLayout
+            {
+                HexBottomY = hexBottom,
+                SandCenterY = sandCenterY,
+                SandTopY = sandCenterY + sandHalf,
+                SandInnerRadius = ComputeColonistSandInnerRadius(boardBoundingRadius),
+                SandOuterRadius = ComputeColonistSandOuterRadius(boardBoundingRadius, hexScale, beachWidth),
+                SandThicknessY = sandThin
+            };
+        }
 
         private static Vector3 ComputeCylinderDiskScale(float worldRadius, float thinY)
         {

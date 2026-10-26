@@ -105,6 +105,8 @@ namespace CatanRoguelike.Editor
             EnsureTodayRolls(game);
             if (game.State.Phase == GamePhase.NightPlayCard)
                 game.SkipNightCard();
+                if (game.State.Phase == GamePhase.DayProduction)
+                    game.ResolveDayProduction();
         }
 
         [MenuItem(Menu + "Auto-Play One Day")]
@@ -253,6 +255,12 @@ namespace CatanRoguelike.Editor
                 return;
             }
 
+            if (phase == GamePhase.RunSelectCivilization && game.State.CivilizationOffer.Count > 0)
+            {
+                game.ChooseCivilization(game.State.CivilizationOffer[0]);
+                return;
+            }
+
             if (phase == GamePhase.RunSelectDraft)
             {
                 if (game.State.DraftedUniques.Count < RunProgression.DraftPickCount)
@@ -279,6 +287,8 @@ namespace CatanRoguelike.Editor
             {
                 EnsureTodayRolls(game);
                 game.SkipNightCard();
+                if (game.State.Phase == GamePhase.DayProduction)
+                    game.ResolveDayProduction();
                 return;
             }
 

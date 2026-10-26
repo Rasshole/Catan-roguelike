@@ -17,9 +17,13 @@ namespace CatanRoguelike.Core.Turn
         NightPlayCard,
         NightAiPlan,
         DayProduction,
+        DayDiscardForSeven,
+        DayPlaceRobberSeven,
         DayPlayerActions,
         DayAiTurn,
         LevelUpChoice,
-        GameOver
+        GameOver,
+        /// <summary>v134: pick 1 of 3 offered civilizations, each led by its leader (after the map, before the draft).</summary>
+        RunSelectCivilization
     }
 }

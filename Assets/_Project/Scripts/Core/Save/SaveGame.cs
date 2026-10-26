@@ -7,6 +7,7 @@ using CatanRoguelike.Core.Yield;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Cards;
+using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
@@ -145,7 +146,22 @@ namespace CatanRoguelike.Core.Save
                     : null,
                 EventStoneDouble = state.EventStoneDouble,
                 EventShopBonus = state.EventShopBonus,
-                Board = BuildBoardSaveData(state.Board)
+                Civilization = state.Civilization,
+                CivilizationOffer = new List<CivilizationId>(state.CivilizationOffer),
+                EventProductionPercent = state.EventProductionPercent,
+                EventBlockedResource = state.EventBlockedResource,
+                EventBonusResource = state.EventBonusResource,
+                EventFishStorm = state.EventFishStorm,
+                EventDetail = state.EventDetail,
+                EventDay = state.EventDay,
+                Board = BuildBoardSaveData(state.Board),
+                FishermenOfCatanEnabled = state.FishermenOfCatanEnabled,
+                FishermenRunSeed = state.FishermenRunSeed,
+                PlayerFish = state.PlayerFish,
+                AiFish = state.AiFish,
+                FishBagRemaining = state.FishBagRemaining != null && state.FishBagRemaining.Count > 0
+                    ? new List<int>(state.FishBagRemaining)
+                    : null
             };
         }
 
@@ -215,6 +231,22 @@ namespace CatanRoguelike.Core.Save
                 : null;
             state.EventStoneDouble = data.EventStoneDouble;
             state.EventShopBonus = data.EventShopBonus;
+            state.Civilization = data.Civilization;
+            state.CivilizationOffer.Clear();
+            state.CivilizationOffer.AddRange(data.CivilizationOffer ?? new List<CivilizationId>());
+            state.EventProductionPercent = data.EventProductionPercent ?? 100;
+            state.EventBlockedResource = data.EventBlockedResource;
+            state.EventBonusResource = data.EventBonusResource;
+            state.EventFishStorm = data.EventFishStorm;
+            state.EventDetail = data.EventDetail ?? "";
+            state.EventDay = data.EventDay ?? -1;
+            state.FishermenOfCatanEnabled = data.FishermenOfCatanEnabled;
+            state.FishermenRunSeed = data.FishermenRunSeed;
+            state.PlayerFish = data.PlayerFish;
+            state.AiFish = data.AiFish;
+            state.FishBagRemaining = data.FishBagRemaining != null
+                ? new List<int>(data.FishBagRemaining)
+                : new List<int>();
 
             ApplyBoardSaveData(state.Board, data.Board);
         }
@@ -230,19 +262,18 @@ namespace CatanRoguelike.Core.Save
             };
 
             foreach (var tile in board.Tiles.Values)
+                data.Tiles.Add(ToHexTileSaveData(tile));
+
+            foreach (var tile in board.SeaFishGrounds.Values)
+                data.SeaFishGrounds.Add(ToHexTileSaveData(tile));
+
+            foreach (var kvp in board.PortVertexToSeaSlot)
             {
-                data.Tiles.Add(new HexTileSaveData
+                data.PortSeaSlots.Add(new PortSeaSlotSaveData
                 {
-                    Q = tile.Coord.Q,
-                    R = tile.Coord.R,
-                    Resource = tile.Resource,
-                    HasRobber = tile.HasRobber,
-                    Building = tile.Building,
-                    Owner = tile.Owner,
-                    VertexIndex = tile.VertexIndex,
-                    IsCoastal = tile.IsCoastal,
-                    IsDesert = tile.IsDesert,
-                    NumberToken = tile.NumberToken
+                    Vertex = ToVertexSaveData(kvp.Key),
+                    SeaQ = kvp.Value.Q,
+                    SeaR = kvp.Value.R
                 });
             }
 
@@ -275,20 +306,7 @@ namespace CatanRoguelike.Core.Save
         {
             var board = new BoardState { DayNumber = data.DayNumber };
 
-            foreach (var tileData in data.Tiles ?? new List<HexTileSaveData>())
-            {
-                var coord = new HexCoord(tileData.Q, tileData.R);
-                var tile = new HexTileData(coord, tileData.Resource, tileData.IsCoastal)
-                {
-                    HasRobber = tileData.HasRobber,
-                    Building = tileData.Building,
-                    Owner = tileData.Owner,
-                    VertexIndex = tileData.VertexIndex,
-                    IsDesert = tileData.IsDesert,
-                    NumberToken = tileData.NumberToken
-                };
-                board.Tiles[coord] = tile;
-            }
+            RestoreBoardTiles(board, data);
 
             foreach (var roadData in data.Roads ?? new List<RoadSaveData>())
                 board.Roads[ToEdge(roadData.Edge)] = roadData.Owner;
@@ -311,25 +329,14 @@ namespace CatanRoguelike.Core.Save
         private static void ApplyBoardSaveData(BoardState board, BoardSaveData data)
         {
             board.Tiles.Clear();
+            board.SeaFishGrounds.Clear();
+            board.PortVertexToSeaSlot.Clear();
             board.Roads.Clear();
             board.VertexBuildings.Clear();
             board.DisabledRoads.Clear();
             board.DayNumber = data.DayNumber;
 
-            foreach (var tileData in data.Tiles ?? new List<HexTileSaveData>())
-            {
-                var coord = new HexCoord(tileData.Q, tileData.R);
-                var tile = new HexTileData(coord, tileData.Resource, tileData.IsCoastal)
-                {
-                    HasRobber = tileData.HasRobber,
-                    Building = tileData.Building,
-                    Owner = tileData.Owner,
-                    VertexIndex = tileData.VertexIndex,
-                    IsDesert = tileData.IsDesert,
-                    NumberToken = tileData.NumberToken
-                };
-                board.Tiles[coord] = tile;
-            }
+            RestoreBoardTiles(board, data);
 
             foreach (var roadData in data.Roads ?? new List<RoadSaveData>())
                 board.Roads[ToEdge(roadData.Edge)] = roadData.Owner;
@@ -347,7 +354,6 @@ namespace CatanRoguelike.Core.Save
                 board.PlaceRobber(ToHexCoord(data.RobberTile));
             else
             {
-                // Clear robber marker when absent in save.
                 foreach (var tile in board.Tiles.Values)
                     tile.HasRobber = false;
             }
@@ -434,5 +440,56 @@ namespace CatanRoguelike.Core.Save
 
         private static Edge ToEdge(EdgeSaveData data) =>
             new Edge(ToVertex(data.A), ToVertex(data.B));
+
+        private static HexTileSaveData ToHexTileSaveData(HexTileData tile) => new()
+        {
+            Q = tile.Coord.Q,
+            R = tile.Coord.R,
+            Resource = tile.Resource,
+            HasRobber = tile.HasRobber,
+            Building = tile.Building,
+            Owner = tile.Owner,
+            VertexIndex = tile.VertexIndex,
+            IsCoastal = tile.IsCoastal,
+            IsDesert = tile.IsDesert,
+            NumberToken = tile.NumberToken,
+            IsFishTile = tile.IsFishTile,
+            FishValue = tile.FishValue
+        };
+
+        private static HexTileData FromHexTileSaveData(HexTileSaveData tileData)
+        {
+            var coord = new HexCoord(tileData.Q, tileData.R);
+            return new HexTileData(coord, tileData.Resource, tileData.IsCoastal)
+            {
+                HasRobber = tileData.HasRobber,
+                Building = tileData.Building,
+                Owner = tileData.Owner,
+                VertexIndex = tileData.VertexIndex,
+                IsDesert = tileData.IsDesert,
+                NumberToken = tileData.NumberToken,
+                IsFishTile = tileData.IsFishTile,
+                FishValue = tileData.FishValue
+            };
+        }
+
+        private static void RestoreBoardTiles(BoardState board, BoardSaveData data)
+        {
+            foreach (var tileData in data.Tiles ?? new List<HexTileSaveData>())
+            {
+                var tile = FromHexTileSaveData(tileData);
+                if (BoardState.IsSeaFishGround(tile))
+                    board.SeaFishGrounds[tile.Coord] = tile;
+                else
+                    board.Tiles[tile.Coord] = tile;
+            }
+
+            foreach (var tileData in data.SeaFishGrounds ?? new List<HexTileSaveData>())
+                board.SeaFishGrounds[new HexCoord(tileData.Q, tileData.R)] = FromHexTileSaveData(tileData);
+
+            board.PortVertexToSeaSlot.Clear();
+            foreach (var slot in data.PortSeaSlots ?? new List<PortSeaSlotSaveData>())
+                board.PortVertexToSeaSlot[ToVertex(slot.Vertex)] = new HexCoord(slot.SeaQ, slot.SeaR);
+        }
     }
 }

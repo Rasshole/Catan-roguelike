@@ -8,5 +8,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/Game.unity
     guid: e60e94ec1e55db9fc95139a27449a25f
+  - enabled: 1
+    path: Assets/_Project/Scenes/ColonistStylePrototype.unity
+    guid: d7a8cd9d1bb7425a788c138596baeece
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

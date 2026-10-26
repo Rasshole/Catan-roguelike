@@ -43,6 +43,15 @@ xvfb-run -a "$UNITY_EDITOR" -runTests -batchmode -projectPath . -testPlatform Pl
 
 Smoke: `GameSceneSmokeTests` loader `Game.unity` og tjekker `GameManager` / `BoardView` / `PlaceholderUI` + controller efter Start.
 
+### Colonist-style prototype scene
+
+| Kommando | Betydning |
+|----------|-----------|
+| **Catan Roguelike → Build Colonist Style Prototype Scene** | Gemmer `Assets/_Project/Scenes/ColonistStylePrototype.unity` (samme wiring som `Setup Game Scene` + `RunHudController`). |
+| `Assets/_Project/Scenes/ColonistStylePrototype.unity` | Committed snapshot til visuel QA uden at overskrive `Game.unity` manuelt. |
+
+`GameManager` tilføjer `RunHudController` automatisk ved Play hvis komponenten mangler.
+
 Play harness: `GameScenePlayTests` driver run select → setup → første dag via `GameManager.Controller` (ingen GUI-klik).
 
 ## Game-view screenshot (`GameViewCapture`)
@@ -55,9 +64,22 @@ Editor CLI + menu (`Assets/_Project/Scripts/Editor/GameViewCapture.cs`) and shar
 |----------|-----------|
 | **Catan Roguelike → Capture Game View Screenshot** | MenuItem; efterlader Editoren åben |
 | `CaptureAndQuit` | `-executeMethod` til batchmode/CI; edit-mode capture; `EditorApplication.Exit(0)` ved success |
-| PlayMode test `GameScene_CaptureGameView_WritesPng` | `unity test --mode PlayMode` — alternativ Linux screenshot path med rigtig player loop |
+| `CaptureColonistAndQuit` | Samme som ovenstående, men åbner `ColonistStylePrototype.unity` og binder HUD-canvas til kamera (uGUI i PNG) |
+| **Catan Roguelike → Capture Colonist Prototype Screenshot** | MenuItem for colonist-prototype + HUD |
+| PlayMode test `GameScene_CaptureGameView_WritesPng` | `unity test --mode PlayMode` — skriver `GAME_VIEW_SHOT` (Game.unity, board uden colonist HUD) |
+| PlayMode test `ColonistPrototype_CaptureWithHud_WritesPng` | Skriver `COLONIST_HUD_SHOT` / `.colonist.png` — colonist prototype + HUD composite |
 
 Standard PNG-sti: `/workspace/game-view.png`. Override med miljøvariabel `GAME_VIEW_SHOT` eller `GameSceneCapture.DefaultOutputPath`.
+
+**Colonist HUD capture (PlayMode)** skriver til en **anden** sti end `GameScene_CaptureGameView_WritesPng`, så begge tests kan køre i samme PlayMode-run uden at overskrive hinanden:
+
+| Variabel | Betydning |
+|----------|-----------|
+| `COLONIST_HUD_SHOT` | Fuld sti til colonist HUD PNG (anbefalet i CI) |
+| (fallback) | `GAME_VIEW_SHOT` + suffiks `.colonist.png` (fx `/tmp/game-view.png.colonist.png`) |
+| (ingen env) | `/workspace/game-view.png.colonist.png` |
+
+Board-only debug: `{colonist-sti}.board.png`. Game-scene test bruger stadig kun `GAME_VIEW_SHOT`.
 
 ### Editor-menu (interaktiv)
 

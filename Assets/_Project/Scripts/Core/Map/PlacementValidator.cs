@@ -20,9 +20,10 @@ namespace CatanRoguelike.Core.Map
                 return false;
 
             // Catan distance rule: no settlement within 2 edges (adjacent vertices forbidden)
-            foreach (var existing in board.VertexBuildings.Keys)
+            // (v145: checks the 3 neighbouring corners instead of a search to every building — same rule, far cheaper.)
+            foreach (var next in VertexGraph.GetAdjacentVertices(vertex))
             {
-                if (VertexGraph.VertexDistance(vertex, existing) < 2)
+                if (board.VertexBuildings.ContainsKey(VertexGraph.Canonicalize(next)))
                     return false;
             }
 
@@ -39,6 +40,10 @@ namespace CatanRoguelike.Core.Map
                 return false;
 
             if (!IsEdgeOnBoard(board, edge))
+                return false;
+
+            // v145 Seafarers: roads need land on one side, and a ship already holds its edge.
+            if (board.IsSeafarers && (board.Ships.ContainsKey(edge) || !ShipRules.BordersLand(board, edge)))
                 return false;
 
             if (setupPhase)
@@ -93,6 +98,9 @@ namespace CatanRoguelike.Core.Map
                 var edge = VertexGraph.GetEdgeBetween(vertex, adjacent);
                 if (board.Roads.TryGetValue(edge, out var owner) && owner == player
                     && !board.DisabledRoads.Contains(edge))
+                    return true;
+                // v145 Seafarers: a ship line also carries settlers to a new coast.
+                if (board.Ships.TryGetValue(edge, out var shipOwner) && shipOwner == player)
                     return true;
             }
 

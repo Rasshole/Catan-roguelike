@@ -17,7 +17,7 @@ namespace CatanRoguelike.Core.Yield
         public Dictionary<ResourceType, int> RollNightly(int maxRoll = 2)
         {
             var rolls = new Dictionary<ResourceType, int>();
-            foreach (ResourceType resource in Enum.GetValues(typeof(ResourceType)))
+            foreach (ResourceType resource in ResourceTypes.Productive)
                 rolls[resource] = RollSingle(maxRoll);
 
             ApplyGlobalCaps(rolls, maxRoll);
@@ -34,7 +34,7 @@ namespace CatanRoguelike.Core.Yield
             for (int pass = 1; pass < rollPasses; pass++)
             {
                 var extra = RollNightly(maxRoll);
-                foreach (ResourceType resource in Enum.GetValues(typeof(ResourceType)))
+                foreach (ResourceType resource in ResourceTypes.Productive)
                     combined[resource] += extra[resource];
                 ApplyGlobalCaps(combined, maxRoll);
             }

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
 
@@ -92,12 +93,12 @@ namespace CatanRoguelike.Core.Shop
             int afterEvent = deal.GiveAmount - state.EventShopBonus;
             bool eventActive = state.EventShopBonus > 0 && afterEvent < deal.GiveAmount;
 
-            bool merchantActive = player == PlayerId.Human && state.Leader == LeaderId.Merchant;
+            bool merchantActive = player == PlayerId.Human && LeaderTraits.HasArchetypePassive(state, LeaderId.Merchant);
             int afterMerchant = merchantActive ? Math.Max(2, afterEvent - 1) : afterEvent;
 
             bool perkActive = player == PlayerId.Human
                 && state.HasPerk(LevelUpPerkId.PortDiscount)
-                && state.Ports.Any(p => PortAccess.PlayerControlsVertex(state.Board, player, p.Vertex));
+                && state.Ports.Any(p => PortAccess.PlayerControlsPort(state.Board, player, p));
             int afterPerk = perkActive ? Math.Max(2, afterMerchant - 1) : afterMerchant;
 
             if (perkActive && afterPerk < afterMerchant)

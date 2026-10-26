@@ -1,13 +1,17 @@
+using System;
 using System.Collections.Generic;
 using CatanRoguelike.Core.Data;
 using CatanRoguelike.Core.Buildings;
 using CatanRoguelike.Core.Cards;
+using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Events;
 using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Shop;
 using CatanRoguelike.Core.Turn;
 using CatanRoguelike.Core.Hex;
+using CatanRoguelike.Core.Trade;
+using CatanRoguelike.Core.UI;
 
 namespace CatanRoguelike.Core
 {
@@ -16,6 +20,11 @@ namespace CatanRoguelike.Core
         public BoardState Board { get; private set; }
         public MapSize MapSize { get; set; } = MapSize.Small;
         public GamePhase Phase { get; set; } = GamePhase.RunSelectMap;
+        public bool FishermenOfCatanEnabled { get; set; }
+        public int FishermenRunSeed { get; set; }
+        public int PlayerFish { get; set; }
+        public int AiFish { get; set; }
+        public List<int> FishBagRemaining { get; set; } = new();
 
         public ResourceBundle PlayerInventory { get; set; }
         public ResourceBundle AiInventory { get; set; }
@@ -65,6 +74,10 @@ namespace CatanRoguelike.Core
         public List<UniqueBuildingId> DraftedUniques { get; } = new();
         public bool RunSetupComplete { get; set; }
 
+        // Civilization (v131): human only. None = not chosen / pick disabled.
+        public CivilizationId Civilization { get; set; } = CivilizationId.None;
+        public List<CivilizationId> CivilizationOffer { get; } = new();
+
         // Level-ups (every 5 days, max 3)
         public List<LevelUpPerkId> AcquiredPerks { get; } = new();
         public List<LevelUpPerkId> PendingLevelUpChoices { get; } = new();
@@ -87,7 +100,27 @@ namespace CatanRoguelike.Core
         public bool EventStoneDouble { get; set; }
         public int EventShopBonus { get; set; }
 
-        public bool IsSetupPhase => Phase <= GamePhase.SetupPlayerRoad2;
+        // v131 data-driven events (cleared at end of day unless the effect is permanent).
+        /// <summary>Production multiplier for today in percent (100 = normal, 200 = double, 50 = half).</summary>
+        public int EventProductionPercent { get; set; } = 100;
+        public ResourceType? EventBlockedResource { get; set; }
+        public ResourceType? EventBonusResource { get; set; }
+        public bool EventFishStorm { get; set; }
+        /// <summary>What exactly happened (e.g. "8 on Pasture swapped with 3 on Forest").</summary>
+        public string EventDetail { get; set; } = "";
+        /// <summary>Day the active event was announced (the HUD shows its card once per event).</summary>
+        public int EventDay { get; set; } = -1;
+        public List<HexCoord> EventHighlightHexes { get; } = new();
+
+        public List<GameLogEntry> Log { get; } = new();
+        public BankStock Bank { get; } = new BankStock();
+        public int PendingSevenDiscard { get; set; }
+        public PlayerTradeOffer? PendingPlayerTrade { get; set; }
+        public IReadOnlyList<AiTradeResponse> PendingAiTradeResponses { get; set; } = Array.Empty<AiTradeResponse>();
+        public AiIncomingTradeOffer? IncomingAiTrade { get; set; }
+        public string ToastMessage { get; set; }
+
+        public bool IsSetupPhase => Phase <= GamePhase.SetupPlayerRoad2 || Phase == GamePhase.RunSelectCivilization;
 
         public bool IsNightPhase => Phase == GamePhase.NightPlayCard
             || Phase == GamePhase.NightRoll
@@ -140,6 +173,8 @@ namespace CatanRoguelike.Core
             Leader = LeaderId.Merchant;
             DraftedUniques.Clear();
             RunSetupComplete = false;
+            Civilization = CivilizationId.None;
+            CivilizationOffer.Clear();
 
             AcquiredPerks.Clear();
             PendingLevelUpChoices.Clear();
@@ -157,6 +192,30 @@ namespace CatanRoguelike.Core
             EventBlockedPortVertex = null;
             EventStoneDouble = false;
             EventShopBonus = 0;
+            EventProductionPercent = 100;
+            EventBlockedResource = null;
+            EventBonusResource = null;
+            EventFishStorm = false;
+            EventDetail = "";
+            EventDay = -1;
+            EventHighlightHexes.Clear();
+
+            Log.Clear();
+            Bank.Wood = BankStock.DefaultPerResource;
+            Bank.Brick = BankStock.DefaultPerResource;
+            Bank.Wheat = BankStock.DefaultPerResource;
+            Bank.Sheep = BankStock.DefaultPerResource;
+            Bank.Stone = BankStock.DefaultPerResource;
+            PendingSevenDiscard = 0;
+            PendingPlayerTrade = null;
+            FishermenOfCatanEnabled = false;
+            FishermenRunSeed = 0;
+            PlayerFish = 0;
+            AiFish = 0;
+            FishBagRemaining = new List<int>();
+            PendingAiTradeResponses = Array.Empty<AiTradeResponse>();
+            IncomingAiTrade = null;
+            ToastMessage = null;
         }
 
         public ResourceBundle GetInventory(PlayerId player) =>

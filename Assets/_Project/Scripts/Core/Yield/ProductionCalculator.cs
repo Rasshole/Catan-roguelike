@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using CatanRoguelike.Core.Buildings;
+using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Leaders;
 using CatanRoguelike.Core.Map;
@@ -28,7 +29,7 @@ namespace CatanRoguelike.Core.Yield
                 foreach (var hex in VertexGraph.GetHexesForVertex(kvp.Key))
                 {
                     if (!board.TryGetTile(hex, out var tile)) continue;
-                    if (tile.IsDesert || !tile.NumberToken.HasValue) continue;
+                    if (tile.IsDesert || tile.IsFishTile || !tile.NumberToken.HasValue) continue;
                     if (IsBlocked(state, hex, player)) continue;
                     if (state.EventStormTile.HasValue && state.EventStormTile.Value.Equals(hex)) continue;
                     if (!resourceRolls.TryGetValue(tile.Resource, out int rollValue)) continue;
@@ -40,6 +41,9 @@ namespace CatanRoguelike.Core.Yield
                     int perHit = isCity
                         ? (int)Math.Ceiling(effectiveRoll * 1.5)
                         : effectiveRoll;
+                    perHit = Math.Max(0, perHit + CivilizationRules.HexYieldDeltaPerHit(state, player, tile.Resource));
+                    if (state.EventBonusResource.HasValue && state.EventBonusResource.Value == tile.Resource)
+                        perHit += 1;
                     int amount = perHit * hits;
 
                     if (state.EventStoneDouble && tile.Resource == ResourceType.Stone)
@@ -64,7 +68,7 @@ namespace CatanRoguelike.Core.Yield
                     foreach (var hex in VertexGraph.GetHexesForVertex(kvp.Key))
                     {
                         if (!board.TryGetTile(hex, out var tile)) continue;
-                        if (tile.IsDesert || !tile.NumberToken.HasValue) continue;
+                        if (tile.IsDesert || tile.IsFishTile || !tile.NumberToken.HasValue) continue;
                         if (!resourceRolls.TryGetValue(tile.Resource, out int rv) || rv <= 0) continue;
                         if (CountDiceHits(tile.NumberToken.Value, state.TodayDiceRolls) <= 0) continue;
                         int amt = (int)Math.Ceiling(rv * 1.5);
@@ -72,6 +76,24 @@ namespace CatanRoguelike.Core.Yield
                     }
                     if (best.HasValue) production.Add(best.Value, 1);
                 }
+            }
+
+            return ApplyEventModifiers(state, production);
+        }
+
+        /// <summary>
+        /// Day-wide event scaling (v131): a blighted resource yields nothing, then the production percent
+        /// (Double Harvest 200 %, Lean Times 50 % rounded down) scales every resource.
+        /// </summary>
+        public static ResourceBundle ApplyEventModifiers(GameState state, ResourceBundle production)
+        {
+            if (state.EventBlockedResource.HasValue)
+                production.Set(state.EventBlockedResource.Value, 0);
+            int percent = state.EventProductionPercent;
+            if (percent != 100)
+            {
+                foreach (var r in ResourceTypes.Productive)
+                    production.Set(r, production[r] * percent / 100);
             }
 
             return production;

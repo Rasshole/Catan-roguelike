@@ -108,9 +108,9 @@ namespace CatanRoguelike.Tests
     public class ActEventTests
     {
         [Test]
-        public void MaybeRollEvent_Act1_Seed18_ReturnsStorm()
+        public void MaybeRollEvent_Act1_Seed18_ReturnsFamine()
         {
-            Assert.AreEqual(EventId.Storm, new EventEngine(18).MaybeRollEvent(1));
+            Assert.AreEqual(EventId.Famine, new EventEngine(18).MaybeRollEvent(1));
         }
 
         [Test]
@@ -237,7 +237,7 @@ namespace CatanRoguelike.Tests
             game.State.Board.DayNumber = 4;
             game.State.Phase = GamePhase.DayPlayerActions;
 
-            game.EndPlayerDay();
+            GameControllerTestHelpers.EndDayWithAi(game);
 
             if (game.State.Phase == GamePhase.LevelUpChoice)
                 game.ChooseLevelUpPerk(game.State.PendingLevelUpChoices[0]);

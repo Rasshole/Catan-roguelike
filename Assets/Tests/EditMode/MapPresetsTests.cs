@@ -10,6 +10,8 @@ namespace CatanRoguelike.Tests.EditMode
         [TestCase(MapSize.Small, 7)]
         [TestCase(MapSize.Medium, 13)]
         [TestCase(MapSize.Large, 19)]
+        [TestCase(MapSize.Extended, 30)]
+        [TestCase(MapSize.Huge, 37)]
         public void CreateBoard_HasExpectedTileCount(MapSize size, int expectedCount)
         {
             var board = MapPresets.CreateBoard(size);
