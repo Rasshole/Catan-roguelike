@@ -321,11 +321,24 @@ namespace CatanRoguelike.Core.Match
         public ResourceBundle RoadCostFor(int seat)
         {
             var c = MatchCivRules.RoadCost(State.Seats[seat].Civilization, State.Seats[seat].Trait);
-            // v142 Road Crew: every second road (an odd count already on the board) is free.
-            if (State.Seats[seat].Trait == MatchTraitId.RoadCrew && CountRoads(seat) % 2 == 1)
+            if (IsNextRoadCrewPieceFree(seat))
                 c = default;
             return c;
         }
+
+        /// <summary>v144 Road Crew: every third road you build is free (setup roads count).</summary>
+        public const int RoadCrewFreeEvery = 3;
+
+        /// <summary>
+        /// v144: pieces that advance the Road Crew counter. Roads only today; a future ship piece adds its count here
+        /// so roads and ships share one "every third" counter.
+        /// </summary>
+        public int RoadCrewPiecesBuilt(int seat) => CountRoads(seat);
+
+        /// <summary>v144 Road Crew: true when the next road (or future ship) this seat builds is free.</summary>
+        public bool IsNextRoadCrewPieceFree(int seat) =>
+            State.Seats[seat].Trait == MatchTraitId.RoadCrew
+            && (RoadCrewPiecesBuilt(seat) + 1) % RoadCrewFreeEvery == 0;
         public ResourceBundle SettlementCostFor(int seat) =>
             MatchCivRules.SettlementCost(State.Seats[seat].Civilization, State.Seats[seat].Trait);
         public ResourceBundle CityCostFor(int seat) =>

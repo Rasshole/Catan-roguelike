@@ -393,7 +393,7 @@ how the group can playtest the rules before any server exists.
       while holding 4 or fewer cards.
     - Traits: Lucky Dice and Prospector trigger on your own roll only; Tough Hide never discards on a 7; Granary
       discards only above 8 and takes 1 Grain on every 7; Head Start takes 1 of each resource; Road Crew makes every
-      second road free; Harbour Pilot's first bank trade per turn is 2:1; Quartermaster dev cards cost no Wool and
+      third road free (v144; setup roads count); Harbour Pilot's first bank trade per turn is 2:1; Quartermaster dev cards cost no Wool and
       every Knight gives 1 Grain.
     - Quests (target: 1 VP 40–60 % done, 2 VP 25–50 %): Knighthood 1 knight, Trader 5 trades, Town Planner "a city
       and 4 buildings"; Grand Army 2 knights, Merchant Prince 7 trades, Highway 6 roads, Metropolis "2 cities and 4

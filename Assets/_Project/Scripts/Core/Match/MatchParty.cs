@@ -165,7 +165,7 @@ namespace CatanRoguelike.Core.Match
             new MatchTraitDefinition(MatchTraitId.ToughHide, "Tough Hide", "A 7 never makes you discard."),
             new MatchTraitDefinition(MatchTraitId.HeadStart, "Head Start", "Take 1 of each resource now."),
             new MatchTraitDefinition(MatchTraitId.Granary, "Granary", "A 7 only makes you discard above 8 cards, and every 7 gives you 1 Grain."),
-            new MatchTraitDefinition(MatchTraitId.RoadCrew, "Road Crew", "Every second road you build is free."),
+            new MatchTraitDefinition(MatchTraitId.RoadCrew, "Road Crew", "Every third road you build is free."),
             new MatchTraitDefinition(MatchTraitId.Quartermaster, "Quartermaster", "Development cards cost you no Wool, and every Knight you play gives you 1 Grain."),
             new MatchTraitDefinition(MatchTraitId.Prospector, "Prospector",
                 "When your own roll (not a 7) gives you nothing, take 1 of the resource you hold least of."),

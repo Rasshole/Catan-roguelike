@@ -161,6 +161,29 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
+        public void RoadCrew_EveryThirdRoad_IsFree_SetupRoadsCount()
+        {
+            var match = ToFirstRoll(4, 51);
+            var s = match.State.Seats[1];
+            s.Civilization = CivilizationId.SunKingdom;
+            s.Trait = MatchTraitId.RoadCrew;
+            Assert.AreEqual(2, match.CountRoads(1), "two setup roads already count");
+            var owner = MatchSeats.ToPlayerId(1);
+            for (int road = 3; road <= 10; road++)
+            {
+                bool free = road % 3 == 0;
+                Assert.AreEqual(free, match.IsNextRoadCrewPieceFree(1), $"road {road}");
+                Assert.AreEqual(free ? 0 : MatchController.RoadCost.Total, match.RoadCostFor(1).Total,
+                    $"road {road} should {(free ? "be free" : "cost the normal price")}");
+                match.State.Board.Roads[match.ValidRoads(1).First()] = owner;
+                Assert.AreEqual(road, match.CountRoads(1));
+            }
+
+            s.Trait = MatchTraitId.LuckyDice;
+            Assert.AreEqual(MatchController.RoadCost.Total, match.RoadCostFor(1).Total, "no Road Crew, no free road");
+        }
+
+        [Test]
         public void CivAndTraitRules_ChangeCostsRatesAndDiscards()
         {
             var match = ToFirstRoll(4, 51);
@@ -174,8 +197,8 @@ namespace CatanRoguelike.Tests
             s.Civilization = CivilizationId.Brickwrights;
             s.Trait = MatchTraitId.RoadCrew;
             Assert.AreEqual(0, match.RoadCostFor(1).Wood, "Brickwrights: roads cost no Lumber");
-            Assert.AreEqual(match.CountRoads(1) % 2 == 1 ? 0 : 1, match.RoadCostFor(1).Total,
-                "v142 Road Crew: every second road is free");
+            Assert.AreEqual((match.CountRoads(1) + 1) % 3 == 0 ? 0 : 1, match.RoadCostFor(1).Total,
+                "v144 Road Crew: every third road is free");
             Assert.AreEqual(2, match.CityCostFor(1).Wheat, "v142: Brickwrights cities cost the normal 2 Grain");
             Assert.AreEqual(2, match.DevCardCostFor(1).Wheat, "v142: Brickwrights development cards cost 1 extra Grain");
 
