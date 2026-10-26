@@ -275,6 +275,8 @@ namespace CatanRoguelike.Game
             var sizes = new List<(MapSize size, bool available, int cost)>();
             foreach (MapSize size in System.Enum.GetValues(typeof(MapSize)))
             {
+                if (MapPresets.IsSeafarers(size))
+                    continue; // v145: ships are a hot-seat/party match feature, not a roguelike run map.
                 bool available = _controller != null && _controller.UnlockAll
                                  || (_meta == null
                                      ? size == MapSize.Small || size == MapSize.Medium || size == MapSize.Large
@@ -396,6 +398,7 @@ namespace CatanRoguelike.Game
                 MapSize.Medium => MapPresets.MediumThirteenHex(),
                 MapSize.Extended => MapPresets.ExtendedThirtyHex(),
                 MapSize.Huge => MapPresets.HugeThirtySevenHex(),
+                MapSize.Islands => MapPresets.IslandsTwentyNineHex(),
                 _ => MapPresets.LargeNineteenHex()
             };
 

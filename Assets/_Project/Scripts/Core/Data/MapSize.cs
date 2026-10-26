@@ -10,6 +10,8 @@ namespace CatanRoguelike.Core.Data
         /// <summary>Colonist-style extended — 5–6 players (30 land hexes).</summary>
         Extended = 30,
         /// <summary>Full radius-3 hexagon (37 land hexes) — large custom tables.</summary>
-        Huge = 37
+        Huge = 37,
+        /// <summary>v145 Seafarers: a home island and two islets across a strait (29 land hexes, ships + pirate).</summary>
+        Islands = 29
     }
 }

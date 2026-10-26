@@ -180,6 +180,9 @@ namespace CatanRoguelike.Core.Match
                 MatchCommandType.GuessSaboteur => ShenanigansOn ? GuessSaboteur(command) : NoShenanigans(),
                 MatchCommandType.RerollToken => RerollToken(command),
                 MatchCommandType.ChooseHarbourPilotResource => ChooseHarbourPilotResource(command),
+                MatchCommandType.BuildShip => BuildShip(command),
+                MatchCommandType.MoveShip => MoveShip(command),
+                MatchCommandType.MovePirate => MovePirate(command),
                 _ => MatchCommandResult.Rejected("Unknown command.")
             };
 
@@ -197,7 +200,7 @@ namespace CatanRoguelike.Core.Match
         // ---------- queries ----------
 
         public IEnumerable<Vertex> ValidSetupSettlements() =>
-            _placement.GetValidSettlementSpots(State.Board, State.Current.Owner, true);
+            _placement.GetValidSettlementSpots(State.Board, State.Current.Owner, true).Where(IsOnSetupLand);
 
         public IEnumerable<Edge> ValidSetupRoads()
         {
@@ -253,6 +256,19 @@ namespace CatanRoguelike.Core.Match
                 }
             }
 
+            // v145 Seafarers: ship ends reach new coasts too.
+            foreach (var kv in State.Board.Ships)
+            {
+                if (kv.Value != owner)
+                    continue;
+                foreach (var end in new[] { kv.Key.A, kv.Key.B })
+                {
+                    var c = VertexGraph.Canonicalize(end);
+                    if (seen.Add(c))
+                        list.Add(c);
+                }
+            }
+
             if (!roadsOnly)
                 foreach (var kv in State.Board.VertexBuildings)
                     if (kv.Value.owner == owner && seen.Add(kv.Key))
@@ -284,16 +300,19 @@ namespace CatanRoguelike.Core.Match
                 if (State.Board.VertexBuildings.TryGetValue(v, out var b))
                 {
                     int s = MatchSeats.ToSeat(b.owner);
-                    // v142: Sun Kingdom can't be robbed under party rules.
-                    if (s != seat && State.Seats[s].CardCount > 0 && !IsHeadStartProtected(s)
-                        && !(PartyRules && State.Seats[s].Civilization == CivilizationId.SunKingdom
-                             && State.Seats[s].CardCount <= SunKingdomSafeHand))
+                    if (s != seat && CanBeRobbed(s))
                         victims.Add(s);
                 }
             }
 
             return victims;
         }
+
+        /// <summary>Robber and pirate: a seat with cards, not Head Start-protected, not a small Sun Kingdom hand (v142).</summary>
+        private bool CanBeRobbed(int s) =>
+            State.Seats[s].CardCount > 0 && !IsHeadStartProtected(s)
+            && !(PartyRules && State.Seats[s].Civilization == CivilizationId.SunKingdom
+                 && State.Seats[s].CardCount <= SunKingdomSafeHand);
 
         /// <summary>v135: bank rate for giving <paramref name="give"/>: 2 with that resource's harbour, 3 with a generic one, else 4.</summary>
         public int BankRatio(int seat, ResourceType give)
@@ -337,13 +356,10 @@ namespace CatanRoguelike.Core.Match
         /// <summary>v144 Road Crew: every third road you build is free (setup roads count).</summary>
         public const int RoadCrewFreeEvery = 3;
 
-        /// <summary>
-        /// v144: pieces that advance the Road Crew counter. Roads only today; a future ship piece adds its count here
-        /// so roads and ships share one "every third" counter.
-        /// </summary>
-        public int RoadCrewPiecesBuilt(int seat) => CountRoads(seat);
+        /// <summary>v144/v145: pieces that advance the Road Crew counter — roads and ships share one "every third" counter.</summary>
+        public int RoadCrewPiecesBuilt(int seat) => CountRoads(seat) + CountShips(seat);
 
-        /// <summary>v144 Road Crew: true when the next road (or future ship) this seat builds is free.</summary>
+        /// <summary>v144 Road Crew: true when the next road or ship this seat builds is free.</summary>
         public bool IsNextRoadCrewPieceFree(int seat) =>
             State.Seats[seat].Trait == MatchTraitId.RoadCrew
             && (RoadCrewPiecesBuilt(seat) + 1) % RoadCrewFreeEvery == 0;
@@ -402,6 +418,8 @@ namespace CatanRoguelike.Core.Match
             var v = VertexGraph.Canonicalize(c.Vertex);
             if (!_placement.CanPlaceSettlement(State.Board, v, State.Current.Owner, true))
                 return MatchCommandResult.Rejected("Invalid settlement spot.");
+            if (!IsOnSetupLand(v))
+                return MatchCommandResult.Rejected("Start on the home island.");
 
             State.Board.VertexBuildings[v] = (BuildingType.Settlement, State.Current.Owner);
             State.LastSetupSettlement = v;
@@ -617,33 +635,39 @@ namespace CatanRoguelike.Core.Match
 
             State.Board.PlaceRobber(hex);
             if (c.Victim >= 0)
-            {
-                var victim = State.Seats[c.Victim];
-                var vHand = victim.Hand;
-                int pick = State.Rng.Next(vHand.Total);
-                foreach (var r in AllResources)
-                {
-                    if (pick < vHand[r])
-                    {
-                        vHand.Add(r, -1);
-                        victim.Hand = vHand;
-                        var mine = State.Current.Hand;
-                        mine.Add(r, 1);
-                        State.Current.Hand = mine;
-                        break;
-                    }
-
-                    pick -= vHand[r];
-                }
-
-                AppendLog($"{State.Current.Name} robbed {victim.Name}.");
-                if (PartyRules)
-                    ClaimBounties(c.Seat, c.Victim);
-            }
+                StealOne(c.Seat, c.Victim, null);
 
             State.Phase = State.ResumePhase;
             State.ResumePhase = MatchPhase.Main;
             return MatchCommandResult.Accepted;
+        }
+
+        /// <summary>Robber or pirate steal: one random card from <paramref name="victimSeat"/> to <paramref name="seat"/>.</summary>
+        private void StealOne(int seat, int victimSeat, string via)
+        {
+            var victim = State.Seats[victimSeat];
+            var vHand = victim.Hand;
+            int pick = State.Rng.Next(vHand.Total);
+            foreach (var r in AllResources)
+            {
+                if (pick < vHand[r])
+                {
+                    vHand.Add(r, -1);
+                    victim.Hand = vHand;
+                    var mine = State.Seats[seat].Hand;
+                    mine.Add(r, 1);
+                    State.Seats[seat].Hand = mine;
+                    break;
+                }
+
+                pick -= vHand[r];
+            }
+
+            AppendLog(via == null
+                ? $"{State.Seats[seat].Name} robbed {victim.Name}."
+                : $"{State.Seats[seat].Name}'s {via} robbed {victim.Name}.");
+            if (PartyRules)
+                ClaimBounties(seat, victimSeat);
         }
 
         private MatchCommandResult BuildRoad(MatchCommand c)
@@ -664,8 +688,7 @@ namespace CatanRoguelike.Core.Match
             if (free)
             {
                 State.FreeRoadsLeft--;
-                if (State.FreeRoadsLeft <= 0 || !ValidRoads(c.Seat).Any()
-                                             || CountRoads(c.Seat) >= BuildingPieceLimits.MaxRoads)
+                if (State.FreeRoadsLeft <= 0 || !AnyFreePieceSpot(c.Seat))
                     FinishRoadBuilding();
             }
 
@@ -725,10 +748,11 @@ namespace CatanRoguelike.Core.Match
                     break;
                 case MatchDevCard.RoadBuilding:
                 {
-                    if (!ValidRoads(c.Seat).Any() || CountRoads(c.Seat) >= BuildingPieceLimits.MaxRoads)
-                        return MatchCommandResult.Rejected("No room for a road.");
+                    // v145: any two pieces, roads and ships mixed.
+                    if (!AnyFreePieceSpot(c.Seat))
+                        return MatchCommandResult.Rejected(SeafarersOn ? "No room for a road or ship." : "No room for a road.");
                     State.ResumePhase = resume;
-                    State.FreeRoadsLeft = Math.Min(RoadBuildingRoads, BuildingPieceLimits.MaxRoads - CountRoads(c.Seat));
+                    State.FreeRoadsLeft = Math.Min(RoadBuildingRoads, FreePiecesInSupply(c.Seat));
                     State.Phase = MatchPhase.RoadBuilding;
                     AppendLog($"{seat.Name} played Road Building.");
                     break;
@@ -1098,6 +1122,8 @@ namespace CatanRoguelike.Core.Match
             State.Current.PlayedDevCardThisTurn = false;
             State.Current.BankTradesThisTurn = 0;
             State.Current.HasTakenFirstTurn = true;
+            State.ShipMovedThisTurn = false;
+            State.ShipsBuiltThisTurn.Clear();
             if (State.ActiveTrade != null)
                 AppendLog($"{State.Seats[State.ActiveTrade.From].Name}'s trade offer lapsed.");
             State.ActiveTrade = null;
@@ -1194,7 +1220,8 @@ namespace CatanRoguelike.Core.Match
         private void RefreshVictoryPoints()
         {
             // Longest road: ≥5 and strictly longer than everyone else; the holder keeps it on ties.
-            var lengths = State.Seats.Select(s => RouteCalculator.LongestRoadLength(State.Board, s.Owner)).ToArray();
+            // v145 Seafarers: Longest Trade Route (roads + ships); identical to Longest Road without ships.
+            var lengths = State.Seats.Select(s => RouteCalculator.LongestTradeRouteLength(State.Board, s.Owner)).ToArray();
             int? holder = State.LongestRoadSeat;
             int best = lengths.Max();
             if (holder.HasValue && lengths[holder.Value] < LongestRoadMinimum)
@@ -1208,7 +1235,7 @@ namespace CatanRoguelike.Core.Match
             }
 
             if (holder != State.LongestRoadSeat && holder.HasValue)
-                AppendLog($"{State.Seats[holder.Value].Name} takes Longest Road.");
+                AppendLog($"{State.Seats[holder.Value].Name} takes {(SeafarersOn ? "Longest Trade Route" : "Longest Road")}.");
             State.LongestRoadSeat = holder;
 
             // v135 Largest Army: ≥3 knights and strictly more than the holder.

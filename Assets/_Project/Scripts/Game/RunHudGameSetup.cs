@@ -174,7 +174,8 @@ namespace CatanRoguelike.Game
             // Map row: every map size, all unlocked.
             SectionLabel(card, "MapHeader", "MAP", new Vector2(0f, -152f));
             var sizes = (MapSize[])Enum.GetValues(typeof(MapSize));
-            const float tileW = 250f, gap = 22f;
+            // v145: six maps (Islands added) still fit the 1600-wide card.
+            float tileW = sizes.Length > 5 ? 228f : 250f, gap = sizes.Length > 5 ? 20f : 22f;
             float x0 = -(sizes.Length - 1) * (tileW + gap) / 2f;
             for (int i = 0; i < sizes.Length; i++)
             {

@@ -178,6 +178,12 @@ namespace CatanRoguelike.Core.Match
         /// <summary>Seat → cards still to discard after a 7.</summary>
         public SortedDictionary<int, int> PendingDiscards { get; } = new();
         public int FreeRoadsLeft { get; set; }
+
+        // ---- v145 Seafarers ----
+        /// <summary>The current seat already moved a ship this turn (one move per turn).</summary>
+        public bool ShipMovedThisTurn { get; set; }
+        /// <summary>Ships built this turn (they can't be moved until next turn).</summary>
+        public List<HexMath.Edge> ShipsBuiltThisTurn { get; } = new();
         /// <summary>Phase to return to after the robber (knight) or road building (Roll or Main).</summary>
         public MatchPhase ResumePhase { get; set; } = MatchPhase.Main;
         public MatchTradeOffer ActiveTrade { get; set; }
@@ -288,6 +294,17 @@ namespace CatanRoguelike.Core.Match
                          .Select(kv => $"R{kv.Key.A.Hex.Q},{kv.Key.A.Hex.R},{kv.Key.A.CornerIndex}-{kv.Key.B.Hex.Q},{kv.Key.B.Hex.R},{kv.Key.B.CornerIndex}={(int)kv.Value}")
                          .OrderBy(x => x, StringComparer.Ordinal))
                 sb.Append(line).Append(';');
+
+            if (Board.IsSeafarers)
+            {
+                foreach (var line in Board.Ships
+                             .Select(kv => $"P{kv.Key.A.Hex.Q},{kv.Key.A.Hex.R},{kv.Key.A.CornerIndex}-{kv.Key.B.Hex.Q},{kv.Key.B.Hex.R},{kv.Key.B.CornerIndex}={(int)kv.Value}")
+                             .OrderBy(x => x, StringComparer.Ordinal))
+                    sb.Append(line).Append(';');
+                var pirate = Board.PirateHex;
+                sb.Append("Pi").Append(pirate.HasValue ? $"{pirate.Value.Q},{pirate.Value.R}" : "-")
+                    .Append(ShipMovedThisTurn ? "m" : "").Append(ShipsBuiltThisTurn.Count).Append('|');
+            }
 
             if (Config.Fishermen)
                 sb.Append("F").Append(string.Join(",", Seats.Select(s => s.Fish))).Append('|');

@@ -67,7 +67,14 @@ namespace CatanRoguelike.Core.Match
         FishForCard = 30,
         // ---- v144 ----
         /// <summary>Harbour Pilot owes a pick (port settlement / city): Receive = the resource taken from the bank.</summary>
-        ChooseHarbourPilotResource = 31
+        ChooseHarbourPilotResource = 31,
+        // ---- v145 Seafarers ----
+        /// <summary>Main / Road Building: a ship on the edge fields.</summary>
+        BuildShip = 32,
+        /// <summary>Main: move the open ship on the edge fields to the edge in the To* fields (once per turn).</summary>
+        MoveShip = 33,
+        /// <summary>MoveRobber phase on a sea map: the pirate goes to the sea hex Q/R instead; Victim = seat with a ship there.</summary>
+        MovePirate = 34
     }
 
     /// <summary>
@@ -118,6 +125,17 @@ namespace CatanRoguelike.Core.Match
         /// </summary>
         public ResourceBundle Choice { get; set; }
 
+        // v145 MoveShip: the destination edge.
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)] public int ToQ { get; set; }
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)] public int ToR { get; set; }
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)] public int ToCorner { get; set; }
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)] public int ToQ2 { get; set; }
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)] public int ToR2 { get; set; }
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)] public int ToCorner2 { get; set; }
+
+        [JsonIgnore]
+        public Edge ToEdge => new(new Vertex(new HexCoord(ToQ, ToR), ToCorner), new Vertex(new HexCoord(ToQ2, ToR2), ToCorner2));
+
         [JsonIgnore]
         public Vertex Vertex => new(new HexCoord(Q, R), Corner);
 
@@ -145,6 +163,21 @@ namespace CatanRoguelike.Core.Match
         {
             Type = MatchCommandType.MoveRobber, Seat = seat, Q = hex.Q, R = hex.R, Victim = victim
         };
+
+        public static MatchCommand Pirate(int seat, HexCoord hex, int victim) => new()
+        {
+            Type = MatchCommandType.MovePirate, Seat = seat, Q = hex.Q, R = hex.R, Victim = victim
+        };
+
+        public static MatchCommand Ship(int seat, Edge e) => AtEdge(MatchCommandType.BuildShip, seat, e);
+
+        public static MatchCommand MoveShipTo(int seat, Edge from, Edge to)
+        {
+            var c = AtEdge(MatchCommandType.MoveShip, seat, from);
+            c.ToQ = to.A.Hex.Q; c.ToR = to.A.Hex.R; c.ToCorner = to.A.CornerIndex;
+            c.ToQ2 = to.B.Hex.Q; c.ToR2 = to.B.Hex.R; c.ToCorner2 = to.B.CornerIndex;
+            return c;
+        }
 
         public static MatchCommand Trade(int seat, ResourceType give, ResourceType receive) => new()
         {
@@ -241,7 +274,9 @@ namespace CatanRoguelike.Core.Match
             && Victim == other.Victim && Give == other.Give && Receive == other.Receive
             && SameBundle(Offer, other.Offer) && SameBundle(Request, other.Request) && Response == other.Response
             && Pick == other.Pick && Pick2 == other.Pick2 && GiveAny == other.GiveAny && GetAny == other.GetAny
-            && SameBundle(Choice, other.Choice);
+            && SameBundle(Choice, other.Choice)
+            && ToQ == other.ToQ && ToR == other.ToR && ToCorner == other.ToCorner
+            && ToQ2 == other.ToQ2 && ToR2 == other.ToR2 && ToCorner2 == other.ToCorner2;
 
         private static bool SameBundle(ResourceBundle a, ResourceBundle b) =>
             a.Wood == b.Wood && a.Brick == b.Brick && a.Wheat == b.Wheat && a.Sheep == b.Sheep && a.Stone == b.Stone;
@@ -254,8 +289,9 @@ namespace CatanRoguelike.Core.Match
         {
             MatchCommandType.PlaceSetupSettlement or MatchCommandType.BuildSettlement or MatchCommandType.BuildCity =>
                 $"{Type}(seat {Seat}, {Vertex})",
-            MatchCommandType.PlaceSetupRoad or MatchCommandType.BuildRoad => $"{Type}(seat {Seat}, {Edge})",
-            MatchCommandType.MoveRobber => $"{Type}(seat {Seat}, {Hex}, victim {Victim})",
+            MatchCommandType.PlaceSetupRoad or MatchCommandType.BuildRoad or MatchCommandType.BuildShip => $"{Type}(seat {Seat}, {Edge})",
+            MatchCommandType.MoveShip => $"{Type}(seat {Seat}, {Edge} -> {ToEdge})",
+            MatchCommandType.MoveRobber or MatchCommandType.MovePirate => $"{Type}(seat {Seat}, {Hex}, victim {Victim})",
             MatchCommandType.BankTrade => $"{Type}(seat {Seat}, {Give}->{Receive})",
             MatchCommandType.Discard => $"{Type}(seat {Seat}, {Offer.Total} cards)",
             MatchCommandType.BankTradeBatch => $"{Type}(seat {Seat}, {Offer.Total} -> {Request.Total})",

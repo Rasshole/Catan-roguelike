@@ -249,37 +249,57 @@ namespace CatanRoguelike.Core.Match
         {
             var owner = MatchSeats.ToPlayerId(seat);
             var board = m.State.Board;
-            var parent = new Dictionary<Vertex, Vertex>();
-            Vertex Find(Vertex v)
+            // v145: roads and ships both join the network, but a road and a ship only meet at your own
+            // settlement or city, so each corner has a road node (0) and a ship node (1).
+            var parent = new Dictionary<(Vertex v, int k), (Vertex v, int k)>();
+            (Vertex v, int k) Find((Vertex v, int k) n)
             {
-                if (!parent.TryGetValue(v, out var p))
-                    return v;
+                if (!parent.TryGetValue(n, out var p))
+                    return n;
                 var root = Find(p);
-                parent[v] = root;
+                parent[n] = root;
                 return root;
             }
 
-            bool Blocked(Vertex v) => board.VertexBuildings.TryGetValue(v, out var b) && b.owner != owner;
-            foreach (var kv in board.Roads)
+            void Union((Vertex v, int k) x, (Vertex v, int k) y)
             {
-                if (kv.Value != owner)
-                    continue;
-                var a = VertexGraph.Canonicalize(kv.Key.A);
-                var b = VertexGraph.Canonicalize(kv.Key.B);
-                if (Blocked(a) || Blocked(b))
-                    continue;
-                var ra = Find(a);
-                var rb = Find(b);
-                if (!ra.Equals(rb))
-                    parent[ra] = rb;
+                var rx = Find(x);
+                var ry = Find(y);
+                if (!rx.Equals(ry))
+                    parent[rx] = ry;
             }
 
-            var groups = new Dictionary<Vertex, HashSet<ResourceType>>();
+            bool Blocked(Vertex v) => board.VertexBuildings.TryGetValue(v, out var b) && b.owner != owner;
+            void Join(HexMath.Edge e, int kind)
+            {
+                var a = VertexGraph.Canonicalize(e.A);
+                var b = VertexGraph.Canonicalize(e.B);
+                if (Blocked(a) || Blocked(b))
+                    return;
+                Union((a, kind), (b, kind));
+            }
+
+            foreach (var kv in board.Roads)
+                if (kv.Value == owner)
+                    Join(kv.Key, 0);
+            foreach (var kv in board.Ships)
+                if (kv.Value == owner)
+                    Join(kv.Key, 1);
+
+            var groups = new Dictionary<(Vertex v, int k), HashSet<ResourceType>>();
             foreach (var kv in board.VertexBuildings)
             {
                 if (kv.Value.owner != owner)
                     continue;
-                var root = Find(VertexGraph.Canonicalize(kv.Key));
+                var c = VertexGraph.Canonicalize(kv.Key);
+                Union((c, 1), (c, 0));
+            }
+
+            foreach (var kv in board.VertexBuildings)
+            {
+                if (kv.Value.owner != owner)
+                    continue;
+                var root = Find((VertexGraph.Canonicalize(kv.Key), 0));
                 if (!groups.TryGetValue(root, out var set))
                     groups[root] = set = new HashSet<ResourceType>();
                 foreach (var hex in VertexGraph.GetHexesForVertex(kv.Key))

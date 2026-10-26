@@ -106,6 +106,39 @@ namespace CatanRoguelike.Core.Data
                 new HexCoord(0, 0), seed ?? 0);
         }
 
+        /// <summary>v145 Seafarers "Islands": desert of the home island (robber start).</summary>
+        public static readonly HexCoord IslandsDesert = new(-1, 1);
+
+        /// <summary>v145: true for maps with playable sea (ships, the pirate).</summary>
+        public static bool IsSeafarers(MapSize size) => size == MapSize.Islands;
+
+        /// <summary>v145 home island: the west half of the radius-3 hexagon (22 hexes, q ≤ 0).</summary>
+        public static IEnumerable<HexCoord> IslandsHomeCoords() =>
+            HexMath.Spiral(new HexCoord(0, 0), 3).Where(h => h.Q <= 0);
+
+        /// <summary>v145: the two islets east of the strait (q = 1 is open sea): 4 hexes north, 3 south.</summary>
+        public static readonly HexCoord[] IslandsIsletCoords =
+        {
+            new(2, -3), new(3, -3), new(2, -2), new(3, -2),
+            new(2, 0), new(3, 0), new(2, 1)
+        };
+
+        public static IEnumerable<HexCoord> IslandsLandCoords() => IslandsHomeCoords().Concat(IslandsIsletCoords);
+
+        /// <summary>v145: playable sea — every hex within radius 4 that isn't land (the strait, the gap and the frame ring).</summary>
+        public static IEnumerable<HexCoord> IslandsSeaCoords()
+        {
+            var land = new HashSet<HexCoord>(IslandsLandCoords());
+            return HexMath.Spiral(new HexCoord(0, 0), 4).Where(h => !land.Contains(h));
+        }
+
+        public static IReadOnlyList<(HexCoord coord, ResourceType resource)> IslandsTwentyNineHex(int? seed = null)
+        {
+            var coords = IslandsLandCoords().ToList();
+            return ShuffleTerrain(BuildFromCoords(coords, BuildResourcesForLandCoords(coords, IslandsDesert)),
+                IslandsDesert, seed ?? 0);
+        }
+
         public static IReadOnlyList<(HexCoord coord, ResourceType resource)> HugeThirtySevenHex(int? seed = null)
         {
             var coords = HugeThirtySevenHexCoords().ToList();
@@ -297,6 +330,7 @@ namespace CatanRoguelike.Core.Data
             MapSize.Large => "Base — 19 hex (3–4 players)",
             MapSize.Extended => "Extended — 30 hex (5–6 players)",
             MapSize.Huge => "Huge — 37 hex (7–8+ players)",
+            MapSize.Islands => "Islands — 29 hex, ships (3–4 players)",
             _ => size.ToString()
         };
 
@@ -307,6 +341,7 @@ namespace CatanRoguelike.Core.Data
             MapSize.Large => "Standard Catan: 18 tokens, 9 ports, desert center.",
             MapSize.Extended => "Colonist extended table — 30 land hexes.",
             MapSize.Huge => "Full radius-3 island — largest standard hexagon.",
+            MapSize.Islands => "Seafarers: start on the home island, sail ships to two islets; the pirate rules the sea.",
             _ => ""
         };
 
@@ -398,10 +433,20 @@ namespace CatanRoguelike.Core.Data
             // Small: robber on outer wheat — center wood is too punishing for hybrid production.
             var robberStart = size == MapSize.Small
                 ? new HexCoord(1, -1)
-                : new HexCoord(0, 0);
+                : size == MapSize.Islands ? IslandsDesert : new HexCoord(0, 0);
             board.PlaceRobber(robberStart);
 
             ApplyDesertCenter(board, size);
+            if (size == MapSize.Islands)
+            {
+                var desert = board.Tiles[IslandsDesert];
+                desert.IsDesert = true;
+                desert.NumberToken = null;
+                foreach (var sea in IslandsSeaCoords())
+                    board.SeaHexes.Add(sea);
+                foreach (var home in IslandsHomeCoords())
+                    board.SetupLandHexes.Add(home);
+            }
 
             NumberTokenLibrary.AssignMissingTokens(board, seed);
 
@@ -423,6 +468,7 @@ namespace CatanRoguelike.Core.Data
                 MapSize.Large => LargeNineteenHex(),
                 MapSize.Extended => ExtendedThirtyHex(seed),
                 MapSize.Huge => HugeThirtySevenHex(seed),
+                MapSize.Islands => IslandsTwentyNineHex(seed),
                 _ => SmallSevenHex()
             };
 

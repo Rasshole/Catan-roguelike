@@ -21,6 +21,24 @@ namespace CatanRoguelike.Core.Map
         public Dictionary<HexMath.Vertex, (BuildingType type, PlayerId owner)> VertexBuildings { get; } = new();
         public HashSet<HexMath.Edge> DisabledRoads { get; } = new();
 
+        /// <summary>
+        /// v145 Seafarers: playable sea hexes (between and around islands). Empty on every classic map, which is
+        /// what keeps ships and the pirate off them.
+        /// </summary>
+        public HashSet<HexCoord> SeaHexes { get; } = new();
+
+        /// <summary>v145 Seafarers: land hexes where the setup settlements may go (the home island). Empty = anywhere.</summary>
+        public HashSet<HexCoord> SetupLandHexes { get; } = new();
+
+        /// <summary>v145 Seafarers: ships on sea edges (canonical edge → owner).</summary>
+        public Dictionary<HexMath.Edge, PlayerId> Ships { get; } = new();
+
+        /// <summary>v145 Seafarers: the pirate's sea hex (null = not on the board yet).</summary>
+        public HexCoord? PirateHex { get; set; }
+
+        /// <summary>v145: true when the board has playable sea, i.e. ships and the pirate are in play.</summary>
+        public bool IsSeafarers => SeaHexes.Count > 0;
+
         public HexCoord? RobberTile { get; private set; }
         public int DayNumber { get; set; } = 1;
 
@@ -72,5 +90,8 @@ namespace CatanRoguelike.Core.Map
 
         public int CountRoads(PlayerId player) =>
             Roads.Values.Count(o => o == player);
+
+        public int CountShips(PlayerId player) =>
+            Ships.Values.Count(o => o == player);
     }
 }
