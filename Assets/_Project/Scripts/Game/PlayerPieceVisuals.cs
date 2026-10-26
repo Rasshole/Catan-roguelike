@@ -49,15 +49,6 @@ namespace CatanRoguelike.Game
         public const float SettlementFootprintOfHex = 0.18f;
         /// <summary>v140: extra size for settlements/cities (pass-and-play sets &gt; 1 so pieces read on the 30-hex table).</summary>
         public static float BuildingScaleMultiplier { get; set; } = 1f;
-        /// <summary>
-        /// v147: pass-and-play draws a dark footprint outline under settlements and cities. Seen almost straight
-        /// from above, a house in the seat colour read as a block at the end of its road; the outline gives it
-        /// a distinct silhouette the roads do not have.
-        /// </summary>
-        public static bool BuildingOutline { get; set; }
-        public const string OutlinePartName = "Outline";
-        public const float OutlineSpread = 1.32f;
-        private static Material _outlineMaterial;
         /// <summary>v140: extra road width (pass-and-play).</summary>
         public static float RoadScaleMultiplier { get; set; } = 1f;
         /// <summary>Road plank width as a fraction of the flat-to-flat hex width.</summary>
@@ -209,43 +200,9 @@ namespace CatanRoguelike.Game
             body.localPosition = -(body.localRotation * (footprintCentre * scale));
             float minY = LowestWorldY(body, mesh);
             body.position += Vector3.up * (hexTopY + BaseGapAboveHex - minY);
-            if (BuildingOutline)
-                AddFootprintOutline(root.transform, mesh, rotation, scale, hexTopY);
 
             DisableShadows(root);
             return root;
-        }
-
-        /// <summary>A flattened, enlarged copy of the house footprint just above the hex top, in dark ink.</summary>
-        private static void AddFootprintOutline(Transform root, Mesh mesh, Quaternion rotation, float scale, float hexTopY)
-        {
-            var go = new GameObject(OutlinePartName);
-            go.transform.SetParent(root, false);
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            var renderer = go.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = OutlineMaterial();
-            // Yaw only (no colonist lean), so the flattened copy lies on the board under the footprint.
-            var yaw = ColonistPresentation.IsActive ? Quaternion.Inverse(LeanTowardScreenTop()) * rotation : rotation;
-            float s = scale * OutlineSpread;
-            var size = new Vector3(s, scale * 0.02f, s);
-            go.transform.rotation = yaw;
-            go.transform.localScale = size;
-            var c = mesh.bounds.center;
-            var offset = -(yaw * Vector3.Scale(new Vector3(c.x, mesh.bounds.min.y, c.z), size));
-            go.transform.position = new Vector3(root.position.x + offset.x, hexTopY + BaseGapAboveHex * 0.5f,
-                root.position.z + offset.z);
-        }
-
-        private static Material OutlineMaterial()
-        {
-            if (_outlineMaterial != null)
-                return _outlineMaterial;
-            var shader = Shader.Find("Unlit/Color") ?? Shader.Find("Standard");
-            _outlineMaterial = new Material(shader) { name = "PieceOutline" };
-            _outlineMaterial.color = new Color(0.12f, 0.08f, 0.05f, 1f);
-            if (_outlineMaterial.HasProperty("_Glossiness"))
-                _outlineMaterial.SetFloat("_Glossiness", 0f);
-            return _outlineMaterial;
         }
 
         /// <summary>

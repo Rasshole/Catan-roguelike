@@ -23,7 +23,11 @@ namespace CatanRoguelike.Core.Map
         public const float FishChevronBandCenterPushFactor = 0.90f;
         private const float FishChevronTokenBiasFactor = 0.26f; // token rim clears both coast edges (0.11 put it ~0.06 onto land)
         private const float BadgeClearanceEpsilon = 0.004f;
-        private static readonly int[] SeaFishDisplayTokens = { 2, 3, 3, 4, 4, 5 };
+        /// <summary>
+        /// v148 (official Fishermen of Catan): the coastal fishing grounds carry 4, 5, 6, 8, 9 and 10 — never 2, 3,
+        /// 11 or 12, which belong to the lake only.
+        /// </summary>
+        public static readonly int[] SeaFishDisplayTokens = { 4, 5, 6, 8, 9, 10 };
 
         public static void AssignPortSeaSlots(BoardState board, IReadOnlyList<PortDefinition> ports)
         {

@@ -142,7 +142,7 @@ namespace CatanRoguelike.Tests.PlayMode
             hud.RefreshHotSeatNow();
         }
 
-        /// <summary>v147: every settlement/city in the match is on the board, visible, outlined and house-sized.</summary>
+        /// <summary>v147: every settlement/city in the match is on the board, visible and house-sized.</summary>
         private static void AssertSettlementsDrawn(MatchState state)
         {
             var view = Object.FindFirstObjectByType<BoardView>();
@@ -158,7 +158,6 @@ namespace CatanRoguelike.Tests.PlayMode
                 var body = h.Find(PlayerPieceVisuals.BodyPartName).GetComponent<Renderer>();
                 Assert.IsTrue(body.enabled, h.name + " body rendered");
                 Assert.Greater(body.bounds.size.x, 0.5f, h.name + " house-sized");
-                Assert.IsNotNull(h.Find(PlayerPieceVisuals.OutlinePartName), h.name + " outline");
             }
         }
 
@@ -190,6 +189,9 @@ namespace CatanRoguelike.Tests.PlayMode
             Assert.IsTrue(lake.LakeArtApplied, "v147: the lake hex is painted as water, not sand");
             AssertSettlementsDrawn(s.State);
             MaybeWrite(hud, "v147-random-board-lake.png");
+            // v148: coastal fishing grounds show 4–10 only; houses without any outline.
+            Assert.IsTrue(s.State.Board.SeaFishGrounds.Values.All(g => g.NumberToken is >= 4 and <= 10 and not 7));
+            MaybeWrite(hud, "v148-board.png");
 
             // Traits are public: a chip on every seat row, a hover tooltip for another seat's trait.
             var root = hud.HotSeatRootForTests;

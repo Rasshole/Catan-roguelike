@@ -71,7 +71,6 @@ namespace CatanRoguelike.Game
             ColonistBoardVisualScale.RobberOffsetScale = 1f;
             PlayerPieceVisuals.BuildingScaleMultiplier = 1f;
             PlayerPieceVisuals.RoadScaleMultiplier = 1f;
-            PlayerPieceVisuals.BuildingOutline = false;
             BoardView.MatchMotion = false;
             BoardView.MatchLakeNumbers = false;
             _hotSeat = null;
