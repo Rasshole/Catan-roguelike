@@ -21,6 +21,7 @@ works of this project and fall under the repository's own license.
 | QuestDone | a secret quest is completed | synthesized |
 | Vote / Auction / Sabotage | party-rules ballots, auctions and shenanigans | synthesized |
 | Victory | the match is won | synthesized |
+| Ship / ShipMove / Pirate | Seafarers: building or sailing a ship, moving the pirate (v145) | synthesized |
 
 Volume (0–100 %) and mute live in the in-game **Menu → Settings** popup and persist in `PlayerPrefs`
 (`catan.sfx.volume`, `catan.sfx.muted`).

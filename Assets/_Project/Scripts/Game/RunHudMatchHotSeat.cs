@@ -280,9 +280,11 @@ namespace CatanRoguelike.Game
                 MatchPhase.SetupSettlement => "place a settlement",
                 MatchPhase.SetupRoad => "place a road",
                 MatchPhase.Roll => "roll the dice",
-                MatchPhase.MoveRobber => "move the robber (click a tile)",
+                MatchPhase.MoveRobber => _hotSeat.Match.SeafarersOn ? "move the robber or the pirate" : "move the robber (click a tile)",
                 MatchPhase.Discard => $"{state.Acting.Name} discards half (rolled 7)",
-                MatchPhase.RoadBuilding => $"place {state.FreeRoadsLeft} free road{(state.FreeRoadsLeft == 1 ? "" : "s")}",
+                MatchPhase.RoadBuilding => _hotSeat.Match.SeafarersOn
+                    ? $"place {state.FreeRoadsLeft} free road{(state.FreeRoadsLeft == 1 ? "" : "s")} or ship{(state.FreeRoadsLeft == 1 ? "" : "s")}"
+                    : $"place {state.FreeRoadsLeft} free road{(state.FreeRoadsLeft == 1 ? "" : "s")}",
                 MatchPhase.Vote => $"secret ballot · {state.Acting.Name} votes",
                 MatchPhase.Auction => $"Night Market · {state.Acting.Name} bids in secret",
                 MatchPhase.Main => state.LastRoll > 0 ? $"rolled {state.LastRoll} · build or end turn" : "build or end turn",
@@ -412,7 +414,7 @@ namespace CatanRoguelike.Game
                 SetRect(vp.rectTransform, new Vector2(1f, 0.5f), new Vector2(-40f, 8f), new Vector2(64f, 44f));
                 BuildSeatShenaniganMarks(row.rectTransform, state, i); // v141: bounty + face-down card marks
                 var vpl = RunHudUiFactory.CreateText(row.rectTransform, "VPLabel",
-                    "VP" + (state.LongestRoadSeat == i ? " · road" : "") + (state.LargestArmySeat == i ? " · army" : ""), 13, TextAnchor.MiddleCenter, ColonistUiKit.InkMuted,
+                    "VP" + (state.LongestRoadSeat == i ? (state.Board.IsSeafarers ? " · route" : " · road") : "") + (state.LargestArmySeat == i ? " · army" : ""), 13, TextAnchor.MiddleCenter, ColonistUiKit.InkMuted,
                     FontStyle.Bold);
                 SetRect(vpl.rectTransform, new Vector2(1f, 0.5f), new Vector2(-40f, -24f), new Vector2(80f, 18f));
             }
@@ -582,11 +584,23 @@ namespace CatanRoguelike.Game
                     break;
                 case MatchPhase.MoveRobber:
                     buttons.Add(("Best tile", false, human, () => s.ApplySuggested()));
-                    hint = "Click a tile to move the robber; pick whom to rob if several players touch it";
+                    hint = s.Match.SeafarersOn
+                        ? "Click a land tile for the robber or the sea for the pirate (it robs ships)"
+                        : "Click a tile to move the robber; pick whom to rob if several players touch it";
                     break;
                 case MatchPhase.RoadBuilding:
                     buttons.Add(("Best road", true, human, () => s.ApplySuggested()));
                     hint = "Road Building: click glowing edges for your free roads";
+                    if (s.Match.SeafarersOn)
+                    {
+                        // v145: the two free pieces may be roads or ships, mixed.
+                        bool ships = _hsBoardInput != null && _hsBoardInput.Mode == MatchBuildMode.Ship;
+                        buttons.Add((ships ? "Roads" : "Ships", false, human && s.Match.ValidShips(state.CurrentSeat).Any(),
+                            () => SetHotSeatBoardMode(ships ? MatchBuildMode.Auto : MatchBuildMode.Ship)));
+                        hint = ships
+                            ? "Road Building: click glowing sea circles for free ships"
+                            : "Road Building: free roads or ships (any mix)";
+                    }
                     break;
                 case MatchPhase.Main:
                     buttons.Add((_hsTradeOpen && free ? "Close trade" : "Trade", false, human && free, () =>
@@ -601,9 +615,29 @@ namespace CatanRoguelike.Game
                     if (state.Config.PartyRules)
                         buttons.Add((_hsScheme != HotSeatScheme.None && free ? "Close schemes" : "Schemes", false, human && free,
                             () => OpenScheme(_hsScheme == HotSeatScheme.None ? HotSeatScheme.Bounty : HotSeatScheme.None)));
+                    if (s.Match.SeafarersOn)
+                    {
+                        // v145 Seafarers: build mode toggles for ships and the one ship move per turn.
+                        var mode = _hsBoardInput != null ? _hsBoardInput.Mode : MatchBuildMode.Auto;
+                        int cs = state.CurrentSeat;
+                        bool canShip = state.Seats[cs].Hand.CanAfford(s.Match.ShipCostFor(cs)) && s.Match.ValidShips(cs).Any();
+                        buttons.Add((mode == MatchBuildMode.Ship ? "Land" : "Ship", mode == MatchBuildMode.Ship,
+                            human && free && (canShip || mode == MatchBuildMode.Ship),
+                            () => SetHotSeatBoardMode(mode == MatchBuildMode.Ship ? MatchBuildMode.Auto : MatchBuildMode.Ship)));
+                        buttons.Add((mode == MatchBuildMode.MoveShip ? "Stay" : "Move ship", mode == MatchBuildMode.MoveShip,
+                            human && free && (s.Match.MovableShips(cs).Any() || mode == MatchBuildMode.MoveShip),
+                            () => SetHotSeatBoardMode(mode == MatchBuildMode.MoveShip ? MatchBuildMode.Auto : MatchBuildMode.MoveShip)));
+                        if (human && free && mode == MatchBuildMode.Ship)
+                            hint = "Ship (1 lumber + 1 wool): click a glowing sea circle";
+                        else if (human && free && mode == MatchBuildMode.MoveShip)
+                            hint = _hsBoardInput.MoveFrom.HasValue
+                                ? "Click a circle to sail the ship there"
+                                : "Click your open ship (gold) to move it";
+                    }
+
                     buttons.Add(("Auto-build", false, human && free, () => s.AutoBuild()));
                     buttons.Add(("End turn", true, human && free, () => s.EndTurn()));
-                    if (human && free)
+                    if (human && free && hint == null)
                         hint = "Click glowing spots on the board to build";
                     break;
             }
@@ -616,8 +650,9 @@ namespace CatanRoguelike.Game
                 AddShadow(ht.gameObject, 1.2f);
             }
 
-            const float h = 60f, gap = 14f;
-            float w = buttons.Count > 4 ? 162f : buttons.Count > 2 ? 190f : 250f;
+            const float h = 60f;
+            float gap = buttons.Count > 5 ? 10f : 14f;
+            float w = buttons.Count > 5 ? 140f : buttons.Count > 4 ? 162f : buttons.Count > 2 ? 190f : 250f;
             float total = buttons.Count * w + (buttons.Count - 1) * gap;
             // Left edge clear of the hand panel (screen x 40..620 of 1920), centre-relative.
             float x = Mathf.Max(70f - total / 2f, 640f - 960f) + w / 2f;
@@ -644,6 +679,19 @@ namespace CatanRoguelike.Game
                 });
             }
         }
+
+        /// <summary>v145: switch what board clicks build (land, ships, ship move) and redraw the highlights.</summary>
+        private void SetHotSeatBoardMode(MatchBuildMode mode)
+        {
+            if (_hsBoardInput == null)
+                return;
+            _hsBoardInput.Mode = mode;
+            _hsBoardInput.MoveFrom = null;
+            _hsBoardInput.RefreshTargets();
+            GameAudio.Play(Sfx.Click);
+        }
+
+        public void SetHotSeatBoardModeForTests(MatchBuildMode mode) => SetHotSeatBoardMode(mode);
 
         private void BuildPassScreen(MatchSeatState seat)
         {

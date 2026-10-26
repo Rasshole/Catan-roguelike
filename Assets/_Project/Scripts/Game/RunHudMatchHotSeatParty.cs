@@ -79,7 +79,8 @@ namespace CatanRoguelike.Game
         /// <summary>Board clicks: a robber move that touches 2+ opponents waits for the victim picker.</summary>
         private bool InterceptHotSeatBoardCommand(MatchCommand command)
         {
-            if (command.Type != MatchCommandType.MoveRobber || command.Victim != MatchBoardPick.VictimPending)
+            if (command.Type != MatchCommandType.MoveRobber && command.Type != MatchCommandType.MovePirate
+                || command.Victim != MatchBoardPick.VictimPending)
                 return false;
             _hsVictimCommand = command;
             HsMark();
@@ -362,10 +363,13 @@ namespace CatanRoguelike.Game
                 return;
             }
 
-            var victims = _hotSeat.Match.RobberVictims(command.Seat, command.Hex).ToList();
+            bool pirate = command.Type == MatchCommandType.MovePirate;
+            var victims = (pirate ? _hotSeat.Match.PirateVictims(command.Seat, command.Hex)
+                : _hotSeat.Match.RobberVictims(command.Seat, command.Hex)).ToList();
             // Docked over the left column so the board (and the chosen tile) stays in view.
             var card = HsModal("VictimPicker", new Vector2(600f, 250f + victims.Count * 86f), new Vector2(330f - 960f, HsTradeOffsetY(250f + victims.Count * 86f)));
-            string where = state.Board.TryGetTile(command.Hex, out var tile)
+            string where = pirate ? "THE PIRATE SAILS IN"
+                : state.Board.TryGetTile(command.Hex, out var tile)
                 ? $"THE ROBBER MOVES TO THE {ResourceLabel(tile.Resource).ToUpperInvariant()} {tile.NumberToken}"
                 : "THE ROBBER MOVES";
             HsText(card, "Kicker", where, 16, new Vector2(0.5f, 1f), new Vector2(0f, -50f), new Vector2(520f, 22f),
@@ -383,11 +387,12 @@ namespace CatanRoguelike.Game
                     new Vector2(0.5f, 1f), new Vector2(50f, y), new Vector2(380f, 58f), true, true, () =>
                     {
                         _hsVictimCommand = null;
-                        _hotSeat.Apply(MatchCommand.Robber(command.Seat, command.Hex, v));
+                        _hotSeat.Apply(pirate ? MatchCommand.Pirate(command.Seat, command.Hex, v)
+                            : MatchCommand.Robber(command.Seat, command.Hex, v));
                     }, 20);
             }
 
-            HsButton(card, "VictimCancel", "Pick another tile", new Vector2(0.5f, 0f), new Vector2(0f, 58f),
+            HsButton(card, "VictimCancel", pirate ? "Pick another spot" : "Pick another tile", new Vector2(0.5f, 0f), new Vector2(0f, 58f),
                 new Vector2(260f, 50f), true, false, () => _hsVictimCommand = null);
         }
 

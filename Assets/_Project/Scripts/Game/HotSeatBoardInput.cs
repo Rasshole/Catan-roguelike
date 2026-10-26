@@ -26,6 +26,78 @@ namespace CatanRoguelike.Game
 
         public int MarkerCountForTests => _markers.Count;
 
+        private static readonly Color ShipCore = new(0.55f, 0.85f, 1f, 1f);
+        private static readonly Color MovableShipColor = new(1f, 0.82f, 0.25f, 1f);
+
+        /// <summary>v145 Seafarers: what a board click builds (Auto = land pieces; Ship / MoveShip from the HUD buttons).</summary>
+        public MatchBuildMode Mode { get; set; } = MatchBuildMode.Auto;
+
+        /// <summary>v145: the ship picked for <see cref="MatchBuildMode.MoveShip"/> (null until one is picked).</summary>
+        public Edge? MoveFrom { get; set; }
+
+        private int _modeSeat = -1;
+        private MatchPhase _modePhase;
+
+        /// <summary>v145: back to land building when the turn or phase changes (or a ship has sailed).</summary>
+        private void ResetModeIfStale()
+        {
+            var state = _session.State;
+            if (_modeSeat != state.ActingSeat || _modePhase != state.Phase)
+            {
+                if (_modeSeat >= 0 && (Mode != MatchBuildMode.Auto || MoveFrom.HasValue))
+                {
+                    Mode = MatchBuildMode.Auto;
+                    MoveFrom = null;
+                }
+
+                _modeSeat = state.ActingSeat;
+                _modePhase = state.Phase;
+            }
+
+            if (Mode == MatchBuildMode.MoveShip && state.ShipMovedThisTurn)
+            {
+                Mode = MatchBuildMode.Auto;
+                MoveFrom = null;
+            }
+        }
+
+        /// <summary>Same as a click on the board at world x/z (tests and captures).</summary>
+        public MatchCommand ClickForTests(float x, float z)
+        {
+            if (!HumanCanClick)
+                return null;
+            ResetModeIfStale();
+            return HandleClick(x, z, apply: true);
+        }
+
+        private MatchCommand HandleClick(float x, float z, bool apply)
+        {
+            if (Mode == MatchBuildMode.MoveShip && !MoveFrom.HasValue)
+            {
+                var pick = MatchBoardPick.PickMovableShip(_session.Match, x, z, _view.HexScale);
+                if (pick.HasValue && apply)
+                {
+                    MoveFrom = pick;
+                    _targetsKey = null;
+                }
+
+                return null;
+            }
+
+            var command = MatchBoardPick.Pick(_session.Match, Mode, x, z, _view.HexScale, MoveFrom);
+            if (command != null && apply && (Intercept == null || !Intercept(command)))
+            {
+                _session.Apply(command);
+                if (command.Type == MatchCommandType.MoveShip)
+                {
+                    Mode = MatchBuildMode.Auto;
+                    MoveFrom = null;
+                }
+            }
+
+            return command;
+        }
+
         /// <summary>v136: the HUD may take a clicked command (e.g. a robber move that needs a victim choice).</summary>
         public System.Func<MatchCommand, bool> Intercept { get; set; }
 
@@ -82,7 +154,8 @@ namespace CatanRoguelike.Game
             }
 
             var state = _session.State;
-            string key = $"{state.ActingSeat}:{state.Phase}:{_session.Match.CommandLog.Count}:{state.ActiveTrade != null}";
+            ResetModeIfStale();
+            string key = $"{state.ActingSeat}:{state.Phase}:{_session.Match.CommandLog.Count}:{state.ActiveTrade != null}:{Mode}:{MoveFrom}";
             if (key == _targetsKey)
                 return;
             Clear();
@@ -92,7 +165,18 @@ namespace CatanRoguelike.Game
             // Ghosts in the acting seat's own colour (lightened) read clearly on every tile; cream/white ghosts
             // vanished into the cream hex borders.
             var seatColor = PlayerPieceVisuals.ColorForPlayer(_session.Acting.Owner);
-            var (vertices, edges, _) = MatchBoardPick.Targets(_session.Match, MatchBuildMode.Auto);
+            if (Mode == MatchBuildMode.MoveShip && MoveFrom.HasValue)
+            {
+                // Step two of a ship move: the picked ship ringed in gold, circles where it can sail.
+                _markers.Add(ShipCircle(MoveFrom.Value, MovableShipColor, scale, top, 1.5f, pulse: false));
+                foreach (var e in _session.Match.ShipMoveTargets(state.ActingSeat, MoveFrom.Value))
+                    _markers.Add(ShipCircle(e, Color.Lerp(seatColor, Color.white, 0.12f), scale, top, 1f, true));
+                return;
+            }
+
+            var (vertices, edges, _) = MatchBoardPick.Targets(_session.Match, Mode);
+            bool shipEdges = Mode == MatchBuildMode.Ship || Mode == MatchBuildMode.MoveShip
+                             || state.Phase == MatchPhase.RoadBuilding && MatchBoardPick.FreePieceShips(_session.Match, state.ActingSeat, Mode);
             // v143: small pulsing seat-colour circles / dashes instead of ghost houses and ghost roads.
             var markColor = Color.Lerp(seatColor, Color.white, 0.12f);
             foreach (var v in vertices)
@@ -102,7 +186,9 @@ namespace CatanRoguelike.Game
             }
 
             foreach (var e in edges)
-                _markers.Add(RoadDash(e, markColor, scale, top, 1f));
+                _markers.Add(shipEdges
+                    ? ShipCircle(e, Mode == MatchBuildMode.MoveShip ? MovableShipColor : markColor, scale, top, 1f, true)
+                    : RoadDash(e, markColor, scale, top, 1f));
         }
 
         private void Update()
@@ -127,12 +213,23 @@ namespace CatanRoguelike.Game
             var ray = cam.ScreenPointToRay(Input.mousePosition);
             if (!BoardPickPlane.TryRaycast(ray, BoardPickPlane.GetPickPlaneY(_view.TileHeight), out var hit))
                 return;
-            var command = MatchBoardPick.Pick(_session.Match, MatchBuildMode.Auto, hit.x, hit.z, _view.HexScale);
+            if (Mode == MatchBuildMode.MoveShip && !MoveFrom.HasValue)
+            {
+                var ship = MatchBoardPick.PickMovableShip(_session.Match, hit.x, hit.z, _view.HexScale);
+                if (!ship.HasValue)
+                    return;
+                _hover = ShipCircle(ship.Value, MovableShipColor, _view.HexScale, _view.TileHeight, 1.5f, false);
+                if (Input.GetMouseButtonDown(0) && !IsPointerOverUI())
+                    HandleClick(hit.x, hit.z, apply: true);
+                return;
+            }
+
+            var command = MatchBoardPick.Pick(_session.Match, Mode, hit.x, hit.z, _view.HexScale, MoveFrom);
             if (command == null)
                 return;
             _hover = HoverMarker(command);
-            if (Input.GetMouseButtonDown(0) && !IsPointerOverUI() && (Intercept == null || !Intercept(command)))
-                _session.Apply(command);
+            if (Input.GetMouseButtonDown(0) && !IsPointerOverUI())
+                HandleClick(hit.x, hit.z, apply: true);
         }
 
         private GameObject HoverMarker(MatchCommand command)
@@ -144,6 +241,15 @@ namespace CatanRoguelike.Game
                 case MatchCommandType.PlaceSetupRoad:
                 case MatchCommandType.BuildRoad:
                     return RoadDash(command.Edge, HoverTint(), scale, top, 1.45f);
+                case MatchCommandType.BuildShip:
+                    return ShipCircle(command.Edge, HoverTint(), scale, top, 1.55f, false);
+                case MatchCommandType.MoveShip:
+                    return ShipCircle(command.ToEdge, HoverTint(), scale, top, 1.55f, false);
+                case MatchCommandType.MovePirate:
+                {
+                    var (hx, hz) = HexMath.ToWorldPosition(command.Hex, scale);
+                    return ShipPieceVisuals.CreatePirate(_root, new Vector3(hx, 0f, hz), top + 0.01f, scale);
+                }
                 case MatchCommandType.MoveRobber:
                 {
                     var (hx, hz) = HexMath.ToWorldPosition(command.Hex, scale);
@@ -175,6 +281,21 @@ namespace CatanRoguelike.Game
             return PlacementMarkerVisuals.CreateRoadDash(_root, new Vector3(mx, 0f, mz), HexMath.EdgeAngle(e), length,
                 color, top, scale, sizeMul, pulse: sizeMul <= 1f);
         }
+
+        /// <summary>v145: ship spots are circles on the edge midpoint (a light-blue core), unlike the road dashes.</summary>
+        private GameObject ShipCircle(Edge e, Color color, float scale, float top, float sizeMul, bool pulse)
+        {
+            var (mx, mz) = HexMath.EdgeMidpoint(e, scale);
+            var go = PlacementMarkerVisuals.CreateSpotCircle(_root, new Vector3(mx, 0f, mz), color, top, scale, sizeMul, pulse);
+            go.name = ShipSpotName;
+            var core = go.transform.Find("Core");
+            if (core != null && core.TryGetComponent<MeshRenderer>(out var mr))
+                mr.sharedMaterial = _shipCoreMat != null ? _shipCoreMat : _shipCoreMat = BuiltInMaterials.CreateUnlit(ShipCore);
+            return go;
+        }
+
+        public const string ShipSpotName = "ShipSpot";
+        private static Material _shipCoreMat;
 
         private void Clear()
         {

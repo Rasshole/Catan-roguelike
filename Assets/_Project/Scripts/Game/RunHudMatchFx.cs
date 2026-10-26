@@ -175,6 +175,13 @@ namespace CatanRoguelike.Game
                 case MatchCommandType.PlayRoadBuilding:
                 case MatchCommandType.PlayYearOfPlenty:
                 case MatchCommandType.PlayMonopoly: GameAudio.Play(Sfx.DevPlay); break;
+                case MatchCommandType.BuildShip: GameAudio.Play(Sfx.Ship); break;
+                case MatchCommandType.MoveShip: GameAudio.Play(Sfx.ShipMove); break;
+                case MatchCommandType.MovePirate:
+                    GameAudio.Play(Sfx.Pirate);
+                    if (c.Victim >= 0)
+                        GameAudio.Play(Sfx.Steal, 0.8f);
+                    break;
                 case MatchCommandType.MoveRobber:
                     GameAudio.Play(Sfx.Robber);
                     if (c.Victim >= 0)

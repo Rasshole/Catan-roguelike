@@ -24,7 +24,13 @@ namespace CatanRoguelike.Game
         Vote,
         Auction,
         Sabotage,
-        Victory
+        Victory,
+        /// <summary>v145: a ship launched (splash + hull knock).</summary>
+        Ship,
+        /// <summary>v145: a ship sails to a new edge (soft wash).</summary>
+        ShipMove,
+        /// <summary>v145: the pirate moves (low horn).</summary>
+        Pirate
     }
 
     /// <summary>
@@ -234,6 +240,23 @@ namespace CatanRoguelike.Game
                     Bell(d, 0.5f, Note(76), 1.2f, 0.25f);
                     Bell(d, 0.5f, Note(79), 1.2f, 0.25f);
                     Bell(d, 0.5f, Note(84), 1.2f, 0.25f);
+                    break;
+                case Sfx.Ship:
+                    d = Buf(0.7f);
+                    Swish(d, 0f, 0.45f, 900f, 2600f, 0.7f, rng); // splash
+                    Knock(d, 0.05f, 170f, 0.09f, 0.8f, rng); // hull on water
+                    Marimba(d, 0.18f, Note(74), 0.3f, 0.35f);
+                    break;
+                case Sfx.ShipMove:
+                    d = Buf(0.6f);
+                    Swish(d, 0f, 0.5f, 700f, 1800f, 0.6f, rng);
+                    Swish(d, 0.18f, 0.35f, 1500f, 600f, 0.4f, rng);
+                    break;
+                case Sfx.Pirate:
+                    d = Buf(1.0f);
+                    Glide(d, 0f, 0.85f, 98f, 92f, 0.55f, 3f); // ship's horn
+                    Glide(d, 0f, 0.85f, 147f, 138f, 0.3f, 3f);
+                    Swish(d, 0.05f, 0.5f, 800f, 2000f, 0.3f, rng);
                     break;
                 default:
                     d = Buf(0.05f);

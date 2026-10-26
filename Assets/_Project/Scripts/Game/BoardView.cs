@@ -704,6 +704,20 @@ namespace CatanRoguelike.Game
                     hexScale);
             }
 
+            // v145 Seafarers: boats on their sea edges, and the pirate ship on its sea hex.
+            foreach (var ship in state.Board.Ships)
+            {
+                var (mx, mz) = HexMath.EdgeMidpoint(ship.Key, hexScale);
+                ShipPieceVisuals.CreateShip(buildingsRoot, new Vector3(mx, 0f, mz), HexMath.EdgeAngle(ship.Key),
+                    PlayerPieceVisuals.ColorForPlayer(ship.Value), tileHeight, hexScale);
+            }
+
+            if (state.Board.PirateHex.HasValue)
+            {
+                var (px, pz) = HexMath.ToWorldPosition(state.Board.PirateHex.Value, hexScale);
+                ShipPieceVisuals.CreatePirate(buildingsRoot, new Vector3(px, 0f, pz), tileHeight, hexScale);
+            }
+
             if (buildingsRoot.childCount > priorCount && buildingsRoot.childCount > _lastBuildingVisualCount)
             {
                 var placed = buildingsRoot.GetChild(buildingsRoot.childCount - 1);
