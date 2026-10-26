@@ -162,7 +162,7 @@ namespace CatanRoguelike.Core.Match
             float bestD = float.MaxValue;
             foreach (var coord in state.Board.Tiles.Keys)
             {
-                if (state.Board.RobberTile == coord)
+                if (state.Board.RobberTile == coord || state.Board.LakeHex == coord)
                     continue;
                 var (tx, tz) = HexMath.ToWorldPosition(coord, scale);
                 float d = (x - tx) * (x - tx) + (z - tz) * (z - tz);

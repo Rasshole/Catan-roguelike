@@ -107,6 +107,8 @@ namespace CatanRoguelike.Game
             ColonistBoardVisualScale.RobberOffsetScale = HotSeatRobberOffsetScale;
             PlayerPieceVisuals.BuildingScaleMultiplier = HotSeatBuildingScale;
             PlayerPieceVisuals.RoadScaleMultiplier = HotSeatRoadScale;
+            BoardView.MatchMotion = true; // v146: pieces drop in, robber/pirate slide, numbers pop
+            BoardView.MatchLakeNumbers = config.Fishermen;
             if (boardView != null)
                 boardView.Rebuild(_hotSeatDisplay);
             if (_boardInput != null)
@@ -136,6 +138,7 @@ namespace CatanRoguelike.Game
             _canvas.gameObject.SetActive(true);
 
             ResetMatchFx();
+            ResetV146Ui();
             _hotSeat.Tick(0f); // AI seats that act first
             RebuildHotSeat();
         }
@@ -153,6 +156,8 @@ namespace CatanRoguelike.Game
             ColonistBoardVisualScale.RobberOffsetScale = 1f;
             PlayerPieceVisuals.BuildingScaleMultiplier = 1f;
             PlayerPieceVisuals.RoadScaleMultiplier = 1f;
+            BoardView.MatchMotion = false;
+            BoardView.MatchLakeNumbers = false;
             if (_hsBoardInput != null)
                 _hsBoardInput.Unbind();
             if (_hotSeatRoot != null)
@@ -200,6 +205,7 @@ namespace CatanRoguelike.Game
             if (_hotSeatDirty)
                 RefreshHotSeatNow();
             UpdateHotSeatTimer();
+            UpdateHotSeatMotion();
             ObserveMatchFx();
         }
 
@@ -239,10 +245,14 @@ namespace CatanRoguelike.Game
 
             var s = _hotSeat;
             var state = s.State;
+            _hsTradeCountdownText = null;
+            _hsTradeCountdownFill = null;
             BuildHotSeatBanner(state);
             BuildSeatStrip(state);
             BuildTimerAndCharge();
             BuildHotSeatHand();
+            if (!s.IsOver && !s.PassScreenPending)
+                BuildOwnQuestCard(); // v146: your quest stays in view while you wait
             BuildHotSeatDevCards();
             BuildEventCard(state);
             BuildHotSeatActions();
@@ -262,9 +272,15 @@ namespace CatanRoguelike.Game
             else if (s.PassScreenPending)
                 BuildPassScreen(state.Acting);
             BuildHotSeatInfoPopup(state);
+            if (_hsTooltipSeat >= 0 && !s.PassScreenPending)
+                ShowTraitTooltip(_hsTooltipSeat);
+            else
+                _hsTooltipSeat = -1;
 
             SetLayerRecursively(_hotSeatRoot.gameObject, HudCaptureUiLayer);
             HideRunHudForHotSeat();
+            LiftFishPickerToTop();
+            NoteHotSeatPanels();
         }
 
         private void BuildHotSeatBanner(MatchState state)
@@ -327,6 +343,8 @@ namespace CatanRoguelike.Game
             var head = RunHudUiFactory.CreateText(panel.rectTransform, "Head", $"{n} PLAYERS  ·  FIRST TO {state.Config.VictoryPoints} VP",
                 16, TextAnchor.MiddleCenter, ink, FontStyle.Bold);
             SetRect(head.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(width - 40f, 24f));
+            _hsSeatRows = new Image[n];
+            _hsVpTexts = new Text[n];
 
             for (int i = 0; i < n; i++)
             {
@@ -337,6 +355,7 @@ namespace CatanRoguelike.Game
                 row.preserveAspect = false;
                 row.color = active ? new Color(1f, 0.82f, 0.36f, 0.55f) : new Color(0f, 0f, 0f, 0.08f);
                 SetRect(row.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, y), new Vector2(width - 36f, rowH - 10f));
+                _hsSeatRows[i] = row;
 
                 const float shift = 0f;
                 string civLabel = null;
@@ -396,7 +415,9 @@ namespace CatanRoguelike.Game
                     SetRect(pip.rectTransform, new Vector2(0f, 0.5f), new Vector2(102f + shift + c * 18f, -32f), new Vector2(14f, 14f));
                 }
 
-                if (civLabel != null)
+                if (SeatTraitVisible(state, seat))
+                    BuildSeatTraitChip(row.rectTransform, state, i, 95f + Mathf.Min(seat.ExtraTimeCharges, 6) * 18f + 6f);
+                else if (civLabel != null)
                 {
                     float x0 = 95f + Mathf.Min(seat.ExtraTimeCharges, 6) * 18f + 6f;
                     var civText = RunHudUiFactory.CreateText(row.rectTransform, "CivName", civLabel, 13, TextAnchor.MiddleLeft,
@@ -412,6 +433,9 @@ namespace CatanRoguelike.Game
                 var vp = RunHudUiFactory.CreateText(row.rectTransform, "VP", seat.PublicVictoryPoints.ToString(), 36,
                     TextAnchor.MiddleCenter, ink, FontStyle.Bold);
                 SetRect(vp.rectTransform, new Vector2(1f, 0.5f), new Vector2(-40f, 8f), new Vector2(64f, 44f));
+                _hsVpTexts[i] = vp;
+                if (state.OldBootSeat == i)
+                    BuildBootBadge(row.rectTransform, new Vector2(1f, 1f), new Vector2(-40f, -2f)); // v146: needs +1 VP
                 BuildSeatShenaniganMarks(row.rectTransform, state, i); // v141: bounty + face-down card marks
                 var vpl = RunHudUiFactory.CreateText(row.rectTransform, "VPLabel",
                     "VP" + (state.LongestRoadSeat == i ? (state.Board.IsSeafarers ? " · route" : " · road") : "") + (state.LargestArmySeat == i ? " · army" : ""), 13, TextAnchor.MiddleCenter, ColonistUiKit.InkMuted,

@@ -65,6 +65,9 @@ namespace CatanRoguelike.Core.Match
                 });
             }
 
+            if (config.Fishermen)
+                SetUpFishermen();
+
             // v135: harbours (same discovery as the single-player board, so the 3D view and the rules agree).
             State.Ports.AddRange(PortAccess.DiscoverPorts(board));
             // v135: development deck — classic 25 (14 K, 5 VP, 2 RB, 2 YoP, 2 Mono); 5–6 player extension 34.
@@ -183,6 +186,8 @@ namespace CatanRoguelike.Core.Match
                 MatchCommandType.BuildShip => BuildShip(command),
                 MatchCommandType.MoveShip => MoveShip(command),
                 MatchCommandType.MovePirate => MovePirate(command),
+                MatchCommandType.SpendFish => SpendFish(command),
+                MatchCommandType.PassOldBoot => PassOldBoot(command),
                 _ => MatchCommandResult.Rejected("Unknown command.")
             };
 
@@ -625,6 +630,8 @@ namespace CatanRoguelike.Core.Match
                 return MatchCommandResult.Rejected("Robber must go on a land hex.");
             if (State.Board.RobberTile == hex)
                 return MatchCommandResult.Rejected("Robber must move to a different hex.");
+            if (State.Board.LakeHex == hex)
+                return MatchCommandResult.Rejected("The robber can't go on the lake.");
             if (State.ActiveDecree == MatchDecreeId.NoDesertRobber && State.Board.TryGetTile(hex, out var dt) && dt.IsDesert)
                 return MatchCommandResult.Rejected("Today's decree: the robber can't enter a desert.");
             var victims = RobberVictims(c.Seat, hex).ToList();
@@ -1206,7 +1213,7 @@ namespace CatanRoguelike.Core.Match
         private void AfterBuild()
         {
             RefreshVictoryPoints();
-            if (State.Current.VictoryPoints >= State.Config.VictoryPoints)
+            if (State.Current.VictoryPoints >= VictoryTarget(State.CurrentSeat))
             {
                 State.Winner = State.CurrentSeat;
                 State.Phase = MatchPhase.GameOver;

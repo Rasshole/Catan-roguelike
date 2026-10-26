@@ -74,7 +74,15 @@ namespace CatanRoguelike.Core.Match
         /// <summary>Main: move the open ship on the edge fields to the edge in the To* fields (once per turn).</summary>
         MoveShip = 33,
         /// <summary>MoveRobber phase on a sea map: the pirate goes to the sea hex Q/R instead; Victim = seat with a ship there.</summary>
-        MovePirate = 34
+        MovePirate = 34,
+        // ---- v146 Fishermen of Catan ----
+        /// <summary>
+        /// Main (Fishermen on): spend fish. Pick = the cost / action: 2 robber off the board, 3 steal 1 card
+        /// (Victim), 4 one card of your choice (Request), 5 a free road or ship, 7 a free development card.
+        /// </summary>
+        SpendFish = 35,
+        /// <summary>Main: hand the old boot to Victim (a player with at least as many visible VP).</summary>
+        PassOldBoot = 36
     }
 
     /// <summary>
@@ -189,6 +197,18 @@ namespace CatanRoguelike.Core.Match
         {
             Type = MatchCommandType.BankTradeBatch, Seat = seat, Offer = give, Request = get
         };
+
+        /// <summary>v146 Fishermen: spend fish on an action (see <see cref="MatchCommandType.SpendFish"/>).</summary>
+        public static MatchCommand SpendFish(int seat, int cost, int victim = -1, ResourceType? card = null)
+        {
+            var get = ResourceBundle.Zero;
+            if (card.HasValue)
+                get.Add(card.Value, 1);
+            return new MatchCommand { Type = MatchCommandType.SpendFish, Seat = seat, Pick = cost, Victim = victim, Request = get };
+        }
+
+        public static MatchCommand PassBoot(int seat, int to) =>
+            new() { Type = MatchCommandType.PassOldBoot, Seat = seat, Victim = to };
 
         /// <summary>v143 Fishermen: trade fish for one card from the bank.</summary>
         public static MatchCommand Fish(int seat, ResourceType card)

@@ -16,6 +16,30 @@ namespace CatanRoguelike.Game
 
         public static float EaseOutQuad(float t) => 1f - (1f - t) * (1f - t);
 
+        /// <summary>v146: a springy scale punch around the current scale (no shrink-from-small like ScalePop).</summary>
+        public static IEnumerator Punch(Transform target, float duration, float amount = 0.25f)
+        {
+            if (target == null)
+                yield break;
+            Vector3 baseScale = target.localScale;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                if (target == null)
+                    yield break;
+                elapsed += Time.unscaledDeltaTime;
+                target.localScale = baseScale * PunchScale(Mathf.Clamp01(elapsed / duration), amount);
+                yield return null;
+            }
+
+            if (target != null)
+                target.localScale = baseScale;
+        }
+
+        /// <summary>1 at t = 0 and t = 1, overshooting by <paramref name="amount"/> early with a small rebound.</summary>
+        public static float PunchScale(float t, float amount) =>
+            1f + amount * Mathf.Sin(t * Mathf.PI * 2.2f) * Mathf.Pow(1f - t, 1.6f);
+
         public static IEnumerator ScalePop(Transform target, float duration, float peakScale = 1.18f)
         {
             if (target == null)

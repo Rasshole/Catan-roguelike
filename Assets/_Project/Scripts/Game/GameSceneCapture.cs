@@ -92,6 +92,8 @@ namespace CatanRoguelike.Game
                 throw new ArgumentNullException(nameof(hud));
 
             Debug.Log($"{HudCompositePipelineMarker} CaptureMainCameraWithHudComposite enter ({width}x{height})");
+            if (HudMotion.SnapOnCapture)
+                hud.SnapMotionForCapture(); // v146: a sharp frame, not a half-faded panel
 
             var camera = Camera.main;
             if (camera == null)

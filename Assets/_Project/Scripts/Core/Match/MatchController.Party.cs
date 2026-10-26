@@ -324,7 +324,7 @@ namespace CatanRoguelike.Core.Match
                 case EventId.BanditRaid:
                 {
                     var busiest = State.Board.Tiles.Values
-                        .Where(t => t.Coord != State.Board.RobberTile)
+                        .Where(t => t.Coord != State.Board.RobberTile && t.Coord != State.Board.LakeHex)
                         .OrderByDescending(t => BuildingsOn(t.Coord)).ThenBy(t => t.Coord.Q).ThenBy(t => t.Coord.R)
                         .FirstOrDefault();
                     if (busiest != null)
@@ -395,7 +395,7 @@ namespace CatanRoguelike.Core.Match
 
                 if (changed)
                     RefreshVictoryPoints();
-                if (!IsPregame && State.Current.VictoryPoints >= State.Config.VictoryPoints)
+                if (!IsPregame && State.Current.VictoryPoints >= VictoryTarget(State.CurrentSeat))
                 {
                     State.Winner = State.CurrentSeat;
                     State.Phase = MatchPhase.GameOver;

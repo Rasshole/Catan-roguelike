@@ -112,11 +112,12 @@ namespace CatanRoguelike.Game
                 content.LeaderLine = string.IsNullOrEmpty(def.LeaderName) ? null : "led by " + def.LeaderName;
             }
 
+            // v146: traits are public (everyone sees every seat's trait); only the quest stays secret.
+            var trait = MatchPartyLibrary.Trait(seat.Trait);
+            content.Sections.Add(("Trait", "TRAIT" + (trait != null ? "  ·  " + trait.Name.ToUpperInvariant() : ""),
+                trait != null ? trait.Description : "Picked after placement.", trait != null ? ColonistUiKit.Ink : ColonistUiKit.InkMuted));
             if (reveal)
             {
-                var trait = MatchPartyLibrary.Trait(seat.Trait);
-                content.Sections.Add(("Trait", "TRAIT" + (trait != null ? "  ·  " + trait.Name.ToUpperInvariant() : ""),
-                    trait != null ? trait.Description : "Picked after placement.", ColonistUiKit.Ink));
                 var quest = MatchPartyLibrary.Quest(seat.Quest);
                 if (quest != null)
                 {
@@ -130,7 +131,7 @@ namespace CatanRoguelike.Game
                     content.Sections.Add(("Quest", "SECRET QUEST", "Picked after placement.", ColonistUiKit.InkMuted));
             }
             else
-                content.Footer = "Trait and secret quest stay hidden until the game ends.";
+                content.Footer = "Their secret quest stays hidden until the game ends.";
 
             // Click-outside catcher (transparent), then the strip above it so another portrait switches cards.
             var catcher = CreateImage(_hotSeatRoot, "CivInfoCatcher", null);

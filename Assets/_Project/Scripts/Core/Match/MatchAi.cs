@@ -86,6 +86,11 @@ namespace CatanRoguelike.Core.Match
             if (knight != null)
                 return knight;
 
+            // v146 Fishermen: shed the old boot, chase the robber off our own hex.
+            var fishMove = ChooseFishFirst(match, seat);
+            if (fishMove != null)
+                return fishMove;
+
             var spots = match.CountSettlements(seat) < BuildingPieceLimits.MaxSettlements
                 ? match.ValidSettlements(seat).ToList()
                 : new List<Vertex>();
@@ -140,6 +145,8 @@ namespace CatanRoguelike.Core.Match
                         return MatchCommand.Simple(MatchCommandType.PlayRoadBuilding, seat);
                     if (wantsRoad && hand.CanAfford(match.RoadCostFor(seat)))
                         return MatchCommand.AtEdge(MatchCommandType.BuildRoad, seat, best);
+                    if (wantsRoad && match.CanSpendFish(seat, MatchController.FishSpendRoad))
+                        return MatchCommand.SpendFish(seat, MatchController.FishSpendRoad);
                 }
             }
 
@@ -214,6 +221,10 @@ namespace CatanRoguelike.Core.Match
                 }
             }
 
+            var fishLate = ChooseFishLate(match, seat);
+            if (fishLate != null)
+                return fishLate;
+
             if (TradesThisTurn(match, seat) >= MaxBankTradesPerTurn)
                 return null;
             foreach (var need in MatchController.AllResources)
@@ -230,6 +241,46 @@ namespace CatanRoguelike.Core.Match
                 if (batch != null)
                     return batch;
                 return MatchCommand.Trade(seat, give.Value, need);
+            }
+
+            return null;
+        }
+
+        /// <summary>v146 Fishermen: pass the old boot to the leader; 2 fish to lift the robber off our own hex.</summary>
+        private static MatchCommand ChooseFishFirst(MatchController match, int seat)
+        {
+            var state = match.State;
+            if (!state.Config.Fishermen)
+                return null;
+            if (state.OldBootSeat == seat)
+            {
+                var to = state.Seats.Where(o => match.CanPassOldBoot(seat, o.Index))
+                    .OrderByDescending(o => o.PublicVictoryPoints).ThenBy(o => o.Index).FirstOrDefault();
+                if (to != null)
+                    return MatchCommand.PassBoot(seat, to.Index);
+            }
+
+            if (state.Board.RobberTile is HexCoord robber && TouchesSeat(state, robber, seat)
+                && match.CanSpendFish(seat, MatchController.FishSpendRobberOff))
+                return MatchCommand.SpendFish(seat, MatchController.FishSpendRobberOff);
+            return null;
+        }
+
+        /// <summary>v146 Fishermen: 7 fish for a development card; exactly 3 fish rob a card-rich leader.</summary>
+        private static MatchCommand ChooseFishLate(MatchController match, int seat)
+        {
+            var state = match.State;
+            if (!state.Config.Fishermen)
+                return null;
+            if (match.CanSpendFish(seat, MatchController.FishSpendDevCard))
+                return MatchCommand.SpendFish(seat, MatchController.FishSpendDevCard);
+            if (state.Seats[seat].Fish == MatchController.FishSpendSteal && match.CanSpendFish(seat, MatchController.FishSpendSteal))
+            {
+                var victim = state.Seats.Where(o => o.Index != seat && o.CardCount >= 5)
+                    .OrderByDescending(o => o.PublicVictoryPoints).ThenByDescending(o => o.CardCount).ThenBy(o => o.Index)
+                    .FirstOrDefault();
+                if (victim != null)
+                    return MatchCommand.SpendFish(seat, MatchController.FishSpendSteal, victim.Index);
             }
 
             return null;
@@ -293,7 +344,7 @@ namespace CatanRoguelike.Core.Match
             int bestScore = int.MinValue;
             foreach (var tile in state.Board.Tiles.Values.OrderBy(t => t.Coord.Q).ThenBy(t => t.Coord.R))
             {
-                if (state.Board.RobberTile == tile.Coord)
+                if (state.Board.RobberTile == tile.Coord || state.Board.LakeHex == tile.Coord)
                     continue;
                 if (tile.IsDesert && state.ActiveDecree == MatchDecreeId.NoDesertRobber)
                     continue;

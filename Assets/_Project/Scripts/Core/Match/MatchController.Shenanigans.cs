@@ -555,7 +555,7 @@ namespace CatanRoguelike.Core.Match
 
         private void DoChaos()
         {
-            var tiles = State.Board.Tiles.Values.Where(t => t.Coord != State.Board.RobberTile)
+            var tiles = State.Board.Tiles.Values.Where(t => t.Coord != State.Board.RobberTile && t.Coord != State.Board.LakeHex)
                 .OrderBy(t => t.Coord.Q).ThenBy(t => t.Coord.R).ToList();
             if (tiles.Count > 0)
                 State.Board.PlaceRobber(tiles[State.PartyRng.Next(tiles.Count)].Coord);

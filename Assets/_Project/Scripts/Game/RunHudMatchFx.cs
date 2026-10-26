@@ -54,6 +54,9 @@ namespace CatanRoguelike.Game
                 ColonistSceneDestroy.SafeDestroy(_fxRoot.gameObject);
             _fxRoot = null;
             _fxDiceRoot = null;
+            _fxDiceSum = null;
+            _fxDiceSumDisc = null;
+            DiceThrownForTests = false;
         }
 
         private RectTransform EnsureFxRoot()
@@ -204,15 +207,64 @@ namespace CatanRoguelike.Game
             }
         }
 
+        public const float DiceHoldSeconds = 0.75f;
+        public const float DiceReturnSeconds = 0.35f;
+        private static readonly Vector2 DiceTrayPos = new(-385f, 285f);
+        private Text _fxDiceSum;
+        private Image _fxDiceSumDisc;
+
+        /// <summary>Tests: the dice are out on the table (thrown, not yet back in the tray).</summary>
+        public bool DiceThrownForTests { get; private set; }
+        public string DiceSumTextForTests => _fxDiceSum != null && _fxDiceSum.gameObject.activeInHierarchy ? _fxDiceSum.text : null;
+        public int LastPoppedTokensForTests { get; private set; }
+
+        /// <summary>Where the dice land: above the board's centre (the board sits left of the seat strip).</summary>
+        private Vector2 DiceThrowPos()
+        {
+            var canvasRt = _canvas != null ? (RectTransform)_canvas.transform : null;
+            if (canvasRt == null)
+                return DiceTrayPos;
+            var r = canvasRt.rect;
+            return new Vector2(-r.width * 0.5f - 190f, r.height * 0.5f + 250f);
+        }
+
+        private void EnsureDiceSum()
+        {
+            if (_fxDiceSumDisc != null || _fxDiceRoot == null)
+                return;
+            _fxDiceSumDisc = CreateDisc(_fxDiceRoot, "SumDisc", new Color(0.16f, 0.11f, 0.07f, 0.96f), 46f);
+            _fxDiceSumDisc.raycastTarget = false;
+            SetRect(_fxDiceSumDisc.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, 14f), new Vector2(46f, 46f));
+            _fxDiceSum = RunHudUiFactory.CreateText(_fxDiceSumDisc.rectTransform, "Sum", "", 26, TextAnchor.MiddleCenter,
+                ColonistUiKit.Cream, FontStyle.Bold);
+            _fxDiceSum.raycastTarget = false;
+            _fxDiceSum.horizontalOverflow = HorizontalWrapMode.Overflow;
+            Stretch(_fxDiceSum.rectTransform);
+            _fxDiceSumDisc.gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// v146: every roll (AI too) throws both dice from the tray onto the table above the board: they spin,
+        /// bounce and flicker through faces, land with a pop and a sum badge (and the matching number tokens pop
+        /// on the board), then glide back to the tray where the result stays up.
+        /// </summary>
         private IEnumerator RollDiceRoutine(int a, int b)
         {
             int token = ++_fxRollAnimating;
             _fxRolling = true;
+            DiceThrownForTests = true;
             _fxDiceRoot.gameObject.SetActive(true);
+            EnsureDiceSum();
+            if (_fxDiceSumDisc != null)
+                _fxDiceSumDisc.gameObject.SetActive(false);
             var rng = new System.Random(a * 31 + b * 7 + Time.frameCount);
             float t = 0f, nextFace = 0f;
             var d0 = _fxDie[0].rectTransform;
             var d1 = _fxDie[1].rectTransform;
+            var from = DiceTrayPos;
+            var to = DiceThrowPos();
+            const float bigScale = 1.55f;
+            float spin0 = 620f + rng.Next(0, 200), spin1 = -(560f + rng.Next(0, 200));
             while (t < DiceRollSeconds)
             {
                 if (token != _fxRollAnimating || _fxDiceRoot == null)
@@ -221,24 +273,134 @@ namespace CatanRoguelike.Game
                 if (t >= nextFace)
                 {
                     SetDiceFaces(rng.Next(1, 7), rng.Next(1, 7));
-                    nextFace = t + Mathf.Lerp(0.05f, 0.16f, k); // tumbles slow down before landing
+                    nextFace = t + Mathf.Lerp(0.04f, 0.15f, k); // tumbles slow down before landing
                 }
 
-                float hop = Mathf.Abs(Mathf.Sin(k * Mathf.PI * 3f)) * (1f - k) * 22f;
-                d0.anchoredPosition = new Vector2(-38f, hop);
-                d1.anchoredPosition = new Vector2(38f, Mathf.Abs(Mathf.Sin(k * Mathf.PI * 3f + 1.1f)) * (1f - k) * 22f);
-                d0.localRotation = Quaternion.Euler(0f, 0f, (1f - k) * 540f);
-                d1.localRotation = Quaternion.Euler(0f, 0f, -(1f - k) * 470f);
+                // The throw: an arc out of the tray, growing as it nears the table.
+                float travel = SimpleTweens.EaseOutQuad(Mathf.Clamp01(k / 0.55f));
+                var pos = Vector2.Lerp(from, to, travel) + new Vector2(0f, Mathf.Sin(travel * Mathf.PI) * 120f);
+                _fxDiceRoot.anchoredPosition = pos;
+                float sc = Mathf.Lerp(1f, bigScale, travel);
+                _fxDiceRoot.localScale = new Vector3(sc, sc, 1f);
+                // Bounces that shrink, the two dice slightly out of step, plus a sideways scatter.
+                float hop0 = Mathf.Abs(Mathf.Sin(k * Mathf.PI * 3.5f)) * (1f - k) * 34f;
+                float hop1 = Mathf.Abs(Mathf.Sin(k * Mathf.PI * 3.5f + 1.1f)) * (1f - k) * 34f;
+                float spread = Mathf.Sin(k * Mathf.PI) * 14f;
+                d0.anchoredPosition = new Vector2(-38f - spread, hop0);
+                d1.anchoredPosition = new Vector2(38f + spread, hop1);
+                d0.localRotation = Quaternion.Euler(0f, 0f, (1f - k) * (1f - k) * spin0);
+                d1.localRotation = Quaternion.Euler(0f, 0f, (1f - k) * (1f - k) * spin1);
+                float squash = 1f + 0.12f * Mathf.Sin(k * Mathf.PI * 7f) * (1f - k);
+                d0.localScale = d1.localScale = new Vector3(squash, 2f - squash, 1f);
                 t += Time.unscaledDeltaTime;
                 yield return null;
             }
 
+            if (token != _fxRollAnimating || _fxDiceRoot == null)
+                yield break;
             d0.anchoredPosition = new Vector2(-38f, 0f);
             d1.anchoredPosition = new Vector2(38f, 0f);
             d0.localRotation = d1.localRotation = Quaternion.identity;
+            d0.localScale = d1.localScale = Vector3.one;
+            _fxDiceRoot.anchoredPosition = to;
+            _fxDiceRoot.localScale = new Vector3(bigScale, bigScale, 1f);
             SetDiceFaces(a, b);
             _fxRolling = false;
+            if (_fxDiceSumDisc != null)
+            {
+                _fxDiceSum.text = (a + b).ToString();
+                _fxDiceSumDisc.color = a + b == 7 ? new Color(0.72f, 0.16f, 0.12f, 0.98f) : new Color(0.16f, 0.11f, 0.07f, 0.96f);
+                _fxDiceSumDisc.gameObject.SetActive(true);
+                StartCoroutine(SimpleTweens.ScalePop(_fxDiceSumDisc.rectTransform, 0.35f, 1.4f));
+            }
+
+            StartCoroutine(SimpleTweens.Punch(d0, 0.32f, 0.22f));
+            StartCoroutine(SimpleTweens.Punch(d1, 0.32f, 0.22f));
+            var boardView = Object.FindFirstObjectByType<BoardView>();
+            LastPoppedTokensForTests = boardView != null ? boardView.PopNumberTokens(a + b) : 0;
+
+            float hold = 0f;
+            while (hold < DiceHoldSeconds)
+            {
+                if (token != _fxRollAnimating || _fxDiceRoot == null)
+                    yield break;
+                hold += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            float r = 0f;
+            while (r < DiceReturnSeconds)
+            {
+                if (token != _fxRollAnimating || _fxDiceRoot == null)
+                    yield break;
+                float k = SimpleTweens.EaseOutQuad(r / DiceReturnSeconds);
+                _fxDiceRoot.anchoredPosition = Vector2.Lerp(to, from, k);
+                float sc = Mathf.Lerp(bigScale, 1f, k);
+                _fxDiceRoot.localScale = new Vector3(sc, sc, 1f);
+                r += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            if (_fxDiceRoot == null)
+                yield break;
+            _fxDiceRoot.anchoredPosition = from;
+            _fxDiceRoot.localScale = Vector3.one;
+            DiceThrownForTests = false;
             StartCoroutine(SimpleTweens.ScalePop(_fxDiceRoot, 0.22f, 1.12f));
+        }
+
+        /// <summary>v146: a "+N" that floats up from a seat's row when it gains cards.</summary>
+        private void FloatGain(int seat, int n)
+        {
+            if (_fxRoot == null || _hotSeatRoot == null || n <= 0)
+                return;
+            var row = _hotSeatRoot.Find("SeatStrip/Seat_" + seat);
+            if (row == null)
+                return;
+            var t = RunHudUiFactory.CreateText(_fxRoot, "GainPop_" + seat, "+" + n, 30, TextAnchor.MiddleCenter,
+                new Color(0.55f, 0.95f, 0.45f, 1f), FontStyle.Bold);
+            t.raycastTarget = false;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            var rt = t.rectTransform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(80f, 40f);
+            rt.localPosition = SeatRowFxLocal(seat, rt.localPosition);
+            AddShadow(t.gameObject, 1.6f);
+            StartCoroutine(FloatGainRoutine(t, seat));
+        }
+
+        /// <summary>The seat row's centre in <see cref="_fxRoot"/> space (rows are rebuilt, so look it up live).</summary>
+        private Vector3 SeatRowFxLocal(int seat, Vector3 fallback)
+        {
+            var row = _hotSeatRoot != null ? _hotSeatRoot.Find("SeatStrip/Seat_" + seat) as RectTransform : null;
+            if (row == null || _fxRoot == null)
+                return fallback;
+            var p = _fxRoot.InverseTransformPoint(row.TransformPoint(row.rect.center));
+            return new Vector3(p.x, p.y, 0f);
+        }
+
+        private IEnumerator FloatGainRoutine(Text text, int seat)
+        {
+            const float dur = 1.0f;
+            float t = 0f;
+            var c = text.color;
+            var start = text.rectTransform.localPosition;
+            while (t < dur)
+            {
+                if (text == null)
+                    yield break;
+                float k = t / dur;
+                start = SeatRowFxLocal(seat, start);
+                text.rectTransform.localPosition = start + new Vector3(-150f, 10f + 46f * SimpleTweens.EaseOutQuad(k), 0f);
+                float s = k < 0.18f ? Mathf.Lerp(0.6f, 1.25f, k / 0.18f) : Mathf.Lerp(1.25f, 1f, (k - 0.18f) / 0.82f);
+                text.rectTransform.localScale = new Vector3(s, s, 1f);
+                text.color = new Color(c.r, c.g, c.b, k < 0.65f ? 1f : 1f - (k - 0.65f) / 0.35f);
+                t += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            if (text != null)
+                ColonistSceneDestroy.SafeDestroy(text.gameObject);
         }
 
         // ---------- cards ----------
@@ -286,7 +448,11 @@ namespace CatanRoguelike.Game
             }
 
             if (gains.Count > 0)
+            {
                 GameAudio.Play(Sfx.CardDraw);
+                for (int seat = 0; seat < after.Length; seat++)
+                    FloatGain(seat, gains.Where(g => g.seat == seat).Sum(g => g.n));
+            }
             // Spending: what's left of the losses goes back to the bank.
             foreach (var (seat, r, n) in losses)
                 for (int k = 0; k < n && flown < MaxFlyPerBatch; k++, flown++)

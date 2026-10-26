@@ -254,6 +254,7 @@ namespace CatanRoguelike.Tests
                         s.Trait = MatchTraitId.None;
                         s.Civilization = CivilizationId.SunKingdom;
                         s.Quest = MatchQuestId.None;
+                        s.HarbourPilotPicks = 0; // v146: shuffled harbours can leave a Harbour Pilot pick owed
                     }
 
                 a.State.Seats[me].Trait = MatchTraitId.LuckyDice;

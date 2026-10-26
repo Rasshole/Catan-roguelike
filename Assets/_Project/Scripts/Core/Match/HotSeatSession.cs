@@ -21,6 +21,17 @@ namespace CatanRoguelike.Core.Match
 
         public string LastMessage { get; private set; } = "";
 
+        /// <summary>v146: a player trade offer stays open this long, then closes by itself.</summary>
+        public const float TradeOpenSeconds = 15f;
+
+        private MatchTradeOffer _tradeSeen;
+        private float _tradeAge;
+
+        /// <summary>Seconds until the open offer closes (0 when none is open).</summary>
+        public float TradeSecondsLeft =>
+            Match.State.ActiveTrade == null ? 0f
+            : Match.State.ActiveTrade == _tradeSeen ? Math.Max(0f, TradeOpenSeconds - _tradeAge) : TradeOpenSeconds;
+
         public event Action Changed;
 
         private (int seat, int turn, int step, MatchPhase phase) _turnKey;
@@ -76,6 +87,8 @@ namespace CatanRoguelike.Core.Match
             }
 
             if (PassScreenPending)
+                return;
+            if (TickTradeTimeout(deltaSeconds))
                 return;
             Clock.Tick(deltaSeconds);
             if (Clock.Expired)
@@ -144,6 +157,37 @@ namespace CatanRoguelike.Core.Match
             }
 
             return applied;
+        }
+
+        /// <summary>v146: ages the open offer; at <see cref="TradeOpenSeconds"/> it is withdrawn automatically.</summary>
+        private bool TickTradeTimeout(float deltaSeconds)
+        {
+            var trade = Match.State.ActiveTrade;
+            if (trade == null)
+            {
+                _tradeSeen = null;
+                _tradeAge = 0f;
+                return false;
+            }
+
+            if (!ReferenceEquals(trade, _tradeSeen))
+            {
+                _tradeSeen = trade;
+                _tradeAge = 0f;
+            }
+
+            _tradeAge += Math.Max(0f, deltaSeconds);
+            if (_tradeAge < TradeOpenSeconds)
+                return false;
+            var result = Match.Apply(MatchCommand.Simple(MatchCommandType.CancelTrade, trade.From));
+            _tradeSeen = null;
+            _tradeAge = 0f;
+            if (!result.Ok)
+                return false;
+            LastMessage = $"{Match.State.Seats[trade.From].Name}'s trade offer closed after {TradeOpenSeconds:0} s.";
+            AfterChange();
+            RunAi();
+            return true;
         }
 
         private void RunAi()

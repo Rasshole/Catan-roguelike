@@ -538,6 +538,7 @@ namespace CatanRoguelike.Game
             float pickerH = pickerOpen ? TradePickerHeight + 12f : 0f;
             float h = headH + rows * rowH + counterH + pickerH + (offererView ? 116f : 66f);
             var card = HsModal("TradeBoard", new Vector2(HsTradeWidth, h), new Vector2(HsTradeX, HsTradeOffsetY(h)));
+            BuildTradeCountdown(card); // v146: offers close by themselves after 15 s
             HsText(card, "Kicker", offererView ? "YOUR OFFER" : $"INCOMING OFFER  ·  {state.Seats[viewer].Name.ToUpperInvariant()} LOOKS",
                 16, new Vector2(0.5f, 1f), new Vector2(0f, -48f), new Vector2(560f, 22f), TradeKickerInk,
                 FontStyle.Bold);

@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace CatanRoguelike.Game
 {
-    public sealed class HexTileView : MonoBehaviour
+    public sealed partial class HexTileView : MonoBehaviour
     {
         public HexTileData Data { get; private set; }
         private Renderer _renderer;
@@ -175,6 +175,12 @@ namespace CatanRoguelike.Game
 
         public void RefreshNumberToken(HexTileData data)
         {
+            if (ShowLakeNumbers && data.IsDesert && data.IsFishTile)
+            {
+                RefreshLakeToken(data); // v146: the Fishermen lake shows the numbers it fishes on
+                return;
+            }
+
             if (data.IsDesert || !data.NumberToken.HasValue)
             {
                 ClearPipDots();

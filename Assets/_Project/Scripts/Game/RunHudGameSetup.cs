@@ -66,6 +66,19 @@ namespace CatanRoguelike.Game
                   $"|{LobbyMap}|{_lobbyFishermen}|{_lobbyVp}|{_lobbyTimer}|{_lobbyTurnSeconds}|{_lobbyEvents}|{_lobbyShenanigans}"
                 : "";
 
+        private static readonly System.Random MatchSeedSource = new System.Random();
+
+        /// <summary>v146: tests can pin the next match seed; otherwise every Start game rolls a new one.</summary>
+        public int? NextMatchSeedForTests { get; set; }
+
+        public int NextMatchSeed()
+        {
+            if (NextMatchSeedForTests is int pinned)
+                return pinned;
+            lock (MatchSeedSource)
+                return MatchSeedSource.Next(1, int.MaxValue);
+        }
+
         public MatchConfig BuildLobbyConfig(int seed)
         {
             var config = new MatchConfig
@@ -291,7 +304,8 @@ namespace CatanRoguelike.Game
             AddLobbyButton(card, "StartMatch", open > 0 ? "Fill open seats first" : "Start game",
                 new Vector2(250f, 70f), new Vector2(380f, 64f), open == 0, true, () =>
                 {
-                    var config = BuildLobbyConfig((_controller?.RunSeed ?? 1) * 31 + 7);
+                    // v146: a fresh seed every match → new board, harbours, numbers and pick offers each time.
+                    var config = BuildLobbyConfig(NextMatchSeed());
                     StartHotSeat(config);
                 }, anchorBottom: true);
         }

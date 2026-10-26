@@ -12,7 +12,7 @@ using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
 namespace CatanRoguelike.Game
 {
-    public sealed class BoardView : MonoBehaviour
+    public sealed partial class BoardView : MonoBehaviour
     {
         [SerializeField] private float hexScale = 1.2f;
         [SerializeField] private float tileHeight = 0.15f;
@@ -317,6 +317,7 @@ namespace CatanRoguelike.Game
             }
 
             buildingsRoot = null;
+            ResetMotion();
 
             _tiles.Clear();
             _fishShoalViews.Clear();
@@ -568,6 +569,7 @@ namespace CatanRoguelike.Game
             {
                 if (_tiles.TryGetValue(kvp.Key, out var view))
                 {
+                    view.ShowLakeNumbers = MatchLakeNumbers;
                     view.Refresh(kvp.Value);
                     view.RefreshNumberToken(kvp.Value);
                 }
@@ -589,6 +591,7 @@ namespace CatanRoguelike.Game
 
         private void RefreshRobber(GameState state)
         {
+            NoteRobberMove(state.Board.RobberTile);
             foreach (var tile in _tiles.Values)
                 tile.SetRobberVisible(false);
 
@@ -596,6 +599,7 @@ namespace CatanRoguelike.Game
             var coord = state.Board.RobberTile.Value;
             if (_tiles.TryGetValue(coord, out var robberView))
                 robberView.SetRobberVisible(true);
+            ApplyMotion();
         }
 
         private void RefreshEventOverlays(GameState state)
@@ -670,6 +674,7 @@ namespace CatanRoguelike.Game
             int priorCount = buildingsRoot.childCount;
             for (int i = buildingsRoot.childCount - 1; i >= 0; i--)
                 DestroySceneObject(buildingsRoot.GetChild(i).gameObject);
+            BeginPieceTracking();
 
             foreach (var kvp in state.Board.VertexBuildings)
             {
@@ -678,10 +683,10 @@ namespace CatanRoguelike.Game
                 var position = new Vector3(x, 0f, z);
                 var color = PlayerPieceVisuals.ColorForPlayer(owner);
 
-                if (building == BuildingType.City)
-                    PlayerPieceVisuals.CreateCity(buildingsRoot, position, color, tileHeight, hexScale);
-                else
-                    PlayerPieceVisuals.CreateSettlement(buildingsRoot, position, color, tileHeight, hexScale);
+                var piece = building == BuildingType.City
+                    ? PlayerPieceVisuals.CreateCity(buildingsRoot, position, color, tileHeight, hexScale)
+                    : PlayerPieceVisuals.CreateSettlement(buildingsRoot, position, color, tileHeight, hexScale);
+                TrackPiece(piece, (1, kvp.Key, (int)building, owner.GetHashCode()));
             }
 
             foreach (var road in state.Board.Roads)
@@ -694,7 +699,7 @@ namespace CatanRoguelike.Game
 
                 bool disabled = state.Board.DisabledRoads.Contains(road.Key);
                 var color = disabled ? Color.gray : PlayerPieceVisuals.ColorForPlayer(road.Value);
-                PlayerPieceVisuals.CreateRoad(
+                var roadPiece = PlayerPieceVisuals.CreateRoad(
                     buildingsRoot,
                     new Vector3(mx, 0f, mz),
                     angle,
@@ -702,23 +707,29 @@ namespace CatanRoguelike.Game
                     color,
                     tileHeight,
                     hexScale);
+                TrackPiece(roadPiece, (2, road.Key, disabled ? 1 : 0, road.Value.GetHashCode()));
             }
 
             // v145 Seafarers: boats on their sea edges, and the pirate ship on its sea hex.
             foreach (var ship in state.Board.Ships)
             {
                 var (mx, mz) = HexMath.EdgeMidpoint(ship.Key, hexScale);
-                ShipPieceVisuals.CreateShip(buildingsRoot, new Vector3(mx, 0f, mz), HexMath.EdgeAngle(ship.Key),
+                var shipPiece = ShipPieceVisuals.CreateShip(buildingsRoot, new Vector3(mx, 0f, mz), HexMath.EdgeAngle(ship.Key),
                     PlayerPieceVisuals.ColorForPlayer(ship.Value), tileHeight, hexScale);
+                TrackPiece(shipPiece, (3, ship.Key, 0, ship.Value.GetHashCode()));
             }
 
             if (state.Board.PirateHex.HasValue)
             {
                 var (px, pz) = HexMath.ToWorldPosition(state.Board.PirateHex.Value, hexScale);
-                ShipPieceVisuals.CreatePirate(buildingsRoot, new Vector3(px, 0f, pz), tileHeight, hexScale);
+                var pirate = ShipPieceVisuals.CreatePirate(buildingsRoot, new Vector3(px, 0f, pz), tileHeight, hexScale);
+                TrackPirate(pirate, state.Board.PirateHex.Value);
             }
+            else
+                TrackPirate(null, null);
 
-            if (buildingsRoot.childCount > priorCount && buildingsRoot.childCount > _lastBuildingVisualCount)
+            EndPieceTracking();
+            if (!MatchMotion && buildingsRoot.childCount > priorCount && buildingsRoot.childCount > _lastBuildingVisualCount)
             {
                 var placed = buildingsRoot.GetChild(buildingsRoot.childCount - 1);
                 StartCoroutine(SimpleTweens.ScalePop(placed, 0.26f, 1.14f));

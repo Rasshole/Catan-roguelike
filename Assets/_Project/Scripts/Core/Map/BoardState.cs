@@ -40,6 +40,12 @@ namespace CatanRoguelike.Core.Map
         public bool IsSeafarers => SeaHexes.Count > 0;
 
         public HexCoord? RobberTile { get; private set; }
+
+        /// <summary>v146: when set, harbour types are permuted over the fixed harbour positions with this seed.</summary>
+        public int? PortShuffleSeed { get; set; }
+
+        /// <summary>v146 Fishermen: the lake that replaced the desert (fish on 2, 3, 11 and 12), if any.</summary>
+        public HexCoord? LakeHex { get; set; }
         public int DayNumber { get; set; } = 1;
 
         public static bool IsSeaFishGround(HexTileData tile) => tile.IsFishTile && !tile.IsDesert;

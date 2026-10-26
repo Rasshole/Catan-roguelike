@@ -33,7 +33,22 @@ namespace CatanRoguelike.Core.Shop
         {
             int landTiles = board.Tiles.Values.Count(t => !t.IsFishTile || t.IsDesert);
             var (specificTarget, genericTarget) = GetPortTargets(landTiles);
-            return PortFrameLayout.DiscoverFramePorts(board, specificTarget, genericTarget);
+            var ports = PortFrameLayout.DiscoverFramePorts(board, specificTarget, genericTarget);
+            return board.PortShuffleSeed is int seed ? ShuffleTypes(ports, seed) : ports;
+        }
+
+        /// <summary>v146: seeded permutation of the harbour types (2:1 resources and 3:1) over the same positions.</summary>
+        public static List<PortDefinition> ShuffleTypes(List<PortDefinition> ports, int seed)
+        {
+            var types = ports.Select(p => p.SpecificResource).ToArray();
+            var rng = new System.Random(unchecked(seed * 131 + 0x5A7F0));
+            for (int i = types.Length - 1; i > 0; i--)
+            {
+                int j = rng.Next(i + 1);
+                (types[i], types[j]) = (types[j], types[i]);
+            }
+
+            return ports.Select((p, i) => new PortDefinition(p.Vertex, types[i])).ToList();
         }
 
         private static (int specific, int generic) GetPortTargets(int tileCount) => tileCount switch

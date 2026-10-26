@@ -188,6 +188,14 @@ namespace CatanRoguelike.Core.Match
         public MatchPhase ResumePhase { get; set; } = MatchPhase.Main;
         public MatchTradeOffer ActiveTrade { get; set; }
 
+        // ---- v146 Fishermen of Catan (official tokens) ----
+        /// <summary>Face-down fish tokens (values 1–3, 0 = the old boot); drawn from the end.</summary>
+        public List<int> FishBag { get; } = new();
+        /// <summary>Own stream for the fish bag so the dice / deck stream is untouched by the expansion.</summary>
+        public MatchRng FishRng { get; set; }
+        /// <summary>Seat holding the old boot (needs one extra VP to win), or -1.</summary>
+        public int OldBootSeat { get; set; } = -1;
+
         // ---- v136 party rules ----
         /// <summary>Seats in pick order for <see cref="MatchPhase.CivPick"/> / <see cref="MatchPhase.QuestPick"/>.</summary>
         public List<int> PickOrder { get; } = new();
@@ -307,7 +315,8 @@ namespace CatanRoguelike.Core.Match
             }
 
             if (Config.Fishermen)
-                sb.Append("F").Append(string.Join(",", Seats.Select(s => s.Fish))).Append('|');
+                sb.Append("F").Append(string.Join(",", Seats.Select(s => s.Fish))).Append('b').Append(OldBootSeat)
+                    .Append('n').Append(FishBag.Count).Append('|');
             if (Config.PartyRules)
             {
                 sb.Append("P").Append(PickStep).Append(':').Append(PartyRng?.State ?? 0).Append(':')

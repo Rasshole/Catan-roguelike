@@ -413,8 +413,11 @@ namespace CatanRoguelike.Core.Data
             MapGenerationOptions options = default)
         {
             var preset = GetLandPreset(size, seed);
+            // v146: pass & play shuffles every hand-laid map per match seed (Small/Medium have no desert to keep).
             if (options.ShuffleTerrain && size == MapSize.Large)
                 preset = ShuffleTerrain(preset, new HexCoord(0, 0), seed ?? 0);
+            else if (options.ShuffleTerrain && (size == MapSize.Small || size == MapSize.Medium))
+                preset = ShuffleTerrain(preset, new HexCoord(int.MinValue / 2, 0), seed ?? 0);
 
             var board = new BoardState();
             var coords = new HashSet<HexCoord>();
@@ -450,6 +453,9 @@ namespace CatanRoguelike.Core.Data
 
             NumberTokenLibrary.AssignMissingTokens(board, seed);
 
+            // v146: pass & play also shuffles which harbour type sits where (positions stay on the fixed frame).
+            if (options.ShuffleTerrain)
+                board.PortShuffleSeed = seed ?? 0;
             var ports = PortAccess.DiscoverPorts(board);
             SeaFrameSlotLayout.AssignPortSeaSlots(board, ports);
             if (options.FishermenOfCatan)
@@ -486,13 +492,20 @@ namespace CatanRoguelike.Core.Data
 
         private static void ApplyDesertFishingLake(BoardState board)
         {
+            // v146: the lake replaces the desert wherever it is (centre on the classic maps, the Islands desert).
             var center = new HexCoord(0, 0);
             if (!board.TryGetTile(center, out var tile) || !tile.IsDesert)
-                return;
+            {
+                tile = board.Tiles.Values.Where(t => t.IsDesert).OrderBy(t => t.Coord.Q).ThenBy(t => t.Coord.R)
+                    .FirstOrDefault();
+                if (tile == null)
+                    return;
+            }
 
             tile.IsFishTile = true;
             tile.FishValue = 0;
             tile.IsCoastal = true;
+            board.LakeHex = tile.Coord;
         }
 
         /// <summary>Coastal = has at least one missing neighbor (board edge → port vertex).</summary>

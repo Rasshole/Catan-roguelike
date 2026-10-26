@@ -303,9 +303,11 @@ namespace CatanRoguelike.Tests.PlayMode
             {
                 StringAssert.DoesNotContain("SECRET QUEST", t.text, "no quest section for other seats");
                 StringAssert.DoesNotContain(otherQuest, t.text, "another seat's quest never leaks");
-                StringAssert.DoesNotContain(otherTrait, t.text, "another seat's trait never leaks");
             }
 
+            // v146: traits are public now; only the quest stays secret.
+            Assert.IsTrue(popup.GetComponentsInChildren<Text>(true).Any(t => t.text.Contains(otherTrait.ToUpperInvariant())),
+                "another seat's trait is visible");
             Assert.IsTrue(popup.GetComponentsInChildren<Text>(true).Any(t => t.text.Contains("hidden until the game ends")));
             MaybeWrite(hud, "popup-other.png");
             hud.ClickOutsideHotSeatInfoForTests();
