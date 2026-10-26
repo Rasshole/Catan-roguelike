@@ -98,7 +98,7 @@ namespace CatanRoguelike.Game
             var state = s.State;
             if (_hsVictimCommand != null && state.Phase != MatchPhase.MoveRobber)
                 _hsVictimCommand = null;
-            if (!state.IsPicking)
+            if (!state.IsPicking || state.HarbourPickSeat >= 0) // v144: a Harbour Pilot pick goes first
             {
                 _hsPickSeat = -1;
                 return;

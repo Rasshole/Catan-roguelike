@@ -64,7 +64,10 @@ namespace CatanRoguelike.Core.Match
         /// </summary>
         BankTradeBatch = 29,
         /// <summary>Main (Fishermen on): pay <see cref="MatchController.FishPerCard"/> fish for 1 card. Request = the card.</summary>
-        FishForCard = 30
+        FishForCard = 30,
+        // ---- v144 ----
+        /// <summary>Harbour Pilot owes a pick (port settlement / city): Receive = the resource taken from the bank.</summary>
+        ChooseHarbourPilotResource = 31
     }
 
     /// <summary>
@@ -164,6 +167,9 @@ namespace CatanRoguelike.Core.Match
 
         public static MatchCommand Card(MatchCommandType type, int seat, ResourceType a = default, ResourceType b = default) =>
             new() { Type = type, Seat = seat, Give = a, Receive = b };
+
+        public static MatchCommand HarbourPick(int seat, ResourceType r) =>
+            new() { Type = MatchCommandType.ChooseHarbourPilotResource, Seat = seat, Receive = r };
 
         public static MatchCommand DiscardCards(int seat, ResourceBundle cards) =>
             new() { Type = MatchCommandType.Discard, Seat = seat, Offer = cards };

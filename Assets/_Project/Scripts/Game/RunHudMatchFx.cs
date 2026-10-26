@@ -185,7 +185,8 @@ namespace CatanRoguelike.Game
                     break;
                 case MatchCommandType.ConfirmTrade:
                 case MatchCommandType.BankTrade:
-                case MatchCommandType.BankTradeBatch: GameAudio.Play(Sfx.TradeAccepted); break;
+                case MatchCommandType.BankTradeBatch:
+                case MatchCommandType.ChooseHarbourPilotResource: GameAudio.Play(Sfx.TradeAccepted); break;
                 case MatchCommandType.CancelTrade: GameAudio.Play(Sfx.TradeDeclined, 0.7f); break;
                 case MatchCommandType.CastVote: GameAudio.Play(Sfx.Vote); break;
                 case MatchCommandType.PlaceBid: GameAudio.Play(Sfx.Auction); break;

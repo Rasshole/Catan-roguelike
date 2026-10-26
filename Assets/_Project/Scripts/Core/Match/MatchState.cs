@@ -112,6 +112,10 @@ namespace CatanRoguelike.Core.Match
         public int BankTradesThisTurn { get; set; }
         /// <summary>Round in which the Prospector trait last paid out (-1 = never).</summary>
         public int ProspectorRound { get; set; } = -1;
+        /// <summary>v144: set when this seat ends its first normal (post-setup) turn; ends Head Start's protection.</summary>
+        public bool HasTakenFirstTurn { get; set; }
+        /// <summary>v144 Harbour Pilot: resource picks still owed (one per port settlement / port city).</summary>
+        public int HarbourPilotPicks { get; set; }
 
         public int QuestVictoryPoints => QuestDone ? MatchPartyLibrary.Quest(Quest)?.Points ?? 0 : 0;
 
@@ -190,6 +194,8 @@ namespace CatanRoguelike.Core.Match
         public HexCoord? EventTile { get; set; }
         /// <summary>Separate stream for dealing offers / events so dice sequences don't depend on party rules.</summary>
         public MatchRng PartyRng { get; set; }
+        /// <summary>v144: 7s rolled this match (Tough Hide pays on every second one).</summary>
+        public int SevensRolled { get; set; }
 
         public bool IsPicking => Phase == MatchPhase.CivPick || Phase == MatchPhase.QuestPick;
 
@@ -199,7 +205,8 @@ namespace CatanRoguelike.Core.Match
         /// v135: the seat that must act now. Usually <see cref="CurrentSeat"/>; during <see cref="MatchPhase.Discard"/>
         /// it is the lowest seat that still owes a discard.
         /// </summary>
-        public int ActingSeat => Phase == MatchPhase.Discard && PendingDiscards.Count > 0
+        public int ActingSeat => HarbourPickSeat >= 0 ? HarbourPickSeat
+            : Phase == MatchPhase.Discard && PendingDiscards.Count > 0
             ? PendingDiscards.Keys.First()
             : (Phase == MatchPhase.Vote || Phase == MatchPhase.Auction) && PickStep < PickOrder.Count
                 ? PickOrder[PickStep]
@@ -209,6 +216,18 @@ namespace CatanRoguelike.Core.Match
         public bool IsBallot => Phase == MatchPhase.Vote || Phase == MatchPhase.Auction;
 
         public MatchSeatState Acting => Seats[ActingSeat];
+
+        /// <summary>v144: the seat that owes a Harbour Pilot pick (it acts before anything else), or -1.</summary>
+        public int HarbourPickSeat
+        {
+            get
+            {
+                foreach (var s in Seats)
+                    if (s.HarbourPilotPicks > 0)
+                        return s.Index;
+                return -1;
+            }
+        }
 
         public MatchState(MatchConfig config, BoardState board)
         {
@@ -277,10 +296,11 @@ namespace CatanRoguelike.Core.Match
                     .Append(':').Append(string.Join(",", CivDeck.Select(c => (int)c)))
                     .Append(':').Append(string.Join(",", QuestDeck.Select(c => (int)c)))
                     .Append(':').Append(string.Join(",", TraitDeck.Select(c => (int)c)))
-                    .Append(':').Append(string.Join(",", EventDeck.Select(c => (int)c))).Append('|');
+                    .Append(':').Append(string.Join(",", EventDeck.Select(c => (int)c)))
+                    .Append(':').Append(SevensRolled).Append('|');
                 foreach (var s in Seats)
                     sb.Append($"Q{s.Index}:{(int)s.Civilization},{(int)s.Quest},{(int)s.Trait},{(s.QuestDone ? 1 : 0)},"
-                              + $"{s.PlayerTrades},{s.BankTradesThisTurn},{s.ProspectorRound},"
+                              + $"{s.PlayerTrades},{s.BankTradesThisTurn},{s.ProspectorRound},{(s.HasTakenFirstTurn ? 1 : 0)},{s.HarbourPilotPicks},"
                               + $"{string.Join(".", s.CivOffer.Select(c => (int)c))}/{string.Join(".", s.QuestOffer.Select(c => (int)c))}/"
                               + $"{string.Join(".", s.TraitOffer.Select(c => (int)c))};");
                 AppendShenanigans(sb);

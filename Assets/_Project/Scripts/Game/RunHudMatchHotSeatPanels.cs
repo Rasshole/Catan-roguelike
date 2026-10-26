@@ -240,6 +240,31 @@ namespace CatanRoguelike.Game
                 });
         }
 
+        // ---------- v144 Harbour Pilot: 1 resource of your choice for a harbour settlement / city ----------
+
+        private void BuildHarbourPilotPicker()
+        {
+            var state = _hotSeat.State;
+            int seat = state.HarbourPickSeat;
+            if (seat < 0 || !_hotSeat.IsHandVisible(seat))
+                return;
+            int owed = state.Seats[seat].HarbourPilotPicks;
+            var card = HsModal("HarbourPilotPicker", new Vector2(860f, 360f), HsModalOffset);
+            string title = owed > 1 ? $"Harbour Pilot: take 1 resource ({owed} picks left)" : "Harbour Pilot: take 1 resource of your choice";
+            HsText(card, "Title", title, 22, new Vector2(0.5f, 1f), new Vector2(0f, -88f), new Vector2(700f, 34f),
+                ColonistUiKit.Ink, FontStyle.Bold);
+            var resources = MatchController.AllResources;
+            for (int i = 0; i < resources.Length; i++)
+            {
+                var r = resources[i];
+                float x = -280f + i * 140f;
+                var icon = CreateImage(card, "Icon_" + r, ColonistHudResourceSprites.Get(r));
+                SetRect(icon.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(x, 4f), new Vector2(64f, 64f));
+                HsButton(card, "HarbourPick_" + r, ResourceLabel(r), new Vector2(0.5f, 0.5f), new Vector2(x, -62f),
+                    new Vector2(124f, 48f), true, true, () => _hotSeat.Apply(MatchCommand.HarbourPick(seat, r)));
+            }
+        }
+
         // ---------- discard on a 7 ----------
 
         private void BuildDiscardPicker()

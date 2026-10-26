@@ -1,9 +1,11 @@
+using System.Collections.Generic;
 using System.Linq;
 using CatanRoguelike.Core;
 using CatanRoguelike.Core.Civilizations;
 using CatanRoguelike.Core.Hex;
 using CatanRoguelike.Core.Map;
 using CatanRoguelike.Core.Match;
+using CatanRoguelike.Core.Shop;
 using NUnit.Framework;
 using Vertex = CatanRoguelike.Core.Hex.HexMath.Vertex;
 
@@ -233,10 +235,10 @@ namespace CatanRoguelike.Tests
         }
 
         [Test]
-        public void LuckyDice_And_Prospector_OnlyOnYourOwnRoll()
+        public void LuckyDice_PaysOnAnyonesTwoOrTwelve_NotThreeOrEleven_ProspectorOwnRollOnly()
         {
-            int luckyRolls = 0;
-            for (int seed = 1; seed < 80 && luckyRolls < 3; seed++)
+            int luckyRolls = 0, nearMiss = 0;
+            for (int seed = 1; seed < 600 && (luckyRolls < 2 || nearMiss < 2); seed++)
             {
                 var a = AfterSetup(3, 0, seed, party: true);
                 var b = AfterSetup(3, 0, seed, party: true);
@@ -251,23 +253,58 @@ namespace CatanRoguelike.Tests
                         s.Quest = MatchQuestId.None;
                     }
 
-                a.State.Seats[me].Trait = MatchTraitId.LuckyDice;
                 a.State.Seats[other].Trait = MatchTraitId.LuckyDice;
                 Assert.IsTrue(a.Apply(MatchCommand.Simple(MatchCommandType.RollDice, me)).Ok);
                 Assert.IsTrue(b.Apply(MatchCommand.Simple(MatchCommandType.RollDice, me)).Ok);
                 int roll = a.State.LastRoll;
                 Assert.AreEqual(roll, b.State.LastRoll);
-                Assert.AreEqual(b.State.Seats[other].Hand.Total, a.State.Seats[other].Hand.Total,
-                    "never on someone else's roll");
                 if (roll == 7)
                     continue;
-                bool lucky = roll <= 4 || roll >= 10;
+                bool lucky = roll == 2 || roll == 12;
                 if (lucky)
                     luckyRolls++;
-                Assert.AreEqual(b.State.Seats[me].Hand.Total + (lucky ? 1 : 0), a.State.Seats[me].Hand.Total, $"roll {roll}");
+                if (roll == 3 || roll == 11)
+                    nearMiss++;
+                Assert.AreEqual(lucky, MatchController.LuckyDiceTriggers(roll));
+                Assert.AreEqual(b.State.Seats[other].Hand.Total + (lucky ? 1 : 0), a.State.Seats[other].Hand.Total,
+                    $"roll {roll} by another player");
+                Assert.AreEqual(b.State.Seats[me].Hand.Total, a.State.Seats[me].Hand.Total, "roller has no trait");
             }
 
-            Assert.Greater(luckyRolls, 0, "at least one lucky roll in the sample");
+            Assert.Greater(luckyRolls, 0, "at least one 2/12 by another player in the sample");
+            Assert.Greater(nearMiss, 0, "at least one 3/11 in the sample");
+            for (int roll = 2; roll <= 12; roll++)
+                Assert.AreEqual(roll == 2 || roll == 12, MatchController.LuckyDiceTriggers(roll), $"roll {roll}");
+        }
+
+        [Test]
+        public void LuckyDice_TiesForLeastHeld_AreRandomButDeterministic()
+        {
+            var hand = new ResourceBundle { Wood = 2, Brick = 2, Sheep = 2, Wheat = 2, Stone = 2 };
+            var seen = new HashSet<ResourceType>();
+            for (int seed = 0; seed < 200; seed++)
+            {
+                var r1 = new MatchRng(seed, 7);
+                var r2 = new MatchRng(seed, 7);
+                var pick = MatchController.LeastHeldRandom(hand, r1);
+                Assert.AreEqual(pick, MatchController.LeastHeldRandom(hand, r2), "same RNG state, same pick");
+                Assert.AreEqual(r1.State, r2.State);
+                seen.Add(pick);
+            }
+
+            Assert.AreEqual(5, seen.Count, "every tied resource can come up (not fixed enum order)");
+
+            var partial = new ResourceBundle { Wood = 3, Brick = 1, Sheep = 1, Wheat = 4, Stone = 2 };
+            var tiedSeen = new HashSet<ResourceType>();
+            for (int seed = 0; seed < 100; seed++)
+                tiedSeen.Add(MatchController.LeastHeldRandom(partial, new MatchRng(seed)));
+            CollectionAssert.AreEquivalent(new[] { ResourceType.Brick, ResourceType.Sheep }, tiedSeen);
+
+            var unique = new ResourceBundle { Wood = 3, Brick = 1, Sheep = 2, Wheat = 4, Stone = 0 };
+            var rng = new MatchRng(5);
+            ulong before = rng.State;
+            Assert.AreEqual(ResourceType.Stone, MatchController.LeastHeldRandom(unique, rng));
+            Assert.AreEqual(before, rng.State, "no draw when there is no tie");
         }
 
         [Test]
@@ -297,6 +334,310 @@ namespace CatanRoguelike.Tests
             }
 
             Assert.Fail("no 7 in the sample");
+        }
+        /// <summary>A party match after setup whose first roll (by the current seat) is a 7, with plain civs/traits.</summary>
+        private static MatchController FirstRollSeven(out int seed, int from = 1)
+        {
+            for (seed = from; seed < 2000; seed++)
+            {
+                var probe = AfterSetup(3, 0, seed, party: true);
+                if (probe.State.Rng.RollDie() + probe.State.Rng.RollDie() != 7)
+                    continue;
+                var match = Plain(AfterSetup(3, 0, seed, party: true));
+                return match;
+            }
+
+            Assert.Fail("no opening 7 in the sample");
+            return null;
+        }
+
+        private static MatchController Plain(MatchController match)
+        {
+            foreach (var s in match.State.Seats)
+            {
+                s.Trait = MatchTraitId.None;
+                s.Civilization = CivilizationId.SunKingdom;
+                s.Quest = MatchQuestId.None;
+                s.Hand = new ResourceBundle { Wood = 1 };
+            }
+
+            return match;
+        }
+
+        [Test]
+        public void ToughHide_EverySecondSeven_GivesOneRandomResource()
+        {
+            FirstRollSeven(out int seed);
+            var expected = new[] { 0, 1, 0, 1 };
+            for (int nth = 1; nth <= 4; nth++)
+            {
+                var match = Plain(AfterSetup(3, 0, seed, party: true));
+                int me = match.State.CurrentSeat;
+                int hide = (me + 1) % 3;
+                match.State.Seats[hide].Trait = MatchTraitId.ToughHide;
+                match.State.Seats[hide].Hand = new ResourceBundle { Wood = 9 };
+                match.State.SevensRolled = nth - 1;
+                Assert.IsTrue(match.Apply(MatchCommand.Simple(MatchCommandType.RollDice, me)).Ok);
+                Assert.AreEqual(7, match.State.LastRoll);
+                Assert.AreEqual(nth, match.State.SevensRolled);
+                Assert.IsFalse(match.State.PendingDiscards.ContainsKey(hide), "Tough Hide still never discards");
+                Assert.AreEqual(9 + expected[nth - 1], match.State.Seats[hide].Hand.Total, $"7 number {nth}");
+
+                var again = Plain(AfterSetup(3, 0, seed, party: true));
+                again.State.Seats[hide].Trait = MatchTraitId.ToughHide;
+                again.State.Seats[hide].Hand = new ResourceBundle { Wood = 9 };
+                again.State.SevensRolled = nth - 1;
+                Assert.IsTrue(again.Apply(MatchCommand.Simple(MatchCommandType.RollDice, me)).Ok);
+                Assert.AreEqual(match.State.Seats[hide].Hand, again.State.Seats[hide].Hand, "deterministic pick");
+            }
+
+            for (int n = 1; n <= 8; n++)
+                Assert.AreEqual(n % 2 == 0, MatchController.ToughHidePaysOn(n), $"7 number {n}");
+        }
+
+        [Test]
+        public void HeadStart_NoDiscardBeforeFirstTurnEnds_NormalDiscardAfter()
+        {
+            FirstRollSeven(out int seed);
+            foreach (bool done in new[] { false, true })
+            {
+                var match = Plain(AfterSetup(3, 0, seed, party: true));
+                int me = match.State.CurrentSeat;
+                int hs = (me + 1) % 3;
+                match.State.Seats[hs].Trait = MatchTraitId.HeadStart;
+                match.State.Seats[hs].HasTakenFirstTurn = done;
+                match.State.Seats[hs].Hand = new ResourceBundle { Wood = 5, Brick = 5 };
+                Assert.AreEqual(done ? 5 : 0, match.DiscardOwed(hs));
+                Assert.IsTrue(match.Apply(MatchCommand.Simple(MatchCommandType.RollDice, me)).Ok);
+                Assert.AreEqual(7, match.State.LastRoll);
+                Assert.AreEqual(done, match.State.PendingDiscards.ContainsKey(hs),
+                    done ? "discards normally after the first turn" : "protected before the first turn ends");
+            }
+
+            // The flag flips when that seat ends its first normal turn, and only for that seat.
+            var m = Plain(AfterSetup(3, 0, 5, party: true));
+            int cur = m.State.CurrentSeat;
+            Assert.IsTrue(m.State.Seats.All(s => !s.HasTakenFirstTurn), "setup turns don't count");
+            m.State.Phase = MatchPhase.Main;
+            Assert.IsTrue(m.Apply(MatchCommand.Simple(MatchCommandType.EndTurn, cur)).Ok);
+            Assert.IsTrue(m.State.Seats[cur].HasTakenFirstTurn);
+            Assert.AreEqual(1, m.State.Seats.Count(s => s.HasTakenFirstTurn));
+        }
+
+        [Test]
+        public void HeadStart_IsSkippedAsStealTarget_UntilFirstTurnEnds()
+        {
+            int checkedHexes = 0;
+            for (int seed = 1; seed < 40 && checkedHexes == 0; seed++)
+            {
+                var match = Plain(AfterSetup(3, 0, seed, party: true));
+                int me = match.State.CurrentSeat;
+                int hs = (me + 1) % 3;
+                var target = match.State.Seats[hs];
+                target.Trait = MatchTraitId.HeadStart;
+                target.Civilization = CivilizationId.ForestFolk; // not Sun Kingdom (small hands are unrobbable)
+                target.Hand = new ResourceBundle { Wood = 2, Brick = 2 };
+                foreach (var hex in match.State.Board.Tiles.Keys.Where(h => h != match.State.Board.RobberTile).ToList())
+                {
+                    target.HasTakenFirstTurn = true;
+                    if (!match.RobberVictims(me, hex).Contains(hs))
+                        continue;
+                    target.HasTakenFirstTurn = false;
+                    Assert.IsFalse(match.RobberVictims(me, hex).Contains(hs), "robber can't pick a protected Head Start");
+                    Assert.IsTrue(match.IsHeadStartProtected(hs));
+                    match.State.Phase = MatchPhase.MoveRobber;
+                    Assert.IsFalse(match.Apply(MatchCommand.Robber(me, hex, hs)).Ok, "explicit steal is rejected");
+                    var aiPick = MatchAi.ChooseCommand(match);
+                    if (aiPick.Type == MatchCommandType.MoveRobber)
+                        Assert.AreNotEqual(hs, aiPick.Victim, "AI skips the protected seat");
+                    target.HasTakenFirstTurn = true;
+                    Assert.IsTrue(match.Apply(MatchCommand.Robber(me, hex, hs)).Ok, "fair game after the first turn");
+                    Assert.AreEqual(3, target.Hand.Total);
+                    checkedHexes++;
+                    break;
+                }
+            }
+
+            Assert.Greater(checkedHexes, 0);
+        }
+        private static MatchController PilotAtMain(int seed, out int me)
+        {
+            var match = Plain(AfterSetup(3, 0, seed, party: true));
+            me = match.State.CurrentSeat;
+            match.State.Seats[me].Trait = MatchTraitId.HarbourPilot;
+            match.State.Phase = MatchPhase.Main;
+            return match;
+        }
+
+        [Test]
+        public void HarbourPilot_SettlementOnPort_OwesOnePick_ThatBlocksUntilChosen()
+        {
+            for (int seed = 1; seed < 60; seed++)
+            {
+                var match = PilotAtMain(seed, out int me);
+                var owner = match.State.Seats[me].Owner;
+                var board = match.State.Board;
+                Vertex? spot = null;
+                foreach (var port in match.State.Ports)
+                foreach (var v in PortAccess.ServedVertices(board, port))
+                {
+                    if (spot.HasValue)
+                        break;
+                    foreach (var adj in VertexGraph.GetAdjacentVertices(v))
+                    {
+                        var e = MatchController.NormalizeEdge(new HexMath.Edge(v, adj));
+                        if (board.Roads.ContainsKey(e))
+                            continue;
+                        board.Roads[e] = owner;
+                        if (match.ValidSettlements(me).Contains(VertexGraph.Canonicalize(v)))
+                        {
+                            spot = VertexGraph.Canonicalize(v);
+                            break;
+                        }
+
+                        board.Roads.Remove(e);
+                    }
+                }
+
+                if (!spot.HasValue)
+                    continue;
+                Assert.IsTrue(match.IsPortVertex(spot.Value));
+                match.State.Seats[me].Hand = match.SettlementCostFor(me);
+                Assert.IsTrue(match.Apply(MatchCommand.AtVertex(MatchCommandType.BuildSettlement, me, spot.Value)).Ok);
+                Assert.AreEqual(1, match.State.Seats[me].HarbourPilotPicks);
+                Assert.AreEqual(me, match.State.HarbourPickSeat);
+                Assert.AreEqual(me, match.State.ActingSeat);
+                Assert.IsFalse(match.Apply(MatchCommand.Simple(MatchCommandType.EndTurn, me)).Ok, "the pick comes first");
+                Assert.IsTrue(match.Apply(MatchCommand.HarbourPick(me, ResourceType.Stone)).Ok);
+                Assert.AreEqual(1, match.State.Seats[me].Hand.Stone);
+                Assert.AreEqual(0, match.State.Seats[me].HarbourPilotPicks);
+                Assert.IsFalse(match.Apply(MatchCommand.HarbourPick(me, ResourceType.Stone)).Ok, "only one pick");
+                Assert.IsTrue(match.Apply(MatchCommand.Simple(MatchCommandType.EndTurn, me)).Ok);
+                return;
+            }
+
+            Assert.Fail("no buildable harbour corner in the sample");
+        }
+
+        [Test]
+        public void HarbourPilot_CityOnPort_OwesAPick_NonPortBuildsGiveNothing()
+        {
+            int port = 0, inland = 0;
+            for (int seed = 1; seed < 40 && (port == 0 || inland == 0); seed++)
+            {
+                var match = PilotAtMain(seed, out int me);
+                var owner = match.State.Seats[me].Owner;
+                var mine = match.State.Board.VertexBuildings
+                    .Where(kv => kv.Value.owner == owner && kv.Value.type == BuildingType.Settlement)
+                    .Select(kv => kv.Key).ToList();
+                foreach (var v in mine)
+                {
+                    bool onPort = match.IsPortVertex(v);
+                    var m = PilotAtMain(seed, out _);
+                    m.State.Seats[me].Hand = m.CityCostFor(me);
+                    Assert.IsTrue(m.Apply(MatchCommand.AtVertex(MatchCommandType.BuildCity, me, v)).Ok);
+                    Assert.AreEqual(onPort ? 1 : 0, m.State.Seats[me].HarbourPilotPicks, onPort ? "port city" : "inland city");
+                    if (onPort)
+                        port++;
+                    else
+                        inland++;
+                }
+
+                // Force a harbour settlement to test the city upgrade even when setup avoided ports.
+                if (port == 0)
+                {
+                    var pv = match.State.Ports.SelectMany(p => PortAccess.ServedVertices(match.State.Board, p))
+                        .Select(VertexGraph.Canonicalize)
+                        .FirstOrDefault(v => !match.State.Board.VertexBuildings.ContainsKey(v));
+                    match.State.Board.VertexBuildings[pv] = (BuildingType.Settlement, owner);
+                    match.State.Seats[me].Hand = match.CityCostFor(me);
+                    Assert.IsTrue(match.Apply(MatchCommand.AtVertex(MatchCommandType.BuildCity, me, pv)).Ok);
+                    Assert.AreEqual(1, match.State.Seats[me].HarbourPilotPicks, "forced port city");
+                    port++;
+                }
+
+                // Without the trait a port city owes nothing.
+                var plain = Plain(AfterSetup(3, 0, seed, party: true));
+                plain.State.Phase = MatchPhase.Main;
+                foreach (var v in plain.State.Board.VertexBuildings.Where(kv => kv.Value.owner == owner).Select(kv => kv.Key).ToList())
+                {
+                    plain.State.Seats[me].Hand = plain.CityCostFor(me);
+                    Assert.IsTrue(plain.Apply(MatchCommand.AtVertex(MatchCommandType.BuildCity, me, v)).Ok);
+                    Assert.AreEqual(0, plain.State.Seats[me].HarbourPilotPicks);
+                }
+            }
+
+            Assert.Greater(port, 0);
+            Assert.Greater(inland, 0);
+        }
+
+        [Test]
+        public void HarbourPilot_SetupPortSettlements_CountWhenTheTraitIsPicked()
+        {
+            int found = 0;
+            for (int seed = 1; seed < 80 && found < 2; seed++)
+            {
+                var match = new MatchController(MatchConfig.Create(3, 0, seed, partyRules: true));
+                while (match.IsSetup || match.State.IsPicking)
+                {
+                    if (match.State.Phase == MatchPhase.QuestPick && match.State.HarbourPickSeat < 0)
+                    {
+                        int seat = match.State.ActingSeat;
+                        var me = match.State.Seats[seat];
+                        me.TraitOffer[0] = MatchTraitId.HarbourPilot;
+                        int ports = match.State.Board.VertexBuildings.Count(kv => kv.Value.owner == me.Owner && match.IsPortVertex(kv.Key));
+                        var before = me.Hand.Total;
+                        Assert.IsTrue(match.Apply(MatchAi.ChooseCommand(match)).Ok);
+                        Assert.AreEqual(MatchTraitId.HarbourPilot, me.Trait);
+                        Assert.AreEqual(ports, me.HarbourPilotPicks, $"seed {seed}: one pick per setup harbour settlement");
+                        if (ports > 0)
+                        {
+                            found++;
+                            Assert.AreEqual(seat, match.State.ActingSeat, "the picker resolves before the next seat");
+                            while (me.HarbourPilotPicks > 0)
+                                Assert.IsTrue(match.Apply(MatchAi.ChooseCommand(match)).Ok);
+                            Assert.AreEqual(before + ports + (seat == 0 && !match.State.IsPicking ? 1 : 0), me.Hand.Total);
+                        }
+
+                        continue;
+                    }
+
+                    Assert.IsTrue(match.Apply(MatchAi.ChooseCommand(match)).Ok);
+                }
+            }
+
+            Assert.Greater(found, 0, "some setup settled on a harbour");
+        }
+
+        [Test]
+        public void HarbourPilot_AiPicksWhatItsNextBuildLacksMost_AndTimeoutAutoPicks()
+        {
+            var match = PilotAtMain(3, out int me);
+            match.State.Seats[me].HarbourPilotPicks = 1;
+            var goal = MatchAi.PrimaryGoal(match, me);
+            var hand = match.State.Seats[me].Hand;
+            int bestShort = MatchController.AllResources.Max(r => goal[r] - hand[r]);
+            var pick = MatchAi.HarbourPilotPick(match, me);
+            if (bestShort > 0)
+                Assert.AreEqual(bestShort, goal[pick] - hand[pick], "the largest shortfall");
+            else
+                Assert.AreEqual(MatchController.LeastHeld(hand), pick);
+            var cmd = MatchAi.ChooseCommand(match);
+            Assert.AreEqual(MatchCommandType.ChooseHarbourPilotResource, cmd.Type);
+            Assert.AreEqual(pick, cmd.Receive);
+
+            // Empty hand: the pick is the resource the next build needs most of.
+            match.State.Seats[me].Hand = default;
+            goal = MatchAi.PrimaryGoal(match, me);
+            pick = MatchAi.HarbourPilotPick(match, me);
+            Assert.AreEqual(MatchController.AllResources.Max(r => goal[r]), goal[pick]);
+
+            // Timer runs out with the pick owed: auto-picked, then the turn ends as usual.
+            int total = match.State.Seats[me].Hand.Total;
+            MatchRunner.ResolveTimeout(match);
+            Assert.AreEqual(0, match.State.Seats[me].HarbourPilotPicks);
+            Assert.AreEqual(total + 1, match.State.Seats[me].Hand.Total);
+            Assert.AreNotEqual(me, match.State.CurrentSeat, "turn ended after the auto-pick");
         }
     }
 }

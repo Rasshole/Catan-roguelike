@@ -132,6 +132,9 @@ namespace CatanRoguelike.Core.Match
                 return MatchCommandResult.Rejected("The match is over.");
             if (command.Seat < 0 || command.Seat >= State.Seats.Count)
                 return MatchCommandResult.Rejected("Unknown seat.");
+            if (State.HarbourPickSeat >= 0 && command.Type != MatchCommandType.ChooseHarbourPilotResource
+                && command.Type != MatchCommandType.UseExtraTime)
+                return MatchCommandResult.Rejected($"{State.Seats[State.HarbourPickSeat].Name} picks a Harbour Pilot resource first.");
             if (command.Type == MatchCommandType.RespondTrade)
             {
                 // Any other seat may answer the open offer.
@@ -176,6 +179,7 @@ namespace CatanRoguelike.Core.Match
                 MatchCommandType.PlaySabotage => ShenanigansOn ? PlaySabotage(command) : NoShenanigans(),
                 MatchCommandType.GuessSaboteur => ShenanigansOn ? GuessSaboteur(command) : NoShenanigans(),
                 MatchCommandType.RerollToken => RerollToken(command),
+                MatchCommandType.ChooseHarbourPilotResource => ChooseHarbourPilotResource(command),
                 _ => MatchCommandResult.Rejected("Unknown command.")
             };
 
@@ -267,6 +271,10 @@ namespace CatanRoguelike.Core.Match
         /// <summary>v142: Sun Kingdom hands this small can't be robbed.</summary>
         public const int SunKingdomSafeHand = 4;
 
+        /// <summary>v144 Head Start: until the holder's first normal turn ends, no discard on a 7 and no card can be stolen.</summary>
+        public bool IsHeadStartProtected(int seat) =>
+            PartyRules && State.Seats[seat].Trait == MatchTraitId.HeadStart && !State.Seats[seat].HasTakenFirstTurn;
+
         public IEnumerable<int> RobberVictims(int seat, HexCoord hex)
         {
             var victims = new SortedSet<int>();
@@ -277,7 +285,7 @@ namespace CatanRoguelike.Core.Match
                 {
                     int s = MatchSeats.ToSeat(b.owner);
                     // v142: Sun Kingdom can't be robbed under party rules.
-                    if (s != seat && State.Seats[s].CardCount > 0
+                    if (s != seat && State.Seats[s].CardCount > 0 && !IsHeadStartProtected(s)
                         && !(PartyRules && State.Seats[s].Civilization == CivilizationId.SunKingdom
                              && State.Seats[s].CardCount <= SunKingdomSafeHand))
                         victims.Add(s);
@@ -353,7 +361,7 @@ namespace CatanRoguelike.Core.Match
         public int DiscardOwed(int seat)
         {
             var s = State.Seats[seat];
-            if (s.CardCount <= DiscardLimitFor(seat))
+            if (s.CardCount <= DiscardLimitFor(seat) || IsHeadStartProtected(seat))
                 return 0;
             int owed = s.CardCount / 2;
             // v142: Tough Hide caps the loss at 2 cards.
@@ -391,6 +399,7 @@ namespace CatanRoguelike.Core.Match
 
             State.Board.VertexBuildings[v] = (BuildingType.Settlement, State.Current.Owner);
             State.LastSetupSettlement = v;
+            OweHarbourPilotPick(State.CurrentSeat, v);
             bool secondRound = State.SetupStep >= State.Seats.Count;
             if (secondRound)
             {
@@ -458,6 +467,7 @@ namespace CatanRoguelike.Core.Match
             AppendLog($"{State.Current.Name} rolled {roll}.");
             if (roll == 7)
             {
+                State.SevensRolled++;
                 State.PendingDiscards.Clear();
                 if (PartyRules)
                     OnSevenParty();
@@ -929,6 +939,7 @@ namespace CatanRoguelike.Core.Match
                 return MatchCommandResult.Rejected("Can't afford a settlement.");
             State.Board.VertexBuildings[v] = (BuildingType.Settlement, State.Current.Owner);
             AppendLog($"{State.Current.Name} built a settlement.");
+            OweHarbourPilotPick(c.Seat, v);
             AfterBuild();
             return MatchCommandResult.Accepted;
         }
@@ -948,6 +959,7 @@ namespace CatanRoguelike.Core.Match
                 return MatchCommandResult.Rejected("Can't afford a city.");
             State.Board.VertexBuildings[v] = (BuildingType.City, State.Current.Owner);
             AppendLog($"{State.Current.Name} built a city.");
+            OweHarbourPilotPick(c.Seat, v);
             AfterBuild();
             return MatchCommandResult.Accepted;
         }
@@ -1065,6 +1077,7 @@ namespace CatanRoguelike.Core.Match
             State.Current.NewDevCards.Clear();
             State.Current.PlayedDevCardThisTurn = false;
             State.Current.BankTradesThisTurn = 0;
+            State.Current.HasTakenFirstTurn = true;
             if (State.ActiveTrade != null)
                 AppendLog($"{State.Seats[State.ActiveTrade.From].Name}'s trade offer lapsed.");
             State.ActiveTrade = null;
@@ -1108,6 +1121,40 @@ namespace CatanRoguelike.Core.Match
             hand.Pay(cost);
             State.Current.Hand = hand;
             return true;
+        }
+
+        /// <summary>v144: true when <paramref name="v"/> is a harbour pier corner.</summary>
+        public bool IsPortVertex(Vertex v) => State.Ports.Any(p => PortAccess.Serves(State.Board, p, v));
+
+        /// <summary>v144 Harbour Pilot: a settlement or city on a harbour owes its holder one free resource pick.</summary>
+        private void OweHarbourPilotPick(int seat, Vertex v)
+        {
+            if (PartyRules && State.Seats[seat].Trait == MatchTraitId.HarbourPilot && IsPortVertex(v))
+                State.Seats[seat].HarbourPilotPicks++;
+        }
+
+        /// <summary>v144: Harbour Pilot picked after setup — each setup settlement already on a harbour counts.</summary>
+        private void OweHarbourPilotPicksForExisting(int seat)
+        {
+            var owner = State.Seats[seat].Owner;
+            foreach (var kv in State.Board.VertexBuildings)
+                if (kv.Value.owner == owner)
+                    OweHarbourPilotPick(seat, kv.Key);
+        }
+
+        private MatchCommandResult ChooseHarbourPilotResource(MatchCommand c)
+        {
+            var seat = State.Seats[c.Seat];
+            if (seat.HarbourPilotPicks <= 0)
+                return MatchCommandResult.Rejected("No Harbour Pilot pick owed.");
+            if (!AllResources.Contains(c.Receive))
+                return MatchCommandResult.Rejected("Pick a resource.");
+            var hand = seat.Hand;
+            hand.Add(c.Receive, 1);
+            seat.Hand = hand;
+            seat.HarbourPilotPicks--;
+            AppendLog($"{seat.Name}'s Harbour Pilot takes 1 {c.Receive}.");
+            return MatchCommandResult.Accepted;
         }
 
         private void AfterBuild()

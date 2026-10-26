@@ -391,9 +391,15 @@ how the group can playtest the rules before any server exists.
       own harbour; Academy settlements +1 Grain; Steppe dev cards +1 Ore; Highland, Shepherd and Raiders lost their
       drawbacks; Raiders steal on their own 7s or any 7 that finds a rival with 7+ cards; Sun Kingdom can't be robbed
       while holding 4 or fewer cards.
-    - Traits: Lucky Dice and Prospector trigger on your own roll only; Tough Hide never discards on a 7; Granary
-      discards only above 8 and takes 1 Grain on every 7; Head Start takes 1 of each resource; Road Crew makes every
-      third road free (v144; setup roads count); Harbour Pilot's first bank trade per turn is 2:1; Quartermaster dev cards cost no Wool and
+    - Traits: Lucky Dice pays on any player's 2 or 12 (v144: 1 of your least-held resource, random among ties);
+      Prospector triggers on your own roll only; Tough Hide never discards on a 7 and (v144) takes 1 random
+      resource on every second 7 of the match; Granary
+      discards only above 8 and takes 1 Grain on every 7; Head Start takes 1 of each resource and (v144) until its first
+      normal turn ends can't be made to discard or be stolen from (robber or Raiders); Road Crew makes every
+      third road free (v144; setup roads count); Harbour Pilot's first bank trade per turn is 2:1
+      and (v144) every settlement or city it builds on a harbour corner — setup settlements included, counted when the
+      trait is picked — owes a free pick of 1 resource (`ChooseHarbourPilotResource`; the seat acts before anything
+      else; the AI takes what its next build lacks most; a timed-out human gets the AI pick); Quartermaster dev cards cost no Wool and
       every Knight gives 1 Grain.
     - Quests (target: 1 VP 40–60 % done, 2 VP 25–50 %): Knighthood 1 knight, Trader 5 trades, Town Planner "a city
       and 4 buildings"; Grand Army 2 knights, Merchant Prince 7 trades, Highway 6 roads, Metropolis "2 cities and 4

@@ -162,6 +162,8 @@ namespace CatanRoguelike.Core.Match
             State.TraitDeck.AddRange(seat.TraitOffer.Where(t => t != trait));
             seat.QuestOffer.Clear();
             seat.TraitOffer.Clear();
+            if (trait == MatchTraitId.HarbourPilot)
+                OweHarbourPilotPicksForExisting(seat.Index);
             if (trait == MatchTraitId.HeadStart)
             {
                 Give(seat, ResourceType.Wood, 1);
@@ -204,11 +206,17 @@ namespace CatanRoguelike.Core.Match
                 bool own = seat.Index == State.CurrentSeat;
                 if (seat.Trait == MatchTraitId.Granary)
                     Give(seat, ResourceType.Wheat, 1);
+                if (seat.Trait == MatchTraitId.ToughHide && ToughHidePaysOn(State.SevensRolled))
+                {
+                    var r = AllResources[State.PartyRng.Next(AllResources.Length)];
+                    Give(seat, r, 1);
+                    AppendLog($"{seat.Name}'s Tough Hide finds 1 {r}.");
+                }
                 switch (seat.Civilization)
                 {
                     case CivilizationId.NorthernRaiders:
                     {
-                        var target = State.Seats.Where(o => o.Index != seat.Index && o.CardCount > 0)
+                        var target = State.Seats.Where(o => o.Index != seat.Index && o.CardCount > 0 && !IsHeadStartProtected(o.Index))
                             .OrderByDescending(o => o.CardCount).ThenBy(o => o.Index).FirstOrDefault();
                         if (target != null && (own || target.CardCount >= DiscardLimit))
                         {
@@ -229,14 +237,28 @@ namespace CatanRoguelike.Core.Match
                 if (seat.Civilization == CivilizationId.ForestFolk && (roll == 2 || roll == 12))
                     Give(seat, ResourceType.Wood, System.Math.Max(1, MatchPartyLibrary.Bordered(this, seat.Index, ResourceType.Wood)));
                 bool own = seat.Index == State.CurrentSeat;
-                if (seat.Trait == MatchTraitId.LuckyDice && own && (roll <= 4 || roll >= 10))
-                    Give(seat, LeastHeld(seat.Hand), 1);
+                if (seat.Trait == MatchTraitId.LuckyDice && LuckyDiceTriggers(roll))
+                    Give(seat, LeastHeldRandom(seat.Hand, State.PartyRng), 1);
                 if (seat.Trait == MatchTraitId.Prospector && own && gained[seat.Index].Total == 0 && seat.ProspectorRound != State.Round)
                 {
                     Give(seat, LeastHeld(seat.Hand), 1);
                     seat.ProspectorRound = State.Round;
                 }
             }
+        }
+
+        /// <summary>v144 Tough Hide: every second 7 of the match (the 2nd, 4th, ...) pays 1 random resource.</summary>
+        public static bool ToughHidePaysOn(int sevensRolled) => sevensRolled > 0 && sevensRolled % 2 == 0;
+
+        /// <summary>v144 Lucky Dice: any player's 2 or 12 pays every Lucky Dice holder.</summary>
+        public static bool LuckyDiceTriggers(int roll) => roll == 2 || roll == 12;
+
+        /// <summary>The resource held least; ties are broken uniformly with <paramref name="rng"/> (one draw only on a tie).</summary>
+        public static ResourceType LeastHeldRandom(ResourceBundle hand, MatchRng rng)
+        {
+            int min = AllResources.Min(r => hand[r]);
+            var tied = AllResources.Where(r => hand[r] == min).ToList();
+            return tied.Count == 1 ? tied[0] : tied[rng.Next(tied.Count)];
         }
 
         public static ResourceType LeastHeld(ResourceBundle hand) =>

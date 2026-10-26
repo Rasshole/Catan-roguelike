@@ -251,6 +251,7 @@ namespace CatanRoguelike.Game
                 BuildTradeBoard();
                 BuildDiscardPicker();
                 BuildDevCardPicker();
+                BuildHarbourPilotPicker();
                 BuildVictimPicker();
                 BuildPartyPickers();
                 BuildShenanigans();

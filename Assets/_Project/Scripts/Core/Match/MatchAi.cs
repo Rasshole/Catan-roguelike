@@ -22,6 +22,8 @@ namespace CatanRoguelike.Core.Match
         {
             var state = match.State;
             int seat = state.ActingSeat;
+            if (state.HarbourPickSeat == seat && seat >= 0)
+                return MatchCommand.HarbourPick(seat, HarbourPilotPick(match, seat));
             switch (state.Phase)
             {
                 case MatchPhase.SetupSettlement:
@@ -404,6 +406,26 @@ namespace CatanRoguelike.Core.Match
                 .ThenBy(x => x.k, System.StringComparer.Ordinal)
                 .First().o;
         }
+
+        /// <summary>v144 Harbour Pilot: the resource furthest short of the AI's next build (least held if none is short).</summary>
+        public static ResourceType HarbourPilotPick(MatchController match, int seat)
+        {
+            var hand = match.State.Seats[seat].Hand;
+            var goal = PrimaryGoal(match, seat);
+            ResourceType best = MatchController.LeastHeld(hand);
+            int bestShort = 0;
+            foreach (var r in MatchController.AllResources)
+            {
+                int shortBy = goal[r] - hand[r];
+                if (shortBy > bestShort)
+                {
+                    bestShort = shortBy;
+                    best = r;
+                }
+            }
+
+            return best;
+        }
     }
 
     /// <summary>Drives AI seats until a human must act (or the match ends).</summary>
@@ -437,7 +459,7 @@ namespace CatanRoguelike.Core.Match
         public static MatchCommand PendingAiResponse(MatchController match)
         {
             var trade = match.State.ActiveTrade;
-            if (trade == null)
+            if (trade == null || match.State.HarbourPickSeat >= 0)
                 return null;
             for (int i = 0; i < match.State.Seats.Count; i++)
                 if (i != trade.From && match.State.Seats[i].IsAi && trade.Responses[i].Kind == TradeResponseKind.Pending)
@@ -480,6 +502,11 @@ namespace CatanRoguelike.Core.Match
         public static void ResolveTimeout(MatchController match)
         {
             int seat = match.State.ActingSeat;
+            // v144: an owed Harbour Pilot pick is auto-picked first.
+            int pickGuard = 0;
+            while (match.State.HarbourPickSeat == seat && pickGuard++ < 16)
+                if (!match.Apply(MatchAi.ChooseCommand(match)).Ok)
+                    break;
             if (MatchAi.AwaitingHumanAnswer(match))
             {
                 // v142: the humans ran out of time to answer an AI's offer: their silence is a no.
@@ -502,12 +529,17 @@ namespace CatanRoguelike.Core.Match
             int guard = 0;
             while (!match.IsOver && match.State.CurrentSeat == seat && match.State.ActingSeat == seat && guard++ < 64)
             {
-                MatchCommand command = match.State.Phase == MatchPhase.Main
+                MatchCommand command = match.State.Phase == MatchPhase.Main && match.State.HarbourPickSeat < 0
                     ? MatchCommand.Simple(MatchCommandType.EndTurn, seat)
                     : MatchAi.ChooseCommand(match);
                 if (!match.Apply(command).Ok)
                     break;
             }
+
+            pickGuard = 0;
+            while (!match.IsOver && match.State.HarbourPickSeat == seat && pickGuard++ < 16)
+                if (!match.Apply(MatchAi.ChooseCommand(match)).Ok)
+                    break;
         }
     }
 }

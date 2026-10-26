@@ -159,11 +159,11 @@ namespace CatanRoguelike.Core.Match
         public static readonly IReadOnlyList<MatchTraitDefinition> Traits = new[]
         {
             new MatchTraitDefinition(MatchTraitId.LuckyDice, "Lucky Dice",
-                "When you roll 2, 3, 4, 10, 11 or 12 yourself, take 1 of the resource you hold least of."),
+                "When anyone rolls 2 or 12, take 1 of the resource you hold least of (random among ties)."),
             new MatchTraitDefinition(MatchTraitId.HarbourPilot, "Harbour Pilot",
-                "Your first bank trade each turn is 2:1; the rest are 1 card cheaper (never below 2:1)."),
-            new MatchTraitDefinition(MatchTraitId.ToughHide, "Tough Hide", "A 7 never makes you discard."),
-            new MatchTraitDefinition(MatchTraitId.HeadStart, "Head Start", "Take 1 of each resource now."),
+                "Your first bank trade each turn is 2:1; the rest are 1 card cheaper (never below 2:1). Each settlement or city you build on a harbour lets you take 1 resource of your choice (setup settlements count)."),
+            new MatchTraitDefinition(MatchTraitId.ToughHide, "Tough Hide", "A 7 never makes you discard; every second 7 rolled gives you 1 random resource."),
+            new MatchTraitDefinition(MatchTraitId.HeadStart, "Head Start", "Start with 1 of each resource. Until your first turn ends, a 7 can't make you discard and the robber can't steal from you."),
             new MatchTraitDefinition(MatchTraitId.Granary, "Granary", "A 7 only makes you discard above 8 cards, and every 7 gives you 1 Grain."),
             new MatchTraitDefinition(MatchTraitId.RoadCrew, "Road Crew", "Every third road you build is free."),
             new MatchTraitDefinition(MatchTraitId.Quartermaster, "Quartermaster", "Development cards cost you no Wool, and every Knight you play gives you 1 Grain."),
